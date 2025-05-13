@@ -1,0 +1,58 @@
+/* frontend/styles/globals.css */
+
+@charset "UTF-8";
+
+/* Google Fonts: Noto Sans KR 불러오기 */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap");
+
+/* 전역 폰트 적용 (Noto Sans KR) */
+html,
+body {
+  font-family: "Noto Sans KR", sans-serif;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Next.js에서는 #__next도 100%로 */
+#__next {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1; /* 본문이 남은 공간을 채움 */
+}
+
+/* React Big Calendar event 커서 */
+.rbc-event {
+  cursor: pointer !important;
+}
+
+/* 전역 리셋(선택사항) */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* a 태그에서 밑줄 제거 */
+a {
+  text-decoration: none;
+  color: inherit; /* 부모 요소의 글자색 계승 */
+}
+
+/* hover 시에도 밑줄 유지하지 않도록 */
+a:hover,
+a:focus,
+a:active {
+  text-decoration: none;
+}
+.detail-box img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 20px auto;
+}
