@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: "22.x"
+          node-version: '22.x'
 
       - name: npm install, build, and test
         run: |
@@ -30,7 +30,7 @@ jobs:
           npm run test --if-present
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip ./backend
+        run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: "Production"
+      name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
@@ -56,18 +56,19 @@ jobs:
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6418112CA1C34DC19EC37A9595C8E790 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B689B15CD0B140E89371D3815FAD0F62 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7652EEFEE1BB4F498C6340F27218CBCD }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6AA404EF095141E488CED1425D800B9D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0FF0F26C64C448F885268A166A52D5E4 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F03E549235AA4731A787250BAFC38679 }}
 
-      - name: "Deploy to Azure Web App"
+      - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: "ghnod"
-          slot-name: "Production"
-          package: ./backend
+          app-name: 'ghnod'
+          slot-name: 'Production'
+          package: .
+          
