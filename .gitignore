@@ -14,3 +14,4 @@ out/
 
 # 백엔드 업로드 파일 (이제 Azure Blob 사용하므로 제외)
 backend/uploads/
+node_modules.tar.gz
