@@ -1,14 +1,16 @@
-// 📄 backend/routes/upload.js
 const express = require("express");
 const router = express.Router();
-const upload = require("../middlewares/upload");
+const { upload, uploadToBlob } = require("../middlewares/uploadBlob");
 
-router.post("/", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: "파일 없음" });
+router.post("/", upload.single("file"), uploadToBlob, (req, res) => {
+  if (!req.file || !req.file.blobUrl) {
+    return res.status(500).json({ success: false, message: "업로드 실패" });
   }
-  const filePath = `/uploads/${req.file.filename}`;
-  res.json({ success: true, url: filePath });
+
+  res.json({
+    success: true,
+    url: req.file.blobUrl, // 🔥 Azure Blob URL 반환
+  });
 });
 
 module.exports = router;

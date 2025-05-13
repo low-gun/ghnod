@@ -1,4 +1,16 @@
+# 공통
 node_modules/
-.env
-.DS_Store
 *.log
+.DS_Store
+
+# 환경변수
+.env
+.env.local
+.env.production
+
+# Next.js 빌드
+.next/
+out/
+
+# 백엔드 업로드 파일 (이제 Azure Blob 사용하므로 제외)
+backend/uploads/

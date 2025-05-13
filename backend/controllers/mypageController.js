@@ -333,15 +333,17 @@ exports.createInquiry = async (req, res) => {
   try {
     const { title, message } = req.body;
     const userId = req.user?.id;
-    const attachment = req.file ? req.file.path : null;
+    const attachment = req.file?.blobUrl || null; // 🔥 Blob URL 저장
 
     if (!userId) return res.status(401).json({ message: "로그인 필요" });
 
     await inquiryModel.createInquiry(userId, title, message, attachment);
 
-    return res
-      .status(201)
-      .json({ success: true, message: "문의가 접수되었습니다." });
+    return res.status(201).json({
+      success: true,
+      message: "문의가 접수되었습니다.",
+      url: attachment, // 🔁 프론트에서 쓸 수 있게 반환도 가능
+    });
   } catch (error) {
     console.error("❌ 1:1 문의 생성 실패:", error);
     return res.status(500).json({ message: "문의 생성 실패" });

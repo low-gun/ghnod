@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middlewares/upload");
+const { upload, uploadToBlob } = require("../middlewares/uploadBlob");
 const pool = require("../config/db");
 
 const {
@@ -105,6 +105,7 @@ router.post(
   "/inquiries",
   authenticateToken,
   upload.single("attachment"),
+  uploadToBlob,
   createInquiry
 );
 

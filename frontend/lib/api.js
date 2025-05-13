@@ -37,8 +37,6 @@ const axiosInstance = axios.create({
 
 // ✅ 요청 인터셉터 – accessToken + guest_token 자동 설정
 axiosInstance.interceptors.request.use((config) => {
-  console.log("📦 요청 URL:", config.baseURL + config.url); // ✅ 이 줄 추가
-  console.log("🪪 Authorization 헤더:", config.headers.Authorization); // ✅ 이 줄 추가
   // accessToken이 있으면 헤더에 자동 주입
   if (!config.headers.Authorization && inMemoryAccessToken) {
     config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
@@ -59,7 +57,6 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-// ✅ 응답 인터셉터 – accessToken 만료 시 재발급 처리
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
