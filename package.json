@@ -7,8 +7,10 @@
     "backend"
   ],
   "scripts": {
-    "build": "npm run build --prefix frontend",
-    "start": "npm install --prefix frontend && npm run build --prefix frontend && node backend/server.js",
+    "prestart": "echo ✅ 1. frontend install && npm install --prefix frontend",
+    "build": "echo ✅ 2. frontend build && npm run build --prefix frontend",
+    "serve": "echo ✅ 3. backend start && node backend/server.js",
+    "start": "npm run prestart && npm run build && npm run serve",
     "test": "echo 'skip test'"
   },
   "type": "commonjs",
