@@ -1,6 +1,6 @@
 // backend/controllers/adminController.js
 const db = require("../config/db");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const courseModel = require("../models/course.model");
 const paymentModel = require("../models/payment.model");
 const pointModel = require("../models/point.model");
