@@ -66,13 +66,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Next 앱 준비 후 나머지 요청 Next가 처리
-nextApp.prepare().then(() => {
-  app.all("*", (req, res) => {
-    return handle(req, res);
-  });
+console.log("✅ 서버 진입");
+console.log("✅ NODE_ENV:", process.env.NODE_ENV);
+console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
+console.log("✅ PORT:", PORT);
 
-  app.listen(PORT, () => {
-    console.log(`✅ [Express + Next] 서버 실행 중: http://localhost:${PORT}`);
+nextApp
+  .prepare()
+  .then(() => {
+    console.log("✅ nextApp 준비 완료");
+
+    app.all("*", (req, res) => {
+      return handle(req, res);
+    });
+
+    app.listen(PORT, () => {
+      console.log(`✅ [Express + Next] 서버 실행 중: http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ nextApp.prepare() 실패:", err);
   });
-});
