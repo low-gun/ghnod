@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const paymentModel = require("../models/payment.model");
 const pool = require("../config/db");
 const couponModel = require("../models/coupon.model");

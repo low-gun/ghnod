@@ -3,7 +3,7 @@ const KakaoStrategy = require("passport-kakao").Strategy;
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 require("dotenv").config();
 const db = require("../config/db");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 // ✅ Google OAuth 전략 설정
 passport.use(
