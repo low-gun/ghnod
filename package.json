@@ -1,6 +1,11 @@
 {
   "name": "ghnod",
+  "private": true,
   "version": "1.0.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "start": "node backend/server.js",
     "test": "echo 'skip test'"
