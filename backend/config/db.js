@@ -1,19 +1,22 @@
 require("dotenv").config();
 const mysql = require("mysql2");
 
-// ✅ MySQL 연결 (프라미스 방식으로 설정)
+// ✅ Azure 운영 환경용 MySQL 연결 (인증서 없이 SSL만 활성화)
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER,
+  host: process.env.DB_HOST || "ghnod-mysql.mysql.database.azure.com",
+  user: process.env.DB_USER || "mysqladmin",
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: true, // 인증서 경로 없이도 SSL 사용
+  },
 });
 
-// ✅ MySQL 연결 테스트
+// ✅ 연결 테스트
 pool.getConnection((err, connection) => {
   if (err) {
     console.error("❌ MySQL 연결 실패:", err);
@@ -23,5 +26,5 @@ pool.getConnection((err, connection) => {
   }
 });
 
-// ✅ Promise 방식으로 명확히 내보내기
+// ✅ Promise 방식 내보내기
 module.exports = pool.promise();
