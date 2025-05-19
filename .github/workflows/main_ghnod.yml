@@ -36,8 +36,6 @@ jobs:
           cd frontend
           npm install
           npx next build
-        env:
-          NEXT_DISABLE_SWC_DOWNLOAD: 1
 
       - name: 📂 Prepare release folder
         run: |
