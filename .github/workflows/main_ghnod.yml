@@ -28,8 +28,14 @@ jobs:
       - name: 📦 Install all dependencies (root with workspaces)
         run: npm ci
 
+      - name: 🧼 Clean SWC cache
+        run: rm -rf ~/.cache/next-swc
+
+      - name: 📦 Install frontend dependencies
+        run: npm install --workspace frontend
+
       - name: 🏗️ Build frontend
-        run: npm run build:frontend
+        run: npm run --workspace frontend build
 
       - name: 📂 Prepare release folder
         run: |
