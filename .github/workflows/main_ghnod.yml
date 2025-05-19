@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - name: ⬇️ Checkout repository
@@ -57,12 +56,13 @@ jobs:
           zip -r ../release.zip . \
             -x "**/node_modules/**" "**/.git/**" "**/uploads/**" "**/logs/**"
 
-      - name: 🔐 Login to Azure
+      - name: 🔐 Login to Azure using service principal
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6AA404EF095141E488CED1425D800B9D }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0FF0F26C64C448F885268A166A52D5E4 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F03E549235AA4731A787250BAFC38679 }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: 🚀 Deploy to Azure Web App
         id: deploy-to-webapp
