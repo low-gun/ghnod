@@ -25,17 +25,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: 📦 Install all dependencies (root with workspaces)
+      - name: 📦 Install all dependencies (root + workspace)
         run: npm ci
 
       - name: 🧼 Clean SWC cache
         run: rm -rf ~/.cache/next-swc
 
-      - name: 📦 Install frontend dependencies
-        run: npm install --workspace frontend
-
-      - name: 🏗️ Build frontend
-        run: npm run --workspace frontend build
+      - name: 📦 Install & Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
 
       - name: 📂 Prepare release folder
         run: |
