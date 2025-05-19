@@ -1,10 +1,12 @@
-# Node.js
+# Node.js 의존성/캐시
 node_modules/
 *.log
 .DS_Store
 
-# 환경설정
+# 환경설정 (모든 .env 변종 제외)
 .env
+.env.*
+!.env.example  # 참고용 템플릿 공유하고 싶을 경우
 
-# 불필요한 로컬 파일 저장소 (Azure Blob 대체)
+# 사용자 업로드 (Azure Blob 등 외부 저장소 대체)
 uploads/

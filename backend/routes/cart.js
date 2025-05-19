@@ -159,9 +159,8 @@ router.post("/migrate", authenticateToken, async (req, res) => {
   const guestToken = req.headers["x-guest-token"];
 
   if (!guestToken) {
-    return res
-      .status(400)
-      .json({ success: false, message: "guest_token 없음" });
+    console.warn("🔁 guest_token 없음 → 병합할 항목 없음 (204 No Content)");
+    return res.status(204).end();
   }
 
   try {

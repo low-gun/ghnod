@@ -7,31 +7,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
+      - name: 💾 Restore npm cache
+        uses: actions/cache@v3
         with:
-          node-version: "22.x"
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      # ✅ 루트 의존성 설치
-      - name: 📦 Install root dependencies
-        run: npm install
+      - name: 📦 Install all dependencies (root with workspaces)
+        run: npm ci
 
-      # ✅ 프론트엔드 의존성 설치 및 빌드
-      - name: 🏗️ Build frontend app
-        run: |
-          npm install --prefix frontend
-          npm run build --prefix frontend
+      - name: 🏗️ Build frontend
+        run: npm run build --prefix frontend
 
-      # ✅ 배포용 폴더 구성
-      - name: 📦 Prepare deployment folder
+      - name: 📂 Prepare release folder
         run: |
           mkdir -p release/frontend
           cp -r backend release/backend
@@ -41,39 +41,13 @@ jobs:
           cp package.json release/
           cp package-lock.json release/
 
-      # ✅ 최소 파일만 포함하여 압축
-      - name: 📦 Zip artifact for deployment (minimal)
+      - name: 📦 Zip for deployment
         run: |
           cd release
           zip -r ../release.zip . \
             -x "**/node_modules/**" "**/.git/**" "**/uploads/**" "**/logs/**"
 
-      - name: Upload artifact for deployment
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-app
-          path: release.zip
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: "Production"
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      - name: Login to Azure
+      - name: 🔐 Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6AA404EF095141E488CED1425D800B9D }}
@@ -86,4 +60,4 @@ jobs:
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: .
+          package: release.zip

@@ -338,7 +338,8 @@ router.post("/refresh-token", async (req, res) => {
   console.log("✅ 쿠키에서 받은 refreshToken:", refreshToken);
   console.log("✅ clientSessionId:", clientSessionId); // 디버깅용 로그도 OK
   if (!refreshToken) {
-    return res.status(400).json({ error: "Refresh Token이 필요합니다." });
+    console.warn("🔒 RefreshToken 없음 → 204 No Content");
+    return res.status(204).end();
   }
 
   try {
@@ -413,16 +414,9 @@ router.post("/logout", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   const clientSessionId = req.body.clientSessionId;
 
-  if (!refreshToken) {
-    return res
-      .status(400)
-      .json({ error: "로그아웃 실패: Refresh Token이 없습니다." });
-  }
-
-  if (!clientSessionId) {
-    return res
-      .status(400)
-      .json({ error: "로그아웃 실패: clientSessionId가 없습니다." });
+  if (!refreshToken || !clientSessionId) {
+    console.warn("🔒 로그아웃 정보 없음 → 204 No Content");
+    return res.status(204).end();
   }
 
   try {

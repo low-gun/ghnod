@@ -39,7 +39,7 @@ export default function Header() {
                 <img
                   src="/logo.png"
                   alt="Logo"
-                  style={{ width: "120px", cursor: "pointer" }}
+                  style={{ width: "120px", height: "60px", cursor: "pointer" }}
                 />
               </Link>
             );
