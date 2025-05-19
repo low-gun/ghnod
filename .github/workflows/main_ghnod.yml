@@ -25,14 +25,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: 📦 Install all dependencies (root with workspaces)
+      - name: 📦 Install backend dependencies
+        working-directory: backend
         run: npm install
 
-      - name: 📦 Install and Build frontend (SWC enabled)
-        run: |
-          cd frontend
-          npm install
-          npx next build
+      - name: 📦 Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: 🧼 Clean SWC cache (just in case)
+        run: rm -rf ~/.cache/next-swc
+
+      - name: 🛠️ Build frontend (Next.js with SWC)
+        working-directory: frontend
+        run: npm run build
 
       - name: 📂 Prepare release folder
         run: |
@@ -41,8 +47,9 @@ jobs:
           cp -r frontend/.next release/frontend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
+          cp backend/package.json release/backend/package.json
+          cp backend/server.js release/backend/server.js
           cp package.json release/
-          cp package-lock.json release/
 
       - name: 📦 Zip for deployment
         run: |
