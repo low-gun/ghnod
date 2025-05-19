@@ -31,11 +31,11 @@ jobs:
       - name: 🧼 Clean SWC cache
         run: rm -rf ~/.cache/next-swc
 
-      - name: 📦 Install and Build frontend (direct mode)
+      - name: 📦 Install and Build frontend safely
         run: |
           cd frontend
           npm install
-          npm run build
+          npx next build
         env:
           NEXT_DISABLE_SWC_DOWNLOAD: 1
 
