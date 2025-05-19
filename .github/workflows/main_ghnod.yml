@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: 🏗️ Build frontend
-        run: npm run build --prefix frontend
+        run: npm run build:frontend
 
       - name: 📂 Prepare release folder
         run: |
