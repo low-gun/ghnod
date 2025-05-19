@@ -26,16 +26,13 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: 📦 Install all dependencies (root with workspaces)
-        run: npm ci
+        run: npm install
 
-      - name: 🧼 Clean SWC cache
-        run: rm -rf ~/.cache/next-swc
-
-      - name: 📦 Install and Build frontend (safe & enforced)
+      - name: 📦 Install and Build frontend (SWC enabled)
         run: |
           cd frontend
           npm install
-          NEXT_DISABLE_SWC_DOWNLOAD=1 npx next build
+          npx next build
 
       - name: 📂 Prepare release folder
         run: |
