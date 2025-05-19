@@ -36,7 +36,7 @@ jobs:
           mkdir -p release/frontend
           cp -r backend release/backend
           cp -r frontend/.next release/frontend/.next
-          cp -r frontend/public release/frontend/public
+          [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
           cp package.json release/
           cp package-lock.json release/
