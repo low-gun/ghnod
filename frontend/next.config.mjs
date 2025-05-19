@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: false, // ✅ SWC 완전 비활성화
 
   async rewrites() {
     return [
       {
-        source: "/uploads/:path*", // ✅ 추가
+        source: "/uploads/:path*",
         destination: "http://localhost:5001/uploads/:path*",
       },
       {
