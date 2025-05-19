@@ -43,6 +43,7 @@ jobs:
         run: |
           mkdir -p release/frontend
           cp -r backend release/backend
+          cp -r backend/node_modules release/backend/node_modules
           cp -r frontend/.next release/frontend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
@@ -54,7 +55,7 @@ jobs:
         run: |
           cd release
           zip -r ../release.zip . \
-            -x "**/node_modules/**" "**/.git/**" "**/uploads/**" "**/logs/**"
+            -x "**/.git/**" "**/uploads/**" "**/logs/**"
 
       - name: 🔐 Login to Azure using service principal
         uses: azure/login@v2
