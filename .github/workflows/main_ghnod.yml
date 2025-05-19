@@ -31,11 +31,11 @@ jobs:
       - name: 🧼 Clean SWC cache
         run: rm -rf ~/.cache/next-swc
 
-      - name: 📦 Install and Build frontend safely
+      - name: 📦 Install and Build frontend (safe & enforced)
         run: |
           cd frontend
           npm install
-          npx next build
+          NEXT_DISABLE_SWC_DOWNLOAD=1 npx next build
 
       - name: 📂 Prepare release folder
         run: |
