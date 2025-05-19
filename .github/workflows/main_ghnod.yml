@@ -24,10 +24,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: 📦 Install backend dependencies
-        working-directory: backend
-        run: npm install
-
       - name: 📦 Install frontend dependencies
         working-directory: frontend
         run: npm install
@@ -43,13 +39,17 @@ jobs:
         run: |
           mkdir -p release/frontend
           cp -r backend release/backend
-          cp -r backend/node_modules release/backend/node_modules
           cp -r frontend/.next release/frontend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
           cp backend/package.json release/backend/package.json
           cp backend/server.js release/backend/server.js
           cp package.json release/
+
+      - name: 📦 Install backend dependencies into release folder (prod only)
+        run: |
+          cd release/backend
+          npm install --omit=dev
 
       - name: 📦 Zip for deployment
         run: |
