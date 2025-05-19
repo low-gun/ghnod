@@ -1,5 +1,7 @@
 // ✅ backend/server.js – 통합형 완성본
-require("dotenv").config();
+require("dotenv").config({
+  path: process.env.NODE_ENV === "production" ? ".env.production" : ".env",
+});
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");

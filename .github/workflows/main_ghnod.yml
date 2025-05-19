@@ -20,23 +20,33 @@ jobs:
         with:
           node-version: "22.x"
 
-      # ✅ 전체 워크스페이스 의존성 설치
-      - name: 📦 Install all workspace dependencies
+      # ✅ 루트 의존성 설치
+      - name: 📦 Install root dependencies
         run: npm install
 
-      # ✅ 프론트엔드 빌드 (frontend/.next 생성됨)
+      # ✅ 프론트엔드 의존성 설치 및 빌드
       - name: 🏗️ Build frontend app
-        run: npm run build
-
-      # ✅ 서버 테스트 (옵션)
-      - name: ✅ Test (optional)
-        run: npm run test --if-present
-
-      # ✅ node_modules, .next 등 제외하고 zip
-      - name: 📦 Zip artifact for deployment (clean)
         run: |
-          zip -r release.zip . \
-            -x "**/node_modules/**" "**/.next/**" "**/.git/**" "**/uploads/**" "**/logs/**"
+          npm install --prefix frontend
+          npm run build --prefix frontend
+
+      # ✅ 배포용 폴더 구성
+      - name: 📦 Prepare deployment folder
+        run: |
+          mkdir release
+          cp -r backend release/backend
+          cp -r frontend/.next release/frontend/.next
+          cp -r frontend/public release/frontend/public
+          cp -r frontend/package.json release/frontend/package.json
+          cp package.json release/
+          cp package-lock.json release/
+
+      # ✅ 최소 파일만 포함하여 압축
+      - name: 📦 Zip artifact for deployment (minimal)
+        run: |
+          cd release
+          zip -r ../release.zip . \
+            -x "**/node_modules/**" "**/.git/**" "**/uploads/**" "**/logs/**"
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
