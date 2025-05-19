@@ -1,13 +1,12 @@
-# Next.js
+# ✅ Next.js 빌드 결과
 .next/
 out/
 
-# 환경변수
-.env.local
-.env.development
-.env.production
+# ✅ 환경 변수 파일
+.env*
+!.env.example   # 필요 시 예시 템플릿은 Git 포함 허용
 
-# 기타
+# ✅ 시스템/캐시/패키지
 node_modules/
 *.log
 .DS_Store

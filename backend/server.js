@@ -1,13 +1,18 @@
 // ✅ backend/server.js – 통합형 완성본
-require("dotenv").config({
-  path: process.env.NODE_ENV === "production" ? ".env.production" : ".env",
-});
+const path = require("path"); // 이 줄이 dotenv보다 위에 있어야 안전
+
+const envPath =
+  process.env.NODE_ENV === "production"
+    ? path.resolve(__dirname, ".env.production")
+    : path.resolve(__dirname, ".env.local");
+
+require("dotenv").config({ path: envPath });
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const db = require("./config/db");
 const passport = require("./config/passport");
-const path = require("path");
 const next = require("next"); // ✅ 추가
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -22,12 +27,24 @@ const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net",
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
 app.use(cookieParser());
 app.use(passport.initialize());
 
