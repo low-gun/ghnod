@@ -31,6 +31,10 @@ jobs:
       - name: 🧼 Clean SWC cache (just in case)
         run: rm -rf ~/.cache/next-swc
 
+      - name: 🧪 Debug env before build
+        working-directory: frontend
+        run: cat .env.production
+
       - name: 🛠️ Build frontend (Next.js with SWC)
         working-directory: frontend
         run: npm run build
