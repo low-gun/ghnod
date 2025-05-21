@@ -31,12 +31,10 @@ jobs:
       - name: 🧼 Clean SWC cache (just in case)
         run: rm -rf ~/.cache/next-swc
 
-      - name: 🧪 Debug env before build
-        working-directory: frontend
-        run: cat .env.production
-
       - name: 🛠️ Build frontend (Next.js with SWC)
         working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
       - name: 📂 Prepare release folder
