@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "proxy": "http://localhost:5001",
   "scripts": {
     "clean": "rimraf .next",
     "dev": "npm run clean && next dev",
