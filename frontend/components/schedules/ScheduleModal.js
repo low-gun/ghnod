@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 
 export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
@@ -20,7 +20,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
   const isEdit = Boolean(scheduleId);
 
   useEffect(() => {
-    axios.get("/api/admin/products").then((res) => {
+    api.get("/api/admin/products").then((res) => {
       if (res.data.success) setProducts(res.data.products);
     });
   }, []);
@@ -28,8 +28,9 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
   useEffect(() => {
     if (!scheduleId) return;
     setLoading(true);
-    axios
+    api
       .get(`/api/admin/schedules/${scheduleId}`)
+
       .then((res) => {
         if (res.data.success) {
           const data = res.data.schedule;
@@ -66,7 +67,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
         ? `/api/admin/schedules/${scheduleId}`
         : "/api/admin/schedules";
 
-      const res = await axios[method](url, payload);
+      const res = await api[method](url, payload);
       if (res.data.success) {
         alert(isEdit ? "수정 완료!" : "등록 완료!");
         onRefresh?.();
@@ -84,7 +85,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
     if (!isEdit || !scheduleId) return;
     if (confirm("정말로 이 일정을 삭제(숨김처리)하시겠습니까?")) {
       try {
-        const res = await axios.delete(`/api/admin/schedules/${scheduleId}`);
+        const res = await api.delete(`/api/admin/schedules/${scheduleId}`);
         if (res.data.success) {
           alert("삭제 완료");
           onRefresh?.();
