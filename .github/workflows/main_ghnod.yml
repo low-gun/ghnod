@@ -55,7 +55,9 @@ jobs:
         run: npm ci --omit=dev
 
       - name: 🧰 Install zip (for Ubuntu)
-        run: sudo apt-get update && sudo apt-get install -y zip
+        run: |
+          apt-get update
+          apt-get install -y zip
 
       - name: 📦 Zip for deployment
         run: |
@@ -63,11 +65,11 @@ jobs:
           zip -r ../release.zip . \
             -x "**/.git/**" "**/uploads/**" "**/logs/**"
 
-            - name: ⬆️ Upload release.zip as artifact
-            uses: actions/upload-artifact@v3.1.3
-            with:
-              name: release-zip
-              path: release.zip
+      - name: ⬆️ Upload release.zip as artifact
+        uses: actions/upload-artifact@v3.1.3
+        with:
+          name: release-zip
+          path: release.zip
 
       - name: 🧪 Check release.zip for hardcoded localhost
         run: unzip -p release.zip | grep -ao 'localhost:5001' || echo "✅ localhost 없음"
