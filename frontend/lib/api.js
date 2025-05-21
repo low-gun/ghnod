@@ -29,20 +29,18 @@ export const setExpectedRole = (role) => {
   expectedRole = role;
 };
 
-// axios 인스턴스 생성
+// ✅ 수정: baseURL fallback 제거
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001/api",
-  withCredentials: true, // ✅ refreshToken 쿠키 자동 전송
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  withCredentials: true,
 });
 
 // ✅ 요청 인터셉터 – accessToken + guest_token 자동 설정
 axiosInstance.interceptors.request.use((config) => {
-  // accessToken이 있으면 헤더에 자동 주입
   if (!config.headers.Authorization && inMemoryAccessToken) {
     config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
   }
 
-  // guest_token을 로그인 여부에 따라 조건적으로 붙임
   if (typeof window !== "undefined") {
     const guestToken = localStorage.getItem("guest_token");
     const user = localStorage.getItem("user");
@@ -76,13 +74,11 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        // ✅ 수정: /api 붙이고 baseURL 제거 → rewrites() 통해 처리
         const refreshResponse = await axios.post(
-          "/auth/refresh-token",
+          "/api/auth/refresh-token",
           {},
           {
-            baseURL:
-              process.env.NEXT_PUBLIC_API_BASE_URL ||
-              "http://localhost:5001/api",
             withCredentials: true,
           }
         );
