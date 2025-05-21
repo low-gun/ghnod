@@ -54,20 +54,6 @@ jobs:
         working-directory: release/backend
         run: npm ci --omit=dev
 
-      - name: 🧰 Install zip (for Ubuntu)
-        run: |
-          apt-get update
-          apt-get install -y zip
-
-      - name: 📦 Zip for deployment
-        run: |
-          cd release
-          zip -r ../release.zip . \
-            -x "**/.git/**" "**/uploads/**" "**/logs/**"
-
-      - name: 🧪 Check release.zip for hardcoded localhost
-        run: unzip -p release.zip | grep -ao 'localhost:5001' || echo "✅ localhost 없음"
-
       - name: 🔐 Login to Azure using service principal
         uses: azure/login@v2
         with:
@@ -79,4 +65,4 @@ jobs:
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: release.zip
+          package: release
