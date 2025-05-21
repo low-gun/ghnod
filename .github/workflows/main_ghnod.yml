@@ -28,8 +28,11 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: 🧼 Clean SWC cache (just in case)
+      - name: 🧼 Clean SWC cache
         run: rm -rf ~/.cache/next-swc
+
+      - name: 🧹 Clean .next directory
+        run: rm -rf frontend/.next
 
       - name: 🛠️ Build frontend (Next.js with SWC)
         working-directory: frontend
@@ -50,7 +53,7 @@ jobs:
           cp backend/server.js release/backend/server.js
           cp package.json release/
 
-      - name: 📦 Install backend dependencies into release folder (prod only)
+      - name: 📦 Install backend dependencies into release folder
         working-directory: release/backend
         run: npm ci --omit=dev
 
