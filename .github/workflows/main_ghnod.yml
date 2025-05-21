@@ -42,6 +42,7 @@ jobs:
           cp -r frontend/.next release/frontend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
+          cp frontend/.env.production release/frontend/.env.production
           cp backend/package.json release/backend/package.json
           cp backend/package-lock.json release/backend/package-lock.json
           cp backend/server.js release/backend/server.js
