@@ -62,6 +62,9 @@ jobs:
           zip -r ../release.zip . \
             -x "**/.git/**" "**/uploads/**" "**/logs/**"
 
+      - name: 🧪 Check release.zip for hardcoded localhost
+        run: unzip -p release.zip | grep -ao 'localhost:5001' || echo "✅ localhost 없음"
+
       - name: 🔐 Login to Azure using service principal
         uses: azure/login@v2
         with:
