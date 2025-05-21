@@ -43,13 +43,13 @@ jobs:
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
           cp backend/package.json release/backend/package.json
+          cp backend/package-lock.json release/backend/package-lock.json
           cp backend/server.js release/backend/server.js
           cp package.json release/
 
       - name: 📦 Install backend dependencies into release folder (prod only)
-        run: |
-          cd release/backend
-          npm install --omit=dev
+        working-directory: release/backend
+        run: npm ci --omit=dev
 
       - name: 📦 Zip for deployment
         run: |
