@@ -54,6 +54,9 @@ jobs:
         working-directory: release/backend
         run: npm ci --omit=dev
 
+      - name: 🧪 Check for hardcoded localhost
+        run: grep -rao 'localhost:5001' release/ || echo "✅ localhost 없음"
+
       - name: 🔐 Login to Azure using service principal
         uses: azure/login@v2
         with:
