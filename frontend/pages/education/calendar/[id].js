@@ -31,11 +31,12 @@ export async function getServerSideProps(context) {
     if (!id) return { notFound: true };
 
     const res = await axios.get(
-      `http://localhost:3000/api/education/schedules?id=${id}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules?id=${id}`,
       {
         headers: { Cookie: cookie },
       }
     );
+
     const data = res.data;
 
     let schedule = null;
