@@ -142,7 +142,7 @@ export async function getServerSideProps(context) {
     const cookie = context.req.headers.cookie || "";
 
     const res = await axios.get(
-      "http://localhost:3000/api/education/schedules",
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules`,
       {
         headers: { Cookie: cookie },
       }
