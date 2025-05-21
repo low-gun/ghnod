@@ -84,6 +84,8 @@ app.use((req, res, next) => {
   if (req.url === "/favicon.ico") return res.status(204).end();
   next();
 });
+// server.js 맨 아래쪽에 추가
+app.use("/debug", require("./routes/debug"));
 
 console.log("✅ 서버 진입");
 console.log("✅ NODE_ENV:", process.env.NODE_ENV);
