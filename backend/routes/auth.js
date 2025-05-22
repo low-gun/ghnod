@@ -112,8 +112,22 @@ router.post("/login", async (req, res) => {
     }
 
     // OAuth 계정 비밀번호 로그인 불가
-    const isOAuth = await bcrypt.compare("google_oauth_dummy", user.password);
-    if (isOAuth) {
+    // OAuth 계정 비밀번호 로그인 불가 (DEBUG 포함)
+    const dummyCheck = await bcrypt.compare(
+      "google_oauth_dummy",
+      user.password
+    );
+    console.log(
+      "📌 [OAuth 차단 체크] google_oauth_dummy 비교 결과:",
+      dummyCheck
+    );
+    console.log("📌 [OAuth 차단 체크] 입력 비밀번호:", password);
+    console.log("📌 [OAuth 차단 체크] DB 해시:", user.password);
+
+    if (dummyCheck) {
+      console.warn(
+        "❌ 차단됨: user.password가 google_oauth_dummy 해시로 저장됨"
+      );
       return res.status(403).json({
         success: false,
         message: "Google OAuth 계정은 비밀번호 로그인을 사용할 수 없습니다.",

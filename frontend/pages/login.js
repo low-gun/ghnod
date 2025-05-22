@@ -74,7 +74,8 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error("로그인 중 오류:", err);
-      toast.error("로그인 요청 실패");
+      const msg = err.response?.data?.message || "로그인 요청 실패";
+      toast.error(msg);
     }
   };
 
