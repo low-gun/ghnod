@@ -49,6 +49,9 @@ jobs:
           cp -r backend release/backend
           cp backend/server.js release/server.js
 
+      - name: 🧹 Clean previous node_modules (just in case)
+        run: rm -rf release/node_modules
+
       - name: 🛠 Force CommonJS for Azure
         run: |
           echo "{ \"type\": \"commonjs\" }" > release/package.json
