@@ -12,6 +12,8 @@ const UPLOADS_BASE = isProd
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: false, // ✅ SWC 완전 비활성화
+  output: "standalone", // ✅ 추가
+  distDir: ".next", // ✅ 명시적으로 빌드 결과 디렉토리 설정
 
   async rewrites() {
     return [
