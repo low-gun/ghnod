@@ -40,18 +40,17 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-      - name: 📂 Prepare release folder
+      - name: 📂 Prepare release folder (standalone Next.js)
         run: |
-          mkdir -p release/frontend
+          mkdir -p release
+          cp -r frontend/.next/standalone/* release/
+          cp -r frontend/public release/public
+          cp frontend/package.json release/package.json
+          cp frontend/.env.production release/.env.production
           cp -r backend release/backend
-          cp -r frontend/.next release/frontend/.next
-          [ -d frontend/public ] && cp -r frontend/public release/frontend/public
-          cp frontend/package.json release/frontend/package.json
-          cp frontend/.env.production release/frontend/.env.production
           cp backend/package.json release/backend/package.json
           cp backend/package-lock.json release/backend/package-lock.json
           cp backend/server.js release/backend/server.js
-          cp package.json release/
 
       - name: 📦 Install backend dependencies into release folder
         working-directory: release/backend
