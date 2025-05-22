@@ -47,7 +47,10 @@ jobs:
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/.env.production release/frontend/.env.production
           cp -r backend release/backend
-          cp backend/server.js release/server.js  # ✅ 핵심 추가
+          cp backend/server.js release/server.js  # ✅ server.js 루트에 복사
+
+      - name: 🛠 Force CommonJS for Azure
+        run: echo '{ "type": "commonjs" }' > release/package.json  # ✅ CommonJS 강제 적용
 
       - name: 📦 Install backend dependencies
         working-directory: release/backend
