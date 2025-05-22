@@ -42,8 +42,8 @@ jobs:
 
       - name: 📂 Prepare release folder (Express + Next.js)
         run: |
-          mkdir -p release/frontend
-          cp -r frontend/.next release/frontend/.next
+          mkdir -p release/backend/.next
+          cp -r frontend/.next release/backend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/package.json release/frontend/package.json
           cp frontend/.env.production release/frontend/.env.production
