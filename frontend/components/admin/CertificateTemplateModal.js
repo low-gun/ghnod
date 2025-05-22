@@ -51,8 +51,7 @@ export default function CertificateTemplateModal({
       // 업로드 성공했을 때
       if (res.data.success) {
         const BASE_UPLOAD_URL =
-          process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "") ||
-          "http://localhost:5001";
+          process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "") || "";
         const finalUrl = `${BASE_UPLOAD_URL}${res.data.url}`; // ✅ 포트 5001 붙여서 완성
         setBackgroundUrl(finalUrl);
         alert("배경이미지 업로드 완료!");
