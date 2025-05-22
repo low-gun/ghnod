@@ -48,6 +48,7 @@ jobs:
           cp frontend/package.json release/frontend/package.json
           cp frontend/.env.production release/frontend/.env.production
           cp -r backend release/backend
+          cp backend/server.js release/server.js  # ✅ 핵심 추가
 
       - name: 📦 Install backend dependencies
         working-directory: release/backend
