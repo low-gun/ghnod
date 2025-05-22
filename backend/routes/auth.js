@@ -112,8 +112,8 @@ router.post("/login", async (req, res) => {
     }
 
     // OAuth 계정 비밀번호 로그인 불가
-    const googleOAuthHash = await bcrypt.hash("google_oauth_dummy", 10);
-    if (user.password === googleOAuthHash) {
+    const isOAuth = await bcrypt.compare("google_oauth_dummy", user.password);
+    if (isOAuth) {
       return res.status(403).json({
         success: false,
         message: "Google OAuth 계정은 비밀번호 로그인을 사용할 수 없습니다.",
