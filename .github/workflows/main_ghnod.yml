@@ -28,11 +28,11 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: 🧼 Clean SWC cache
-        run: rm -rf ~/.cache/next-swc
-
-      - name: 🧹 Clean .next directory
-        run: rm -rf frontend/.next
+      - name: 🧼 Clean SWC + Next.js cache
+        run: |
+          rm -rf ~/.cache/next-swc
+          rm -rf frontend/.next
+          rm -rf frontend/.next/cache/webpack
 
       - name: 🛠️ Build frontend (Next.js with SWC)
         working-directory: frontend
