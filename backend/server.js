@@ -16,7 +16,10 @@ const passport = require("./config/passport");
 const next = require("next"); // ✅ 추가
 
 const isDev = process.env.NODE_ENV !== "production";
-const nextApp = next({ dev: isDev, dir: path.join(__dirname, "../frontend") });
+const nextApp = next({
+  dev: isDev,
+  dir: path.join(__dirname, "../frontend"),
+});
 const handle = nextApp.getRequestHandler();
 
 const PORT = process.env.PORT || 5001;
