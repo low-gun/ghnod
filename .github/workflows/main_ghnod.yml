@@ -51,7 +51,7 @@ jobs:
           mkdir -p release
           cp -r frontend/.next release/.next
           cp -r frontend/public release/public
-          cp -r frontend/pages release/pages              # ✅ 누락된 pages 폴더 추가
+          cp -r frontend/pages release/pages
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
@@ -66,8 +66,6 @@ jobs:
           ls -al release/.next || echo "❌ .next not found"
           echo "---- pages folder ----"
           ls -al release/pages || echo "❌ pages not found"
-          echo "---- package.json (dependencies) ----"
-          grep -A 10 '"dependencies"' release/package.json || echo "❌ No dependencies section found"
 
       - name: Clean previous node_modules (just in case)
         run: rm -rf release/node_modules
@@ -79,6 +77,11 @@ jobs:
         run: |
           cp backend/package.json release/package.json
           jq '.scripts.start = "node server.js" | .main = "server.js"' release/package.json > tmp.json && mv tmp.json release/package.json
+
+      - name: DEBUG - Show release/package.json dependencies
+        run: |
+          echo "---- Final release/package.json ----"
+          cat release/package.json
 
       - name: Install runtime dependencies at root
         working-directory: release
