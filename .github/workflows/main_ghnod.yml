@@ -40,14 +40,13 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-      - name: Prepare release folder (frontend/backend structure)
+      - name: Prepare release folder (merge frontend/backend into root)
         run: |
           mkdir -p release/frontend
           cp -r frontend/.next release/frontend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/.env.production release/frontend/.env.production
-          cp frontend/package.json release/frontend/package.json
-          cp -r backend release/backend
+          cp -r backend/* release/
           cp backend/server.js release/server.js
 
       - name: DEBUG - Check deployed key files
@@ -55,23 +54,39 @@ jobs:
           echo "---- server.js (first 10 lines) ----"
           head -n 10 release/server.js || echo "❌ server.js not found"
           echo "---- passport.js (first 10 lines) ----"
-          head -n 10 release/backend/config/passport.js || echo "❌ passport.js not found"
+          head -n 10 release/config/passport.js || echo "❌ passport.js not found"
           echo "---- .env.production ----"
           cat release/frontend/.env.production || echo "❌ .env.production not found"
-          echo "---- backend/package.json (dependencies) ----"
-          grep -A 10 '"dependencies"' release/backend/package.json || echo "❌ No dependencies section found"
+          echo "---- package.json (dependencies) ----"
+          grep -A 10 '"dependencies"' release/package.json || echo "❌ No dependencies section found"
 
       - name: Clean previous node_modules (just in case)
-        run: |
-          rm -rf release/node_modules
-          rm -rf release/backend/node_modules
+        run: rm -rf release/node_modules
 
-      - name: Force CommonJS for Azure
+      - name: Create root package.json with start script
         run: |
-          echo "{ \"type\": \"commonjs\" }" > release/package.json
+          echo '{
+            "type": "commonjs",
+            "main": "server.js",
+            "scripts": {
+              "start": "node server.js"
+            },
+            "dependencies": {
+              "@azure/storage-blob": "^12.27.0",
+              "bcryptjs": "^3.0.2",
+              "cookie-parser": "^1.4.7",
+              "cors": "^2.8.5",
+              "dotenv": "^16.4.7",
+              "express": "^4.21.2",
+              "jsonwebtoken": "^9.0.2",
+              "multer": "^1.4.5-lts.2",
+              "mysql2": "^3.13.0",
+              "puppeteer": "^24.7.2"
+            }
+          }' > release/package.json
 
-      - name: Install backend dependencies
-        working-directory: release/backend
+      - name: Install runtime dependencies at root
+        working-directory: release
         run: npm ci --omit=dev
 
       - name: Check for hardcoded localhost
