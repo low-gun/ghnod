@@ -19,7 +19,7 @@ const next = require("next");
 const isDev = process.env.NODE_ENV !== "production";
 const nextApp = next({
   dev: isDev,
-  dir: path.join(__dirname, "../frontend"),
+  dir: ".", // ✅ 이제 정확히 /home/site/wwwroot 기준으로 .next, pages, public 등을 인식
 });
 const handle = nextApp.getRequestHandler();
 
