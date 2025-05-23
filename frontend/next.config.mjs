@@ -11,6 +11,7 @@ const UPLOADS_BASE = isProd
 
 const nextConfig = {
   reactStrictMode: true,
+  output: "standalone", // ← 이 줄 추가
 
   async rewrites() {
     return [

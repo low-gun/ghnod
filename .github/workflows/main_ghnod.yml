@@ -42,10 +42,10 @@ jobs:
 
       - name: Prepare release folder (merge frontend/backend into root)
         run: |
-          mkdir -p release/frontend
-          cp -r frontend/.next release/frontend/.next
-          [ -d frontend/public ] && cp -r frontend/public release/frontend/public
-          cp frontend/.env.production release/frontend/.env.production
+          mkdir -p release
+          cp -r frontend/.next release/.next                     # ✅ 수정: .next는 루트로
+          [ -d frontend/public ] && cp -r frontend/public release/public
+          cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
 
@@ -56,7 +56,7 @@ jobs:
           echo "---- passport.js (first 10 lines) ----"
           head -n 10 release/config/passport.js || echo "❌ passport.js not found"
           echo "---- .env.production ----"
-          cat release/frontend/.env.production || echo "❌ .env.production not found"
+          cat release/.env.production || echo "❌ .env.production not found"
           echo "---- package.json (dependencies) ----"
           grep -A 10 '"dependencies"' release/package.json || echo "❌ No dependencies section found"
 
