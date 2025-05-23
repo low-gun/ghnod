@@ -43,7 +43,7 @@ jobs:
       - name: Prepare release folder (merge frontend/backend into root)
         run: |
           mkdir -p release
-          cp -r frontend/.next release/.next                     # ✅ 수정: .next는 루트로
+          cp -r frontend/.next release/.next
           [ -d frontend/public ] && cp -r frontend/public release/public
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
@@ -63,28 +63,10 @@ jobs:
       - name: Clean previous node_modules (just in case)
         run: rm -rf release/node_modules
 
-      - name: Create root package.json with start script
+      - name: Create root package.json from backend and fix start script
         run: |
-          echo '{
-            "type": "commonjs",
-            "main": "server.js",
-            "scripts": {
-              "start": "node server.js"
-            },
-            "dependencies": {
-              "@azure/storage-blob": "^12.27.0",
-              "bcryptjs": "^3.0.2",
-              "cookie-parser": "^1.4.7",
-              "cors": "^2.8.5",
-              "dotenv": "^16.4.7",
-              "express": "^4.21.2",
-              "jsonwebtoken": "^9.0.2",
-              "multer": "^1.4.5-lts.2",
-              "mysql2": "^3.13.0",
-              "puppeteer": "^24.7.2"
-              "passport": "^0.6.0"              # ✅ 이 줄 추가!
-            }
-          }' > release/package.json
+          cp backend/package.json release/package.json
+          jq '.scripts.start = "node server.js" | .main = "server.js"' release/package.json > tmp.json && mv tmp.json release/package.json
 
       - name: Install runtime dependencies at root
         working-directory: release
