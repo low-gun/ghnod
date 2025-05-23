@@ -49,8 +49,17 @@ jobs:
           cp -r backend release/backend
           cp backend/server.js release/server.js
 
+      - name: 🕵️ DEBUG: Check server.js and passport.js content
+        run: |
+          echo "---- server.js (first 10 lines) ----"
+          head -n 10 release/server.js || echo "❌ server.js not found"
+          echo "---- passport.js (first 10 lines) ----"
+          head -n 10 release/backend/config/passport.js || echo "❌ passport.js not found"
+
       - name: 🧹 Clean previous node_modules (just in case)
-        run: rm -rf release/node_modules
+        run: |
+          rm -rf release/node_modules
+          rm -rf release/backend/node_modules
 
       - name: 🛠 Force CommonJS for Azure
         run: |
