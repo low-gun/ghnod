@@ -13,10 +13,10 @@ jobs:
       contents: read
 
     steps:
-      - name: ⬇️ Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 💾 Restore npm cache
+      - name: Restore npm cache
         uses: actions/cache@v3
         with:
           path: ~/.npm
@@ -24,23 +24,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: 📦 Install frontend dependencies
+      - name: Install frontend dependencies
         working-directory: frontend
         run: npm install
 
-      - name: 🧼 Clean SWC + Next.js cache
+      - name: Clean SWC + Next.js cache
         run: |
           rm -rf ~/.cache/next-swc
           rm -rf frontend/.next
           rm -rf frontend/.next/cache/webpack
 
-      - name: 🛠️ Build frontend (Next.js with SWC)
+      - name: Build frontend (Next.js with SWC)
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-      - name: 📂 Prepare release folder (keep original frontend/backend structure)
+      - name: Prepare release folder (keep original frontend/backend structure)
         run: |
           mkdir -p release/frontend
           cp -r frontend/.next release/frontend/.next
@@ -49,35 +49,35 @@ jobs:
           cp -r backend release/backend
           cp backend/server.js release/server.js
 
-      - name: 🕵️ DEBUG: Check server.js and passport.js content
+      - name: DEBUG - Check deployed server.js and passport.js
         run: |
           echo "---- server.js (first 10 lines) ----"
           head -n 10 release/server.js || echo "❌ server.js not found"
           echo "---- passport.js (first 10 lines) ----"
           head -n 10 release/backend/config/passport.js || echo "❌ passport.js not found"
 
-      - name: 🧹 Clean previous node_modules (just in case)
+      - name: Clean previous node_modules (just in case)
         run: |
           rm -rf release/node_modules
           rm -rf release/backend/node_modules
 
-      - name: 🛠 Force CommonJS for Azure
+      - name: Force CommonJS for Azure
         run: |
           echo "{ \"type\": \"commonjs\" }" > release/package.json
 
-      - name: 📦 Install backend dependencies
+      - name: Install backend dependencies
         working-directory: release/backend
         run: npm ci --omit=dev
 
-      - name: 🧪 Check for hardcoded localhost
+      - name: Check for hardcoded localhost
         run: grep -rao 'localhost:5001' release/ || echo "✅ localhost 없음"
 
-      - name: 🔐 Login to Azure using service principal
+      - name: Login to Azure using service principal
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 🚀 Deploy to Azure Web App
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
