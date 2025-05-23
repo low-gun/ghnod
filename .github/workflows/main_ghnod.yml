@@ -40,21 +40,26 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-      - name: Prepare release folder (keep original frontend/backend structure)
+      - name: Prepare release folder (frontend/backend structure)
         run: |
           mkdir -p release/frontend
           cp -r frontend/.next release/frontend/.next
           [ -d frontend/public ] && cp -r frontend/public release/frontend/public
           cp frontend/.env.production release/frontend/.env.production
+          cp frontend/package.json release/frontend/package.json
           cp -r backend release/backend
           cp backend/server.js release/server.js
 
-      - name: DEBUG - Check deployed server.js and passport.js
+      - name: DEBUG - Check deployed key files
         run: |
           echo "---- server.js (first 10 lines) ----"
           head -n 10 release/server.js || echo "❌ server.js not found"
           echo "---- passport.js (first 10 lines) ----"
           head -n 10 release/backend/config/passport.js || echo "❌ passport.js not found"
+          echo "---- .env.production ----"
+          cat release/frontend/.env.production || echo "❌ .env.production not found"
+          echo "---- backend/package.json (dependencies) ----"
+          grep -A 10 '"dependencies"' release/backend/package.json || echo "❌ No dependencies section found"
 
       - name: Clean previous node_modules (just in case)
         run: |
