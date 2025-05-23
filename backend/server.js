@@ -7,13 +7,14 @@ const envPath =
     : path.resolve(__dirname, ".env.local");
 
 require("dotenv").config({ path: envPath });
+console.log("✅ .env 로딩됨:", envPath);
 
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const db = require("./config/db");
 const passport = require("./config/passport");
-const next = require("next"); // ✅ 추가
+const next = require("next");
 
 const isDev = process.env.NODE_ENV !== "production";
 const nextApp = next({
@@ -25,11 +26,17 @@ const handle = nextApp.getRequestHandler();
 const PORT = process.env.PORT || 5001;
 const app = express();
 
+console.log("✅ 서버 진입");
+console.log("✅ NODE_ENV:", process.env.NODE_ENV);
+console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
+console.log("✅ PORT:", PORT);
+
 // ✅ 미들웨어
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 const allowedOrigins = [
   "http://localhost:3000",
   "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net",
@@ -87,13 +94,11 @@ app.use((req, res, next) => {
   if (req.url === "/favicon.ico") return res.status(204).end();
   next();
 });
-// server.js 맨 아래쪽에 추가
+
 app.use("/debug", require("./routes/debug"));
 
-console.log("✅ 서버 진입");
-console.log("✅ NODE_ENV:", process.env.NODE_ENV);
-console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
-console.log("✅ PORT:", PORT);
+// ✅ nextApp 준비 및 서버 실행
+console.log("✅ nextApp.prepare() 시작");
 
 nextApp
   .prepare()
@@ -103,6 +108,8 @@ nextApp
     app.all("*", (req, res) => {
       return handle(req, res);
     });
+
+    console.log("✅ listen() 호출 전");
 
     app.listen(PORT, () => {
       console.log(`✅ [Express + Next] 서버 실행 중: http://localhost:${PORT}`);
