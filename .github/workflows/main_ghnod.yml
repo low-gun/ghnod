@@ -63,6 +63,9 @@ jobs:
       - name: Clean previous node_modules (just in case)
         run: rm -rf release/node_modules
 
+      - name: Install jq (JSON processor)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Create root package.json from backend and fix start script
         run: |
           cp backend/package.json release/package.json
