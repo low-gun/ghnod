@@ -51,6 +51,7 @@ jobs:
           mkdir -p release
           cp -r frontend/.next release/.next
           cp -r frontend/public release/public
+          cp -r frontend/pages release/pages              # ✅ 누락된 pages 폴더 추가
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
@@ -63,6 +64,8 @@ jobs:
           cat release/.env.production || echo "❌ .env.production not found"
           echo "---- .next folder ----"
           ls -al release/.next || echo "❌ .next not found"
+          echo "---- pages folder ----"
+          ls -al release/pages || echo "❌ pages not found"
           echo "---- package.json (dependencies) ----"
           grep -A 10 '"dependencies"' release/package.json || echo "❌ No dependencies section found"
 
