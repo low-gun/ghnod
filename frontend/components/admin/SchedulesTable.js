@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import format from "date-fns/format/index.js";
 import SearchFilter from "@/components/common/SearchFilter";
 import api from "@/lib/api";
 import { useMemo } from "react";
@@ -39,7 +39,7 @@ export default function SchedulesTable() {
 
   // ✅ fetch
   const fetchSchedules = async () => {
-    const res = await api.get("/admin/schedules", {
+    const res = await api.get("admin/schedules", {
       params: {
         type: tabType,
         all: true,
@@ -67,7 +67,7 @@ export default function SchedulesTable() {
   const handleDeleteSelected = async () => {
     if (!window.confirm("정말로 선택한 일정을 삭제하시겠습니까?")) return;
     try {
-      await api.delete("/admin/schedules", {
+      await api.delete("admin/schedules", {
         data: { ids: selectedIds },
       });
       alert("삭제되었습니다.");
@@ -94,7 +94,7 @@ export default function SchedulesTable() {
   const handleToggleActive = async (id, currentValue) => {
     try {
       const newValue = !currentValue; // 현재값 반전
-      await api.patch(`/admin/schedules/${id}/active`, {
+      await api.patch(`admin/schedules/${id}/active`, {
         is_active: newValue,
       });
       fetchSchedules();
@@ -124,7 +124,7 @@ export default function SchedulesTable() {
     }
   }, [schedules]);
   useEffect(() => {
-    api.get("/admin/schedules/types").then((res) => {
+    api.get("admin/schedules/types").then((res) => {
       if (res.data.success) {
         setTypeOptions(
           res.data.types.map((type) => ({
@@ -342,7 +342,7 @@ export default function SchedulesTable() {
                   const allRows = [];
                   for (const s of sortedSchedules) {
                     const res = await api.get(
-                      `/admin/schedules/${s.id}/students`
+                      `admin/schedules/${s.id}/students`
                     );
                     const students = res.data.students || [];
                     const mapped = students.map((stu) => ({
@@ -419,18 +419,24 @@ export default function SchedulesTable() {
               >
                 가격 {renderArrow("price", sortConfig)}
               </th>
-              <th style={{ ...thCenter, width: "60px" }}>
-                <label
-                  onClick={() => handleSort("is_active")}
+              <th
+                onClick={() => handleSort("is_active")}
+                style={{
+                  ...thCenter,
+                  width: "60px",
+                  cursor: "pointer",
+                  position: "relative",
+                }}
+              >
+                <div
                   style={{
                     position: "relative",
                     display: "inline-block",
                     width: "42px",
                     height: "24px",
-                    cursor: "pointer",
                   }}
                 >
-                  <span
+                  <div
                     style={{
                       position: "absolute",
                       top: 0,
@@ -447,7 +453,7 @@ export default function SchedulesTable() {
                       transition: "0.3s",
                     }}
                   >
-                    <span
+                    <div
                       style={{
                         position: "absolute",
                         height: "18px",
@@ -463,8 +469,8 @@ export default function SchedulesTable() {
                         transition: "0.3s",
                       }}
                     />
-                  </span>
-                </label>
+                  </div>
+                </div>
               </th>
               <th
                 style={{ ...thCenter, width: "140px" }}
@@ -565,19 +571,28 @@ export default function SchedulesTable() {
                     : "-"}
                 </td>
                 <td style={{ ...tdCenter, width: "60px" }}>
-                  <label
+                  <div
+                    onClick={() => handleToggleActive(s.id, s.is_active)}
                     style={{
                       position: "relative",
                       display: "inline-block",
                       width: "42px",
                       height: "24px",
+                      cursor: "pointer",
+                      overflow: "hidden", // ✅ 핵심: 튀어나온 점 잘라냄
                     }}
                   >
                     <input
                       type="checkbox"
                       checked={s.is_active}
-                      onChange={() => handleToggleActive(s.id, s.is_active)}
-                      style={{ opacity: 0, width: 0, height: 0 }}
+                      readOnly
+                      style={{
+                        opacity: 0,
+                        width: 0,
+                        height: 0,
+                        position: "absolute",
+                        pointerEvents: "none",
+                      }}
                     />
                     <span
                       style={{
@@ -604,7 +619,7 @@ export default function SchedulesTable() {
                         }}
                       />
                     </span>
-                  </label>
+                  </div>
                 </td>
                 <td style={{ ...tdCenter, width: "140px" }}>
                   {formatDateTime(s.created_at)}

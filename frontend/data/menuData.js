@@ -25,12 +25,15 @@ export const centerGroup = [
     label: "교육",
     link: "/education",
     sub: [
-      { label: "calendar", slug: "calendar" },
       { label: "followup", slug: "followup" },
       { label: "certification", slug: "certification" },
       { label: "공개교육", slug: "opencourse" },
       { label: "facilitation", slug: "facilitation" },
     ],
+  },
+  {
+    label: "교육일정",
+    link: "/education/calendar",
   },
   {
     label: "컨설팅",

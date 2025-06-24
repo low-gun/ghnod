@@ -6,7 +6,9 @@ import api, { setAccessToken as applyAccessTokenToAxios } from "@/lib/api";
 import ChangePasswordModal from "@/components/mypage/ChangePasswordModal";
 import { getClientSessionId } from "@/lib/session";
 import { toast } from "react-toastify";
+import { ChevronLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
+import SocialLoginButtons from "@/components/SocialLoginButtons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -46,7 +48,6 @@ export default function LoginPage() {
 
         // ✅ accessToken 세팅 (user 인증 전환)
         applyAccessTokenToAxios(data.accessToken);
-        login(userData, data.accessToken, []); // cartItems는 비워두고
 
         // ✅ 로그인 후 서버 기준으로 장바구니 재요청 (병합 반영됨)
         let finalCartItems = [];
@@ -58,6 +59,8 @@ export default function LoginPage() {
         } catch (err) {
           console.warn("🛒 로그인 직후 장바구니 fetch 실패:", err.message);
         }
+
+        login(userData, data.accessToken, finalCartItems); // ✅ 정확하게 전달
 
         // ✅ 전역 상태 반영
         setCartItems(finalCartItems);
@@ -122,10 +125,56 @@ export default function LoginPage() {
   return (
     <div style={containerStyle}>
       <div style={boxStyle}>
-        <h1 style={titleStyle}>🔑 로그인</h1>
-        <form onSubmit={handleLogin} style={{ textAlign: "left" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            marginBottom: "20px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{
+              position: "absolute",
+              left: 0,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              color: "#666",
+              fontWeight: "bold",
+            }}
+            aria-label="이전 페이지로"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <h1 style={{ fontSize: "24px", margin: 0 }}>로그인</h1>
+        </div>
+        <form
+          onSubmit={handleLogin}
+          autoComplete="off"
+          style={{ textAlign: "left" }}
+        >
+          {/* 🧱 fake input 필드로 자동완성 우회 */}
+          <input
+            type="text"
+            name="fake_email"
+            autoComplete="username"
+            style={{ display: "none" }}
+          />
+          <input
+            type="password"
+            name="fake_password"
+            autoComplete="current-password"
+            style={{ display: "none" }}
+          />
           <input
             type="email"
+            name="nope_email"
             placeholder="이메일"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -134,6 +183,7 @@ export default function LoginPage() {
           />
           <input
             type="password"
+            name="nope_password"
             autoComplete="current-password"
             placeholder="비밀번호"
             value={password}
@@ -144,6 +194,28 @@ export default function LoginPage() {
           <button type="submit" style={buttonStyle}>
             로그인
           </button>
+          <p style={{ marginTop: "10px", fontSize: "14px", textAlign: "left" }}>
+            아직 회원이 아니신가요?{" "}
+            <a
+              href="/register"
+              style={{ color: "#0070f3", textDecoration: "underline" }}
+            >
+              회원가입
+            </a>
+          </p>
+          {/* ✅ 소셜 로그인 버튼 추가 위치 */}
+          <div style={{ marginTop: "20px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: "14px",
+                marginBottom: "10px",
+              }}
+            >
+              소셜 계정으로 로그인
+            </div>
+            <SocialLoginButtons />
+          </div>
         </form>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { formatPrice } from "@/lib/format";
-
+import { useRouter } from "next/router";
 function formatKoreanDateTime(isoString) {
   if (!isoString) return "";
   const date = new Date(isoString);
@@ -22,6 +22,7 @@ function getStatusLabel(status) {
 
 export default function PaymentHistory({ data }) {
   console.log("🧾 PaymentHistory data:", data); // ✅ 콘솔 찍기
+  const router = useRouter();
   const [filterType, setFilterType] = useState("order_id");
   const [searchValue, setSearchValue] = useState("");
   const [dateRange, setDateRange] = useState([null, null]);
@@ -32,7 +33,6 @@ export default function PaymentHistory({ data }) {
   useEffect(() => {
     setSortConfig({ key: "null", direction: "asc" });
   }, []);
-
   const handleSort = (key) => {
     setSortConfig((prev) => ({
       key,
@@ -340,83 +340,40 @@ export default function PaymentHistory({ data }) {
             </tr>
           </thead>
           <tbody>
-            {pagedData.length === 0 ? (
-              <tr>
-                <td colSpan={9} style={tdCenter}>
-                  결제내역이 없습니다.
+            {pagedData.map((item, idx) => (
+              <tr
+                key={item.order_id + "-" + idx}
+                style={{
+                  backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                  cursor: "pointer",
+                }}
+              >
+                <td style={tdCenter}>
+                  {(currentPage - 1) * itemsPerPage + idx + 1}
+                </td>
+                <td
+                  style={{ ...tdCenter, color: "#0070f3" }}
+                  onClick={() => router.push(`/orders/${item.order_id}`)}
+                >
+                  {item.order_id}
+                </td>
+                <td style={tdCenter}>
+                  {formatKoreanDateTime(item.created_at)}
+                </td>
+                <td style={tdCenter}>{formatPrice(item.amount)}원</td>
+                <td style={tdCenter}>{item.quantity || 0}명</td>
+                <td style={tdCenter}>
+                  {formatPrice(
+                    (item.used_point || 0) + (item.coupon_discount || 0)
+                  )}
+                  원
+                </td>
+                <td style={tdCenter}>{item.payment_method || "-"}</td>
+                <td style={tdCenter}>
+                  {renderStatusBadge(getStatusLabel(item.status))}
                 </td>
               </tr>
-            ) : (
-              pagedData.map((item, idx) => (
-                <tr
-                  key={`${item.order_id}-${idx}`}
-                  style={{
-                    backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                  }}
-                >
-                  <td style={tdCenter}>
-                    {(currentPage - 1) * itemsPerPage + idx + 1}
-                  </td>
-                  <td
-                    style={{ ...tdCenter, color: "#0070f3", cursor: "pointer" }}
-                    onClick={() =>
-                      (window.location.href = `/orders/${item.order_id}`)
-                    }
-                  >
-                    {item.order_id}
-                  </td>
-                  <td style={tdCenter}>
-                    {formatKoreanDateTime(item.created_at)}
-                  </td>
-                  <td style={tdCenter}>{formatPrice(item.amount)}원</td>
-                  <td style={tdCenter}>{item.total_quantity || 0}명</td>
-                  <td style={{ ...tdCenter, position: "relative" }}>
-                    <span
-                      onClick={() =>
-                        (item.used_point || 0) + (item.coupon_discount || 0) >
-                          0 &&
-                        setActivePopover((prev) =>
-                          prev === item.order_id ? null : item.order_id
-                        )
-                      }
-                    >
-                      {formatPrice(
-                        (item.used_point || 0) + (item.coupon_discount || 0)
-                      )}
-                      원
-                    </span>
-
-                    {activePopover === item.order_id && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "24px",
-                          right: "0",
-                          background: "#fff",
-                          border: "1px solid #ccc",
-                          borderRadius: "6px",
-                          padding: "8px 12px",
-                          fontSize: "13px",
-                          zIndex: 1000,
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <div>포인트: {formatPrice(item.used_point || 0)}P</div>
-                        <div>
-                          쿠폰: {formatPrice(item.coupon_discount || 0)}원
-                        </div>
-                      </div>
-                    )}
-                  </td>
-
-                  <td style={tdCenter}>{item.payment_method || "-"}</td>
-                  <td style={tdCenter}>
-                    {renderStatusBadge(getStatusLabel(item.status))}
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>

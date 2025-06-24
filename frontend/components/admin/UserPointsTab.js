@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import PageSizeSelector from "@/components/common/PageSizeSelector";
+import PaginationControls from "@/components/common/PaginationControls";
 import api from "@/lib/api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import UserPointModal from "./UserPointModal";
 
 export default function UserPointsTab({ userId }) {
   const [points, setPoints] = useState([]);
@@ -15,12 +16,12 @@ export default function UserPointsTab({ userId }) {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [showModal, setShowModal] = useState(false);
   const [sortConfig, setSortConfig] = useState({
     key: "created_at",
     direction: "desc",
   });
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const fetchPoints = () => {
     api.get(`/admin/users/${userId}/points`).then((res) => {
       const data = res.data.points || [];
@@ -68,24 +69,44 @@ export default function UserPointsTab({ userId }) {
           ? new Date(aVal) - new Date(bVal)
           : new Date(bVal) - new Date(aVal);
       }
-
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return direction === "asc"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
       if (typeof aVal === "number" && typeof bVal === "number") {
         return direction === "asc" ? aVal - bVal : bVal - aVal;
       }
-
       return 0;
     });
 
     setFiltered(temp);
   }, [points, type, startDate, endDate, search, sortConfig]);
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPage]);
+  const pagedPoints = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filtered.slice(start, end);
+  }, [filtered, currentPage, itemsPerPage]);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const handleSort = (key) => {
     setSortConfig((prev) => ({
       key,
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
   };
-
+  const renderArrow = (key) => {
+    const baseStyle = { marginLeft: "6px", fontSize: "12px" };
+    if (!sortConfig || key !== sortConfig.key)
+      return <span style={{ ...baseStyle, color: "#ccc" }}>↕</span>;
+    return (
+      <span style={{ ...baseStyle, color: "#000" }}>
+        {sortConfig.direction === "asc" ? "▲" : "▼"}
+      </span>
+    );
+  };
   const resetFilters = () => {
     setType("");
     setSearch("");
@@ -95,10 +116,10 @@ export default function UserPointsTab({ userId }) {
 
   const handleDownload = () => {
     const exportData = filtered.map((p) => ({
-      구분: p.change_type,
+      일시: p.created_at?.slice(0, 19).replace("T", " "),
+      상태: p.change_type,
       금액: p.amount,
       설명: p.description || "-",
-      일시: p.created_at?.slice(0, 19).replace("T", " "),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -179,12 +200,6 @@ export default function UserPointsTab({ userId }) {
         <button onClick={resetFilters} style={buttonStyle("#ccc", "#333")}>
           초기화
         </button>
-        <button
-          onClick={() => setShowModal(true)}
-          style={buttonStyle("#0070f3", "#fff")}
-        >
-          + 포인트 지급
-        </button>
         <button onClick={handleDownload} style={buttonStyle("#4CAF50", "#fff")}>
           다운로드
         </button>
@@ -192,69 +207,104 @@ export default function UserPointsTab({ userId }) {
 
       {/* 테이블 */}
       <div style={{ overflowX: "auto" }}>
+        {/* 테이블 우상단 드롭다운 */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginBottom: "8px",
+          }}
+        >
+          <PageSizeSelector
+            value={itemsPerPage}
+            onChange={(newSize) => {
+              setItemsPerPage(newSize);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
         {filtered.length === 0 ? (
           <p>포인트 내역이 없습니다.</p>
         ) : (
-          <table
-            style={{
-              width: "100%",
-              fontSize: "15px",
-              borderCollapse: "collapse",
-              lineHeight: "1.6",
-            }}
-          >
-            <thead style={{ background: "#f9f9f9" }}>
-              <tr>
-                <th style={thCenter}>구분</th>
-                <th
-                  style={{ ...thRight, cursor: "pointer" }}
-                  onClick={() => handleSort("amount")}
-                >
-                  금액{" "}
-                  {sortConfig.key === "amount" &&
-                    (sortConfig.direction === "asc" ? "▲" : "▼")}
-                </th>
-                <th style={thLeft}>설명</th>
-                <th
-                  style={{ ...thRight, cursor: "pointer" }}
-                  onClick={() => handleSort("created_at")}
-                >
-                  일시{" "}
-                  {sortConfig.key === "created_at" &&
-                    (sortConfig.direction === "asc" ? "▲" : "▼")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p, i) => (
-                <tr
-                  key={i}
-                  style={{
-                    borderBottom: "1px solid #eee",
-                    backgroundColor: i % 2 === 0 ? "#fff" : "#fafafa",
-                  }}
-                >
-                  <td style={tdCenter}>{renderBadge(p.change_type)}</td>
-                  <td style={tdRight}>{Number(p.amount).toLocaleString()}P</td>
-                  <td style={tdLeft}>{p.description || "-"}</td>
-                  <td style={tdRight}>
-                    {new Date(p.created_at).toLocaleString()}
-                  </td>
+          <>
+            <table
+              style={{
+                width: "100%",
+                fontSize: "15px",
+                borderCollapse: "collapse",
+                lineHeight: "1.6",
+              }}
+            >
+              <thead style={{ background: "#f9f9f9" }}>
+                <tr>
+                  <th style={thCenter}>NO</th>
+                  <th
+                    style={{ ...thRight, cursor: "pointer" }}
+                    onClick={() => handleSort("created_at")}
+                  >
+                    일시 {renderArrow("created_at")}
+                  </th>
+                  <th
+                    style={{ ...thCenter, cursor: "pointer" }}
+                    onClick={() => handleSort("change_type")}
+                  >
+                    상태 {renderArrow("change_type")}
+                  </th>
+                  <th
+                    style={{ ...thRight, cursor: "pointer" }}
+                    onClick={() => handleSort("amount")}
+                  >
+                    금액 {renderArrow("amount")}
+                  </th>
+                  <th
+                    style={{ ...thLeft, cursor: "pointer" }}
+                    onClick={() => handleSort("description")}
+                  >
+                    설명 {renderArrow("description")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {pagedPoints.map((p, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      borderBottom: "1px solid #eee",
+                      backgroundColor: i % 2 === 0 ? "#fff" : "#fafafa",
+                    }}
+                  >
+                    <td style={tdCenter}>
+                      {filtered.length - ((currentPage - 1) * itemsPerPage + i)}
+                    </td>
+                    <td style={tdRight}>
+                      {new Date(p.created_at).toLocaleString()}
+                    </td>
+                    <td style={tdCenter}>{renderBadge(p.change_type)}</td>
+                    <td style={tdRight}>
+                      {Number(p.amount).toLocaleString()}P
+                    </td>
+                    <td style={tdLeft}>{p.description || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
-
-      {/* 지급 모달 */}
-      {showModal && (
-        <UserPointModal
-          userId={userId}
-          onClose={() => setShowModal(false)}
-          onSuccess={fetchPoints}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginTop: "16px",
+        }}
+      >
+        <PaginationControls
+          page={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
         />
-      )}
+      </div>
     </div>
   );
 }

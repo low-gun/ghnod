@@ -10,7 +10,7 @@ export default function ProductFormPage() {
   const { id } = router.query;
   const isEdit = id !== "new";
   const categoryMap = {
-    교육: ["followup", "certification", "공개교육", "facilitation"],
+    교육: ["followup", "certification", "opencourse", "facilitation"],
     컨설팅: ["워크숍", "숙의토론", "조직개발"],
     진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
   };
@@ -22,7 +22,7 @@ export default function ProductFormPage() {
     image_url: "",
     description: "",
     detail: "",
-    price: 0,
+    price: "",
     is_active: 1,
     created_at: "",
     updated_at: "",
@@ -71,12 +71,23 @@ export default function ProductFormPage() {
 
   const handleSave = async () => {
     const error = validate();
+    console.log("🧨 validate 결과:", error);
+    console.log("🧾 form.type =", form.type);
     if (error) return alert(error);
 
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `/admin/products/${id}` : "/admin/products";
-      const res = await api[method](url, form);
+      const cleanForm = {
+        ...form,
+        type: String(form.type).trim(), // ✅ type을 무조건 문자열로 변환
+      };
+      console.log("🟡 cleanForm 전체:", cleanForm);
+      console.log("🟡 typeof cleanForm.type:", typeof cleanForm.type);
+      console.log("🟡 cleanForm.type 길이:", cleanForm.type.length);
+      const res = await api[method](url, cleanForm);
+      console.log("🧾 type 값:", cleanForm.type);
+      console.log("🧾 type 길이:", cleanForm.type.length);
       if (res.data.success) {
         alert(isEdit ? "수정 완료!" : "등록 완료!");
 

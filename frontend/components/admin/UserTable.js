@@ -12,6 +12,7 @@ import PageSizeSelector from "@/components/common/PageSizeSelector"; // 상단�
 export default function UserTable({ onResetPassword }) {
   const router = useRouter(); // ✅ 추가
   const [users, setUsers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0); // ✅ 페이지네이션용 전체 수
   const [sortConfig, setSortConfig] = useState(null);
   const [searchType, setSearchType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,14 +27,21 @@ export default function UserTable({ onResetPassword }) {
   const [showDeleted, setShowDeleted] = useState(false);
   useEffect(() => {
     if (router.query.tab && router.query.tab !== "list") return;
-    // ✅ query.tab이 'list'가 아닌 경우 fetchUsers 금지
 
     const delayDebounceFn = setTimeout(() => {
-      fetchUsers(); // ✅ 300ms 뒤에 fetchUsers 호출
+      fetchUsers();
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, searchType, showDeleted, router.query.tab]);
+  }, [
+    searchQuery,
+    searchType,
+    showDeleted,
+    router.query.tab,
+    currentPage,
+    pageSize,
+    sortConfig,
+  ]);
 
   // URL 쿼리 갱신 함수
   const handleResetPassword = async (userId) => {
@@ -133,8 +141,9 @@ export default function UserTable({ onResetPassword }) {
   }, [filteredUsers, sortConfig]);
 
   const totalPages = useMemo(() => {
-    return Math.ceil(sortedUsers.length / pageSize);
-  }, [sortedUsers, pageSize]);
+    return Math.ceil(totalCount / pageSize);
+  }, [totalCount, pageSize]);
+
   const handleToggleUserStatus = async (userId, currentStatus) => {
     setTogglingId(userId);
     try {
@@ -145,9 +154,10 @@ export default function UserTable({ onResetPassword }) {
       toast.success("계정 상태가 변경되었습니다.");
 
       // 👉 api 호출 후 다시 리스트 불러오기
-      const res = await api.get("/admin/users", { params: { showDeleted } });
+      const res = await api.get("admin/users", { params: { showDeleted } });
       if (res.data.success) {
         setUsers(res.data.users);
+        setTotalCount(res.data.totalCount); // ✅ 추가
       }
     } catch (err) {
       toast.error("계정 상태 변경 실패");
@@ -157,26 +167,25 @@ export default function UserTable({ onResetPassword }) {
   };
   const fetchUsers = async () => {
     try {
-      const res = await api.get("/admin/users", {
+      const res = await api.get("admin/users", {
         params: {
-          searchType,
-          searchQuery,
+          page: currentPage,
+          pageSize: pageSize,
+          sort: sortConfig?.key || "created_at",
+          order: sortConfig?.direction || "desc",
+          type: searchType,
+          search: searchQuery,
           showDeleted,
         },
       });
       if (res.data.success) {
         setUsers(res.data.users);
+        setTotalCount(res.data.totalCount); // ✅ totalPages 계산용
       }
     } catch (err) {
-      console.error("❌ 사용자 목록 조회 실패:", err);
       toast.error("사용자 목록 조회 실패");
     }
   };
-  const pagedUsers = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return sortedUsers.slice(startIndex, endIndex);
-  }, [sortedUsers, currentPage, pageSize]);
   return (
     <div>
       {/* 🔍 검색 필터: 좌측 / 엑셀 + 페이지당 수: 우측 */}
@@ -291,8 +300,8 @@ export default function UserTable({ onResetPassword }) {
                     onChange={handleSelectAll}
                     checked={
                       selectedIds.length > 0 &&
-                      selectedIds.length === pagedUsers.length &&
-                      pagedUsers.every((u) => selectedIds.includes(u.id))
+                      selectedIds.length === users.length &&
+                      users.every((u) => selectedIds.includes(u.id))
                     }
                   />
                 </th>
@@ -323,7 +332,7 @@ export default function UserTable({ onResetPassword }) {
               </tr>
             </thead>
             <tbody>
-              {pagedUsers.map((user, index) => (
+              {users.map((user, index) => (
                 <tr
                   key={user.id}
                   style={{

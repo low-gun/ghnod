@@ -12,7 +12,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await api.get("/admin/products", {
+      const res = await api.get("admin/products", {
         params: { all: true }, // ✅ 전체 데이터 한번에 요청
       });
       if (res.data.success) {
@@ -40,6 +40,28 @@ export default function AdminProductsPage() {
 
   return (
     <AdminLayout pageTitle="📦 상품관리">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: 20,
+        }}
+      >
+        <button
+          onClick={() => (window.location.href = "/admin/products/new")}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#0070f3",
+            color: "#fff",
+            borderRadius: "6px",
+            border: "none",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          +등록
+        </button>
+      </div>
       {loading ? (
         <p>로딩 중...</p>
       ) : (

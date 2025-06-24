@@ -5,11 +5,19 @@ import Footer from "./Footer";
 
 export default function MainLayout({ children }) {
   return (
-    <div className="layout-wrapper">
+    <div
+      className="layout-wrapper"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+      }}
+    >
       <Header />
 
       <main
         style={{
+          flex: 1,
           marginTop: "80px",
           maxWidth: "1200px",
           marginLeft: "auto",

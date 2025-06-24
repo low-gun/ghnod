@@ -34,9 +34,19 @@ router.get("/courses", authenticateToken, async (req, res) => {
     if (all === "true") {
       const [rows] = await pool.query(
         `SELECT
-            s.*,
+            s.id AS schedule_id,
+            s.title,
+            s.start_date,
+            s.end_date,
+            s.location,
+            s.instructor,
+            s.product_id,
+            p.type AS type,
+            s.total_spots,
+            s.image_url,
             o.user_id,
             oi.order_id,
+            oi.id AS order_item_id,
             CASE
               WHEN NOW() < s.start_date THEN '예정'
               WHEN NOW() > s.end_date   THEN '완료'
@@ -74,6 +84,7 @@ router.get("/courses", authenticateToken, async (req, res) => {
          FROM order_items oi
          JOIN orders o ON oi.order_id = o.id
          JOIN schedules s ON oi.schedule_id = s.id
+         JOIN products p ON s.product_id = p.id
          WHERE o.user_id = ?
            AND o.order_status = 'paid'`,
         [userId]
@@ -81,7 +92,6 @@ router.get("/courses", authenticateToken, async (req, res) => {
       return res.json({ success: true, courses: rows });
     }
 
-    // 기본 페이징 처리된 조회 로직 (기존 getCourseInfo 함수 내용)
     return getCourseInfo(req, res);
   } catch (error) {
     console.error("❌ 전체 수강 데이터 조회 실패:", error);

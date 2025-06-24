@@ -23,7 +23,7 @@ export default function CouponTemplateModal({ onClose }) {
 
   const fetchTemplates = async () => {
     try {
-      const res = await api.get("/admin/coupon-templates");
+      const res = await api.get("admin/coupon-templates");
       if (res.data.success) {
         setTemplates(res.data.data);
       }
@@ -66,7 +66,7 @@ export default function CouponTemplateModal({ onClose }) {
     }
 
     try {
-      await api.post("/admin/coupon-templates", {
+      await api.post("admin/coupon-templates", {
         ...form,
         expired_at: form.expired_at || null,
       });

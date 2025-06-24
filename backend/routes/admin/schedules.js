@@ -27,6 +27,7 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
         s.image_url AS schedule_image, -- ✅ 추가
         p.title AS product_title,
         p.type AS product_type,
+        p.category AS product_category, -- ✅ 이 줄 추가
         p.image_url AS product_image
       FROM schedules s
       LEFT JOIN products p ON s.product_id = p.id

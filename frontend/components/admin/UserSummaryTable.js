@@ -14,6 +14,7 @@ import PageSizeSelector from "@/components/common/PageSizeSelector";
 import UserInquiryModal from "./UserInquiryModal"; // ✅ 추가
 export default function UserSummaryTable() {
   const router = useRouter();
+  const [totalCount, setTotalCount] = useState(0); // ✅ 총 개수
   const [summaries, setSummaries] = useState([]);
   const [searchType, setSearchType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,28 +54,28 @@ export default function UserSummaryTable() {
   }, [summaries, sortConfig]);
 
   // ✅ 페이징
-  const pagedSummaries = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    return sortedSummaries.slice(start, end);
-  }, [sortedSummaries, currentPage, pageSize]);
+  const pagedSummaries = summaries; // ✅ 서버에서 받은 데이터 그대로 사용
 
   // ✅ 페이지 수
   const totalPages = useMemo(() => {
-    return Math.ceil(sortedSummaries.length / pageSize);
-  }, [sortedSummaries, pageSize]);
+    return Math.ceil(totalCount / pageSize); // ✅ 서버에서 받은 총 개수 기준
+  }, [totalCount, pageSize]);
 
   const fetchSummaries = async () => {
     try {
-      const res = await api.get("/admin/users/summary", {
+      const res = await api.get("admin/users/summary", {
         params: {
+          page: currentPage,
+          pageSize: pageSize,
           type: searchType,
           search: searchQuery,
-          all: true,
+          sort: sortConfig.key,
+          order: sortConfig.direction,
         },
       });
       if (res.data.success) {
         setSummaries(res.data.summaries);
+        setTotalCount(res.data.totalCount); // ✅ totalPages 계산용
       }
     } catch (err) {
       console.error("❌ 사용자 요약 데이터 불러오기 실패:", err);
@@ -83,11 +84,11 @@ export default function UserSummaryTable() {
 
   useEffect(() => {
     fetchSummaries();
-  }, [searchType, searchQuery]);
+  }, [searchType, searchQuery, currentPage, pageSize, sortConfig]);
 
   useEffect(() => {
     const fetchCouponTemplates = async () => {
-      const res = await api.get("/admin/coupon-templates");
+      const res = await api.get("admin/coupon-templates");
       if (res.data.success) {
         const activeTemplates = res.data.data.filter((t) => t.is_active === 1);
         setCouponTemplates(activeTemplates);
@@ -292,7 +293,7 @@ export default function UserSummaryTable() {
               </tr>
             </thead>
             <tbody>
-              {pagedSummaries.map((user, index) => (
+              {summaries.map((user, index) => (
                 <tr key={user.id}>
                   <td style={tdCenter}>
                     <input

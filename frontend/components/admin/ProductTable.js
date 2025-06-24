@@ -19,15 +19,17 @@ export default function ProductTable({ onEdit }) {
   const [searchField, setSearchField] = useState("title");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  // ✅ 기본 정렬을 is_active로 변경
   const [sortConfig, setSortConfig] = useState({
-    key: "created_at",
-    direction: "desc",
+    key: "is_active",
+    direction: "desc", // 활성 먼저 보이도록
   });
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchProducts = async () => {
     try {
-      const res = await api.get("/admin/products", { params: { all: true } });
+      const res = await api.get("admin/products", { params: { all: true } });
       if (res.data.success) {
         setProducts(res.data.products);
         const types = [
@@ -42,6 +44,7 @@ export default function ProductTable({ onEdit }) {
     }
   };
 
+  // ✅ 위치: fetchProducts() 호출 useEffect 아래쪽
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -157,7 +160,7 @@ export default function ProductTable({ onEdit }) {
   const handleDeleteSelected = async () => {
     if (!window.confirm("정말로 선택한 상품을 삭제하시겠습니까?")) return;
     try {
-      await api.delete("/admin/products", { data: { ids: selectedIds } });
+      await api.delete("admin/products", { data: { ids: selectedIds } });
       toast.success("삭제되었습니다.");
       setSelectedIds([]);
       fetchProducts();
@@ -172,7 +175,7 @@ export default function ProductTable({ onEdit }) {
     );
     setProducts(updatedList); // ✅ 내부 상태 직접 반영
     try {
-      await api.patch(`/admin/products/${id}/active`);
+      await api.patch(`admin/products/${id}/active`);
       toast.success("상태가 변경되었습니다.");
     } catch (err) {
       toast.error("상태 변경 실패");
@@ -289,13 +292,13 @@ export default function ProductTable({ onEdit }) {
 
                   for (const product of sortedProducts) {
                     const res = await api.get(
-                      `/admin/products/${product.id}/schedules`
+                      `admin/products/${product.id}/schedules`
                     );
                     const schedules = res.data.schedules || [];
 
                     for (const s of schedules) {
                       const r = await api.get(
-                        `/admin/schedules/${s.id}/students`
+                        `admin/schedules/${s.id}/students`
                       );
                       const students = r.data.students || [];
 
@@ -515,7 +518,7 @@ export default function ProductTable({ onEdit }) {
                   onClick={() => setSelectedProductId(product.id)}
                   style={scheduleButtonStyle}
                 >
-                  일정 보기
+                  일정
                 </button>
               </td>
             </tr>

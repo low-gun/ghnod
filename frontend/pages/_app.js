@@ -2,7 +2,6 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
-
 import { CartProvider, useCartContext } from "../context/CartContext"; // ✅ CartProvider 바깥으로
 import { UserProvider } from "../context/UserContext";
 import { ToastContainer } from "react-toastify";

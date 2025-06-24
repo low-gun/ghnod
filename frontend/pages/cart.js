@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
-import { formatPrice } from "@/lib/format";
 import SearchFilter from "@/components/common/SearchFilter";
-import { FaTrash, FaShoppingCart } from "react-icons/fa";
 import CartSummary from "@/components/cart/CartSummary";
 import { useCartContext } from "@/context/CartContext";
 import CartItemCard from "@/components/cart/CartItemCard";

@@ -4,12 +4,16 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { useMemo } from "react";
+import PageSizeSelector from "@/components/common/PageSizeSelector";
+import PaginationControls from "@/components/common/PaginationControls";
 
 export default function UserCouponsTab({ userId }) {
   const [coupons, setCoupons] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [usage, setUsage] = useState("");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(null);
@@ -18,7 +22,16 @@ export default function UserCouponsTab({ userId }) {
     key: "expiry_date",
     direction: "desc",
   });
-
+  const renderArrow = (key) => {
+    const baseStyle = { marginLeft: "6px", fontSize: "12px" };
+    if (!sortConfig || key !== sortConfig.key)
+      return <span style={{ ...baseStyle, color: "#ccc" }}>↕</span>;
+    return (
+      <span style={{ ...baseStyle, color: "#000" }}>
+        {sortConfig.direction === "asc" ? "▲" : "▼"}
+      </span>
+    );
+  };
   useEffect(() => {
     if (!userId) return;
 
@@ -63,17 +76,36 @@ export default function UserCouponsTab({ userId }) {
           ? new Date(a[key]) - new Date(b[key])
           : new Date(b[key]) - new Date(a[key]);
       }
+      if (typeof a[key] === "string" && typeof b[key] === "string") {
+        return direction === "asc"
+          ? a[key].localeCompare(b[key])
+          : b[key].localeCompare(a[key]);
+      }
+      if (typeof a[key] === "number" && typeof b[key] === "number") {
+        return direction === "asc" ? a[key] - b[key] : b[key] - a[key];
+      }
       return 0;
     });
 
     setFiltered(temp);
   }, [coupons, usage, startDate, endDate, search, sortConfig]);
 
+  const pagedCoupons = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filtered.slice(start, end);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPage]);
   const handleSort = (key) => {
     setSortConfig((prev) => ({
       key,
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const resetFilters = () => {
@@ -170,8 +202,25 @@ export default function UserCouponsTab({ userId }) {
           초기화
         </button>
         <button onClick={handleDownload} style={buttonStyle("#4CAF50", "#fff")}>
-          📥 다운로드
+          EXCEL
         </button>
+      </div>
+
+      {/* 페이지사이즈 드롭다운 */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "12px",
+        }}
+      >
+        <PageSizeSelector
+          value={itemsPerPage}
+          onChange={(newSize) => {
+            setItemsPerPage(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       {/* 테이블 */}
@@ -189,9 +238,26 @@ export default function UserCouponsTab({ userId }) {
           >
             <thead style={{ background: "#f9f9f9" }}>
               <tr>
-                <th style={thCenter}>쿠폰명</th>
-                <th style={thCenter}>할인액</th>
-                <th style={thCenter}>상태</th>
+                <th style={thCenter}>NO</th>
+                <th
+                  style={{ ...thCenter, cursor: "pointer" }}
+                  onClick={() => handleSort("name")}
+                >
+                  쿠폰명 {renderArrow("name")}
+                </th>
+                <th
+                  style={{ ...thCenter, cursor: "pointer" }}
+                  onClick={() => handleSort("discount_amount")}
+                >
+                  할인액 {renderArrow("discount_amount")}
+                </th>
+                <th
+                  style={{ ...thCenter, cursor: "pointer" }}
+                  onClick={() => handleSort("is_used")}
+                >
+                  상태 {renderArrow("is_used")}
+                </th>
+
                 <th
                   style={{ ...thCenter, cursor: "pointer" }}
                   onClick={() => handleSort("expiry_date")}
@@ -203,25 +269,38 @@ export default function UserCouponsTab({ userId }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c, i) => (
-                <tr
-                  key={i}
-                  style={{
-                    borderBottom: "1px solid #eee",
-                    backgroundColor: i % 2 === 0 ? "#fff" : "#fafafa",
-                  }}
-                >
-                  <td style={tdCenter}>{c.name}</td>
+              {pagedCoupons.map((c, i) => (
+                <tr key={i}>
+                  <td style={tdCenter}>
+                    {filtered.length - ((currentPage - 1) * itemsPerPage + i)}
+                  </td>
+                  <td style={tdCenter}>{c.coupon_name}</td>
                   <td style={tdCenter}>
                     {Number(c.discount_amount).toLocaleString()}원
                   </td>
                   <td style={tdCenter}>{renderBadge(c.is_used)}</td>
-                  <td style={tdCenter}>{c.expiry_date?.slice(0, 10)}</td>
+                  <td style={tdCenter}>
+                    {c.expiry_date ? c.expiry_date.slice(0, 10) : "없음"}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginTop: "16px",
+        }}
+      >
+        <PaginationControls
+          page={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

@@ -33,7 +33,7 @@ export default function UserCouponGrantModal({
       const token = sessionStorage.getItem("accessToken");
       console.log("🔥 accessToken from sessionStorage:", token);
 
-      const res = await api.post("/admin/batch-coupons", {
+      const res = await api.post("admin/batch-coupons", {
         userIds: selectedIds.map((id) => Number(id)),
         templateId: Number(templateId),
       });

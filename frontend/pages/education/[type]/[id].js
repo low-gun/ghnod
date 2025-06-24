@@ -50,10 +50,10 @@ export default function EducationScheduleDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/schedules/${id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/${id}`) // ✅ 여기 경로 수정
       .then((res) => res.json())
       .then((data) => {
-        console.log("받은 데이터:", data.schedule); // ✅ 여기 추가
+        console.log("🔥 받은 일정:", data.schedule); // ← 이거 찍어봐
         if (data.success) setSchedule(data.schedule);
       })
       .catch(() => alert("일정 정보를 불러오지 못했습니다."))
@@ -63,7 +63,7 @@ export default function EducationScheduleDetailPage() {
   if (loading) return <p style={{ padding: 40 }}>불러오는 중...</p>;
   if (!schedule)
     return <p style={{ padding: 40 }}>일정 정보를 찾을 수 없습니다.</p>;
-
+  const unitPrice = Number(schedule.price ?? schedule.product_price ?? 0);
   return (
     <div
       style={{
@@ -272,7 +272,7 @@ export default function EducationScheduleDetailPage() {
             >
               <span style={{ color: "#333" }}>총 {quantity}명</span>
               <span style={{ fontWeight: "bold" }}>
-                {Number(schedule.price * quantity).toLocaleString()}원
+                {Number(unitPrice * quantity).toLocaleString()}원
               </span>
             </div>
           </div>
@@ -285,7 +285,7 @@ export default function EducationScheduleDetailPage() {
                   const payload = {
                     schedule_id: schedule.id,
                     quantity,
-                    unit_price: Number(schedule.price),
+                    unit_price: unitPrice,
                     type: "buyNow",
                   };
 

@@ -45,7 +45,7 @@ export default function CertificateTemplateModal({
     formData.append("file", file);
 
     try {
-      const res = await api.post("/admin/certificates/upload", formData, {
+      const res = await api.post("admin/certificates/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       // 업로드 성공했을 때

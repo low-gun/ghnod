@@ -271,27 +271,34 @@ exports.getPaymentHistory = async (req, res) => {
 
     const [payments] = await pool.query(
       `SELECT 
-         o.id                               AS order_id,
-         o.total_amount                     AS amount,
+         o.id AS order_id,
+         o.total_amount AS amount,
          o.used_point,
          (
-           SELECT ct.discount_amount
+           SELECT 
+             CASE 
+               WHEN ct.discount_type = 'fixed' THEN ct.discount_amount
+               WHEN ct.discount_type = 'percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
+               ELSE 0
+             END
            FROM coupons c
            JOIN coupon_templates ct ON c.template_id = ct.id
            WHERE c.id = o.coupon_id
            LIMIT 1
-         )                                   AS coupon_discount,
-         (
-           SELECT SUM(quantity)
-           FROM order_items
-           WHERE order_id = o.id
-         )                                   AS total_quantity,
-         o.order_status                      AS status,          -- paid / refunded
+         ) AS coupon_discount,
+           oi.quantity,
+         s.title AS schedule_title,
+         s.image_url,
+         p.type AS product_type,
+         o.order_status AS status,
          o.payment_method,
          o.created_at
        FROM orders o
+       LEFT JOIN order_items oi ON oi.order_id = o.id
+       LEFT JOIN schedules s ON oi.schedule_id = s.id
+       LEFT JOIN products p ON s.product_id = p.id
        WHERE o.user_id = ?
-         AND o.order_status IN ('paid', 'refunded')              -- ✅ 환불 건도 포함
+         AND o.order_status IN ('paid', 'refunded')
        ORDER BY o.created_at DESC`,
       [userId]
     );

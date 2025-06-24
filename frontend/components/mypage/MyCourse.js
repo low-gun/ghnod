@@ -290,7 +290,7 @@ export default function MyCourse() {
 
                 return (
                   <tr
-                    key={item.schedule_id || idx}
+                    key={item.order_item_id}
                     style={{
                       backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
                     }}

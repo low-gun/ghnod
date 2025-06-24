@@ -12,7 +12,7 @@ export default function AdminPaymentsPage() {
     const fetchPayments = async () => {
       try {
         console.log("[ADMIN] ▶ GET /admin/payments 요청"); // 요청 찍기
-        const res = await api.get("/admin/payments");
+        const res = await api.get("admin/payments");
 
         console.log("[ADMIN] ◀ 응답:", res.data); // 응답 찍기
         if (res.data?.success) {

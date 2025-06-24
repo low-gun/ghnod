@@ -4,10 +4,15 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { useMemo } from "react"; // 상단 import도 추가
+import PageSizeSelector from "@/components/common/PageSizeSelector";
+import PaginationControls from "@/components/common/PaginationControls";
 
 export default function UserPaymentsTab({ userId }) {
   const [payments, setPayments] = useState([]);
   const [filtered, setFiltered] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [userInfo, setUserInfo] = useState(null);
 
   const [status, setStatus] = useState("");
@@ -18,7 +23,16 @@ export default function UserPaymentsTab({ userId }) {
     key: "created_at",
     direction: "desc",
   });
-
+  const renderArrow = (key) => {
+    const baseStyle = { marginLeft: "6px", fontSize: "12px" };
+    if (!sortConfig || key !== sortConfig.key)
+      return <span style={{ ...baseStyle, color: "#ccc" }}>↕</span>;
+    return (
+      <span style={{ ...baseStyle, color: "#000" }}>
+        {sortConfig.direction === "asc" ? "▲" : "▼"}
+      </span>
+    );
+  };
   const fetchPayments = () => {
     api.get(`/admin/users/${userId}/payments`).then((res) => {
       const data = res.data.payments || [];
@@ -62,22 +76,28 @@ export default function UserPaymentsTab({ userId }) {
       const aVal = a[key];
       const bVal = b[key];
 
-      if (key === "created_at") {
-        return direction === "asc"
-          ? new Date(aVal) - new Date(bVal)
-          : new Date(bVal) - new Date(aVal);
+      let result = 0;
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        result = aVal.localeCompare(bVal);
+      } else if (!isNaN(Date.parse(aVal)) && !isNaN(Date.parse(bVal))) {
+        result = new Date(aVal) - new Date(bVal);
+      } else if (typeof aVal === "number" && typeof bVal === "number") {
+        result = aVal - bVal;
       }
 
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return direction === "asc" ? aVal - bVal : bVal - aVal;
-      }
-
-      return 0;
+      return direction === "asc" ? result : -result;
     });
 
     setFiltered(temp);
   }, [payments, status, search, startDate, endDate, sortConfig]);
+  const pagedPayments = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filtered.slice(start, end);
+  }, [filtered, currentPage, itemsPerPage]);
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const handleSort = (key) => {
     setSortConfig((prev) => ({
       key,
@@ -93,12 +113,19 @@ export default function UserPaymentsTab({ userId }) {
   };
 
   const handleDownload = () => {
-    const exportData = filtered.map((p) => ({
-      금액: p.amount,
-      결제수단: p.payment_method,
-      상태: p.status,
-      일시: p.created_at?.slice(0, 19).replace("T", " "),
-    }));
+    const exportData = filtered.map((p) => {
+      const createdAt = new Date(p.created_at).toLocaleString("ko-KR");
+      const refundedAt = p.refunded_at
+        ? new Date(p.refunded_at).toLocaleString("ko-KR")
+        : null;
+
+      return {
+        금액: p.amount,
+        결제수단: p.payment_method,
+        상태: p.status,
+        일시: refundedAt ? `${createdAt} (${refundedAt})` : createdAt,
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -113,14 +140,25 @@ export default function UserPaymentsTab({ userId }) {
     const blob = new Blob([buffer], { type: "application/octet-stream" });
     saveAs(blob, fileName);
   };
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPage]);
   const renderBadge = (status) => {
+    const labels = {
+      paid: "결제완료",
+      pending: "대기중",
+      canceled: "취소됨",
+      refunded: "환불됨",
+    };
     const colors = {
       paid: "#4CAF50",
       pending: "#FFA000",
       canceled: "#f44336",
+      refunded: "#9E9E9E",
     };
+
     const color = colors[status] || "#999";
+    const label = labels[status] || status;
 
     return (
       <span
@@ -132,7 +170,7 @@ export default function UserPaymentsTab({ userId }) {
           fontSize: "12px",
         }}
       >
-        {status}
+        {label}
       </span>
     );
   };
@@ -186,10 +224,25 @@ export default function UserPaymentsTab({ userId }) {
           초기화
         </button>
         <button onClick={handleDownload} style={buttonStyle("#4CAF50", "#fff")}>
-          다운로드
+          EXCEL
         </button>
       </div>
-
+      {/* ▼ 여기에 PageSizeSelector 넣기 */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "12px",
+        }}
+      >
+        <PageSizeSelector
+          value={itemsPerPage}
+          onChange={(newSize) => {
+            setItemsPerPage(newSize);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
       {/* 테이블 */}
       <div style={{ overflowX: "auto" }}>
         {filtered.length === 0 ? (
@@ -205,28 +258,41 @@ export default function UserPaymentsTab({ userId }) {
           >
             <thead style={{ background: "#f9f9f9" }}>
               <tr>
+                <th style={thCenter}>NO</th>
                 <th
-                  style={{ ...thCenter, cursor: "pointer" }}
-                  onClick={() => handleSort("amount")}
-                >
-                  금액{" "}
-                  {sortConfig.key === "amount" &&
-                    (sortConfig.direction === "asc" ? "▲" : "▼")}
-                </th>
-                <th style={thCenter}>결제수단</th>
-                <th style={thCenter}>상태</th>
-                <th
-                  style={{ ...thCenter, cursor: "pointer" }}
+                  style={{ ...thCenter, width: "30%", cursor: "pointer" }}
                   onClick={() => handleSort("created_at")}
                 >
-                  일시{" "}
-                  {sortConfig.key === "created_at" &&
-                    (sortConfig.direction === "asc" ? "▲" : "▼")}
+                  일시 {renderArrow("created_at")}
+                </th>
+                <th
+                  style={{ ...thCenter, width: "35%", cursor: "pointer" }}
+                  onClick={() => handleSort("product_titles")}
+                >
+                  상품명 {renderArrow("product_titles")}
+                </th>
+                <th
+                  style={{ ...thCenter, width: "10%", cursor: "pointer" }}
+                  onClick={() => handleSort("amount")}
+                >
+                  금액 {renderArrow("amount")}
+                </th>
+                <th
+                  style={{ ...thCenter, width: "15%", cursor: "pointer" }}
+                  onClick={() => handleSort("payment_method")}
+                >
+                  결제수단 {renderArrow("payment_method")}
+                </th>
+                <th
+                  style={{ ...thCenter, width: "10%", cursor: "pointer" }}
+                  onClick={() => handleSort("status")}
+                >
+                  상태 {renderArrow("status")}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p, i) => (
+              {pagedPayments.map((p, i) => (
                 <tr
                   key={i}
                   style={{
@@ -235,18 +301,69 @@ export default function UserPaymentsTab({ userId }) {
                   }}
                 >
                   <td style={tdCenter}>
+                    {filtered.length - ((currentPage - 1) * itemsPerPage + i)}
+                  </td>
+                  {/* 일시 */}
+                  <td style={tdCenter}>
+                    {new Date(p.created_at).toLocaleString("ko-KR")}
+                    {p.refunded_at && (
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginTop: "4px",
+                        }}
+                      >
+                        ({new Date(p.refunded_at).toLocaleString("ko-KR")})
+                      </div>
+                    )}
+                  </td>
+
+                  {/* 상품명 */}
+                  <td style={tdCenter}>
+                    <span
+                      style={{
+                        cursor: "pointer",
+                        color: "#0070f3",
+                        textDecoration: "underline",
+                      }}
+                      onClick={() => alert(p.product_titles)}
+                    >
+                      {p.product_titles
+                        ? p.product_titles.split(", ")[0] +
+                          (p.product_titles.includes(", ") ? " 등" : "")
+                        : "-"}
+                    </span>
+                  </td>
+
+                  {/* 금액 */}
+                  <td style={tdCenter}>
                     {Number(p.amount).toLocaleString()}원
                   </td>
+
+                  {/* 결제수단 */}
                   <td style={tdCenter}>{p.payment_method}</td>
+
+                  {/* 상태 */}
                   <td style={tdCenter}>{renderBadge(p.status)}</td>
-                  <td style={tdCenter}>
-                    {new Date(p.created_at).toLocaleString()}
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginTop: "16px",
+        }}
+      >
+        <PaginationControls
+          page={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

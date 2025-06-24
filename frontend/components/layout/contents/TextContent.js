@@ -13,7 +13,7 @@ export default function TextContent({
       style={{
         maxWidth: "1200px",
         margin: "0 auto",
-        padding: "clamp(16px, 4vw, 40px)",
+        padding: "clamp(8px, 2vw, 20px) 20px",
         fontSize: "clamp(14px, 2vw, 18px)", // 최소 14px~최대 18px 반응
       }}
     >

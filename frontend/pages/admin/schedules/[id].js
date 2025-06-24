@@ -34,7 +34,7 @@ export default function ScheduleFormPage() {
   const [originalImageUrl, setOriginalImageUrl] = useState(""); // 일정 썸네일 초기값 기억용
 
   useEffect(() => {
-    api.get("/admin/products").then((res) => {
+    api.get("admin/products").then((res) => {
       if (res.data.success) setProducts(res.data.products);
     });
   }, []);
@@ -43,7 +43,7 @@ export default function ScheduleFormPage() {
     if (!isEdit || !id) return;
     setLoading(true);
     api
-      .get(`/admin/schedules/${id}`)
+      .get(`admin/schedules/${id}`)
       .then((res) => {
         if (res.data.success) {
           const data = res.data.schedule;
@@ -108,7 +108,7 @@ export default function ScheduleFormPage() {
     console.log("📦 저장 요청 payload:", form); // ✅ 여기 추가!!
     try {
       const method = isEdit ? "put" : "post";
-      const url = isEdit ? `/admin/schedules/${id}` : "/admin/schedules";
+      const url = isEdit ? `admin/schedules/${id}` : "admin/schedules";
 
       const res = await api[method](url, form);
       console.log("📥 서버 응답:", res.data); // ✅ 2. 응답 바로 여기서 확인!!
@@ -128,10 +128,10 @@ export default function ScheduleFormPage() {
     if (!isEdit || !id) return;
     if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) return;
     try {
-      const res = await api.delete(`/admin/schedules/${id}`);
+      const res = await api.delete(`admin/schedules/${id}`);
       if (res.data.success) {
         alert("삭제 완료");
-        router.push("/admin/schedules");
+        router.push("admin/schedules");
       } else {
         alert("삭제 실패: " + res.data.message);
       }
@@ -158,7 +158,7 @@ export default function ScheduleFormPage() {
     if (!confirm("정말로 이 일정의 수료증을 발급하시겠습니까?")) return;
 
     try {
-      const res = await api.post("/admin/certificates/generate", {
+      const res = await api.post("admin/certificates/generate", {
         schedule_id: id,
       });
 
@@ -187,7 +187,7 @@ export default function ScheduleFormPage() {
       };
 
       const res = await api.put(
-        `/admin/schedules/${id}/certificate-template`,
+        `admin/schedules/${id}/certificate-template`,
         payload
       );
 
@@ -521,7 +521,7 @@ export default function ScheduleFormPage() {
               }}
             >
               <button
-                onClick={() => router.push("/admin/schedules")}
+                onClick={() => router.push("admin/schedules")}
                 style={{
                   padding: "10px 16px",
                   backgroundColor: "#eee",

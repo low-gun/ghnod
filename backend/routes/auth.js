@@ -19,6 +19,37 @@ router.get(
 );
 router.get(
   "/google/callback",
+  (req, res, next) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.log("🔓 로컬 환경: Google 로그인 우회 처리");
+      const mockUser = {
+        id: 1,
+        username: "로컬유저",
+        email: "localtest@example.com",
+        role: "user",
+      };
+      const tokenPayload = { id: mockUser.id, role: mockUser.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
+
+      return res.json({
+        message: "🔓 로컬 Google 로그인 성공 (우회)",
+        accessToken,
+        user: mockUser,
+      });
+    }
+
+    return next();
+  },
   passport.authenticate("google", {
     failureRedirect: "/login",
     session: false,
@@ -30,10 +61,41 @@ router.get(
   }
 );
 
-// ====================== 소셜 로그인 (Kakao) ======================
+// ===========`=========== 소셜 로그인 (Kakao) ======================
 router.get("/kakao", passport.authenticate("kakao"));
 router.get(
-  "/kakao/callback",
+  "/kakao/callwlback",
+  (req, res, next) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.log("🔓 로컬 환경: Kakao 로그인 우회 처리");
+      const mockUser = {
+        id: 2,
+        username: "로컬카카오유저",
+        email: "kakaotest@example.com",
+        role: "user",
+      };
+      const tokenPayload = { id: mockUser.id, role: mockUser.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
+
+      return res.json({
+        message: "🔓 로컬 Kakao 로그인 성공 (우회)",
+        accessToken,
+        user: mockUser,
+      });
+    }
+
+    return next();
+  },
   passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
   (req, res) => {
     console.log("✅ Kakao 로그인 성공:", req.user);
@@ -41,18 +103,64 @@ router.get(
     res.json({ message: "✅ Kakao 로그인 성공!", user: userWithoutPassword });
   }
 );
+// ====================== 이메일 중복 확인 ======================
+router.post("/check-email", async (req, res) => {
+  const { email } = req.body;
 
+  if (!email) {
+    return res.status(400).json({ error: "이메일이 필요합니다." });
+  }
+
+  try {
+    const [rows] = await db.query("SELECT id FROM users WHERE email = ?", [
+      email,
+    ]);
+
+    if (rows.length > 0) {
+      return res.json({ exists: true });
+    } else {
+      return res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error("❌ 이메일 중복 확인 오류:", error);
+    return res.status(500).json({ error: "서버 오류로 이메일 확인 실패" });
+  }
+});
 // ====================== 회원가입 ======================
 router.post("/register", async (req, res) => {
   console.log("📌 회원가입 요청 데이터:", req.body);
 
-  const { username, email, password } = req.body;
-  if (!username || !email || !password) {
+  const {
+    username,
+    email,
+    password,
+    phone,
+    company,
+    department,
+    position,
+    marketing_agree,
+    terms_agree,
+    privacy_agree,
+  } = req.body;
+
+  if (!username || !email || !password || !phone) {
     return res.status(400).json({ error: "모든 필드를 입력하세요." });
   }
 
+  // ✅ 비밀번호 유효성 검사 추가 (6자 이상, 숫자 포함, 영문 포함, 특수문자 포함)
+  const pwTooShort = password.length < 6;
+  const pwNoNumber = !/\d/.test(password);
+  const pwNoAlpha = !/[a-zA-Z]/.test(password);
+  const pwNoSymbol = !/[~!@#$%^&*()_+{}\[\]:;<>,.?\/\\\-]/.test(password);
+
+  if (pwTooShort || pwNoNumber || pwNoAlpha || pwNoSymbol) {
+    return res.status(400).json({
+      error: "비밀번호는 영문, 숫자, 특수문자를 포함한 6자 이상이어야 합니다.",
+    });
+  }
+
   try {
-    // 이메일 중복
+    // 이메일 중복 확인
     const [existingUsers] = await db.query(
       "SELECT id FROM users WHERE email = ?",
       [email]
@@ -64,20 +172,52 @@ router.post("/register", async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 기본 role: 'user'
+    // INSERT 실행
     await db.query(
-      "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 'user')",
-      [username, email, hashedPassword]
+      `INSERT INTO users
+        (username, email, password, phone, company, department, position, marketing_agree, terms_agree, privacy_agree, role, password_reset_required)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', false)`,
+      [
+        username,
+        email,
+        hashedPassword,
+        phone,
+        company || "",
+        department || "",
+        position || "",
+        marketing_agree ? 1 : 0,
+        terms_agree ? 1 : 0,
+        privacy_agree ? 1 : 0,
+      ]
     );
 
     console.log("✅ 회원가입 성공!", email);
     res.status(200).json({ message: "✅ 회원가입 성공!" });
   } catch (error) {
-    console.error("❌ 회원가입 오류:", error);
+    console.error("❌ 회원가입 오류:", error); // 기존 로그
+    console.error("❌ SQL 오류 메시지:", error.sqlMessage); // 추가
+    console.error("❌ SQL:", error.sql); // 추가
+    console.error("❌ stack:", error.stack); // 선택
     res.status(500).json({ error: "회원가입 실패" });
   }
 });
+router.post("/check-phone", async (req, res) => {
+  const { phone } = req.body;
 
+  if (!phone) {
+    return res.status(400).json({ error: "휴대폰번호가 필요합니다." });
+  }
+
+  try {
+    const [rows] = await db.query("SELECT id FROM users WHERE phone = ?", [
+      phone,
+    ]);
+    res.json({ exists: rows.length > 0 });
+  } catch (err) {
+    console.error("❌ 휴대폰 중복 확인 오류:", err);
+    res.status(500).json({ error: "서버 오류" });
+  }
+});
 // ====================== 통합 로그인 ======================
 router.post("/login", async (req, res) => {
   console.log("📌 로그인 요청 데이터:", req.body);
@@ -161,6 +301,13 @@ router.post("/login", async (req, res) => {
       req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7일
 
+    // 🔧 기존 세션 토큰 중복 방지
+    await db.query(
+      `DELETE FROM refresh_tokens WHERE user_id = ? AND client_session_id = ?`,
+      [user.id, clientSessionId]
+    );
+
+    // 🔐 새로운 refreshToken 저장
     await db.query(
       `INSERT INTO refresh_tokens 
    (user_id, token, client_session_id, device_info, ip_address, expires_at, user_agent) 

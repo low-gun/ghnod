@@ -27,7 +27,7 @@ export default function UserPointGrantModal({
       return;
     }
     try {
-      await api.post("/admin/batch-points", {
+      await api.post("admin/batch-points", {
         userIds: selectedIds,
         amount: Number(amount),
       });

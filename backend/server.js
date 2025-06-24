@@ -19,7 +19,10 @@ const next = require("next");
 const isDev = process.env.NODE_ENV !== "production";
 const nextApp = next({
   dev: isDev,
-  dir: ".", // ✅ 이제 정확히 /home/site/wwwroot 기준으로 .next, pages, public 등을 인식
+  dir:
+    process.env.NODE_ENV === "production"
+      ? path.resolve(".") // 배포 환경: /home/site/wwwroot
+      : path.join(__dirname, "../frontend"), // 로컬: backend/server.js → ../frontend/pages
 });
 const handle = nextApp.getRequestHandler();
 
@@ -66,6 +69,7 @@ app.use((req, res, next) => {
 
 // ✅ API 라우터 등록
 app.use("/api/admin/schedules", require("./routes/admin/schedules"));
+app.use("/api/admin/products", require("./routes/admin/products")); // ← ✅ 이 줄 추가!
 app.use("/api/admin/payments", require("./routes/payment"));
 app.use("/api/admin", require("./routes/admin"));
 app.use("/api/user", require("./routes/user"));
@@ -74,7 +78,7 @@ app.use("/api/orders", require("./routes/order"));
 app.use("/api/cart", require("./routes/cart"));
 app.use("/api/education", require("./routes/userSchedules"));
 app.use("/api/auth", require("./routes/auth"));
-app.use("/api/schedules", require("./routes/public/schedules"));
+app.use("/api/education/schedules", require("./routes/public/schedules"));
 app.use("/api", require("./routes/productReviews"));
 
 // ✅ DB 연결 테스트용

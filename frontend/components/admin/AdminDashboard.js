@@ -24,7 +24,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const res = await api.get("/admin/dashboard-summary");
+        const res = await api.get("admin/dashboard-summary");
         setSummary(res.data);
       } catch (err) {
         console.error("대시보드 요약 데이터 불러오기 실패:", err);

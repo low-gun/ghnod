@@ -165,7 +165,11 @@ router.put("/:id", authenticateToken, adminOnly, async (req, res) => {
   if (!title || !type) {
     return res.status(400).json({ success: false, message: "필수 항목 누락" });
   }
-
+  // ✅ 바로 여기 로그 추가
+  console.log("📥 req.body.type =", type);
+  console.log("📥 typeof =", typeof type);
+  console.log("📥 length =", type?.length);
+  console.log("📥 전체 req.body =", req.body);
   try {
     await pool.execute(
       `UPDATE products SET title=?, type=?, image_url=?, description=?, detail=?, price=?, is_active=?, updated_at=NOW() WHERE id=?`,
@@ -181,6 +185,10 @@ router.put("/:id", authenticateToken, adminOnly, async (req, res) => {
 router.post("/", authenticateToken, adminOnly, async (req, res) => {
   const { title, type, image_url, description, detail, price, is_active } =
     req.body;
+  console.log("📥 [POST] type =", type);
+  console.log("📥 typeof =", typeof type);
+  console.log("📥 length =", type?.length);
+  console.log("📥 전체 req.body =", req.body);
 
   if (!title || !type) {
     return res.status(400).json({ success: false, message: "필수 항목 누락" });

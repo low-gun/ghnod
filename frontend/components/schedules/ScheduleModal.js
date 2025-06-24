@@ -20,7 +20,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
   const isEdit = Boolean(scheduleId);
 
   useEffect(() => {
-    api.get("/api/admin/products").then((res) => {
+    api.get("admin/products").then((res) => {
       if (res.data.success) setProducts(res.data.products);
     });
   }, []);
@@ -29,15 +29,18 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
     if (!scheduleId) return;
     setLoading(true);
     api
-      .get(`/api/admin/schedules/${scheduleId}`)
-
+      .get(`admin/schedules/${scheduleId}`)
       .then((res) => {
         if (res.data.success) {
           const data = res.data.schedule;
           setForm({
             ...data,
-            start_date: data.start_date?.replace(" ", "T") || "",
-            end_date: data.end_date?.replace(" ", "T") || "",
+            start_date: data.start_date
+              ? new Date(data.start_date).toISOString().slice(0, 16)
+              : "",
+            end_date: data.end_date
+              ? new Date(data.end_date).toISOString().slice(0, 16)
+              : "",
             total_spots: Number(data.total_spots) || 0,
             price: Number(data.price) || 0,
           });
@@ -46,14 +49,15 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
       .catch(() => alert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [scheduleId]);
-
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    const parsed =
-      type === "number" ? (value === "" ? "" : Number(value)) : value;
-    setForm((prev) => ({ ...prev, [name]: parsed }));
-  };
-
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [onClose]);
   const handleSave = async () => {
     try {
       const payload = {
@@ -63,9 +67,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
       };
 
       const method = isEdit ? "put" : "post";
-      const url = isEdit
-        ? `/api/admin/schedules/${scheduleId}`
-        : "/api/admin/schedules";
+      const url = isEdit ? `admin/schedules/${scheduleId}` : "admin/schedules";
 
       const res = await api[method](url, payload);
       if (res.data.success) {
@@ -85,7 +87,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
     if (!isEdit || !scheduleId) return;
     if (confirm("정말로 이 일정을 삭제(숨김처리)하시겠습니까?")) {
       try {
-        const res = await api.delete(`/api/admin/schedules/${scheduleId}`);
+        const res = await api.delete(`admin/schedules/${scheduleId}`);
         if (res.data.success) {
           alert("삭제 완료");
           onRefresh?.();
@@ -110,20 +112,29 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
     ["정원", "total_spots", "number"],
     ["가격", "price", "number"],
   ];
-
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    const parsed =
+      type === "number" ? (value === "" ? "" : Number(value)) : value;
+    setForm((prev) => ({ ...prev, [name]: parsed }));
+  };
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
         <h2
           style={{ marginBottom: "16px", fontSize: "20px", fontWeight: "bold" }}
         >
-          {isEdit ? "🛠 일정 수정" : "일정 등록"}
+          {isEdit ? "일정 수정" : "일정 등록"}
         </h2>
+        <button onClick={onClose} style={closeButtonStyle}>
+          ×
+        </button>
 
         {loading ? (
           <p>⏳ 불러오는 중...</p>
         ) : (
           <>
+            {/* ✅ 상품 선택 */}
             <div style={formGroup}>
               <label style={labelStyle}>상품</label>
               <select
@@ -141,42 +152,97 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
               </select>
             </div>
 
-            {fields.map(([label, name, type]) => (
-              <div style={formGroup} key={name}>
-                <label style={labelStyle}>{label}</label>
-                {type === "textarea" ? (
-                  <textarea
-                    name={name}
-                    value={form[name] || ""}
-                    onChange={handleChange}
-                    rows={3}
-                    style={{ ...inputStyle, resize: "vertical" }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <input
-                      type={type}
-                      name={name}
-                      value={form[name] || ""}
-                      onChange={handleChange}
-                      style={inputStyle}
-                    />
-                    {name === "price" && form.price ? (
-                      <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                        {formatPrice(form.price)}
-                      </span>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ))}
+            {/* ✅ 일정명 */}
+            <div style={formGroup}>
+              <label style={labelStyle}>일정명</label>
+              <input
+                name="title"
+                value={form.title || ""}
+                onChange={handleChange}
+                style={inputStyle}
+              />
+            </div>
 
+            {/* ✅ 교육기간 */}
+            <div style={formGroup}>
+              <label style={labelStyle}>교육기간</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="datetime-local"
+                  name="start_date"
+                  value={form.start_date || ""}
+                  onChange={handleChange}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <input
+                  type="datetime-local"
+                  name="end_date"
+                  value={form.end_date || ""}
+                  onChange={handleChange}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+              </div>
+            </div>
+
+            {/* ✅ 장소 + 강사 */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>장소</label>
+                <input
+                  name="location"
+                  value={form.location || ""}
+                  onChange={handleChange}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>강사</label>
+                <input
+                  name="instructor"
+                  value={form.instructor || ""}
+                  onChange={handleChange}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            {/* ✅ 정원 + 가격 */}
+            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>정원</label>
+                <input
+                  type="number"
+                  name="total_spots"
+                  value={form.total_spots}
+                  onChange={handleChange}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>가격</label>
+                <input
+                  type="number"
+                  name="price"
+                  value={form.price}
+                  onChange={handleChange}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            {/* ✅ 설명 */}
+            <div style={formGroup}>
+              <label style={labelStyle}>설명</label>
+              <textarea
+                name="description"
+                value={form.description || ""}
+                onChange={handleChange}
+                rows={3}
+                style={{ ...inputStyle, resize: "vertical" }}
+              />
+            </div>
+
+            {/* ✅ 버튼들 */}
             <div
               style={{
                 display: "flex",
@@ -190,9 +256,6 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
                   삭제
                 </button>
               )}
-              <button onClick={onClose} style={secondaryButtonStyle}>
-                닫기
-              </button>
               <button onClick={handleSave} style={primaryButtonStyle}>
                 저장
               </button>
@@ -218,6 +281,7 @@ const overlayStyle = {
 };
 
 const modalStyle = {
+  position: "relative", // ✅ 추가!
   background: "#fff",
   padding: "24px 32px",
   borderRadius: "12px",
@@ -274,4 +338,15 @@ const dangerButtonStyle = {
   padding: "8px 16px",
   border: "none",
   borderRadius: "6px",
+};
+const closeButtonStyle = {
+  position: "absolute",
+  top: "12px",
+  right: "16px",
+  fontSize: "18px",
+  fontWeight: "bold",
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  color: "#888",
 };

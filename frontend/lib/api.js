@@ -35,7 +35,6 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-// ✅ 요청 인터셉터 – accessToken + guest_token 자동 설정
 axiosInstance.interceptors.request.use((config) => {
   if (!config.headers.Authorization && inMemoryAccessToken) {
     config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
@@ -43,9 +42,19 @@ axiosInstance.interceptors.request.use((config) => {
 
   if (typeof window !== "undefined") {
     const guestToken = localStorage.getItem("guest_token");
-    const user = localStorage.getItem("user");
+    const userRaw = localStorage.getItem("user");
 
-    if (guestToken && !user) {
+    let isGuest = true;
+    try {
+      const parsedUser = JSON.parse(userRaw);
+      if (parsedUser && typeof parsedUser === "object" && parsedUser.id) {
+        isGuest = false;
+      }
+    } catch {
+      isGuest = true;
+    }
+
+    if (guestToken && isGuest) {
       config.headers["x-guest-token"] = guestToken;
     } else {
       delete config.headers["x-guest-token"];
@@ -62,7 +71,8 @@ axiosInstance.interceptors.response.use(
 
     if (
       (error.response?.status === 401 || error.response?.status === 403) &&
-      !originalRequest._retry
+      !originalRequest._retry &&
+      inMemoryAccessToken
     ) {
       if (
         typeof window !== "undefined" &&
@@ -106,8 +116,15 @@ axiosInstance.interceptors.response.use(
         setAccessToken(null);
 
         if (typeof window !== "undefined") {
-          alert("세션이 만료되었습니다. 다시 로그인해주세요.");
-          window.location.href = "/login";
+          const skipAlert =
+            originalRequest?.url?.includes("/cart/items") ||
+            originalRequest?.url?.includes("/product") ||
+            originalRequest?.url?.includes("/education");
+
+          if (!skipAlert) {
+            alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+            window.location.href = "/login";
+          }
         }
 
         return Promise.reject(refreshError);

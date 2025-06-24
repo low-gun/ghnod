@@ -112,22 +112,23 @@ router.get("/:id/items", authenticateToken, async (req, res) => {
     const [items] = await pool.execute(
       `
       SELECT 
-        oi.id,
-        oi.quantity,
-        oi.unit_price,
-        oi.discount_price,
-        oi.subtotal,
-        s.title,
-        s.id AS schedule_id,
-        s.image_url,
-        s.start_date,
-        s.end_date,
-        p.type
-      FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id
-      JOIN schedules s ON oi.schedule_id = s.id
-      JOIN products p ON s.product_id = p.id
-      WHERE oi.order_id = ?`,
+  oi.id,
+  oi.quantity,
+  oi.unit_price,
+  oi.discount_price,
+  oi.subtotal,
+  s.title AS title,                      -- ✅ 프론트에서 기대하는 item.title
+  s.id AS schedule_id,
+  s.image_url,
+  s.start_date,
+  s.end_date,
+  p.type,
+  p.price AS price                      -- ✅ 프론트에서 기대하는 item.price
+FROM order_items oi
+JOIN orders o ON oi.order_id = o.id
+LEFT JOIN schedules s ON oi.schedule_id = s.id
+LEFT JOIN products p ON s.product_id = p.id
+WHERE oi.order_id = ?`,
       [orderId]
     );
     console.log("🧾 주문 ID:", orderId);
@@ -135,6 +136,7 @@ router.get("/:id/items", authenticateToken, async (req, res) => {
       `
       SELECT 
         o.total_amount,
+
         o.used_point,
         o.created_at,
         (

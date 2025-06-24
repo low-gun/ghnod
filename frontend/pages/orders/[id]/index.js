@@ -15,12 +15,21 @@ export default function OrderDetailPage() {
   const [items, setItems] = useState([]);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    if (!id) return;
+    if (!router.isReady || !id) return;
+
     const fetchItems = async () => {
       try {
         const res = await api.get(`/orders/${id}/items`);
+        console.log("🟦 주문 응답:", res.data);
+
+        // ✅ 콘솔 로그 추가: schedule_id, product_type 확인용
+        res.data.items.forEach((item, i) => {
+          console.log(
+            `📦 [${i}] schedule_id: ${item.schedule_id}, product_type: ${item.type}`
+          );
+        });
+
         setItems(res.data.items || []);
         setOrder(res.data.order || null);
       } catch (err) {
@@ -29,8 +38,9 @@ export default function OrderDetailPage() {
         setLoading(false);
       }
     };
+
     fetchItems();
-  }, [id]);
+  }, [router.isReady, id]);
 
   if (loading) return <p style={{ padding: 40 }}>불러오는 중...</p>;
   if (!items.length)

@@ -1,25 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Calendar, dateFnsLocalizer } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
-import ko from "date-fns/locale/ko";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-
-import TextContent from "../../components/layout/contents/TextContent";
-import CustomEvent from "../../components/schedules/CustomEvent";
-import MySingleAgendaView from "../../components/schedules/MySingleAgendaView";
+import moment from "moment"; // 상단에 import 추가
+import CustomCalendar from "../../components/schedules/CustomCalendar"; // ✅ 교체
 import axios from "axios"; // ✅ SSR self-fetch
-
-function formatKoreanAMPM(date) {
-  if (!(date instanceof Date)) return "";
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours < 12 ? "오전" : "오후";
-  let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12;
-  const mm = String(minutes).padStart(2, "0");
-  return `${ampm} ${hour12}:${mm}`;
-}
+import ScheduleDetailModal from "@/components/schedules/ScheduleDetailModal";
 
 function formatYYYYMMDD(date) {
   if (!(date instanceof Date)) return "";
@@ -35,114 +19,20 @@ function parseYYYYMMDD(str) {
   return new Date(Number(y), Number(m) - 1, Number(d));
 }
 
-const localizer = dateFnsLocalizer({
-  format: (date, formatStr, options) =>
-    format(date, formatStr, { ...(options || {}), locale: ko }),
-  parse: (dateString, formatStr, options) =>
-    parse(dateString, formatStr, { ...(options || {}), locale: ko }),
-  startOfWeek: (date) => startOfWeek(date, { locale: ko }),
-  getDay,
-  locales: { ko },
-});
-
-const messagesKo = {
-  allDay: "종일",
-  previous: "이전",
-  next: "다음",
-  today: "오늘",
-  month: "월",
-  week: "주",
-  myAgenda: "목록",
-  date: "날짜",
-  time: "시간",
-  event: "이벤트",
-  noEventsInRange: "이 기간에는 일정이 없습니다.",
-};
-
-const formats = {
-  monthHeaderFormat: (date) =>
-    `${date.getFullYear()}년 ${date.getMonth() + 1}월`,
-  dayRangeHeaderFormat: ({ start, end }) =>
-    `${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${
-      end.getMonth() + 1
-    }월 ${end.getDate()}일`,
-  weekdayFormat: (date) => {
-    const dayMap = ["일", "월", "화", "수", "목", "금", "토"];
-    return dayMap[date.getDay()];
-  },
-  timeGutterFormat: (date) => formatKoreanAMPM(date),
-  eventTimeRangeFormat: ({ start, end }) =>
-    `${formatKoreanAMPM(start)} ~ ${formatKoreanAMPM(end)}`,
-  agendaTimeRangeFormat: ({ start, end }) =>
-    `${formatKoreanAMPM(start)} ~ ${formatKoreanAMPM(end)}`,
-  agendaTimeFormat: (date) => formatKoreanAMPM(date),
-};
-
-function EventDetailPanel({ event }) {
-  const router = useRouter();
-
-  if (!event) {
-    return (
-      <div style={{ padding: 16 }}>일정을 클릭하면 정보를 표시합니다.</div>
-    );
-  }
-
-  const formatDetailDate = (d) => {
-    if (!(d instanceof Date)) return "";
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    return `${y}년 ${m}월 ${day}일 ${formatKoreanAMPM(d)}`;
-  };
-
-  const startDate = formatDetailDate(event.start);
-  const endDate = formatDetailDate(event.end);
-
-  return (
-    <div style={{ padding: 16, fontSize: "14px" }}>
-      <p>
-        <strong>기간:</strong>
-        <br />
-        {startDate} ~ {endDate}
-      </p>
-      <p>
-        <strong>제목:</strong>
-        <br />
-        {event.title}
-      </p>
-      <p>
-        <strong>장소:</strong>
-        <br />
-        {event.location}
-      </p>
-      <p>
-        <strong>강사:</strong>
-        <br />
-        {event.instructor}
-      </p>
-      <p>
-        <strong>내용:</strong>
-        <br />
-        {event.description}
-      </p>
-      <p>
-        <strong>정원:</strong>
-        <br />
-        {event.total_spots || "-"}
-      </p>
-      <button onClick={() => router.push(`/education/calendar/${event.id}`)}>
-        자세히 보기
-      </button>
-    </div>
-  );
-}
-
 export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
+    console.log("👉 baseURL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+    const now = moment();
+    const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
+    const endOfMonth = now
+      .clone()
+      .endOf("month")
+      .add(1, "month")
+      .format("YYYY-MM-DD");
 
     const res = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
       {
         headers: { Cookie: cookie },
       }
@@ -157,7 +47,18 @@ export async function getServerSideProps(context) {
     }
 
     return {
-      props: { eventsData: data.schedules },
+      props: {
+        eventsData: data.schedules.map((item) => ({
+          id: item.id,
+          title: item.title,
+          start_date: item.start_date,
+          end_date: item.end_date,
+          location: item.location,
+          instructor: item.instructor,
+          total_spots: item.total_spots,
+          type: item.type || item.category || null,
+        })),
+      },
     };
   } catch (error) {
     console.error("SSR education/calendar error:", error);
@@ -178,25 +79,37 @@ export default function CalendarPage({ eventsData }) {
       instructor: item.instructor,
       description: item.description,
       total_spots: item.total_spots,
+      type: item.type || item.category || null, // ✅ 여기서 제대로 넣어줘야 함
     }))
   );
 
-  const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchType, setSearchType] = useState("전체");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date(2025, 11, 31));
-  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarDate, setCalendarDate] = useState(moment());
 
-  const handleSelectEvent = (event) => setSelectedEvent(event);
+  const router = useRouter();
+  const selectedEvent = useMemo(() => {
+    const id = router.query.id;
+    return events.find((e) => String(e.id) === String(id));
+  }, [router.query.id, events]); // 📌 이걸 여기 넣기
+  const handleSelectEvent = (event) => {
+    console.log("🧪 클릭된 일정:", event);
+
+    if (!event?.type) {
+      alert("교육 타입 정보가 없습니다.");
+      return;
+    }
+
+    router.push(`/education/${event.type}/${event.id}`);
+  };
 
   useEffect(() => {
     if (searchType === "교육기간") {
       setCalendarDate(startDate);
     }
   }, [searchType, startDate]);
-
-  const handleNavigate = (newDate) => setCalendarDate(newDate);
 
   const filteredEvents = events.filter((evt) => {
     const kw = searchKeyword.toLowerCase();
@@ -226,27 +139,33 @@ export default function CalendarPage({ eventsData }) {
     return true;
   });
 
-  const paragraphs = [
-    "이 페이지는 DB에서 가져온 교육 일정을 달력 형태로 보여줍니다.",
-    "날짜/시간 표기를 한국어(오전/오후) 형태로 표시합니다.",
-  ];
-  const subTabs = [
-    { label: "calendar", href: "/education/calendar" },
-    { label: "followup", href: "/education/followup" },
-    { label: "certification", href: "/education/certification" },
-    { label: "공개교육", href: "/education/opencourse" },
-    { label: "facilitation", href: "/education/facilitation" },
-  ];
-
   return (
     <>
-      <TextContent
-        title="calendar"
-        subtitle="교육 일정 달력"
-        paragraphs={paragraphs}
-        tabs={subTabs}
-      />
-
+      {/* 달 이동 컨트롤 */}
+      <div
+        style={{
+          textAlign: "center",
+          margin: "8px 0 16px",
+          fontSize: "20px",
+          fontWeight: "bold",
+        }}
+      >
+        <span
+          style={{ marginRight: "20px", cursor: "pointer", fontSize: "24px" }}
+          onClick={() =>
+            setCalendarDate(calendarDate.clone().subtract(1, "month"))
+          }
+        >
+          ◀
+        </span>
+        {calendarDate.format("YYYY년 M월")}
+        <span
+          style={{ marginLeft: "20px", cursor: "pointer", fontSize: "24px" }}
+          onClick={() => setCalendarDate(calendarDate.clone().add(1, "month"))}
+        >
+          ▶
+        </span>
+      </div>
       {/* 검색 영역 */}
       <div
         style={{
@@ -336,43 +255,25 @@ export default function CalendarPage({ eventsData }) {
           )}
         </div>
       </div>
-
-      {/* 달력 + 우측 패널 */}
       <div style={{ display: "flex", gap: "20px", padding: "20px" }}>
         <div style={{ flex: 1, fontSize: "14px" }}>
-          <Calendar
-            localizer={localizer}
-            culture="ko"
-            messages={messagesKo}
-            formats={formats}
-            events={filteredEvents}
-            date={calendarDate}
-            onNavigate={handleNavigate}
-            style={{ height: 600 }}
-            views={{
-              month: true,
-              week: true,
-              myAgenda: MySingleAgendaView,
-            }}
-            components={{ event: CustomEvent }}
-            onSelectEvent={handleSelectEvent}
-            startAccessor="start"
-            endAccessor="end"
+          <CustomCalendar
+            schedules={filteredEvents}
+            currentMonth={calendarDate}
+            setCurrentMonth={setCalendarDate}
+            onSelectSchedule={handleSelectEvent}
+            shouldFilterInactive={false}
           />
         </div>
-
-        <div
-          style={{
-            width: "300px",
-            minHeight: "600px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            backgroundColor: "#f9f9f9",
-          }}
-        >
-          <EventDetailPanel event={selectedEvent} />
-        </div>
       </div>
+      {/* 모달은 바깥에서 렌더링 */}
+      <ScheduleDetailModal
+        schedule={selectedEvent}
+        onClose={() =>
+          router.push(router.pathname, undefined, { shallow: true })
+        }
+        mode="user"
+      />
     </>
   );
 }
