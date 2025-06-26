@@ -79,9 +79,6 @@ jobs:
             }
           ' backend/package.json frontend/package.json > release/package.json
 
-      - name: DEBUG - Show release/package.json
-        run: cat release/package.json
-
       - name: Clean previous node_modules
         run: rm -rf release/node_modules
 
