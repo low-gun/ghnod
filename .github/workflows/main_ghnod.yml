@@ -73,10 +73,22 @@ jobs:
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Create root package.json from backend and fix start script
+      - name: Merge frontend + backend dependencies into root package.json
         run: |
-          cp backend/package.json release/package.json
-          jq '.scripts.start = "node server.js" | .main = "server.js"' release/package.json > tmp.json && mv tmp.json release/package.json
+          jq -s '
+            def deepmerge(a;b): a * b // (a + b);
+            .[0] as $backend |
+            .[1] as $frontend |
+            {
+              name: "ghnod",
+              version: "1.0.0",
+              main: "server.js",
+              scripts: {
+                start: "node server.js"
+              },
+              dependencies: deepmerge($backend.dependencies; $frontend.dependencies)
+            }
+          ' backend/package.json frontend/package.json > release/package.json
 
       - name: DEBUG - Show release/package.json dependencies
         run: |
