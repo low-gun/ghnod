@@ -56,19 +56,8 @@ jobs:
           cp -r backend/* release/
           cp backend/server.js release/server.js
 
-      - name: DEBUG - Check deployed key files
-        run: |
-          echo "---- server.js (first 10 lines) ----"
-          head -n 10 release/server.js || echo "❌ server.js not found"
-          echo "---- .env.production ----"
-          cat release/.env.production || echo "❌ .env.production not found"
-          echo "---- .next folder ----"
-          ls -al release/.next || echo "❌ .next not found"
-          echo "---- pages folder ----"
-          ls -al release/pages || echo "❌ pages not found"
-
-      - name: Clean previous node_modules (just in case)
-        run: rm -rf release/node_modules
+      - name: Copy lock file to release
+        run: cp frontend/package-lock.json release/package-lock.json
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -90,14 +79,15 @@ jobs:
             }
           ' backend/package.json frontend/package.json > release/package.json
 
-      - name: DEBUG - Show release/package.json dependencies
-        run: |
-          echo "---- Final release/package.json ----"
-          cat release/package.json
+      - name: DEBUG - Show release/package.json
+        run: cat release/package.json
 
-      - name: Install runtime dependencies at root
+      - name: Clean previous node_modules
+        run: rm -rf release/node_modules
+
+      - name: Install runtime dependencies from lock file
         working-directory: release
-        run: npm install --omit=dev
+        run: npm ci
 
       - name: Check for hardcoded localhost
         run: grep -rao 'localhost:5001' release/ || echo "✅ localhost 없음"
@@ -108,7 +98,6 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
-        id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: "ghnod"
