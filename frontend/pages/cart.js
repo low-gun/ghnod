@@ -40,9 +40,9 @@ export default function CartPage() {
   }, [router.isReady, router.query]);
 
   useEffect(() => {
-    if (!router.isReady) return;
-    refreshCart();
-  }, [router.isReady, searchType, searchValue]);
+    if (!cartReady || cartItems.length === 0) return;
+    setSelectedItems(cartItems.map((it) => it.id));
+  }, [cartReady, cartItems]);
 
   const handleSearchUpdate = (type, val) => {
     setSearchType(type);
@@ -137,14 +137,24 @@ export default function CartPage() {
               checked={isAllChecked}
               onChange={(e) => handleCheckAll(e.target.checked)}
             />
-            전체 선택
+            <span style={{ fontSize: "14px" }}>전체선택</span>
           </label>
           {selectedItems.length > 0 && (
             <button
               onClick={handleDeleteSelected}
-              style={buttonStyle("#ef4444", "#fff")}
+              style={{
+                backgroundColor: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                padding: "6px 12px", // ✅ 작게
+                fontSize: "14px", // ✅ 통일
+                fontWeight: "bold",
+                cursor: "pointer",
+                marginLeft: "8px", // ✅ 여백 추가
+              }}
             >
-              🗑 삭제하기
+              삭제
             </button>
           )}
         </div>

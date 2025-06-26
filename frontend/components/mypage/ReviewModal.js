@@ -74,29 +74,22 @@ export default function ReviewModal({
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
-        {/* 닫기 버튼 */}
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: "12px",
-            right: "12px",
-            background: "transparent",
-            border: "none",
-            fontSize: "20px",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={onClose} style={closeButtonStyle}>
           ×
         </button>
 
+        {/* 썸네일 이미지 */}
+        {initialData?.thumbnail && (
+          <img
+            src={initialData.thumbnail}
+            alt="강의 썸네일"
+            style={thumbnailStyle}
+          />
+        )}
+
         {/* 강의명 */}
         {initialData?.title && (
-          <div
-            style={{ marginBottom: 12, fontWeight: "bold", fontSize: "16px" }}
-          >
-            {initialData.title}
-          </div>
+          <div style={titleTextStyle}>{initialData.title}</div>
         )}
 
         {/* 별점 UI */}
@@ -130,19 +123,20 @@ export default function ReviewModal({
 
         {/* 작성일시 / 수정일시 */}
         {initialData?.created_at && (
-          <div style={{ fontSize: "12px", color: "#888", marginBottom: 4 }}>
+          <div style={metaTextStyle}>
             작성일시: {new Date(initialData.created_at).toLocaleString("ko-KR")}
           </div>
         )}
         {initialData?.updated_at &&
           initialData.updated_at !== initialData.created_at && (
-            <div style={{ fontSize: "12px", color: "#888", marginBottom: 12 }}>
+            <div style={metaTextStyle}>
               수정일시:{" "}
               {new Date(initialData.updated_at).toLocaleString("ko-KR")}
             </div>
           )}
+
         {/* 버튼들 */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <div style={buttonRowStyle}>
           {reviewId && (
             <button
               onClick={handleDelete}
@@ -188,6 +182,36 @@ const modalStyle = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
 };
 
+const thumbnailStyle = {
+  width: "100%",
+  height: "160px",
+  objectFit: "cover",
+  borderRadius: "8px",
+  marginBottom: "12px",
+};
+
+const closeButtonStyle = {
+  position: "absolute",
+  top: "12px",
+  right: "12px",
+  background: "transparent",
+  border: "none",
+  fontSize: "20px",
+  cursor: "pointer",
+};
+
+const titleTextStyle = {
+  marginBottom: 12,
+  fontWeight: "bold",
+  fontSize: "16px",
+};
+
+const metaTextStyle = {
+  fontSize: "12px",
+  color: "#888",
+  marginBottom: 4,
+};
+
 const inputStyle = {
   padding: "8px",
   borderRadius: "4px",
@@ -204,3 +228,9 @@ const buttonStyle = (bg, color) => ({
   fontWeight: "bold",
   cursor: "pointer",
 });
+
+const buttonRowStyle = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: 8,
+};

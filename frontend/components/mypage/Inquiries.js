@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
 import api from "@/lib/api";
 import InquiryModal from "./InquiryModal";
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
 export default function Inquiries({ data }) {
   const [inquiries, setInquiries] = useState(data || []);
   const [showModal, setShowModal] = useState(false);
   const [openIndex, setOpenIndex] = useState(null);
-
-  // ✅ 목록 새로고침 함수
+  const isMobile = useIsMobile(); // ✅ 1번만 호출
+  const containerStyle = {
+    padding: isMobile ? 0 : 20,
+  };
+  // 목록 새로고침
   const fetchData = async () => {
     try {
       const res = await api.get("/mypage/inquiries");
@@ -19,13 +23,34 @@ export default function Inquiries({ data }) {
     }
   };
 
-  if (!inquiries) return <p>로딩 중...</p>;
+  if (!inquiries) return <></>;
+
+  // ✅ 조건 분기된 스타일
+  const headerRow = {
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "stretch" : "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    marginBottom: 20,
+  };
+
+  const topButtonStyle = {
+    padding: isMobile ? "10px 0" : "6px 12px",
+    width: isMobile ? "100%" : "auto",
+    backgroundColor: "#0070f3",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "0.95rem",
+    cursor: "pointer",
+    marginTop: isMobile ? 0 : 0,
+  };
 
   return (
     <div style={containerStyle}>
-      {/* 상단 타이틀 + 버튼 */}
       <div style={headerRow}>
-        <h2 style={titleStyle}>1:1 문의 내역</h2>
+        {!isMobile && <h2 style={titleStyle}>1:1 문의내역</h2>}
         <button onClick={() => setShowModal(true)} style={topButtonStyle}>
           문의하기
         </button>
@@ -71,7 +96,6 @@ export default function Inquiries({ data }) {
                     <div style={sectionTitle}>📩 문의 내용</div>
                     <p style={messageText}>{inquiry.message}</p>
 
-                    {/* ✅ 첨부파일 다운로드 버튼 */}
                     {inquiry.attachment && (
                       <div style={{ marginTop: 8 }}>
                         <button
@@ -135,9 +159,7 @@ export default function Inquiries({ data }) {
   );
 }
 
-// ──────────────
-// 유틸
-// ──────────────
+// ────────────── 유틸 ──────────────
 const formatDate = (dateStr) =>
   new Date(dateStr).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -145,30 +167,8 @@ const formatDate = (dateStr) =>
     day: "2-digit",
   });
 
-// ──────────────
-// 스타일
-// ──────────────
-const containerStyle = { padding: 20 };
-
-const headerRow = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: 20,
-};
-
+// ────────────── 공통 스타일 ──────────────
 const titleStyle = { fontSize: "1.2rem", margin: 0 };
-
-const topButtonStyle = {
-  padding: "6px 12px",
-  backgroundColor: "#0070f3",
-  color: "#fff",
-  border: "none",
-  borderRadius: "6px",
-  fontSize: "0.85rem",
-  cursor: "pointer",
-  transition: "background-color 0.2s ease",
-};
 
 const cardHeaderRow = {
   display: "flex",
@@ -224,6 +224,7 @@ const badgeStyle = {
     fontSize: 12,
   },
 };
+
 const downloadButtonStyle = {
   backgroundColor: "#f1f1f1",
   border: "1px solid #ccc",

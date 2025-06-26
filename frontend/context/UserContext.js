@@ -81,7 +81,7 @@ export function UserProvider({ children }) {
     }
 
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
@@ -101,6 +101,7 @@ export function UserProvider({ children }) {
       })
       .catch((error) => {
         console.error("유저 정보를 불러오지 못했습니다.", error);
+        logout();
       });
   }, [accessToken]);
 

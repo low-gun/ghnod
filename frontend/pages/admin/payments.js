@@ -37,7 +37,7 @@ export default function AdminPaymentsPage() {
 
   return (
     <AdminLayout pageTitle="💳 결제내역">
-      {loading && <p style={{ padding: 20 }}>로딩 중...</p>}
+      {loading && <></>}
       {!loading && error && <p style={{ color: "red" }}>{error}</p>}
       {!loading && !error && payments.length === 0 && (
         <p>결제 내역이 없습니다.</p>

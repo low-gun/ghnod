@@ -91,7 +91,11 @@ router.post("/items", optionalAuthenticate, (req, res, next) => {
 
 // 2) PUT /api/cart/items/:itemId - 아이템 수정 (비로그인도 허용)
 
-// router.put("/items/:itemId", optionalAuthenticate, cartController.updateCartItem);
+router.put(
+  "/items/:itemId",
+  optionalAuthenticate,
+  cartController.updateCartItem
+);
 router.delete(
   "/items/:itemId",
   optionalAuthenticate,

@@ -160,7 +160,7 @@ export default function CartSummary({
           opacity: isLoading ? 0.6 : 1,
         }}
       >
-        {isLoading ? "처리 중..." : "🍚 주문하기"}
+        {isLoading ? "처리 중..." : "주문하기"}
       </button>
 
       {showCouponPopup && (

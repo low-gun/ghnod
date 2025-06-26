@@ -62,9 +62,7 @@ export default function AdminProductsPage() {
           +등록
         </button>
       </div>
-      {loading ? (
-        <p>로딩 중...</p>
-      ) : (
+      {!loading && (
         <ProductTable
           products={products}
           productTypes={productTypes}

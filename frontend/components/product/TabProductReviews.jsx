@@ -34,7 +34,7 @@ export default function TabProductReviews({ productId }) {
       </h2>
 
       {loading ? (
-        <div style={{ textAlign: "center", color: "#aaa" }}>로딩 중...</div>
+        <></>
       ) : reviews.length === 0 ? (
         <div
           style={{

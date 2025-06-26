@@ -59,7 +59,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (!user) return <p>로딩 중...</p>;
+  if (!user) return null;
   if (user.role !== "admin") return null;
 
   return (

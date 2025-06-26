@@ -23,6 +23,7 @@ export default function MainLayout({ children }) {
           marginLeft: "auto",
           marginRight: "auto",
           width: "100%",
+          position: "relative", // ✅ 추가!
         }}
       >
         {children}

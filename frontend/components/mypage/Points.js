@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { formatPrice } from "@/lib/format";
-
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize"; // 상단 import 추가
 export default function Points({ data }) {
   const [tab, setTab] = useState("전체");
 
@@ -25,7 +25,10 @@ export default function Points({ data }) {
     }
   });
   usedMap.forEach((v) => merged.push(v));
-
+  const isMobile = useIsMobile(); // 컴포넌트 내부
+  const containerStyle = {
+    padding: isMobile ? 0 : 20,
+  };
   const filtered = merged.filter((point) => {
     if (tab === "전체") return true;
     return point.change_type === tab;
@@ -48,6 +51,10 @@ export default function Points({ data }) {
           padding: "4px 8px",
           borderRadius: "12px",
           fontSize: "12px",
+          minWidth: "40px", // ✅ 고정 너비
+          textAlign: "center", // ✅ 가운데 정렬
+          whiteSpace: "nowrap", // ✅ 줄바꿈 방지
+          display: "inline-block", // ✅ width 적용 위해 필요
         }}
       >
         {type}
@@ -57,11 +64,11 @@ export default function Points({ data }) {
 
   return (
     <div style={containerStyle}>
-      <h2 style={titleStyle}>포인트</h2>
+      {!isMobile && <h2 style={titleStyle}>포인트</h2>}
 
       {/* 상단 카드 */}
       <div style={cardStyle}>
-        <div style={cardLeft}>{username}님의 사용 가능 포인트</div>
+        <div style={cardLeft}>{username}님의 포인트</div>
         <div style={cardRight}>{formatPrice(availablePoints)}P</div>
       </div>
 
@@ -127,12 +134,6 @@ export default function Points({ data }) {
     </div>
   );
 }
-
-// 스타일 정의
-const containerStyle = {
-  padding: "20px",
-  fontFamily: "sans-serif",
-};
 
 const titleStyle = {
   fontSize: "1.2rem",

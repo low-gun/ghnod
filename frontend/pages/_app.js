@@ -2,20 +2,22 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
-import { CartProvider, useCartContext } from "../context/CartContext"; // ✅ CartProvider 바깥으로
+import { CartProvider, useCartContext } from "../context/CartContext";
 import { UserProvider } from "../context/UserContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "@/lib/api";
+import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
+import useGlobalLoading from "@/stores/globalLoading";
+import ScrollTopButton from "@/components/common/ScrollTopButton"; // ✅ 추가
 
 function CartInitializer() {
-  const { setCartItems, setCartReady } = useCartContext(); // ✅ 추가
+  const { setCartItems, setCartReady } = useCartContext();
 
   useEffect(() => {
     const fetchCart = async () => {
       let guestToken = localStorage.getItem("guest_token");
 
-      // ✅ 없으면 자동 생성
       if (!guestToken) {
         guestToken = crypto.randomUUID();
         localStorage.setItem("guest_token", guestToken);
@@ -30,7 +32,7 @@ function CartInitializer() {
         if (res.data.success) {
           setCartItems(res.data.items);
         }
-        setCartReady(true); // ✅ 성공/실패와 관계없이 항상 호출
+        setCartReady(true);
       } catch (err) {
         console.warn("🛒 장바구니 초기화 실패:", err.message);
       }
@@ -44,6 +46,39 @@ function CartInitializer() {
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
+  const { showLoading, hideLoading } = useGlobalLoading();
+  let startTime = 0;
+  let maxTimeout = null;
+
+  useEffect(() => {
+    const handleStart = () => {
+      startTime = Date.now();
+      showLoading();
+
+      maxTimeout = setTimeout(() => {
+        hideLoading();
+        console.warn("⏱ 로딩이 10초 이상 지속되어 자동 종료되었습니다.");
+      }, 30000);
+    };
+
+    const handleEnd = () => {
+      clearTimeout(maxTimeout);
+      const elapsed = Date.now() - startTime;
+      const delay = Math.max(300 - elapsed, 0);
+      setTimeout(hideLoading, delay);
+    };
+
+    router.events.on("routeChangeStart", handleStart);
+    router.events.on("routeChangeComplete", handleEnd);
+    router.events.on("routeChangeError", handleEnd);
+
+    return () => {
+      clearTimeout(maxTimeout);
+      router.events.off("routeChangeStart", handleStart);
+      router.events.off("routeChangeComplete", handleEnd);
+      router.events.off("routeChangeError", handleEnd);
+    };
+  }, [router, showLoading, hideLoading]);
 
   const LayoutWrapper = router.pathname.startsWith("/admin")
     ? ({ children }) => <>{children}</>
@@ -51,13 +86,13 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <CartProvider>
-      {" "}
-      {/* ✅ CartProvider 최상단 */}
       <UserProvider>
         <CartInitializer />
+        <GlobalLoadingBar />
         <LayoutWrapper>
           <Component {...pageProps} />
         </LayoutWrapper>
+        <ScrollTopButton /> {/* ✅ 전역 Scroll To Top 버튼 */}
         <ToastContainer position="top-right" autoClose={2000} />
       </UserProvider>
     </CartProvider>

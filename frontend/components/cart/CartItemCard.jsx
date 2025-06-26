@@ -34,16 +34,17 @@ export default function CartItemCard({
   return (
     <div
       style={{
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-        padding: "12px",
+        border: "1px solid #ddd",
+        borderRadius: "12px",
+        padding: "16px",
         background: "#fff",
         display: "flex",
-        flexDirection: "column", // ✅ 세로로 쌓기
-        gap: "12px",
+        flexDirection: "row", // 가로 배치
+        gap: "16px",
         position: "relative",
-        height: "100%", // ✅ 카드 높이 통일
+        height: "100%",
         boxSizing: "border-box",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.05)", // 그림자
       }}
     >
       {/* 삭제 버튼 */}
@@ -170,10 +171,10 @@ export default function CartItemCard({
                   marginRight: 8,
                 }}
               >
-                {formatPrice(unit_price)}
+                {formatPrice(unit_price)}원
               </span>
               <span style={{ color: "#d9534f", fontWeight: "bold" }}>
-                {formatPrice(discount_price)}
+                {formatPrice(discount_price)}원
               </span>
               <span
                 style={{
@@ -192,13 +193,13 @@ export default function CartItemCard({
                   marginTop: 4,
                 }}
               >
-                {formatPrice(subtotal)}
+                {formatPrice(subtotal)}원
               </div>
             </>
           ) : (
             <>
               <div style={{ textAlign: "right", fontWeight: "bold" }}>
-                {formatPrice(subtotal)}
+                {formatPrice(subtotal)}원
               </div>
             </>
           )}
@@ -209,14 +210,16 @@ export default function CartItemCard({
 }
 
 const qtyBtnStyle = {
-  width: 28,
-  height: 28,
-  border: "none",
-  background: "transparent",
+  width: 32,
+  height: 32,
+  border: "1px solid #ddd",
+  background: "#f5f5f5",
   fontWeight: "bold",
   fontSize: 16,
   cursor: "pointer",
+  borderRadius: "4px",
 };
+
 const qtyValueStyle = {
   width: 36,
   height: 28,

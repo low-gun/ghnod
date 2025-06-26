@@ -44,7 +44,17 @@ export default function Header() {
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
-
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") setShowMobileMenu(false);
+    };
+    if (showMobileMenu) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showMobileMenu]);
   function renderLeftGroup() {
     return (
       <div
@@ -291,57 +301,59 @@ export default function Header() {
     return (
       <div
         style={{
-          position: "absolute",
-          top: "80px",
+          position: "fixed",
+          top: 0,
           left: 0,
-          width: "100%",
-          backgroundColor: "#fff",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-          padding: "20px",
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.6)", // ✅ 블랙 반투명 배경
           zIndex: 9999,
           display: "flex",
           flexDirection: "column",
-          alignItems: "center", // ✅ 가운데 정렬
-          textAlign: "center", // ✅ 텍스트 정렬도 중앙
+          justifyContent: "center", // ✅ 수직 중앙 정렬
+          alignItems: "center",
+          padding: "5vh 20px", // ✅ 화면 크기에 따라 여백
+          gap: "3vh", // ✅ 메뉴 간격도 vh로
         }}
       >
+        {/* 닫기 버튼 */}
+        <button
+          onClick={() => setShowMobileMenu(false)}
+          style={{
+            position: "absolute",
+            top: 20,
+            right: 20,
+            fontSize: "28px",
+            background: "none",
+            border: "none",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+          aria-label="메뉴 닫기"
+        >
+          ×
+        </button>
+
+        {/* 메뉴 항목 */}
         {centerGroup.map(
           (item) =>
             item.link && (
-              <div key={item.label} style={{ marginBottom: "12px" }}>
-                <Link
-                  href={
-                    item.sub ? `${item.link}/${item.sub[0].slug}` : item.link
-                  }
-                  style={{
-                    textDecoration: "none",
-                    color: "#333",
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              </div>
-            )
-        )}
-
-        {getRightGroup(user).map(
-          (item) =>
-            item.link && (
-              <div key={item.label} style={{ marginBottom: "12px" }}>
-                <Link
-                  href={item.link}
-                  style={{
-                    textDecoration: "none",
-                    color: "#333",
-                    fontSize: "16px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              </div>
+              <Link
+                key={item.label}
+                href={item.sub ? `${item.link}/${item.sub[0].slug}` : item.link}
+                style={{
+                  textDecoration: "none",
+                  color: "#fff",
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  transition: "color 0.2s", // ✅ 부드러운 색 전환
+                }}
+                onClick={() => setShowMobileMenu(false)}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#e0e0e0")} // ✅ hover in
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")} // ✅ hover out
+              >
+                {item.label}
+              </Link>
             )
         )}
       </div>
@@ -358,7 +370,7 @@ export default function Header() {
           height: "80px",
           backgroundColor: "#fff",
           zIndex: 999,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+          boxShadow: isMobile ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
         }}
       >
         <div
@@ -381,15 +393,28 @@ export default function Header() {
                 display: "flex",
                 alignItems: "center",
                 marginLeft: "auto",
+                gap: "12px",
               }}
             >
+              {!user && (
+                <Link
+                  href="/login"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    color: "#333333",
+                    textDecoration: "none",
+                  }}
+                >
+                  로그인
+                </Link>
+              )}
               {user && (
                 <Link
                   href="/mypage"
                   style={{
                     fontWeight: "bold",
                     fontSize: "16px",
-                    marginRight: "12px",
                     color: "#333",
                     textDecoration: "none",
                   }}

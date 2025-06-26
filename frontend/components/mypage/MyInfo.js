@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import api from "@/lib/api";
-import ChangePasswordModal from "./ChangePasswordModal"; // 비밀번호 변경 모달 import
+import ChangePasswordModal from "./ChangePasswordModal";
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
 export default function MyInfo({ data }) {
-  if (!data || !data[0]) return <p>로딩 중...</p>;
+  if (!data || data.length === 0) return <></>; // 데이터 없는 경우만
 
   const {
     name: initialUsername,
@@ -26,6 +27,57 @@ export default function MyInfo({ data }) {
   const [editing, setEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
+
+  const containerStyle = {
+    padding: isMobile ? 0 : 20,
+  };
+  const buttonRow = {
+    marginTop: "24px",
+    display: "flex",
+    justifyContent: "center",
+    gap: "12px",
+  };
+
+  const editButton = {
+    flex: 1,
+    padding: "12px 0",
+    fontSize: "1rem",
+    backgroundColor: "#0070f3",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    maxWidth: "160px",
+  };
+
+  const saveButton = {
+    ...editButton,
+    backgroundColor: "#2196F3",
+  };
+
+  const cancelButton = {
+    ...editButton,
+    backgroundColor: "#ccc",
+    color: "#333",
+  };
+
+  const cardStyle = {
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    padding: isMobile ? "16px" : "24px",
+    boxShadow: isMobile ? "none" : "0 2px 10px rgba(0,0,0,0.06)",
+    maxWidth: "900px",
+    position: "relative",
+    marginBottom: isMobile ? "16px" : "24px",
+  };
+
+  const infoGrid = {
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    rowGap: "16px",
+    columnGap: isMobile ? "0px" : "32px",
+  };
 
   const handleSave = async () => {
     try {
@@ -48,16 +100,13 @@ export default function MyInfo({ data }) {
     }
   };
 
-  const handlePasswordChange = () => {
-    setShowPasswordModal(true);
-  };
+  const handlePasswordChange = () => setShowPasswordModal(true);
 
   const handleWithdraw = async () => {
     const confirmed = window.confirm(
       "정말 탈퇴하시겠습니까? 탈퇴 후에는 복구할 수 없습니다."
     );
     if (!confirmed) return;
-
     try {
       await api.delete("/mypage/delete-account");
       localStorage.removeItem("token");
@@ -72,38 +121,28 @@ export default function MyInfo({ data }) {
 
   return (
     <div style={containerStyle}>
-      <h2 style={titleStyle}>내 정보</h2>
+      {!isMobile && <h2 style={titleStyle}>내 정보</h2>}
+
+      {/* ✅ 기본정보 카드 */}
       <div style={cardStyle}>
-        <h3 style={subTitleStyle}>기본정보</h3>
+        {!isMobile && <h3 style={subTitleStyle}>기본정보</h3>}
         <button onClick={handleWithdraw} style={withdrawButton}>
           ✖
         </button>
 
         <div style={infoGrid}>
-          <div style={infoItem}>
-            <span style={infoLabel}>이름</span>
-            {editing ? (
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                style={inputStyle}
-              />
-            ) : (
-              <span style={infoValue}>{username}</span>
-            )}
-          </div>
-          <div style={infoItem}>
-            <span style={infoLabel}>연락처</span>
-            {editing ? (
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                style={inputStyle}
-              />
-            ) : (
-              <span style={infoValue}>{phone}</span>
-            )}
-          </div>
+          <InfoField
+            label="이름"
+            value={username}
+            editing={editing}
+            onChange={setUsername}
+          />
+          <InfoField
+            label="연락처"
+            value={phone}
+            editing={editing}
+            onChange={setPhone}
+          />
           <div style={infoItem}>
             <span style={infoLabel}>이메일</span>
             <span style={infoValue}>{email}</span>
@@ -120,45 +159,29 @@ export default function MyInfo({ data }) {
         </div>
       </div>
 
-      <div style={cardStyle}>
-        <h3 style={subTitleStyle}>추가정보</h3>
-        <div style={infoGrid}>
-          <div style={infoItem}>
-            <span style={infoLabel}>소속</span>
-            {editing ? (
-              <input
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                style={inputStyle}
-              />
-            ) : (
-              <span style={infoValue}>{company || "-"}</span>
-            )}
-          </div>
-          <div style={infoItem}>
-            <span style={infoLabel}>부서</span>
-            {editing ? (
-              <input
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                style={inputStyle}
-              />
-            ) : (
-              <span style={infoValue}>{department || "-"}</span>
-            )}
-          </div>
-          <div style={infoItem}>
-            <span style={infoLabel}>직책</span>
-            {editing ? (
-              <input
-                value={position}
-                onChange={(e) => setPosition(e.target.value)}
-                style={inputStyle}
-              />
-            ) : (
-              <span style={infoValue}>{position || "-"}</span>
-            )}
-          </div>
+      {/* ✅ 추가정보 카드 */}
+      <div style={{ ...cardStyle, marginTop: isMobile ? "16px" : "24px" }}>
+        {!isMobile && <h3 style={subTitleStyle}>추가정보</h3>}
+
+        <div style={{ ...infoGrid, marginTop: isMobile ? "0" : "8px" }}>
+          <InfoField
+            label="소속"
+            value={company}
+            editing={editing}
+            onChange={setCompany}
+          />
+          <InfoField
+            label="부서"
+            value={department}
+            editing={editing}
+            onChange={setDepartment}
+          />
+          <InfoField
+            label="직책"
+            value={position}
+            editing={editing}
+            onChange={setPosition}
+          />
           <div style={infoItem}>
             <span style={infoLabel}>마케팅 수신 동의</span>
             {editing ? (
@@ -167,7 +190,7 @@ export default function MyInfo({ data }) {
                   <input
                     type="radio"
                     value="1"
-                    checked={marketingAgree === true}
+                    checked={marketingAgree}
                     onChange={() => setMarketingAgree(true)}
                   />{" "}
                   동의함
@@ -176,7 +199,7 @@ export default function MyInfo({ data }) {
                   <input
                     type="radio"
                     value="0"
-                    checked={marketingAgree === false}
+                    checked={!marketingAgree}
                     onChange={() => setMarketingAgree(false)}
                   />{" "}
                   동의 안 함
@@ -208,7 +231,6 @@ export default function MyInfo({ data }) {
         )}
       </div>
 
-      {/* ✅ 비밀번호 변경 모달 */}
       {showPasswordModal && (
         <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
       )}
@@ -217,12 +239,26 @@ export default function MyInfo({ data }) {
 }
 
 // ─────────────────────────────────────────────
-// 스타일
-const containerStyle = {
-  padding: "20px",
-  fontFamily: "sans-serif",
-};
+// 재사용 필드 컴포넌트
+function InfoField({ label, value, editing, onChange }) {
+  return (
+    <div style={infoItem}>
+      <span style={infoLabel}>{label}</span>
+      {editing ? (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={inputStyle}
+        />
+      ) : (
+        <span style={infoValue}>{value || "-"}</span>
+      )}
+    </div>
+  );
+}
 
+// ─────────────────────────────────────────────
+// 스타일
 const titleStyle = {
   fontSize: "1.4rem",
   fontWeight: "bold",
@@ -233,16 +269,6 @@ const subTitleStyle = {
   fontSize: "1.1rem",
   fontWeight: "bold",
   marginBottom: "16px",
-};
-
-const cardStyle = {
-  backgroundColor: "#fff",
-  borderRadius: "12px",
-  padding: "24px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-  maxWidth: "900px",
-  position: "relative",
-  marginBottom: "24px",
 };
 
 const withdrawButton = {
@@ -256,12 +282,7 @@ const withdrawButton = {
   cursor: "pointer",
 };
 
-const infoGrid = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  rowGap: "16px",
-  columnGap: "32px",
-};
+const infoGrid = {}; // 조건부 스타일은 컴포넌트 내부에서 분기
 
 const infoItem = {
   display: "flex",
@@ -299,26 +320,4 @@ const miniButton = {
 const buttonRow = {
   marginTop: "24px",
   textAlign: "center",
-};
-
-const editButton = {
-  padding: "8px 24px",
-  fontSize: "0.9rem",
-  backgroundColor: "#0070f3",
-  color: "#fff",
-  border: "none",
-  borderRadius: "4px",
-  cursor: "pointer",
-};
-
-const saveButton = {
-  ...editButton,
-  backgroundColor: "#2196F3",
-};
-
-const cancelButton = {
-  ...editButton,
-  backgroundColor: "#ccc",
-  color: "#333",
-  marginLeft: "8px",
 };

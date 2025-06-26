@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import "react-datepicker/dist/react-datepicker.css";
 import SearchFilter from "@/components/common/SearchFilter";
 import ReviewModal from "@/components/mypage/ReviewModal"; // 상단 import 추가
+import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize";
 function formatKoreanDate(dateString) {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -24,7 +25,32 @@ export default function MyCourse() {
   const [isLoading, setIsLoading] = useState(false);
   const pageSize = 10;
   const [currentPage, setCurrentPage] = useState(1);
+  const isCardLayout = useIsCardLayout();
+  const [isMediumScreen, setIsMediumScreen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(null);
 
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth && windowWidth <= 480;
+  useEffect(() => {
+    const check = () => {
+      const width = window.innerWidth;
+      setIsMediumScreen(isCardLayout && width > 500 && width < 1024);
+    };
+    check(); // mount 시점 실행
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [isCardLayout]);
+
+  const containerStyle = {
+    padding: isCardLayout ? 0 : 20,
+    marginTop: isMediumScreen ? "16px" : 0, // ✅ 중간 사이즈에서만 여백
+  };
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewTarget, setReviewTarget] = useState(null);
 
@@ -172,123 +198,175 @@ export default function MyCourse() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2 style={{ fontSize: "1.2rem", marginBottom: "16px" }}>수강정보</h2>
+    <div style={containerStyle}>
+      {!isMobile && <h2 style={titleStyle}>수강정보</h2>}
 
-      {/* 🔍 필터 영역 */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "16px",
-        }}
-      >
-        <SearchFilter
-          searchType={searchType}
-          setSearchType={setSearchType}
-          searchQuery={searchValue}
-          setSearchQuery={setSearchValue}
-          startDate={dateRange[0]}
-          endDate={dateRange[1]}
-          setStartDate={(date) => setDateRange([date, dateRange[1]])}
-          setEndDate={(date) => setDateRange([dateRange[0], date])}
-          searchOptions={[
-            { value: "title", label: "강의명", type: "text" },
-            { value: "location", label: "장소", type: "text" },
-            { value: "instructor", label: "강사", type: "text" },
-            {
-              value: "status",
-              label: "상태",
-              type: "select",
-              options: [
-                { value: "예정", label: "예정" },
-                { value: "진행중", label: "진행중" },
-                { value: "완료", label: "완료" },
-              ],
-            },
-            { value: "date", label: "일정", type: "date" },
-          ]}
-          onSearchUpdate={(type, query) => {
-            setSearchType(type);
-            setSearchValue(query);
-            setCurrentPage(1);
-          }}
-        />
-        <button onClick={resetFilters} style={buttonStyle("#ccc", "#333")}>
-          초기화
-        </button>
-      </div>
-
-      {/* 📋 테이블 */}
-      <div style={{ overflowX: "auto" }}>
-        <table
+      {/* 🔍 필터 영역 - 카드형일 때 숨김 */}
+      {!isCardLayout && (
+        <div
           style={{
-            width: "100%",
-            fontSize: "15px",
-            borderCollapse: "collapse",
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
           }}
         >
-          <thead style={{ background: "#f9f9f9" }}>
-            <tr>
-              {[
-                "No",
-                "title",
-                "date",
-                "location",
-                "instructor",
-                "status",
-                "certificate",
-                "review", // ✅ 후기 컬럼 추가
-              ].map((key) => {
-                const sortKey =
-                  key === "No" ? null : key === "date" ? "start_date" : key;
-                const isSortable = !["No", "certificate"].includes(key);
-                const isActive = sortConfig.key === sortKey;
-                return (
-                  <th
-                    key={key}
-                    onClick={() => {
-                      if (isSortable) handleSort(sortKey);
-                    }}
-                    style={thCenter}
+          <SearchFilter
+            searchType={searchType}
+            setSearchType={setSearchType}
+            searchQuery={searchValue}
+            setSearchQuery={setSearchValue}
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            setStartDate={(date) => setDateRange([date, dateRange[1]])}
+            setEndDate={(date) => setDateRange([dateRange[0], date])}
+            searchOptions={[
+              { value: "title", label: "강의명", type: "text" },
+              { value: "location", label: "장소", type: "text" },
+              { value: "instructor", label: "강사", type: "text" },
+              {
+                value: "status",
+                label: "상태",
+                type: "select",
+                options: [
+                  { value: "예정", label: "예정" },
+                  { value: "진행중", label: "진행중" },
+                  { value: "완료", label: "완료" },
+                ],
+              },
+              { value: "date", label: "일정", type: "date" },
+            ]}
+            onSearchUpdate={(type, query) => {
+              setSearchType(type);
+              setSearchValue(query);
+              setCurrentPage(1);
+            }}
+          />
+          <button onClick={resetFilters} style={buttonStyle("#ccc", "#333")}>
+            초기화
+          </button>
+        </div>
+      )}
+
+      {/* 📱 모바일 카드형 / 💻 테이블 분기 */}
+      {isCardLayout ? (
+        <div
+          style={{
+            display: "grid",
+            gap: "16px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", // ✅ 핵심
+          }}
+        >
+          {pagedCourses.map((item) => (
+            <div key={item.order_item_id} style={mobileCardStyle}>
+              <div style={mobileRow}>
+                <strong>강의명</strong> {item.title}
+              </div>
+              <div style={mobileRow}>
+                <strong>일정</strong>{" "}
+                {new Date(item.start_date).toISOString().slice(0, 10) ===
+                new Date(item.end_date).toISOString().slice(0, 10)
+                  ? formatKoreanDate(item.start_date)
+                  : `${formatKoreanDate(item.start_date)} ~ ${formatKoreanDate(item.end_date)}`}
+              </div>
+              <div style={mobileRow}>
+                <strong>장소</strong> {item.location}
+              </div>
+              <div style={mobileRow}>
+                <strong>강사</strong> {item.instructor}
+              </div>
+              <div style={mobileRow}>
+                <strong>상태</strong> {renderStatusBadge(item.status)}
+              </div>
+              {item.certificate_id && (
+                <div style={mobileRow}>
+                  <strong>수료증</strong>
+                  <button
+                    style={certButtonStyle}
+                    onClick={() => handleDownloadCertificate(item)}
                   >
-                    {columnMap[key]}{" "}
-                    {isSortable && (
-                      <span
-                        style={{
-                          ...sortArrowStyle,
-                          color: isActive ? "#000" : "#ccc",
-                        }}
-                      >
-                        {isActive
-                          ? sortConfig.direction === "asc"
-                            ? "▲"
-                            : "▼"
-                          : "↕"}
-                      </span>
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredCourses.length === 0 ? (
+                    다운로드
+                  </button>
+                </div>
+              )}
+              <div style={mobileRow}>
+                <strong>후기</strong>{" "}
+                {item.status === "완료" ? (
+                  <button
+                    style={reviewButtonStyle}
+                    onClick={() => handleOpenReviewModal({ ...item })}
+                  >
+                    {item.is_reviewed ? "수정" : "작성"}
+                  </button>
+                ) : (
+                  "-"
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              fontSize: "15px",
+              borderCollapse: "collapse",
+            }}
+          >
+            <thead style={{ background: "#f9f9f9" }}>
               <tr>
-                <td colSpan={7} style={tdCenter}>
-                  수강 내역이 없습니다.
-                </td>
+                {[
+                  "No",
+                  "title",
+                  "date",
+                  "location",
+                  "instructor",
+                  "status",
+                  "certificate",
+                  "review",
+                ].map((key) => {
+                  const sortKey =
+                    key === "No" ? null : key === "date" ? "start_date" : key;
+                  const isSortable = !["No", "certificate"].includes(key);
+                  const isActive = sortConfig.key === sortKey;
+                  return (
+                    <th
+                      key={key}
+                      onClick={() => {
+                        if (isSortable) handleSort(sortKey);
+                      }}
+                      style={thCenter}
+                    >
+                      {columnMap[key]}{" "}
+                      {isSortable && (
+                        <span
+                          style={{
+                            ...sortArrowStyle,
+                            color: isActive ? "#000" : "#ccc",
+                          }}
+                        >
+                          {isActive
+                            ? sortConfig.direction === "asc"
+                              ? "▲"
+                              : "▼"
+                            : "↕"}
+                        </span>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
-            ) : (
-              pagedCourses.map((item, idx) => {
-                const now = new Date();
-                const start = new Date(item.start_date);
-                const end = new Date(item.end_date);
-                const status = item.status;
-
-                return (
+            </thead>
+            <tbody>
+              {filteredCourses.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={tdCenter}>
+                    수강 내역이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                pagedCourses.map((item, idx) => (
                   <tr
                     key={item.order_item_id}
                     style={{
@@ -324,10 +402,9 @@ export default function MyCourse() {
                         </>
                       )}
                     </td>
-
                     <td style={tdCenter}>{item.location}</td>
                     <td style={tdCenter}>{item.instructor}</td>
-                    <td style={tdCenter}>{renderStatusBadge(status)}</td>
+                    <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
                     <td style={tdCenter}>
                       {item.certificate_id ? (
                         <button
@@ -346,9 +423,8 @@ export default function MyCourse() {
                         "-"
                       )}
                     </td>
-
                     <td style={tdCenter}>
-                      {status === "완료" ? (
+                      {item.status === "완료" ? (
                         <button
                           style={{
                             ...reviewButtonStyle,
@@ -363,20 +439,12 @@ export default function MyCourse() {
                               initialData: {
                                 rating: item.review_rating,
                                 comment: item.review_comment,
-                                title: item.title, // 강의명
-                                created_at: item.review_created_at, // 작성일시 (백엔드에서 내려줘야 함
+                                title: item.title,
+                                created_at: item.review_created_at,
                                 updated_at: item.review_updated_at,
                               },
                             })
                           }
-                          onMouseOver={(e) => {
-                            if (!item.is_reviewed)
-                              e.currentTarget.style.backgroundColor = "#0057c2";
-                          }}
-                          onMouseOut={(e) => {
-                            if (!item.is_reviewed)
-                              e.currentTarget.style.backgroundColor = "#0070f3";
-                          }}
                         >
                           {item.is_reviewed ? "수정" : "작성"}
                         </button>
@@ -385,12 +453,12 @@ export default function MyCourse() {
                       )}
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* ⏩ 페이지네이션 */}
       <div style={{ marginTop: "20px", textAlign: "center" }}>
@@ -435,14 +503,6 @@ const columnMap = {
   status: "상태",
   certificate: "수료증",
   review: "후기", // ✅ 추가
-};
-
-const inputStyle = {
-  padding: "8px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  fontSize: "14px",
-  width: "140px",
 };
 
 const buttonStyle = (bg, color) => ({
@@ -505,4 +565,24 @@ const reviewButtonStyle = {
   fontWeight: "bold",
   cursor: "pointer",
   transition: "all 0.2s",
+};
+const titleStyle = {
+  fontSize: "1.4rem",
+  fontWeight: "bold",
+  marginBottom: "20px",
+};
+const mobileCardStyle = {
+  padding: "16px",
+  border: "1px solid #ddd",
+  borderRadius: "8px",
+  background: "#fff",
+  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+};
+
+const mobileRow = {
+  marginBottom: "8px",
+  fontSize: "14px",
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "8px",
 };

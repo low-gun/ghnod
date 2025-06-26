@@ -36,14 +36,12 @@ export default function AdminUserDetailPage() {
       });
   }, [id, currentUser]);
 
-  if (!currentUser) return <p>로딩 중...</p>;
+  if (!currentUser) return null;
   if (currentUser.role !== "admin") return null;
 
   return (
     <AdminLayout pageTitle="👤 사용자 상세정보">
-      {loading ? (
-        <p>로딩 중...</p>
-      ) : user ? (
+      {loading ? null : user ? (
         <>
           <UserDetailPageComponent user={user} />
           <div style={{ marginTop: "40px" }}>

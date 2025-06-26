@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import api from "@/lib/api";
 import axios from "axios";
 import MyPageSidebar from "../../components/mypage/MyPageSidebar";
-
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize"; // ✅ 추가
 // 자식 컴포넌트들
 import MyCourse from "../../components/mypage/MyCourse";
 import MyInfo from "../../components/mypage/MyInfo";
@@ -11,24 +11,38 @@ import PaymentHistory from "../../components/mypage/PaymentHistory";
 import Coupons from "../../components/mypage/Coupons";
 import Points from "../../components/mypage/Points";
 import Inquiries from "../../components/mypage/Inquiries";
+import { useRef } from "react"; // ⬅️ 상단 import 추가
 
 axios.defaults.withCredentials = true;
 
 export default function MyPage() {
   const router = useRouter();
-  const [activeMenu, setActiveMenu] = useState("내정보");
+  const [activeMenu, setActiveMenu] = useState("내 정보");
   const [myData, setMyData] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
+  const dropdownRef = useRef(null); // ⬅️ ref 정의
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (!router.isReady) return;
 
-    const menu = router.query.menu || "수강정보";
+    const menu = router.query.menu || "내 정보";
     setActiveMenu(menu);
     fetchData(menu);
   }, [router.query.menu]);
-
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   async function fetchData(menu) {
     setLoading(true);
     setErrorMessage("");
@@ -36,7 +50,7 @@ export default function MyPage() {
 
     try {
       let endpoint = "";
-      if (menu === "내정보") endpoint = "/mypage/info";
+      if (menu === "내 정보") endpoint = "/mypage/info";
       else if (menu === "수강정보") endpoint = "/mypage/courses";
       else if (menu === "결제내역") endpoint = "/mypage/payments";
       else if (menu === "쿠폰") endpoint = "/mypage/coupons";
@@ -62,7 +76,7 @@ export default function MyPage() {
   }
 
   const renderContent = () => {
-    if (loading) return <p>로딩 중...</p>;
+    if (loading) return <></>;
     if (errorMessage) {
       return (
         <div style={{ padding: "20px" }}>
@@ -75,7 +89,7 @@ export default function MyPage() {
     const commonProps = { data: myData };
 
     switch (activeMenu) {
-      case "내정보":
+      case "내 정보":
         return <MyInfo {...commonProps} />;
       case "수강정보":
         return <MyCourse {...commonProps} />;
@@ -96,14 +110,93 @@ export default function MyPage() {
     <div style={{ background: "#fefefe", minHeight: "100vh" }}>
       <div
         style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
           display: "flex",
-          paddingBottom: "20px",
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: "stretch", // ✅ 핵심 수정
+          minHeight: "100vh",
+          width: "100%",
+          overflow: "visible",
+          position: "relative", // ✅ 추가 (sticky 기준 anchor 역할)
         }}
       >
-        <MyPageSidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
-        <div style={{ flex: 1, padding: "0 20px" }}>{renderContent()}</div>
+        {isMobile ? (
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "relative",
+              margin: "16px 12px",
+              width: "calc(100% - 24px)",
+            }}
+          >
+            <div
+              onClick={() => setShowDropdown((prev) => !prev)}
+              style={{
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                padding: "10px 12px",
+                background: "#fff",
+                fontSize: "15px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                display: "flex", // ✅ flex로 분리
+                justifyContent: "space-between", // ✅ 좌우 정렬
+                alignItems: "center",
+              }}
+            >
+              <span>{activeMenu}</span>
+              <span style={{ fontSize: "13px", color: "#888" }}>▾</span>
+            </div>
+
+            {showDropdown && (
+              <div
+                style={{
+                  marginTop: "4px",
+                  border: "1px solid #ddd",
+                  borderRadius: "6px",
+                  background: "#fff",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  position: "absolute",
+                  zIndex: 10,
+                  width: "100%",
+                }}
+              >
+                {[
+                  "내 정보",
+                  "수강정보",
+                  "결제내역",
+                  "쿠폰",
+                  "포인트",
+                  "1:1문의",
+                ].map((label) => (
+                  <div
+                    key={label}
+                    onClick={() => {
+                      setShowDropdown(false);
+                      router.push(`/mypage?menu=${label}`);
+                    }}
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: "1px solid #f0f0f0",
+                      cursor: "pointer",
+                      background: activeMenu === label ? "#f5f5f5" : "#fff",
+                    }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <MyPageSidebar
+            activeMenu={activeMenu}
+            setActiveMenu={setActiveMenu}
+          />
+        )}
+
+        <div style={{ flex: 1, padding: isMobile ? "0 12px" : "0 20px" }}>
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
