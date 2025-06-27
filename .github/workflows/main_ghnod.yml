@@ -9,21 +9,77 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - name: Restore npm cache
+        uses: actions/cache@v3
         with:
-          node-version: "20"
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      - name: Install production dependencies in release
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Clean SWC + Next.js cache
+        run: |
+          rm -rf ~/.cache/next-swc
+          rm -rf frontend/.next
+          rm -rf frontend/.next/cache/webpack
+
+      - name: Build frontend (Next.js with SWC)
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
+        run: npm run build
+
+      - name: Prepare release folder (merge frontend/backend into root)
+        run: |
+          mkdir -p release
+          cp -r frontend/.next release/.next
+          cp -r frontend/public release/public
+          cp -r frontend/pages release/pages
+          cp frontend/.env.production release/.env.production
+          cp -r backend/* release/
+          cp backend/server.js release/server.js
+
+      - name: Install jq (JSON processor)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Merge frontend + backend dependencies into root package.json
+        run: |
+          jq -s '
+            def deepmerge(a;b): a * b // (a + b);
+            .[0] as $backend |
+            .[1] as $frontend |
+            {
+              name: "ghnod",
+              version: "1.0.0",
+              main: "server.js",
+              scripts: {
+                start: "node server.js"
+              },
+              dependencies: deepmerge($backend.dependencies; $frontend.dependencies)
+            }
+          ' backend/package.json frontend/package.json > release/package.json
+
+      - name: Install runtime dependencies
         working-directory: release
-        run: npm install --omit=dev
+        run: |
+          npm install
+          npm prune --omit=dev
 
-      - name: Login to Azure
+      - name: Check for hardcoded localhost
+        run: grep -rao 'localhost:5001' release/ || echo "✅ localhost 없음"
+
+      - name: Login to Azure using service principal
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
