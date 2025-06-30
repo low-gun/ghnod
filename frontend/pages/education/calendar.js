@@ -22,7 +22,9 @@ function parseYYYYMMDD(str) {
 export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
-    const baseURL = process.env.API_BASE_URL || "http://localhost:5001/api";
+    const baseURL =
+      process.env.API_BASE_URL ||
+      "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api";
     console.log("👉 baseURL:", baseURL);
     const now = moment();
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
