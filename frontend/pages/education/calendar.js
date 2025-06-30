@@ -22,7 +22,8 @@ function parseYYYYMMDD(str) {
 export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
-    console.log("👉 baseURL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+    const baseURL = process.env.API_BASE_URL || "http://localhost:5001/api";
+    console.log("👉 baseURL:", baseURL);
     const now = moment();
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
     const endOfMonth = now
@@ -32,7 +33,7 @@ export async function getServerSideProps(context) {
       .format("YYYY-MM-DD");
 
     const res = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
+      `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
       {
         headers: { Cookie: cookie },
       }
