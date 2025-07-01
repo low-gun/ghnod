@@ -43,15 +43,12 @@ jobs:
       - name: Prepare release folder (merge frontend/backend into root)
         run: |
           mkdir -p release
-          rsync -a frontend/.next/ release/.next/
-          rsync -a frontend/public/ release/public/
+          cp -r frontend/.next release/.next
+          cp -r frontend/public release/public
           cp -r frontend/pages release/pages
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
-
-      - name: 확인: .next/static 내부 확인
-        run: ls -R release/.next/static || echo "❌ static 폴더 누락됨"
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -93,4 +90,3 @@ jobs:
           app-name: "ghnod"
           slot-name: "Production"
           package: release
-# 수정 확인용 공백
