@@ -18,3 +18,4 @@ backend/uploads/
 # ✅ 루트 압축 캐시
 node_modules.tar.gz
 release/node_modules
+release/.next

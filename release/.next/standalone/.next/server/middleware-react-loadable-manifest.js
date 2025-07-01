@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"..\\\\components\\\\common\\\\ExcelDownloadButton.js -> @/lib/downloadExcel":{"id":2260,"files":["static/chunks/674a26a7-eb8fb59ffcec4f34.js","static/chunks/4620.3c523d2e7334f74c.js"]}}';
