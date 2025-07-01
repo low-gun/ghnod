@@ -5,8 +5,8 @@
   "devFiles": [],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/p6yLAG8eO746L6jDhQIOu/_buildManifest.js",
-    "static/p6yLAG8eO746L6jDhQIOu/_ssgManifest.js"
+    "static/tq8CZVg8G0vzVCDdoLxJt/_buildManifest.js",
+    "static/tq8CZVg8G0vzVCDdoLxJt/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
@@ -187,7 +187,7 @@
       "static/chunks/webpack-9bbf43677c7527c4.js",
       "static/chunks/framework-9387e000915d7b64.js",
       "static/chunks/main-3749e8f175965d00.js",
-      "static/chunks/pages/education/[type]/[id]-336514b855ad6d3e.js"
+      "static/chunks/pages/education/[type]/[id]-a9c18ce9994f3e78.js"
     ],
     "/education/calendar": [
       "static/chunks/webpack-9bbf43677c7527c4.js",
