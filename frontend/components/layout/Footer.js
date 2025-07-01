@@ -4,9 +4,14 @@ import TermsModal from "@/components/modals/TermsModal";
 import PrivacyModal from "@/components/modals/PrivacyModal";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
+import { useContext } from "react";
+import { UserContext } from "@/context/UserContext"; // 추가
+
 export default function Footer() {
+  const { user, logout } = useContext(UserContext); // ✅ 추가
   const router = useRouter();
   const isMobile = useIsMobile();
+
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
@@ -31,7 +36,7 @@ export default function Footer() {
   return (
     <footer
       style={{
-        marginTop: "40px",
+        marginTop: isMobile ? "0px" : "40px", // ✅ 모바일이면 여백 제거
         padding: "40px 20px",
         backgroundColor: "#f8f8f8",
         borderTop: "1px solid #ddd",
@@ -43,7 +48,7 @@ export default function Footer() {
         // ✅ 모바일 간소화
         <div style={{ textAlign: "center" }}>
           <img
-            src="/logo_blue.png"
+            src="/logo_gray.png"
             alt="ORPi 회사 로고"
             style={{ width: "100px", opacity: 0.9, marginBottom: "16px" }}
           />
@@ -77,6 +82,25 @@ export default function Footer() {
           <div style={{ color: "#aaa", fontSize: "12px" }}>
             © 2025 ORPi. All rights reserved.
           </div>
+
+          {user && (
+            <button
+              onClick={logout}
+              style={{
+                marginTop: "12px",
+                fontSize: "13px",
+                color: "#fff",
+                background: "#0070f3",
+                border: "none",
+                borderRadius: "4px",
+                padding: "8px 16px",
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              로그아웃
+            </button>
+          )}
         </div>
       ) : (
         // ✅ 데스크탑/태블릿

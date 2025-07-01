@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import { ChevronLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import SocialLoginButtons from "@/components/SocialLoginButtons";
-
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize"; // 상단에 추가
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +18,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useContext(UserContext);
   const { setCartItems, setCartReady } = useCartContext(); // ✅ cartReady도 같이 꺼냄
-
+  const isMobile = useIsMobile(); // 컴포넌트 안에 추가
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -91,13 +91,15 @@ export default function LoginPage() {
     margin: 0,
   };
   const boxStyle = {
-    width: "360px",
-    padding: "40px",
-    borderRadius: "8px",
+    width: isMobile ? "100%" : "360px",
+    padding: isMobile ? "32px 24px" : "40px",
+    borderRadius: isMobile ? "0px" : "8px",
     background: "#fff",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    boxShadow: isMobile ? "none" : "0 4px 12px rgba(0,0,0,0.1)",
     textAlign: "center",
+    boxSizing: "border-box",
   };
+
   const titleStyle = {
     fontSize: "24px",
     marginBottom: "20px",
