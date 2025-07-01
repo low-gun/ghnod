@@ -13,7 +13,8 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: visible; /* ✅ body에 스크롤 주도권 부여 */
+  overflow-x: hidden;
+  overflow-y: scroll; /* ✅ 수직 스크롤 항상 확보 */
 }
 
 /* Next.js에서는 #__next도 100%로 */

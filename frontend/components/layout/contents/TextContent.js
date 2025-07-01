@@ -1,69 +1,72 @@
-// components/layout/contents/TextContent.js
-import TabNavigation from "./TabNavigation";
-
-export default function TextContent({
-  title,
-  subtitle,
-  paragraphs,
-  imageSrc,
-  tabs, // 탭 배열
-}) {
+export default function TextContent({ title, subtitle, paragraphs, imageSrc }) {
   return (
     <section
       style={{
         maxWidth: "1200px",
         margin: "0 auto",
-        padding: "clamp(8px, 2vw, 20px) 20px",
-        fontSize: "clamp(14px, 2vw, 18px)", // 최소 14px~최대 18px 반응
+        padding: "0 20px",
+        fontSize: "clamp(14px, 2vw, 18px)",
       }}
     >
-      {/* ===== 상단 탭 (옵션) ===== */}
-      {tabs && tabs.length > 0 && <TabNavigation tabs={tabs} />}
-
-      {/* 제목 및 부제목 */}
-      <h1
-        style={{
-          fontWeight: "bold",
-          marginBottom: "10px",
-          fontSize: "clamp(20px, 4vw, 28px)",
-        }}
-      >
-        {title}
-      </h1>
-      {subtitle && (
-        <h2
+      {/* 이미지 + 제목/부제목 오버레이 */}
+      {imageSrc && (
+        <div
           style={{
-            marginBottom: "20px",
-            color: "#666",
-            fontSize: "clamp(16px, 3vw, 22px)",
+            position: "relative",
+            textAlign: "left",
+            marginBottom: 16,
           }}
         >
-          {subtitle}
-        </h2>
-      )}
-
-      {/* 이미지 */}
-      {imageSrc && (
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
           <img
             src={imageSrc}
             alt={title}
             style={{
-              maxWidth: "100%",
+              width: "100%",
+              maxWidth: 1200,
               height: "auto",
-              borderRadius: "4px",
+              borderRadius: 8,
+              display: "block",
+              margin: "0 auto",
             }}
           />
+          <div
+            style={{
+              position: "absolute",
+              top: "clamp(12px, 3vw, 24px)",
+              left: "clamp(16px, 4vw, 32px)",
+              color: "#222",
+            }}
+          >
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(18px, 4vw, 24px)",
+                fontWeight: "bold",
+              }}
+            >
+              {title}
+            </h1>
+            {subtitle && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(12px, 2.8vw, 14px)",
+                  color: "#555",
+                }}
+              >
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* 여러 단락 */}
-      {paragraphs &&
-        paragraphs.map((para, idx) => (
-          <p key={idx} style={{ marginBottom: "1em", lineHeight: 1.6 }}>
-            {para}
-          </p>
-        ))}
+      {/* 본문 단락들 */}
+      {paragraphs?.map((para, idx) => (
+        <p key={idx} style={{ marginBottom: "1em", lineHeight: 1.6 }}>
+          {para}
+        </p>
+      ))}
     </section>
   );
 }
