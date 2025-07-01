@@ -50,11 +50,12 @@ export default function EducationScheduleDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/${id}`) // ✅ 여기 경로 수정
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("🔥 받은 일정:", data.schedule); // ← 이거 찍어봐
-        if (data.success) setSchedule(data.schedule);
+
+    api
+      .get(`/education/schedules/${id}`)
+      .then((res) => {
+        console.log("🔥 받은 일정:", res.data.schedule);
+        if (res.data.success) setSchedule(res.data.schedule);
       })
       .catch(() => alert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
