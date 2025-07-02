@@ -1,5 +1,4 @@
-// pages/diagnosis/orghealth.js
-import TextContent from "../../components/layout/contents/TextContent";
+import DiagnosisSubTabs from "@/components/diagnosis/DiagnosisSubTabs";
 
 export default function OrgHealthPage() {
   const paragraphs = [
@@ -16,12 +15,35 @@ export default function OrgHealthPage() {
   ];
 
   return (
-    <TextContent
-      title="조직건강도 진단"
-      subtitle="조직 몰입과 구성원 만족도를 높이는 핵심 지표 분석"
-      paragraphs={paragraphs}
-      imageSrc="/images/orghealth.jpg" // 예시 이미지 경로
-      tabs={subTabs}
-    />
+    <div style={{ padding: 32 }}>
+      <DiagnosisSubTabs tabs={subTabs} />
+
+      <h1
+        style={{
+          marginTop: 32,
+          marginBottom: 8,
+          fontSize: "clamp(20px, 4vw, 28px)",
+          fontWeight: "bold",
+        }}
+      >
+        조직건강도 진단
+      </h1>
+
+      <h2
+        style={{
+          marginBottom: 24,
+          color: "#666",
+          fontSize: "clamp(16px, 3vw, 22px)",
+        }}
+      >
+        조직 몰입과 구성원 만족도를 높이는 핵심 지표 분석
+      </h2>
+
+      {paragraphs.map((para, idx) => (
+        <p key={idx} style={{ marginBottom: "1em", lineHeight: 1.6 }}>
+          {para}
+        </p>
+      ))}
+    </div>
   );
 }

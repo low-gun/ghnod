@@ -1,5 +1,4 @@
-// pages/diagnosis/rnp.js
-import TextContent from "../../components/layout/contents/TextContent";
+import DiagnosisSubTabs from "@/components/diagnosis/DiagnosisSubTabs";
 
 export default function RnpPage() {
   const paragraphs = [
@@ -16,12 +15,35 @@ export default function RnpPage() {
   ];
 
   return (
-    <TextContent
-      title="RNP 진단"
-      subtitle="개인 역할 적합도 분석을 통한 성과 극대화"
-      paragraphs={paragraphs}
-      imageSrc="/images/rnp.jpg" // 예시 이미지 경로
-      tabs={subTabs}
-    />
+    <div style={{ padding: 32 }}>
+      <DiagnosisSubTabs tabs={subTabs} />
+
+      <h1
+        style={{
+          marginTop: 32,
+          marginBottom: 8,
+          fontSize: "clamp(20px, 4vw, 28px)",
+          fontWeight: "bold",
+        }}
+      >
+        RNP 진단
+      </h1>
+
+      <h2
+        style={{
+          marginBottom: 24,
+          color: "#666",
+          fontSize: "clamp(16px, 3vw, 22px)",
+        }}
+      >
+        개인 역할 적합도 분석을 통한 성과 극대화
+      </h2>
+
+      {paragraphs.map((para, idx) => (
+        <p key={idx} style={{ marginBottom: "1em", lineHeight: 1.6 }}>
+          {para}
+        </p>
+      ))}
+    </div>
   );
 }

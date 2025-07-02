@@ -80,6 +80,7 @@ app.use("/api/education", require("./routes/userSchedules"));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/education/schedules", require("./routes/public/schedules"));
 app.use("/api", require("./routes/productReviews"));
+app.use("/api/upload", require("./routes/upload")); // ← 이 줄 추가
 
 // ✅ DB 연결 테스트용
 app.get("/test-db", async (req, res) => {

@@ -1,7 +1,6 @@
 // pages/admin/products/[id].js
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
 import TiptapEditor from "@/components/editor/TiptapEditor";

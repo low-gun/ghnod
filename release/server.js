@@ -100,7 +100,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/debug", require("./routes/debug"));
-
+app.use("/api", require("./routes/public/inquiry"));
 // ✅ nextApp 준비 및 서버 실행
 console.log("✅ nextApp.prepare() 시작");
 

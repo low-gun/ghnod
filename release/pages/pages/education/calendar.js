@@ -23,7 +23,8 @@ export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
     const baseURL =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001/api";
+      process.env.API_BASE_URL ||
+      "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api";
     console.log("👉 baseURL:", baseURL);
     const now = moment();
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
