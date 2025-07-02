@@ -43,7 +43,7 @@ jobs:
       - name: Prepare release folder (merge frontend/backend into root)
         run: |
           mkdir -p release
-          cp -r frontend/.next/static release/.next/static
+          cp -r frontend/.next/static release/.next/
           cp -r frontend/.next/standalone/* release/
           cp -r frontend/public release/public
           cp -r frontend/pages release/pages
