@@ -109,3 +109,26 @@ exports.deleteReview = async (req, res) => {
     res.status(500).json({ success: false, message: "후기 삭제 실패" });
   }
 };
+exports.checkReviewEligibility = async (req, res) => {
+  const userId = req.user?.id;
+  const productId = req.params.id;
+  console.log("✅ checkReviewEligibility 요청:", { userId, productId }); // ← 이거 추가
+
+  try {
+    const [rows] = await db.query(
+      `SELECT 1
+       FROM orders o
+       JOIN order_items oi ON o.id = oi.order_id
+       JOIN schedules s ON oi.schedule_id = s.id
+       WHERE o.user_id = ? AND s.product_id = ? AND o.order_status = 'paid'
+       LIMIT 1`,
+      [userId, productId]
+    );
+
+    const eligible = rows.length > 0;
+    return res.json({ success: true, eligible });
+  } catch (err) {
+    console.error("후기 작성 가능 여부 조회 오류:", err);
+    return res.status(500).json({ success: false, message: "서버 오류" });
+  }
+};

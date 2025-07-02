@@ -33,10 +33,12 @@ export default function ProductTabs({ tabs }) {
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
-    const offset = window.innerWidth <= 768 ? 120 : 80;
     if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "start", // 또는 "center"로 부드럽게 조정
+      });
+      setActive(id);
     }
   };
 

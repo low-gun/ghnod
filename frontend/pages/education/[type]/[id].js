@@ -9,7 +9,7 @@ import TabProductReviews from "@/components/product/TabProductReviews";
 import TabProductInquiry from "@/components/product/TabProductInquiry";
 import TabRefundPolicy from "@/components/product/TabRefundPolicy";
 import ScrollTopButton from "@/components/common/ScrollTopButton";
-
+import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize"; // 상단 import에 추가
 export default function EducationScheduleDetailPage() {
   const router = useRouter();
   const { cartItems, setCartItems } = useCartContext(); // ✅ 이 줄 추가
@@ -18,6 +18,9 @@ export default function EducationScheduleDetailPage() {
   const [schedule, setSchedule] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
+  const isTabletOrBelow = useIsTabletOrBelow();
+
   const handleBuyNow = async () => {
     if (!user) {
       alert("로그인 후 결제하실 수 있습니다.");
@@ -98,51 +101,57 @@ export default function EducationScheduleDetailPage() {
         </span>
       </div>
 
-      <div style={{ display: "flex", gap: 40, alignItems: "flex-start" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: isTabletOrBelow ? "column" : "row", // ✅ 반응형 분기
+          gap: isTabletOrBelow ? 24 : 40, // ✅ gap 조정
+          alignItems: isTabletOrBelow ? "stretch" : "flex-start",
+        }}
+      >
         {/* 좌측: 썸네일 (비율로) */}
         <div style={{ flex: 1 }}>
-          <div
-            style={{
-              width: "100%",
-              aspectRatio: "4 / 3", // ✅ 썸네일 비율 유지
-              border: "1px solid #ccc",
-              borderRadius: 8,
-              backgroundColor: "#f9f9f9",
-              overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {schedule.image_url ? (
-              <img
-                src={schedule.image_url}
-                alt={schedule.title}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
-                }}
-              />
-            ) : schedule.product_image ? (
-              <img
-                src={schedule.product_image}
-                alt={schedule.title}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
-                }}
-              />
-            ) : (
+          {schedule.image_url || schedule.product_image ? (
+            <img
+              src={schedule.image_url || schedule.product_image}
+              alt={schedule.title}
+              style={{
+                width: "100%",
+                height: "auto",
+                borderRadius: 8,
+                objectFit: "cover", // 또는 contain
+                display: "block",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                aspectRatio: "4 / 3",
+                border: "1px solid #ccc",
+                borderRadius: 8,
+                backgroundColor: "#f9f9f9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <span style={{ color: "#888" }}>이미지가 없습니다</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* 텍스트 정보 */}
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 28, marginBottom: 10 }}>{schedule.title}</h1>
+          <h1
+            style={{
+              fontSize: 22, // ✅ 작게
+              fontWeight: 600, // ✅ bold 대신
+              marginBottom: 10,
+            }}
+          >
+            {schedule.title}
+          </h1>
 
           {/* 가격 */}
           <p style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
@@ -175,9 +184,11 @@ export default function EducationScheduleDetailPage() {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  padding: "16px 0",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 15,
+                  padding: "10px 0", // ✅ 간격 줄임
+                  borderBottom: "0.5px solid rgba(0,0,0,0.05)", // ✅ 더 연하고 얇게
+                  fontSize: 14, // ✅ 약간 줄임
+                  lineHeight: 1.7,
+                  color: "#444",
                 }}
               >
                 <span style={{ color: "#666" }}>{item.label}</span>
@@ -190,10 +201,12 @@ export default function EducationScheduleDetailPage() {
             style={{
               display: "flex",
               justifyContent: "space-between",
-              padding: "16px 0",
+              padding: "12px 0",
               borderBottom: "1px solid #eee",
               fontSize: 15,
               whiteSpace: "pre-line",
+              lineHeight: 1.8, // ✅ 가독성 향상
+              color: "#444",
             }}
           >
             <span style={{ textAlign: "right", maxWidth: "70%" }}>
@@ -279,81 +292,173 @@ export default function EducationScheduleDetailPage() {
           </div>
 
           {/* ✅ 요 아래에 이거 붙여줘 */}
-          <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-            <button
-              onClick={async () => {
-                try {
-                  const payload = {
-                    schedule_id: schedule.id,
-                    quantity,
-                    unit_price: unitPrice,
-                    type: "buyNow",
-                  };
-
-                  console.log("📦 담기 요청 값:", payload);
-
-                  const guestToken = localStorage.getItem("guest_token");
-                  const res = await api.post("/cart/items", payload, {
-                    headers: {
-                      "x-guest-token": guestToken || "",
-                    },
-                  });
-
-                  if (res.data.success) {
-                    alert("🛒 장바구니에 담았습니다!");
-
-                    const newItem = {
-                      id: Date.now(), // 임시 id (서버에서 안 주는 경우)
+          {isMobile ? (
+            <div
+              style={{
+                position: "fixed",
+                bottom: 0,
+                left: 0,
+                width: "100%",
+                display: "flex",
+                gap: 8,
+                padding: "12px 16px",
+                backgroundColor: "#fff",
+                borderTop: "1px solid #eee",
+                zIndex: 999,
+              }}
+            >
+              <button
+                onClick={async () => {
+                  try {
+                    const payload = {
                       schedule_id: schedule.id,
-                      schedule_title: schedule.title,
-                      image_url:
-                        schedule.image_url || schedule.product_image || null,
-                      quantity: 1,
-                      unit_price: Number(schedule.price),
-                      discount_price: null,
-                      subtotal: Number(schedule.price),
+                      quantity,
+                      unit_price: unitPrice,
+                      type: "buyNow",
                     };
 
-                    setCartItems((prev) => [...prev, newItem]);
-                  } else {
-                    alert("❌ 장바구니 담기에 실패했습니다.");
+                    const guestToken = localStorage.getItem("guest_token");
+                    const res = await api.post("/cart/items", payload, {
+                      headers: {
+                        "x-guest-token": guestToken || "",
+                      },
+                    });
+
+                    if (res.data.success) {
+                      alert("🛒 장바구니에 담았습니다!");
+
+                      const newItem = {
+                        id: Date.now(),
+                        schedule_id: schedule.id,
+                        schedule_title: schedule.title,
+                        image_url:
+                          schedule.image_url || schedule.product_image || null,
+                        quantity: 1,
+                        unit_price: Number(schedule.price),
+                        discount_price: null,
+                        subtotal: Number(schedule.price),
+                      };
+
+                      setCartItems((prev) => [...prev, newItem]);
+                    } else {
+                      alert("❌ 장바구니 담기에 실패했습니다.");
+                    }
+                  } catch (err) {
+                    console.error("장바구니 담기 오류:", err);
+                    alert("오류가 발생했습니다. 다시 시도해주세요.");
                   }
-                } catch (err) {
-                  console.error("장바구니 담기 오류:", err);
-                  alert("오류가 발생했습니다. 다시 시도해주세요.");
-                }
-              }}
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px 0",
+                  border: "1px solid #0070f3",
+                  backgroundColor: "#fff",
+                  color: "#0070f3",
+                  borderRadius: 6,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                장바구니
+              </button>
+              <button
+                onClick={handleBuyNow}
+                style={{
+                  flex: 1,
+                  padding: "12px 0",
+                  backgroundColor: "#0070f3",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                바로 구매
+              </button>
+            </div>
+          ) : (
+            <div
               style={{
-                flex: 1,
-                minWidth: "40%",
-                padding: "10px 16px",
-                border: "1px solid #0070f3",
-                backgroundColor: "#fff",
-                color: "#0070f3",
-                borderRadius: 6,
-                fontWeight: 500,
-                cursor: "pointer",
+                display: "flex",
+                flexDirection: "row",
+                gap: 12,
+                marginTop: 20,
               }}
             >
-              장바구니
-            </button>
-            <button
-              onClick={handleBuyNow}
-              style={{
-                flex: 1,
-                minWidth: "40%",
-                padding: "10px 16px",
-                backgroundColor: "#0070f3",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              바로 구매
-            </button>
-          </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      schedule_id: schedule.id,
+                      quantity,
+                      unit_price: unitPrice,
+                      type: "buyNow",
+                    };
+
+                    const guestToken = localStorage.getItem("guest_token");
+                    const res = await api.post("/cart/items", payload, {
+                      headers: {
+                        "x-guest-token": guestToken || "",
+                      },
+                    });
+
+                    if (res.data.success) {
+                      alert("🛒 장바구니에 담았습니다!");
+
+                      const newItem = {
+                        id: Date.now(),
+                        schedule_id: schedule.id,
+                        schedule_title: schedule.title,
+                        image_url:
+                          schedule.image_url || schedule.product_image || null,
+                        quantity: 1,
+                        unit_price: Number(schedule.price),
+                        discount_price: null,
+                        subtotal: Number(schedule.price),
+                      };
+
+                      setCartItems((prev) => [...prev, newItem]);
+                    } else {
+                      alert("❌ 장바구니 담기에 실패했습니다.");
+                    }
+                  } catch (err) {
+                    console.error("장바구니 담기 오류:", err);
+                    alert("오류가 발생했습니다. 다시 시도해주세요.");
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: "40%",
+                  padding: "10px 16px",
+                  border: "1px solid #0070f3",
+                  backgroundColor: "#fff",
+                  color: "#0070f3",
+                  borderRadius: 6,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                장바구니
+              </button>
+              <button
+                onClick={handleBuyNow}
+                style={{
+                  flex: 1,
+                  minWidth: "40%",
+                  padding: "10px 16px",
+                  backgroundColor: "#0070f3",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                바로 구매
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -368,16 +473,21 @@ export default function EducationScheduleDetailPage() {
       />
 
       {/* 탭 콘텐츠 실제 위치에 렌더링 */}
-      <div id="detail">
+      <div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabProductDetail html={schedule.detail} />
       </div>
-      <div id="review">
-        <TabProductReviews />
+      <div id="review" style={{ minHeight: 400, paddingTop: 40 }}>
+        <TabProductReviews
+          productId={schedule.product_id || schedule.productId}
+          scheduleId={schedule.id}
+        />
       </div>
-      <div id="inquiry">
-        <TabProductInquiry />
+      <div id="inquiry" style={{ minHeight: 400, paddingTop: 40 }}>
+        <TabProductInquiry
+          productId={schedule.product_id || schedule.productId}
+        />
       </div>
-      <div id="refund">
+      <div id="refund" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabRefundPolicy />
       </div>
       <ScrollTopButton />

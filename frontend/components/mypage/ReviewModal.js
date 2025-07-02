@@ -99,10 +99,11 @@ export default function ReviewModal({
               key={n}
               onClick={() => setRating(n)}
               style={{
-                fontSize: "20px",
+                fontSize: 28,
                 cursor: "pointer",
-                color: n <= rating ? "#facc15" : "#ccc",
+                color: n <= rating ? "#f39c12" : "#ddd",
                 marginRight: 4,
+                userSelect: "none", // ✅ 드래그 방지
               }}
             >
               ★

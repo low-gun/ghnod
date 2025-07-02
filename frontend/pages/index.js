@@ -1,19 +1,28 @@
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
-
 export default function HomePage() {
-  const isMobile = useIsMobile();
-
   return (
-    <div style={{ margin: 0, padding: 0 }}>
+    <main
+      style={{
+        marginTop: 0, // ✅ 추가
+        margin: 0,
+        padding: 0,
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+        minHeight: "auto",
+        flex: "unset",
+      }}
+    >
       <img
         src="/main.png"
         alt="진단 워크숍 메인 이미지"
         style={{
           width: "100%",
           height: "auto",
-          display: isMobile ? "block" : undefined, // ✅ 모바일에서만 block 처리
+          display: "block",
+          margin: 0,
+          padding: 0,
         }}
       />
-    </div>
+    </main>
   );
 }

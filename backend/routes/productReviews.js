@@ -1,9 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/productReviewController");
-const auth = require("../middlewares/authMiddleware"); // ✅ 경로 OK
+const auth = require("../middlewares/authMiddleware");
 
 router.get("/products/:id/reviews", controller.getReviewsByProduct);
+
+router.get(
+  "/products/:id/reviews/check-eligible", // ✅ 구매 여부 확인용 GET
+  auth.authenticateToken,
+  controller.checkReviewEligibility
+);
 
 router.post(
   "/products/:id/reviews",
@@ -19,8 +25,8 @@ router.put(
 
 router.delete(
   "/products/:id/reviews/:reviewId",
-  auth.authenticateToken, // ✅ 중복된 import 제거
-  controller.deleteReview // ✅ controller에서 export
+  auth.authenticateToken,
+  controller.deleteReview
 );
 
 module.exports = router;
