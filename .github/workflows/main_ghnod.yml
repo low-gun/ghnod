@@ -44,6 +44,7 @@ jobs:
         run: |
           mkdir -p release
           cp -r frontend/.next release/.next
+          cp -r frontend/.next/static release/.next/static
           cp -r frontend/public release/public
           cp -r frontend/pages release/pages
           cp frontend/.env.production release/.env.production
