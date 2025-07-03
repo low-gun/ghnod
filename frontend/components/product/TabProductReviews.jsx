@@ -3,6 +3,8 @@ import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
 import ProductReviewModal from "./ProductReviewModal";
 
+console.log("🔥 ProductReviewModal 연결됨");
+
 export default function TabProductReviews({ productId, scheduleId }) {
   const { user } = useUserContext();
   const [isPurchaser, setIsPurchaser] = useState(false);
@@ -54,7 +56,7 @@ export default function TabProductReviews({ productId, scheduleId }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-    };
+    };z
   }, []);
   useEffect(() => {
     fetchReviews();
