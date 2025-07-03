@@ -47,12 +47,20 @@ jobs:
           cp -r frontend/.next/standalone/* release/
           cp -r frontend/public release/public
           cp -r frontend/pages release/pages
-          cp -r frontend/components release/components  # ✅ 누락되어 있던 핵심 줄!
+
+          # ✅ components 전체 포함
+          cp -r frontend/components release/components
+
+          # ✅ 명시적으로 누락 방지 (보장용)
+          mkdir -p release/components/product
+          cp -r frontend/components/product/*.jsx release/components/product/
+
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
+
           mkdir -p release/routes
-          cp backend/routes/upload.js release/routes/upload.js  # ✅ 명시적 포함
+          cp backend/routes/upload.js release/routes/upload.js  # ✅ 누락 방지
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq
