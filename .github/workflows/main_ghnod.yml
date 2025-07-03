@@ -47,6 +47,7 @@ jobs:
           cp -r frontend/.next/standalone/* release/
           cp -r frontend/public release/public
           cp -r frontend/pages release/pages
+          cp -r frontend/components release/components  # ✅ 누락되어 있던 핵심 줄!
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
