@@ -49,7 +49,8 @@ jobs:
           cp -r frontend/pages release/pages
 
           # ✅ components 전체 포함
-          cp -r frontend/components release/components
+          mkdir -p release/components/product
+          cp -r frontend/components/product release/components/ 
 
           # ✅ .env, backend 코드 통합
           cp frontend/.env.production release/.env.production
