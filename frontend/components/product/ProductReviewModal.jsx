@@ -4,45 +4,62 @@ import { useUserContext } from "@/context/UserContext";
 
 export default function ProductReviewModal({
   productId,
-  initialData = null, // ✅ 수정 모드 지원
+  initialData = null,
   onClose,
   onSubmitSuccess,
 }) {
   const { user } = useUserContext();
 
-  // ✅ 초기값 세팅 (작성 vs 수정 모드)
   const [rating, setRating] = useState(initialData?.rating || 0);
   const [comment, setComment] = useState(initialData?.comment || "");
   const [loading, setLoading] = useState(false);
 
-  if (!user) return null;
+  const [imageFiles, setImageFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newFiles = files.slice(0, 10 - imageFiles.length);
+    if (newFiles.length === 0) return;
+    setImageFiles((prev) => [...prev, ...newFiles]);
+    setPreviewUrls((prev) => [...prev, ...newFiles.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removeImage = (idx) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== idx));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = async () => {
-    if (!rating || !comment.trim()) {
-      return alert("별점과 후기를 입력해주세요.");
-    }
+    if (!rating) return alert("별점을 입력해주세요.");
 
     try {
       setLoading(true);
-      let res;
 
-      if (initialData?.id) {
-        // ✅ 수정 요청
-        res = await api.put(
-          `/products/${productId}/reviews/${initialData.id}`,
-          {
-            user_id: user.id,
-            rating,
-            comment,
-          }
-        );
-      } else {
-        // 신규 등록
-        res = await api.post(`/products/${productId}/reviews`, {
-          user_id: user.id,
-          rating,
-          comment,
+      let uploadedUrls = [];
+
+      if (imageFiles.length > 0) {
+        const uploadPromises = imageFiles.map((file) => {
+          const form = new FormData();
+          form.append("file", file);
+          return api.post("/upload", form).then((res) => res.data.url);
         });
+
+        uploadedUrls = await Promise.all(uploadPromises);
+      }
+
+      const payload = {
+        user_id: user.id,
+        rating,
+        comment,
+        images: uploadedUrls,
+      };
+
+      let res;
+      if (initialData?.id) {
+        res = await api.put(`/products/${productId}/reviews/${initialData.id}`, payload);
+      } else {
+        res = await api.post(`/products/${productId}/reviews`, payload);
       }
 
       if (res.data.success) {
@@ -53,83 +70,50 @@ export default function ProductReviewModal({
         alert("등록 실패: " + res.data.message);
       }
     } catch (err) {
-      console.error("리뷰 등록 오류:", err);
+      console.error("후기 등록 오류:", err);
       alert("리뷰 등록 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ ESC로 닫기
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const escHandler = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", escHandler);
+    return () => window.removeEventListener("keydown", escHandler);
   }, []);
 
+  if (!user) return null;
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "rgba(0,0,0,0.5)",
-        zIndex: 1000,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: "#fff",
-          padding: 24,
-          width: "100%",
-          maxWidth: 480,
-          borderRadius: 8,
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        }}
-      >
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
         <h3 style={{ fontSize: 18, fontWeight: "bold", marginBottom: 20 }}>
           {initialData?.id ? "상품 후기 수정" : "상품 후기 작성"}
         </h3>
 
-        {/* 별점 */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, marginBottom: 6, display: "block" }}>
-              별점
-            </label>
-            <div style={{ display: "flex", gap: 4 }}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <span
-                  key={i}
-                  onClick={() => setRating(i)}
-                  style={{
-                    fontSize: 28,
-                    color: i <= rating ? "#f39c12" : "#ddd",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  ★
-                </span>
-              ))}
-            </div>
+          <label style={labelStyle}>별점</label>
+          <div style={{ display: "flex", gap: 4 }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <span
+                key={i}
+                onClick={() => setRating(i)}
+                style={{
+                  fontSize: 28,
+                  color: i <= rating ? "#f39c12" : "#ddd",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                ★
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* 내용 */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 14, marginBottom: 6, display: "block" }}>
-            후기 내용
-          </label>
+          <label style={labelStyle}>후기 내용</label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
@@ -144,34 +128,62 @@ export default function ProductReviewModal({
           />
         </div>
 
-        {/* 버튼 */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={labelStyle}>이미지 첨부 (최대 10장)</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {previewUrls.map((url, idx) => (
+              <div key={idx} style={{ position: "relative" }}>
+                <img
+                  src={url}
+                  alt={`이미지 ${idx + 1}`}
+                  style={{
+                    width: 72,
+                    height: 72,
+                    objectFit: "cover",
+                    borderRadius: 4,
+                    border: "1px solid #ccc",
+                  }}
+                />
+                <button
+                  onClick={() => removeImage(idx)}
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    right: -6,
+                    background: "#f00",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: 20,
+                    height: 20,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {imageFiles.length < 10 && (
+              <label style={uploadLabelStyle}>
+                +
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  style={{ display: "none" }}
+                />
+              </label>
+            )}
+          </div>
+        </div>
+
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            style={{
-              padding: "8px 16px",
-              border: "1px solid #ccc",
-              backgroundColor: "#fff",
-              borderRadius: 6,
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={onClose} disabled={loading} style={cancelButtonStyle}>
             취소
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#0070f3",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={handleSubmit} disabled={loading} style={submitButtonStyle}>
             등록
           </button>
         </div>
@@ -179,3 +191,62 @@ export default function ProductReviewModal({
     </div>
   );
 }
+
+const overlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  backgroundColor: "rgba(0,0,0,0.5)",
+  zIndex: 1000,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+};
+
+const modalStyle = {
+  backgroundColor: "#fff",
+  padding: 24,
+  width: "100%",
+  maxWidth: 480,
+  borderRadius: 8,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+};
+
+const labelStyle = {
+  fontSize: 14,
+  marginBottom: 6,
+  display: "block",
+};
+
+const uploadLabelStyle = {
+  width: 72,
+  height: 72,
+  border: "2px dashed #ccc",
+  borderRadius: 4,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  fontSize: 28,
+  color: "#aaa",
+  cursor: "pointer",
+};
+
+const cancelButtonStyle = {
+  padding: "8px 16px",
+  border: "1px solid #ccc",
+  backgroundColor: "#fff",
+  borderRadius: 6,
+  cursor: "pointer",
+};
+
+const submitButtonStyle = {
+  padding: "8px 16px",
+  backgroundColor: "#0070f3",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  fontWeight: 500,
+  cursor: "pointer",
+};

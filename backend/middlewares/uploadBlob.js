@@ -1,4 +1,3 @@
-// backend/middlewares/uploadBlob.js
 const multer = require("multer");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { v4: uuidv4 } = require("uuid");
@@ -7,40 +6,41 @@ require("dotenv").config();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const AZURE_STORAGE_CONNECTION_STRING =
-  process.env.AZURE_STORAGE_CONNECTION_STRING;
+const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER_NAME || "uploads";
 
-// ✅ 연결 문자열이 없으면 앱 실행 시 에러 방지
 let containerClient = null;
 if (AZURE_STORAGE_CONNECTION_STRING) {
-  const blobServiceClient = BlobServiceClient.fromConnectionString(
-    AZURE_STORAGE_CONNECTION_STRING
-  );
+  const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
   containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
 } else {
-  console.warn(
-    "⚠️ AZURE_STORAGE_CONNECTION_STRING is not set. Blob upload disabled."
-  );
+  console.warn("⚠️ AZURE_STORAGE_CONNECTION_STRING is not set. Blob upload disabled.");
 }
 
-// ✅ 파일 업로드 미들웨어
 const uploadToBlob = async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file provided" });
+    if (!req.files || req.files.length === 0) {
+      return next(); // 첨부 이미지 없는 경우도 허용
+    }
 
     if (!containerClient) {
       return res.status(503).json({ error: "Blob upload not configured" });
     }
 
-    const blobName = `${Date.now()}-${uuidv4()}-${req.file.originalname}`;
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    const uploadedUrls = [];
 
-    await blockBlobClient.uploadData(req.file.buffer, {
-      blobHTTPHeaders: { blobContentType: req.file.mimetype },
-    });
+    for (const file of req.files) {
+      const blobName = `${Date.now()}-${uuidv4()}-${file.originalname}`;
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    req.file.blobUrl = blockBlobClient.url;
+      await blockBlobClient.uploadData(file.buffer, {
+        blobHTTPHeaders: { blobContentType: file.mimetype },
+      });
+
+      uploadedUrls.push(blockBlobClient.url);
+    }
+
+    req.uploadedImageUrls = uploadedUrls; // ✅ 다음 미들웨어/컨트롤러에서 사용
     next();
   } catch (error) {
     console.error("❌ Azure Blob upload error:", error.message);

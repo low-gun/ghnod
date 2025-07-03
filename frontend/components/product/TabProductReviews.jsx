@@ -71,49 +71,51 @@ export default function TabProductReviews({ productId, scheduleId }) {
   }, [user, scheduleId]);
   return (
     <section
-      id="review"
-      style={{ padding: "40px 0", borderBottom: "1px solid #eee" }}
+    id="review"
+    style={{ padding: "40px 0", borderBottom: "1px solid #eee" }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 12,
+        marginBottom: 20,
+      }}
     >
+      <h2
+        style={{
+          fontSize: 20,
+          fontWeight: "bold",
+          margin: 0,
+          flexShrink: 0,
+        }}
+      >
+        상품후기
+      </h2>
+  
       {user && isPurchaser && (
-        <div
+        <button
+          onClick={() => setShowModal(true)}
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
-            marginBottom: 20,
+            padding: "8px 16px",
+            backgroundColor: "#0070f3",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            fontWeight: 500,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
           }}
         >
-          <h2
-            style={{
-              fontSize: 20,
-              fontWeight: "bold",
-              margin: 0,
-              flexShrink: 0,
-            }}
-          >
-            상품후기
-          </h2>
-
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#0070f3",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              fontWeight: 500,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            후기 작성하기
-          </button>
-        </div>
+          후기 작성하기
+        </button>
       )}
-      {loading ? (
+    </div>
+  
+        
+        {loading ? (
         <></>
       ) : reviews.length === 0 ? (
         <div
