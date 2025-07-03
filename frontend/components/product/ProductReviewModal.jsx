@@ -89,7 +89,7 @@ export default function ProductReviewModal({
     <div style={overlayStyle}>
       <div style={modalStyle}>
         <h3 style={{ fontSize: 18, fontWeight: "bold", marginBottom: 20 }}>
-          {initialData?.id ? "상품 후기 수정" : "상품 후기 작성"}
+          {initialData?.id ? "상품후기 수정하기" : "상품후기 작성하기"}
         </h3>
 
         <div style={{ marginBottom: 16 }}>
