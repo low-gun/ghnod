@@ -42,7 +42,7 @@ jobs:
 
       - name: Prepare deployment folder
         run: |
-          mkdir -p build
+          mkdir -p build/.next/static
           cp -r frontend/.next/standalone/* build/
           cp -r frontend/.next/static build/.next/static
           cp -r frontend/public build/public
