@@ -50,6 +50,8 @@ jobs:
           cp frontend/.env.production release/.env.production
           cp -r backend/* release/
           cp backend/server.js release/server.js
+          mkdir -p release/routes
+          cp backend/routes/upload.js release/routes/upload.js  # ✅ 명시적 포함
 
       - name: Install jq (JSON processor)
         run: sudo apt-get update && sudo apt-get install -y jq

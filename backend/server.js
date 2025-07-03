@@ -68,6 +68,7 @@ app.use((req, res, next) => {
 });
 
 // ✅ API 라우터 등록
+console.log("✅ API 라우터 등록 시작");
 app.use("/api/admin/schedules", require("./routes/admin/schedules"));
 app.use("/api/admin/products", require("./routes/admin/products")); // ← ✅ 이 줄 추가!
 app.use("/api/admin/payments", require("./routes/payment"));
@@ -81,7 +82,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/education/schedules", require("./routes/public/schedules"));
 app.use("/api", require("./routes/productReviews"));
 app.use("/api/upload", require("./routes/upload")); // ← 이 줄 추가
-
+console.log("✅ API 라우터 등록 완료");
 // ✅ DB 연결 테스트용
 app.get("/test-db", async (req, res) => {
   console.log("📌 /test-db 요청 도착");
