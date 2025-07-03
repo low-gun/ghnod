@@ -28,44 +28,31 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Clean SWC + Next.js cache
+      - name: Clean Next.js cache
         run: |
           rm -rf ~/.cache/next-swc
           rm -rf frontend/.next
           rm -rf frontend/.next/cache/webpack
 
-      - name: Build frontend (Next.js with SWC)
+      - name: Build frontend
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-      - name: Prepare release folder (merge frontend/backend into root)
+      - name: Prepare deployment folder
         run: |
-          mkdir -p release/.next/static
-          cp -r frontend/.next/standalone/* release/
-          cp -r frontend/.next/static release/.next/static
-          cp -r frontend/public release/public
-          cp -r frontend/pages release/pages
+          mkdir -p build/.next/static
+          cp -r frontend/.next/standalone/* build/
+          cp -r frontend/.next/static build/.next/static
+          cp -r frontend/public build/public
+          cp -r backend/* build/
+          cp backend/server.js build/server.js
+          cp frontend/.env.production build/.env.production
 
-          # ✅ components 전체 포함
-          mkdir -p release/components/product
-          cp -r frontend/components/product release/components/
-
-          # ✅ .env, backend 코드 통합
-          cp frontend/.env.production release/.env.production
-          cp -r backend/* release/
-          cp backend/server.js release/server.js
-
-          # ✅ 누락 방지: 라우터 수동 복사
-          mkdir -p release/routes
-          cp backend/routes/upload.js release/routes/upload.js
-
-      - name: Install jq (JSON processor)
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Merge frontend + backend dependencies into root package.json
+      - name: Merge frontend + backend dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y jq
           jq -s '
             def deepmerge(a;b): a * b // (a + b);
             .[0] as $backend |
@@ -79,10 +66,10 @@ jobs:
               },
               dependencies: deepmerge($backend.dependencies; $frontend.dependencies)
             }
-          ' backend/package.json frontend/package.json > release/package.json
+          ' backend/package.json frontend/package.json > build/package.json
 
-      - name: Install runtime dependencies
-        working-directory: release
+      - name: Install production dependencies
+        working-directory: build
         run: |
           npm install
           npm prune --omit=dev
@@ -97,4 +84,4 @@ jobs:
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: release
+          package: build
