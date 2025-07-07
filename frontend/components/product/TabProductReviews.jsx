@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
-import dynamic from "next/dynamic";
-const ProductReviewModal = dynamic(() => import("./ProductReviewModal"), { ssr: false });
+import ProductReviewModalNew from "./ProductReviewModalNew";
 
-console.log("🔥 ProductReviewModal 연결됨");
+console.log("🔥 ProductReviewModalNew 연결됨");
 
 export default function TabProductReviews({ productId, scheduleId }) {
   const { user } = useUserContext();
@@ -269,19 +268,19 @@ export default function TabProductReviews({ productId, scheduleId }) {
         </ul>
       )}
       {showModal && (
-        <ProductReviewModal
-          productId={productId}
-          initialData={editTarget}
-          onClose={() => {
-            setShowModal(false);
-            setEditTarget(null);
-          }}
-          onSubmitSuccess={() => {
-            setShowModal(false);
-            setEditTarget(null);
-            fetchReviews();
-          }}
-        />
+        <ProductReviewModalNew
+        productId={productId}
+        initialData={editTarget}
+        onClose={() => {
+          setShowModal(false);
+          setEditTarget(null);
+        }}
+        onSubmitSuccess={() => {
+          setShowModal(false);
+          setEditTarget(null);
+          fetchReviews();
+        }}
+      />
       )}
     </section>
   );
