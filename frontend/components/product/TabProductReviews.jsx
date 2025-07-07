@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
-import ProductReviewModal from "./ProductReviewModal";
+import dynamic from "next/dynamic";
+const ProductReviewModal = dynamic(() => import("./ProductReviewModal"), { ssr: false });
 
 console.log("🔥 ProductReviewModal 연결됨");
 
