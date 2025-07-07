@@ -28,11 +28,12 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Clean Next.js cache
+      - name: Clean Next.js cache and old build artifacts
         run: |
           rm -rf ~/.cache/next-swc
           rm -rf frontend/.next
           rm -rf frontend/.next/cache/webpack
+          rm -rf release
 
       - name: Build frontend
         working-directory: frontend
@@ -42,14 +43,13 @@ jobs:
 
       - name: Prepare deployment folder (release)
         run: |
-          rm -rf release
           mkdir -p release/.next/static
           mkdir -p release/public
           # 프론트 빌드 산출물
           cp -r frontend/.next/standalone/* release/
-          cp -r frontend/.next/static release/.next/static
+          cp -r frontend/.next/static/* release/.next/static/
           cp frontend/.next/BUILD_ID release/.next/BUILD_ID
-          cp -r frontend/public release/public
+          cp -r frontend/public/* release/public/
           cp frontend/.env.production release/.env.production
           # 백엔드 코드 및 리소스 통째 복사
           cp -r backend/certs release/certs
