@@ -1,126 +1,52 @@
-// ✅ backend/server.js – 통합형 완성본
-const path = require("path"); // 이 줄이 dotenv보다 위에 있어야 안전
+performance.mark('next-start');
+import path from 'path'
+import { fileURLToPath } from 'url'
+import module from 'module'
+const require = module.createRequire(import.meta.url)
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
-const envPath =
-  process.env.NODE_ENV === "production"
-    ? path.resolve(__dirname, ".env.production")
-    : path.resolve(__dirname, ".env.local");
 
-require("dotenv").config({ path: envPath });
-console.log("✅ .env 로딩됨:", envPath);
+const dir = path.join(__dirname)
 
-const express = require("express");
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const db = require("./config/db");
-const passport = require("./config/passport");
-const next = require("next");
+process.env.NODE_ENV = 'production'
+process.chdir(__dirname)
 
-const isDev = process.env.NODE_ENV !== "production";
-const nextApp = next({
-  dev: isDev,
-  dir:
-    process.env.NODE_ENV === "production"
-      ? path.resolve(".") // 배포 환경: /home/site/wwwroot
-      : path.join(__dirname, "../frontend"), // 로컬: backend/server.js → ../frontend/pages
+// Make sure commands gracefully respect termination signals (e.g. from Docker)
+// Allow the graceful termination to be manually configurable
+if (!process.env.NEXT_MANUAL_SIG_HANDLE) {
+  process.on('SIGTERM', () => process.exit(0))
+  process.on('SIGINT', () => process.exit(0))
+}
+
+const currentPort = parseInt(process.env.PORT, 10) || 3000
+const hostname = process.env.HOSTNAME || '0.0.0.0'
+
+let keepAliveTimeout = parseInt(process.env.KEEP_ALIVE_TIMEOUT, 10)
+const nextConfig = {"env":{"NEXT_PUBLIC_API_BASE_URL":"http://localhost:5001/api"},"webpack":null,"eslint":{"ignoreDuringBuilds":false},"typescript":{"ignoreBuildErrors":false,"tsconfigPath":"tsconfig.json"},"distDir":"./.next","cleanDistDir":true,"assetPrefix":"","configOrigin":"next.config.mjs","useFileSystemPublicRoutes":true,"generateEtags":true,"pageExtensions":["tsx","ts","jsx","js"],"poweredByHeader":true,"compress":true,"analyticsId":"","images":{"deviceSizes":[640,750,828,1080,1200,1920,2048,3840],"imageSizes":[16,32,48,64,96,128,256,384],"path":"/_next/image","loader":"default","loaderFile":"","domains":[],"disableStaticImages":false,"minimumCacheTTL":60,"formats":["image/webp"],"dangerouslyAllowSVG":false,"contentSecurityPolicy":"script-src 'none'; frame-src 'none'; sandbox;","contentDispositionType":"inline","remotePatterns":[],"unoptimized":false},"devIndicators":{"buildActivity":true,"buildActivityPosition":"bottom-right"},"onDemandEntries":{"maxInactiveAge":60000,"pagesBufferLength":5},"amp":{"canonicalBase":""},"basePath":"","sassOptions":{},"trailingSlash":false,"i18n":null,"productionBrowserSourceMaps":false,"optimizeFonts":true,"excludeDefaultMomentLocales":true,"serverRuntimeConfig":{},"publicRuntimeConfig":{},"reactProductionProfiling":false,"reactStrictMode":true,"httpAgentOptions":{"keepAlive":true},"outputFileTracing":true,"staticPageGenerationTimeout":60,"swcMinify":true,"output":"standalone","modularizeImports":{"@mui/icons-material":{"transform":"@mui/icons-material/{{member}}"},"date-fns":{"transform":"date-fns/{{member}}"},"lodash":{"transform":"lodash/{{member}}"},"lodash-es":{"transform":"lodash-es/{{member}}"},"ramda":{"transform":"ramda/es/{{member}}"},"react-bootstrap":{"transform":{"useAccordionButton":"modularize-import-loader?name=useAccordionButton&from=named&as=default!react-bootstrap/AccordionButton","*":"react-bootstrap/{{member}}"}},"antd":{"transform":"antd/lib/{{kebabCase member}}"},"ahooks":{"transform":{"createUpdateEffect":"modularize-import-loader?name=createUpdateEffect&from=named&as=default!ahooks/es/createUpdateEffect","*":"ahooks/es/{{member}}"}},"@ant-design/icons":{"transform":{"IconProvider":"modularize-import-loader?name=IconProvider&from=named&as=default!@ant-design/icons","createFromIconfontCN":"@ant-design/icons/es/components/IconFont","getTwoToneColor":"modularize-import-loader?name=getTwoToneColor&from=named&as=default!@ant-design/icons/es/components/twoTonePrimaryColor","setTwoToneColor":"modularize-import-loader?name=setTwoToneColor&from=named&as=default!@ant-design/icons/es/components/twoTonePrimaryColor","*":"@ant-design/icons/lib/icons/{{member}}"}},"next/server":{"transform":"next/dist/server/web/exports/{{ kebabCase member }}"}},"experimental":{"serverMinification":true,"serverSourceMaps":false,"caseSensitiveRoutes":false,"useDeploymentId":false,"useDeploymentIdServerActions":false,"clientRouterFilter":true,"clientRouterFilterRedirects":false,"fetchCacheKeyPrefix":"","middlewarePrefetch":"flexible","optimisticClientCache":true,"manualClientBasePath":false,"cpus":15,"memoryBasedWorkersCount":false,"isrFlushToDisk":true,"workerThreads":false,"optimizeCss":false,"nextScriptWorkers":false,"scrollRestoration":false,"externalDir":false,"disableOptimizedLoading":false,"gzipSize":true,"craCompat":false,"esmExternals":true,"isrMemoryCacheSize":52428800,"fullySpecified":false,"outputFileTracingRoot":"C:\\Users\\USER\\ghnod\\frontend","swcTraceProfiling":false,"forceSwcTransforms":false,"largePageDataBytes":128000,"adjustFontFallbacks":false,"adjustFontFallbacksWithSizeAdjust":false,"typedRoutes":false,"instrumentationHook":false,"bundlePagesExternals":false,"optimizePackageImports":["lucide-react","@headlessui/react","@headlessui-float/react","@heroicons/react/20/solid","@heroicons/react/24/solid","@heroicons/react/24/outline","@visx/visx","@tremor/react","rxjs","@mui/material","recharts","@material-ui/core","react-use","@material-ui/icons","@tabler/icons-react","mui-core","react-icons/ai","react-icons/bi","react-icons/bs","react-icons/cg","react-icons/ci","react-icons/di","react-icons/fa","react-icons/fa6","react-icons/fc","react-icons/fi","react-icons/gi","react-icons/go","react-icons/gr","react-icons/hi","react-icons/hi2","react-icons/im","react-icons/io","react-icons/io5","react-icons/lia","react-icons/lib","react-icons/lu","react-icons/md","react-icons/pi","react-icons/ri","react-icons/rx","react-icons/si","react-icons/sl","react-icons/tb","react-icons/tfi","react-icons/ti","react-icons/vsc","react-icons/wi"],"trustHostHeader":false,"isExperimentalCompile":false},"configFileName":"next.config.mjs"}
+
+process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(nextConfig)
+
+require('next')
+const { startServer } = require('next/dist/server/lib/start-server')
+
+if (
+  Number.isNaN(keepAliveTimeout) ||
+  !Number.isFinite(keepAliveTimeout) ||
+  keepAliveTimeout < 0
+) {
+  keepAliveTimeout = undefined
+}
+
+startServer({
+  dir,
+  isDev: false,
+  config: nextConfig,
+  hostname,
+  port: currentPort,
+  allowRetry: false,
+  keepAliveTimeout,
+  useWorkers: true,
+}).catch((err) => {
+  console.error(err);
+  process.exit(1);
 });
-const handle = nextApp.getRequestHandler();
-
-const PORT = process.env.PORT || 5001;
-const app = express();
-
-console.log("✅ 서버 진입");
-console.log("✅ NODE_ENV:", process.env.NODE_ENV);
-console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
-console.log("✅ PORT:", PORT);
-
-// ✅ 미들웨어
-const trackVisitor = require("./middlewares/trackVisitor");
-app.use(trackVisitor);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net",
-];
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
-
-app.use(cookieParser());
-app.use(passport.initialize());
-
-// ✅ 요청 로깅
-app.use((req, res, next) => {
-  console.log(`📌 요청: ${req.method} ${req.url}`);
-  next();
-});
-
-// ✅ API 라우터 등록
-console.log("✅ API 라우터 등록 시작");
-app.use("/api/admin/schedules", require("./routes/admin/schedules"));
-app.use("/api/admin/products", require("./routes/admin/products")); // ← ✅ 이 줄 추가!
-app.use("/api/admin/payments", require("./routes/payment"));
-app.use("/api/admin", require("./routes/admin"));
-app.use("/api/user", require("./routes/user"));
-app.use("/api/mypage", require("./routes/mypage"));
-app.use("/api/orders", require("./routes/order"));
-app.use("/api/cart", require("./routes/cart"));
-app.use("/api/education", require("./routes/userSchedules"));
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/education/schedules", require("./routes/public/schedules"));
-app.use("/api", require("./routes/productReviews"));
-app.use("/api/upload", require("./routes/upload")); // ← 이 줄 추가
-console.log("✅ API 라우터 등록 완료");
-// ✅ DB 연결 테스트용
-app.get("/test-db", async (req, res) => {
-  console.log("📌 /test-db 요청 도착");
-  try {
-    const [rows] = await db.query("SELECT '✅ DB 연결 테스트 성공' AS message");
-    res.json(rows[0]);
-  } catch (error) {
-    console.error("❌ DB 연결 오류:", error);
-    res.status(500).json({ error: "DB 연결 실패" });
-  }
-});
-
-// ✅ favicon 무시
-app.use((req, res, next) => {
-  if (req.url === "/favicon.ico") return res.status(204).end();
-  next();
-});
-
-app.use("/debug", require("./routes/debug"));
-app.use("/api", require("./routes/public/inquiry"));
-// ✅ nextApp 준비 및 서버 실행
-console.log("✅ nextApp.prepare() 시작");
-
-nextApp
-  .prepare()
-  .then(() => {
-    console.log("✅ nextApp 준비 완료");
-
-    app.all("*", (req, res) => {
-      return handle(req, res);
-    });
-
-    console.log("✅ listen() 호출 전");
-
-    app.listen(PORT, () => {
-      console.log(`✅ [Express + Next] 서버 실행 중: http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error("❌ nextApp.prepare() 실패:", err);
-  });
