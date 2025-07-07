@@ -90,6 +90,14 @@ jobs:
           npm install
           npm prune --omit=dev
 
+      # ------ 여기서부터 추가 ------
+      - name: Print BUILD_ID before deploy
+        run: cat release/.next/BUILD_ID
+
+      - name: List all files before deploy
+        run: find release/ -type f -ls
+      # ------ 여기까지 추가 ------
+
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -101,6 +109,7 @@ jobs:
           app-name: "ghnod"
           slot-name: "Production"
           package: ./release/.
+          clean: true     # <-- 기존 파일 완전 삭제 후 배포!
 
       - name: Force restart Azure Web App
         run: az webapp restart --name ghnod --resource-group ghnod
