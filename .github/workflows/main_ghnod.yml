@@ -75,10 +75,7 @@ jobs:
           npm prune --omit=dev
 
       - name: Zip build folder
-        run: |
-          cd build
-          zip -r ../build.zip .
-          cd ..
+        run: zip -r build.zip build
 
       - name: Login to Azure
         uses: azure/login@v1
