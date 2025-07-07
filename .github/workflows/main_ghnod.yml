@@ -40,19 +40,20 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-      - name: Prepare deployment folder
+      - name: Prepare deployment folder (release)
         run: |
-          rm -rf build
-          mkdir -p build/.next/static
-          mkdir -p build/public
-          cp -r frontend/.next/standalone/* build/ || true
-          cp -r frontend/.next/static build/.next/static || true
-          cp frontend/.next/BUILD_ID build/.next/BUILD_ID || true
-          cp -r frontend/public build/public || true
-          cp -r backend/* build/ || true
-          cp backend/server.js build/server.js || true
-          cp frontend/.env.production build/.env.production || true
-          ls -al build
+          rm -rf release
+          mkdir -p release/.next/static
+          mkdir -p release/public
+          cp -r frontend/.next/standalone/* release/
+          cp -r frontend/.next/static release/.next/static
+          cp frontend/.next/BUILD_ID release/.next/BUILD_ID
+          cp -r frontend/public release/public
+          cp -r backend/* release/
+          cp backend/server.js release/server.js
+          cp frontend/.env.production release/.env.production
+          ls -al release/.next
+          ls -al release
 
       - name: Merge frontend + backend dependencies
         run: |
@@ -70,10 +71,10 @@ jobs:
               },
               dependencies: deepmerge($backend.dependencies; $frontend.dependencies)
             }
-          ' backend/package.json frontend/package.json > build/package.json
+          ' backend/package.json frontend/package.json > release/package.json
 
       - name: Install production dependencies
-        working-directory: build
+        working-directory: release
         run: |
           npm install
           npm prune --omit=dev
@@ -88,7 +89,7 @@ jobs:
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: build
+          package: release
 
       - name: Force restart Azure Web App
         run: az webapp restart --name ghnod --resource-group ghnod
