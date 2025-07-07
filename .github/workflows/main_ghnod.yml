@@ -45,15 +45,26 @@ jobs:
           rm -rf release
           mkdir -p release/.next/static
           mkdir -p release/public
+          # 프론트 빌드 산출물
           cp -r frontend/.next/standalone/* release/
           cp -r frontend/.next/static release/.next/static
           cp frontend/.next/BUILD_ID release/.next/BUILD_ID
           cp -r frontend/public release/public
-          cp -r backend/* release/
-          cp backend/server.js release/server.js
           cp frontend/.env.production release/.env.production
-          ls -al release/.next
-          ls -al release
+          # 백엔드 코드 및 리소스 통째 복사
+          cp -r backend/certs release/certs
+          cp -r backend/config release/config
+          cp -r backend/controllers release/controllers
+          cp -r backend/middlewares release/middlewares
+          cp -r backend/models release/models
+          cp -r backend/routes release/routes
+          cp -r backend/uploads release/uploads
+          cp -r backend/utils release/utils
+          cp backend/server.js release/server.js
+          # (필요하다면 추가 복사)
+          if [ -f backend/DigiCertGlobalRootCA.crt ]; then cp backend/DigiCertGlobalRootCA.crt release/; fi
+          if [ -f backend/test-db.js ]; then cp backend/test-db.js release/; fi
+          if [ -f backend/test-env.js ]; then cp backend/test-env.js release/; fi
 
       - name: Merge frontend + backend dependencies
         run: |
