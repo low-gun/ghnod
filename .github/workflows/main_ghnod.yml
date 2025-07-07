@@ -85,6 +85,6 @@ jobs:
           app-name: "ghnod"
           slot-name: "Production"
           package: build
-
+          
       - name: Force restart Azure Web App
-        run: az webapp restart --name ghnod --resource-group <ghnod>
+        run: az webapp restart --name ghnod --resource-group ghnod
