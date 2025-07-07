@@ -42,13 +42,17 @@ jobs:
 
       - name: Prepare deployment folder
         run: |
+          rm -rf build
           mkdir -p build/.next/static
-          cp -r frontend/.next/standalone/* build/
-          cp -r frontend/.next/static build/.next/static
-          cp -r frontend/public build/public
-          cp -r backend/* build/
-          cp backend/server.js build/server.js
-          cp frontend/.env.production build/.env.production
+          mkdir -p build/public
+          cp -r frontend/.next/standalone/* build/ || true
+          cp -r frontend/.next/static build/.next/static || true
+          cp frontend/.next/BUILD_ID build/.next/BUILD_ID || true
+          cp -r frontend/public build/public || true
+          cp -r backend/* build/ || true
+          cp backend/server.js build/server.js || true
+          cp frontend/.env.production build/.env.production || true
+          ls -al build
 
       - name: Merge frontend + backend dependencies
         run: |
@@ -74,9 +78,6 @@ jobs:
           npm install
           npm prune --omit=dev
 
-      - name: Zip build folder
-        run: zip -r build.zip build
-
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -87,10 +88,7 @@ jobs:
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: build.zip
-  
-      - name: Wait before restart
-        run: sleep 15
-  
+          package: build
+
       - name: Force restart Azure Web App
         run: az webapp restart --name ghnod --resource-group ghnod
