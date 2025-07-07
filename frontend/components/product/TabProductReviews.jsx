@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
-import ProductReviewModalNew from "./ProductReviewModalNew";
+import ProductReviewModal from "./ProductReviewModal";
 
 console.log("🔥 ProductReviewModalNew 연결됨");
 
@@ -209,7 +209,7 @@ export default function TabProductReviews({ productId, scheduleId }) {
                           lineHeight: 1,
                         }}
                       >
-                        ⋯
+                        sdfsdf⋯
                       </button>
 
                       {menuOpenId === r.id && (
@@ -268,7 +268,7 @@ export default function TabProductReviews({ productId, scheduleId }) {
         </ul>
       )}
       {showModal && (
-        <ProductReviewModalNew
+        <ProductReviewModal
         productId={productId}
         initialData={editTarget}
         onClose={() => {
