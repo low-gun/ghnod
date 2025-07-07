@@ -74,22 +74,26 @@ jobs:
           npm install
           npm prune --omit=dev
 
+      - name: Zip build folder
+        run: |
+          cd build
+          zip -r ../build.zip .
+          cd ..
+
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: build
+          package: build.zip
   
       - name: Wait before restart
         run: sleep 15
   
       - name: Force restart Azure Web App
         run: az webapp restart --name ghnod --resource-group ghnod
-  
