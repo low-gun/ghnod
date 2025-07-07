@@ -79,12 +79,17 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: "ghnod"
           slot-name: "Production"
           package: build
-          
+  
+      - name: Wait before restart
+        run: sleep 15
+  
       - name: Force restart Azure Web App
         run: az webapp restart --name ghnod --resource-group ghnod
+  
