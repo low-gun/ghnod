@@ -43,13 +43,13 @@ jobs:
 
       - name: Prepare deployment folder (release)
         run: |
-          mkdir -p release/.next/static
-          mkdir -p release/public
+          mkdir -p release/build/.next/static
+          mkdir -p release/build/public
           # 프론트 빌드 산출물
           cp -r frontend/.next/standalone/* release/
-          cp -r frontend/.next/static/* release/.next/static/
-          cp frontend/.next/BUILD_ID release/.next/BUILD_ID
-          cp -r frontend/public/* release/public/
+          cp -r frontend/.next/static/* release/build/.next/static/
+          cp frontend/.next/BUILD_ID release/build/.next/BUILD_ID
+          cp -r frontend/public/* release/build/public/
           cp frontend/.env.production release/.env.production
           # 백엔드 코드 및 리소스 통째 복사
           cp -r backend/certs release/certs
@@ -90,13 +90,11 @@ jobs:
           npm install
           npm prune --omit=dev
 
-      # ------ 여기서부터 추가 ------
       - name: Print BUILD_ID before deploy
-        run: cat release/.next/BUILD_ID
+        run: cat release/build/.next/BUILD_ID
 
       - name: List all files before deploy
         run: find release/ -type f -ls
-      # ------ 여기까지 추가 ------
 
       - name: Login to Azure
         uses: azure/login@v1
@@ -109,7 +107,7 @@ jobs:
           app-name: "ghnod"
           slot-name: "Production"
           package: ./release/.
-          clean: true     # <-- 기존 파일 완전 삭제 후 배포!
+          clean: true
 
       - name: Force restart Azure Web App
         run: az webapp restart --name ghnod --resource-group ghnod
