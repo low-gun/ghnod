@@ -54,6 +54,7 @@ jobs:
           cp frontend/.next/routes-manifest.json release/build/.next/routes-manifest.json
           cp frontend/.next/prerender-manifest.json release/build/.next/prerender-manifest.json
           cp frontend/.next/server/pages-manifest.json release/build/.next/server/pages-manifest.json
+          cp frontend/.next/server/pages/_document.js release/build/.next/server/pages/_document.js  # ← ✅ 추가
           cp frontend/.next/server/next-font-manifest.json release/build/.next/server/next-font-manifest.json
           cp frontend/.next/server/font-manifest.json release/build/.next/server/font-manifest.json
           cp frontend/.next/server/middleware-manifest.json release/build/.next/server/middleware-manifest.json
@@ -82,6 +83,7 @@ jobs:
           [ -f backend/DigiCertGlobalRootCA.crt ] && cp backend/DigiCertGlobalRootCA.crt release/build/
           [ -f backend/test-db.js ] && cp backend/test-db.js release/build/
           [ -f backend/test-env.js ] && cp backend/test-env.js release/build/
+
 
       - name: Merge frontend + backend dependencies
         run: |
