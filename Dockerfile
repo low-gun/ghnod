@@ -17,7 +17,7 @@ RUN npm install --omit=dev
 
 # 6. 빌드 결과 통합
 WORKDIR /app
-RUN mkdir -p release/build/.next/static release/build/.next/server \
+RUN mkdir -p release/build/.next/static release/build/.next/server release/build/frontend \
   && cp -r frontend/.next/standalone/* release/build/ \
   && cp -r frontend/.next/static/* release/build/.next/static/ \
   && test -f frontend/.next/BUILD_ID && cp frontend/.next/BUILD_ID release/build/.next/ || echo "⛔ BUILD_ID not found" \
@@ -28,8 +28,10 @@ RUN mkdir -p release/build/.next/static release/build/.next/server \
   && test -f frontend/.next/server/middleware-manifest.json && cp frontend/.next/server/middleware-manifest.json release/build/.next/server/ || echo "⛔ middleware-manifest.json not found" \
   && test -f frontend/.next/server/app-paths-manifest.json && cp frontend/.next/server/app-paths-manifest.json release/build/.next/server/ || echo "⛔ app-paths-manifest.json not found" \
   && test -f frontend/.next/server/app-route-manifest.json && cp frontend/.next/server/app-route-manifest.json release/build/.next/server/ || echo "⛔ app-route-manifest.json not found" \
+  && test -f frontend/.next/server/next-font-manifest.json && cp frontend/.next/server/next-font-manifest.json release/build/.next/server/ || echo "⛔ next-font-manifest.json not found" \
   && test -d frontend/public && cp -r frontend/public release/build/public || echo "⛔ public/ not found" \
-  && test -f frontend/.env.production && cp frontend/.env.production release/build/.env.production || echo "⛔ .env.production not found" \
+  && test -f frontend/.env.production && cp frontend/.env.production release/build/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
+  && test -f backend/.env.production && cp backend/.env.production release/build/.env.production || echo "⛔ backend/.env.production not found" \
   && cp -r backend/* release/build/ \
   && rm -rf release/build/node_modules release/build/.next/cache \
   && cd release/build && npm install --omit=dev
