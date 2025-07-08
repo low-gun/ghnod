@@ -44,17 +44,23 @@ jobs:
       - name: Prepare deployment folder (release)
         run: |
           mkdir -p release/build
-          # Next.js standalone 전체를 build/로 복사
+          # Next.js standalone 전체 복사
           cp -r frontend/.next/standalone/* release/build/
-          # static, BUILD_ID도 build/.next로 복사 (중복이라도 무방)
+
+          # static, BUILD_ID, routes-manifest.json 복사
           mkdir -p release/build/.next/static
           cp -r frontend/.next/static/* release/build/.next/static/
           cp frontend/.next/BUILD_ID release/build/.next/BUILD_ID
-          # public도 build/아래로 복사
+          cp frontend/.next/routes-manifest.json release/build/.next/routes-manifest.json
+
+          # public 복사
           mkdir -p release/build/public
           cp -r frontend/public/* release/build/public/
+
+          # env 파일 복사
           cp frontend/.env.production release/build/.env.production
-          # 백엔드 코드 및 리소스 통째 복사 (모두 build/ 하위로)
+
+          # 백엔드 전체 복사
           cp -r backend/certs release/build/certs
           cp -r backend/config release/build/config
           cp -r backend/controllers release/build/controllers
@@ -64,10 +70,11 @@ jobs:
           cp -r backend/uploads release/build/uploads
           cp -r backend/utils release/build/utils
           cp backend/server.js release/build/server.js
-          # (필요하다면 추가 복사)
-          if [ -f backend/DigiCertGlobalRootCA.crt ]; then cp backend/DigiCertGlobalRootCA.crt release/build/; fi
-          if [ -f backend/test-db.js ]; then cp backend/test-db.js release/build/; fi
-          if [ -f backend/test-env.js ]; then cp backend/test-env.js release/build/; fi
+
+          # 선택적 복사 파일
+          [ -f backend/DigiCertGlobalRootCA.crt ] && cp backend/DigiCertGlobalRootCA.crt release/build/
+          [ -f backend/test-db.js ] && cp backend/test-db.js release/build/
+          [ -f backend/test-env.js ] && cp backend/test-env.js release/build/
 
       - name: Merge frontend + backend dependencies
         run: |
