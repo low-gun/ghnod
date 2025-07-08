@@ -7,7 +7,7 @@ WORKDIR /app
 # 3. 전체 복사 (루트 기준)
 COPY . .
 
-# 4. 프론트엔드 설치 및 빌드
+# 4. 프론트엔드 설치 및 빌드 (캐시 제거 포함)
 WORKDIR /app/frontend
 RUN rm -rf .next/cache && npm install && npm run build
 
@@ -20,12 +20,12 @@ WORKDIR /app
 RUN mkdir -p release/build/.next/static \
   && cp -r frontend/.next/standalone/* release/build/ \
   && cp -r frontend/.next/static/* release/build/.next/static/ \
-  && cp frontend/.next/BUILD_ID release/build/.next/BUILD_ID \
-  && cp frontend/.next/routes-manifest.json release/build/.next/ \
-  && cp frontend/.next/prerender-manifest.json release/build/.next/ \
-  && cp frontend/.next/pages-manifest.json release/build/.next/ \
-  && cp -r frontend/public release/build/public \
-  && cp frontend/.env.production release/build/.env.production \
+  && test -f frontend/.next/BUILD_ID && cp frontend/.next/BUILD_ID release/build/.next/ || echo "⛔ BUILD_ID not found, skipping" \
+  && test -f frontend/.next/routes-manifest.json && cp frontend/.next/routes-manifest.json release/build/.next/ || echo "⛔ routes-manifest.json not found, skipping" \
+  && test -f frontend/.next/prerender-manifest.json && cp frontend/.next/prerender-manifest.json release/build/.next/ || echo "⛔ prerender-manifest.json not found, skipping" \
+  && test -f frontend/.next/pages-manifest.json && cp frontend/.next/pages-manifest.json release/build/.next/ || echo "⛔ pages-manifest.json not found, skipping" \
+  && test -d frontend/public && cp -r frontend/public release/build/public || echo "⛔ public/ not found, skipping" \
+  && test -f frontend/.env.production && cp frontend/.env.production release/build/.env.production || echo "⛔ .env.production not found, skipping" \
   && cp -r backend/* release/build/ \
   && rm -rf release/build/node_modules release/build/.next/cache \
   && cd release/build && npm install --omit=dev
