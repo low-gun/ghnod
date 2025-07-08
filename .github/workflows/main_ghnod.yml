@@ -43,28 +43,31 @@ jobs:
 
       - name: Prepare deployment folder (release)
         run: |
-          mkdir -p release/.next/static
-          mkdir -p release/public
-          # Next.js standalone 전체를 release/에 복사
-          cp -r frontend/.next/standalone/* release/
-          cp -r frontend/.next/static/* release/.next/static/
-          cp frontend/.next/BUILD_ID release/.next/BUILD_ID
-          cp frontend/.env.production release/.env.production
-          cp -r frontend/public/* release/public/
-          # 백엔드 코드 및 리소스 통째 복사 (모두 release/ 하위로)
-          cp -r backend/certs release/certs
-          cp -r backend/config release/config
-          cp -r backend/controllers release/controllers
-          cp -r backend/middlewares release/middlewares
-          cp -r backend/models release/models
-          cp -r backend/routes release/routes
-          cp -r backend/uploads release/uploads
-          cp -r backend/utils release/utils
-          cp backend/server.js release/server.js
+          mkdir -p release/build
+          # Next.js standalone 전체를 build/로 복사
+          cp -r frontend/.next/standalone/* release/build/
+          # static, BUILD_ID도 build/.next로 복사 (중복이라도 무방)
+          mkdir -p release/build/.next/static
+          cp -r frontend/.next/static/* release/build/.next/static/
+          cp frontend/.next/BUILD_ID release/build/.next/BUILD_ID
+          # public도 build/아래로 복사
+          mkdir -p release/build/public
+          cp -r frontend/public/* release/build/public/
+          cp frontend/.env.production release/build/.env.production
+          # 백엔드 코드 및 리소스 통째 복사 (모두 build/ 하위로)
+          cp -r backend/certs release/build/certs
+          cp -r backend/config release/build/config
+          cp -r backend/controllers release/build/controllers
+          cp -r backend/middlewares release/build/middlewares
+          cp -r backend/models release/build/models
+          cp -r backend/routes release/build/routes
+          cp -r backend/uploads release/build/uploads
+          cp -r backend/utils release/build/utils
+          cp backend/server.js release/build/server.js
           # (필요하다면 추가 복사)
-          if [ -f backend/DigiCertGlobalRootCA.crt ]; then cp backend/DigiCertGlobalRootCA.crt release/; fi
-          if [ -f backend/test-db.js ]; then cp backend/test-db.js release/; fi
-          if [ -f backend/test-env.js ]; then cp backend/test-env.js release/; fi
+          if [ -f backend/DigiCertGlobalRootCA.crt ]; then cp backend/DigiCertGlobalRootCA.crt release/build/; fi
+          if [ -f backend/test-db.js ]; then cp backend/test-db.js release/build/; fi
+          if [ -f backend/test-env.js ]; then cp backend/test-env.js release/build/; fi
 
       - name: Merge frontend + backend dependencies
         run: |
@@ -82,16 +85,16 @@ jobs:
               },
               dependencies: deepmerge($backend.dependencies; $frontend.dependencies)
             }
-          ' backend/package.json frontend/package.json > release/package.json
+          ' backend/package.json frontend/package.json > release/build/package.json
 
       - name: Install production dependencies
-        working-directory: release
+        working-directory: release/build
         run: |
           npm install
           npm prune --omit=dev
 
       - name: Print BUILD_ID before deploy
-        run: cat release/.next/BUILD_ID
+        run: cat release/build/.next/BUILD_ID
 
       - name: List all files before deploy
         run: find release/ -type f -ls
@@ -106,7 +109,7 @@ jobs:
         with:
           app-name: "ghnod"
           slot-name: "Production"
-          package: ./release/.
+          package: ./release/build/.
           clean: true
 
       - name: Force restart Azure Web App
