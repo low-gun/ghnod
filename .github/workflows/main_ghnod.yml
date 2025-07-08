@@ -57,6 +57,10 @@ jobs:
           cp frontend/.next/server/pages-manifest.json release/build/.next/server/pages-manifest.json
           cp frontend/.next/server/next-font-manifest.json release/build/.next/server/next-font-manifest.json
           cp frontend/.next/server/font-manifest.json release/build/.next/server/font-manifest.json
+          cp frontend/.next/server/middleware-manifest.json release/build/.next/server/middleware-manifest.json
+          cp frontend/.next/server/functions-config-manifest.json release/build/.next/server/functions-config-manifest.json
+          cp frontend/.next/server/middleware-react-loadable-manifest.js release/build/.next/server/middleware-react-loadable-manifest.js
+
 
           # public 복사
           mkdir -p release/build/public
