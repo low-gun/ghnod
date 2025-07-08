@@ -17,13 +17,13 @@ RUN npm install --omit=dev
 
 # 6. 빌드 결과 통합
 WORKDIR /app
-RUN mkdir -p release/build/.next/static \
+RUN mkdir -p release/build/.next/static release/build/.next/server \
   && cp -r frontend/.next/standalone/* release/build/ \
   && cp -r frontend/.next/static/* release/build/.next/static/ \
   && test -f frontend/.next/BUILD_ID && cp frontend/.next/BUILD_ID release/build/.next/ || echo "⛔ BUILD_ID not found, skipping" \
   && test -f frontend/.next/routes-manifest.json && cp frontend/.next/routes-manifest.json release/build/.next/ || echo "⛔ routes-manifest.json not found, skipping" \
   && test -f frontend/.next/prerender-manifest.json && cp frontend/.next/prerender-manifest.json release/build/.next/ || echo "⛔ prerender-manifest.json not found, skipping" \
-  && test -f frontend/.next/pages-manifest.json && cp frontend/.next/pages-manifest.json release/build/.next/ || echo "⛔ pages-manifest.json not found, skipping" \
+  && test -f frontend/.next/pages-manifest.json && cp frontend/.next/pages-manifest.json release/build/.next/server/ || echo "⛔ pages-manifest.json not found, skipping" \
   && test -d frontend/public && cp -r frontend/public release/build/public || echo "⛔ public/ not found, skipping" \
   && test -f frontend/.env.production && cp frontend/.env.production release/build/.env.production || echo "⛔ .env.production not found, skipping" \
   && cp -r backend/* release/build/ \
