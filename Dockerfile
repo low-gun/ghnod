@@ -9,7 +9,7 @@ COPY . .
 
 # 4. 프론트엔드 설치 및 빌드
 WORKDIR /app/frontend
-RUN npm install && npm run build
+RUN rm -rf .next/cache && npm install && npm run build
 
 # 5. 백엔드 설치
 WORKDIR /app/backend
@@ -23,10 +23,11 @@ RUN mkdir -p release/build/.next/static \
   && cp frontend/.next/BUILD_ID release/build/.next/BUILD_ID \
   && cp frontend/.next/routes-manifest.json release/build/.next/ \
   && cp frontend/.next/prerender-manifest.json release/build/.next/ \
+  && cp frontend/.next/pages-manifest.json release/build/.next/ \
   && cp -r frontend/public release/build/public \
   && cp frontend/.env.production release/build/.env.production \
   && cp -r backend/* release/build/ \
-  && rm -rf release/build/node_modules \
+  && rm -rf release/build/node_modules release/build/.next/cache \
   && cd release/build && npm install --omit=dev
 
 # 7. 실행용 이미지로 경량화
