@@ -8,7 +8,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: ghnod
-  AZURE_CONTAINER_REGISTRY: ghnodacr.azurecr.io
+  AZURE_CONTAINER_REGISTRY: ghnod.azurecr.io
   IMAGE_NAME: ghnod-app
 
 jobs:
