@@ -49,6 +49,7 @@ jobs:
           # ✅ .next 관련 파일 복사
           mkdir -p release/build/.next/static
           mkdir -p release/build/.next/server
+          mkdir -p release/build/.next/server/pages  # ← ✅ 이 줄 추가
           cp -r frontend/.next/static/* release/build/.next/static/
           cp frontend/.next/BUILD_ID release/build/.next/BUILD_ID
           cp frontend/.next/routes-manifest.json release/build/.next/routes-manifest.json
