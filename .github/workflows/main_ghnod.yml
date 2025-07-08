@@ -41,7 +41,7 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api
         run: npm run build
 
-        - name: Prepare deployment folder (release)
+      - name: Prepare deployment folder (release)
         run: |
           mkdir -p release/build
           cp -r frontend/.next/standalone/* release/build/
