@@ -20,6 +20,7 @@ WORKDIR /app
 RUN mkdir -p release/frontend \
   && mkdir -p release/.next \
   && cp -r frontend/.next/* release/.next \
+  && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
   && cp -r frontend/.next/standalone/* release/ \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
