@@ -1,7 +1,0 @@
-node_modules
-release
-*.log
-frontend/.next/cache
-frontend/.env.local
-backend/.env.local
-.git
