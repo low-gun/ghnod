@@ -21,6 +21,7 @@ RUN mkdir -p release/.next/static release/.next/server release/frontend \
   && mkdir -p release/.next/server && cp -r frontend/.next/server/pages release/.next/server/pages \
   && cp -r frontend/.next/standalone/* release/ \
   && cp -r frontend/.next/static/* release/.next/static/ \
+  && cp -r frontend/.next/standalone/.next/static/* release/.next/static/ \
   && test -f frontend/.next/BUILD_ID && cp frontend/.next/BUILD_ID release/.next/ || echo "⛔ BUILD_ID not found" \
   && test -f frontend/.next/routes-manifest.json && cp frontend/.next/routes-manifest.json release/.next/ || echo "⛔ routes-manifest.json not found" \
   && test -f frontend/.next/prerender-manifest.json && cp frontend/.next/prerender-manifest.json release/.next/ || echo "⛔ prerender-manifest.json not found" \
