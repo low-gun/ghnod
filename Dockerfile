@@ -18,6 +18,7 @@ RUN npm install --omit=dev
 # 6. 빌드 결과 통합 (release에 바로 복사)
 WORKDIR /app
 RUN mkdir -p release/.next/static release/.next/server release/frontend \
+  && mkdir -p release/.next/server && cp -r frontend/.next/server/pages release/.next/server/pages \
   && cp -r frontend/.next/standalone/* release/ \
   && cp -r frontend/.next/static/* release/.next/static/ \
   && test -f frontend/.next/BUILD_ID && cp frontend/.next/BUILD_ID release/.next/ || echo "⛔ BUILD_ID not found" \
