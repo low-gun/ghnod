@@ -18,7 +18,8 @@ RUN npm install --omit=dev
 # 6. 빌드 결과 통합 (release에 바로 복사)
 WORKDIR /app
 RUN mkdir -p release/frontend \
-  && cp -r frontend/.next release/.next \
+  && mkdir -p release/.next \
+  && cp -r frontend/.next/* release/.next \
   && cp -r frontend/.next/standalone/* release/ \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
