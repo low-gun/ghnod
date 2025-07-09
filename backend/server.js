@@ -40,23 +40,22 @@ app.use(trackVisitor);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net",
-];
-
 app.use(
   cors({
     origin: (origin, callback) => {
+      console.log("📌 CORS 요청 origin:", origin); // 요청 로그 확인
+
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn("❌ 차단된 origin:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
   })
 );
+
 
 app.use(cookieParser());
 app.use(passport.initialize());
