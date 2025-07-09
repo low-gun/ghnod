@@ -24,7 +24,7 @@ RUN mkdir -p release/.next/static release/.next/server release/frontend \
   && cp -r frontend/.next/static/* release/.next/static/ \
   && cp -r frontend/.next/standalone/.next/static/* release/.next/static/ \
   && mkdir -p release/.next \
-  && test -f frontend/.next/BUILD_ID && cp frontend/.next/BUILD_ID release/.next/ || echo "⛔ BUILD_ID not found" \
+  && cp frontend/.next/BUILD_ID release/.next/ || echo "⛔ BUILD_ID 복사 실패" \
   && test -f frontend/.next/routes-manifest.json && cp frontend/.next/routes-manifest.json release/.next/ || echo "⛔ routes-manifest.json not found" \
   && test -f frontend/.next/prerender-manifest.json && cp frontend/.next/prerender-manifest.json release/.next/ || echo "⛔ prerender-manifest.json not found" \
   && test -f frontend/.next/required-server-files.json && cp frontend/.next/required-server-files.json release/.next/ || echo "⛔ required-server-files.json not found" \
