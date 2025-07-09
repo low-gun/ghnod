@@ -33,7 +33,7 @@ FROM node:18-alpine AS runner
 
 WORKDIR /app
 COPY --from=builder /app/release/ .
-
+RUN echo "🧾 BUILD_ID:" && cat /app/.next/BUILD_ID || echo "❌ BUILD_ID 없음"
 # ✅ 디렉토리 구조 확인용 로그
 RUN echo "📁 /app:" && ls -al /app && \
     echo "\n📁 /app/.next:" && ls -al /app/.next || echo "❌ .next 없음" && \
