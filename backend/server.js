@@ -104,6 +104,11 @@ app.use("/api", require("./routes/public/inquiry"));
 // ✅ nextApp 준비 및 서버 실행
 console.log("✅ nextApp.prepare() 시작");
 
+// ⬇⬇⬇ 여기에 추가
+console.log("✅ nextApp 설정 dir:", nextApp.dir);
+console.log("✅ 현재 디렉토리:", process.cwd());
+console.log("✅ __dirname:", __dirname);
+
 nextApp
   .prepare()
   .then(() => {
