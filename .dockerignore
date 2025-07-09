@@ -1,9 +1,9 @@
-# .dockerignore
 node_modules
 release
 *.log
 frontend/.next/cache
 frontend/.env.local
 backend/.env.local
-frontend/.env.production
-backend/.env.production
+# ⚠️ .env.production은 포함해야 하므로 아래 두 줄 삭제 또는 주석 처리
+# frontend/.env.production
+# backend/.env.production

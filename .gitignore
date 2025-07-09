@@ -3,10 +3,12 @@ node_modules/
 *.log
 .DS_Store
 
-# ✅ 환경변수 (모든 변종)
+# ✅ 환경변수 (Git에선 제외, Docker에선 포함)
 .env
 .env.*
-!.env.example  # 필요하면 템플릿으로 예외 허용
+!.env.example         # 필요하면 템플릿으로 예외 허용
+!frontend/.env.production
+!backend/.env.production
 
 # ✅ 프론트엔드 (Next.js 빌드)
 frontend/.next/

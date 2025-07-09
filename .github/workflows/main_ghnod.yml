@@ -1,3 +1,4 @@
+# yamllint disable rule:line-length
 name: Build and deploy Dockerized GHNOD app
 
 on:
@@ -26,6 +27,11 @@ jobs:
 
       - name: Log in to ACR
         run: az acr login --name ghnod
+
+      - name: Generate env files from secrets
+        run: |
+          echo "${{ secrets.FRONTEND_ENV_PRODUCTION }}" > frontend/.env.production
+          echo "${{ secrets.BACKEND_ENV_PRODUCTION }}" > backend/.env.production
 
       - name: Build and push Docker image
         run: |
