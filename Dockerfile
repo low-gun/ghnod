@@ -23,12 +23,14 @@ RUN mkdir -p release/frontend \
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
   && cp -r frontend/.next/standalone/* release/ \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
+  && cp frontend/package.json release/package.json \       
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && test -f frontend/.env.production && cp frontend/.env.production release/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
   && test -f backend/.env.production && cp backend/.env.production release/.env.production || echo "⛔ backend/.env.production not found" \
   && cp -r backend/* release/ \
   && rm -rf release/node_modules release/.next/cache \
   && cd release && npm install --omit=dev
+
 
 # 7. 실행용 이미지로 경량화 + 구조 확인 디버깅
 FROM node:18-alpine AS runner
