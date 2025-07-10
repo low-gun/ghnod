@@ -27,10 +27,10 @@ RUN mkdir -p release/frontend \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && test -f frontend/.env.production && cp frontend/.env.production release/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
   && test -f backend/.env.production && cp backend/.env.production release/.env.production || echo "⛔ backend/.env.production not found" \
-  && rsync -av backend/ release/ \
   && rm -rf release/node_modules release/.next/cache \
   && cd release \
   && sed -i '/"type": "module"/d' package.json \
+  && rsync -av ../backend/ ./ --exclude=package.json --exclude=package-lock.json \
   && npm install --omit=dev --verbose \
   && echo "\n✅ zustand 확인:" && ls -al node_modules/zustand || echo "❌ zustand 없음" \
   && echo "\n✅ release/package.json 내 zustand 포함 여부:" && cat package.json | grep zustand || echo "❌ package.json에 zustand 없음"
