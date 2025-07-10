@@ -30,6 +30,7 @@ RUN mkdir -p release/frontend \
   && rsync -av --exclude=package.json --exclude=package-lock.json backend/ release/ \
   && rm -rf release/node_modules release/.next/cache \
   && cd release \
+  && sed -i '/"type": "module"/d' package.json \
   && npm install --omit=dev --verbose \
   && echo "\n✅ zustand 확인:" && ls -al node_modules/zustand || echo "❌ zustand 없음" \
   && echo "\n✅ release/package.json 내 zustand 포함 여부:" && cat package.json | grep zustand || echo "❌ package.json에 zustand 없음"
