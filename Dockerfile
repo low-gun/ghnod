@@ -27,7 +27,6 @@ RUN mkdir -p release/frontend \
   && test -f frontend/.env.production && cp frontend/.env.production release/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
   && test -f backend/.env.production && cp backend/.env.production release/.env.production || echo "⛔ backend/.env.production not found" \
   && cp -r backend/* release/ \
-  && cp frontend/package.json release/package.json \ 
   && rm -rf release/node_modules release/.next/cache \
   && cd release && npm install --omit=dev
 
