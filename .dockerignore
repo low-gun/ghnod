@@ -1,9 +1,17 @@
 node_modules
-release
 *.log
+
+# Next.js 캐시 제거
 frontend/.next/cache
+
+# local 개발용 env 제외
 frontend/.env.local
 backend/.env.local
-# ⚠️ .env.production은 포함해야 하므로 아래 두 줄 삭제 또는 주석 처리
+
+# 배포용 env는 포함되어야 하므로 주석처리 또는 제거
 # frontend/.env.production
 # backend/.env.production
+
+# release 전체는 무시하되, package.json만 예외적으로 포함
+release/*
+!release/package.json
