@@ -23,7 +23,9 @@ RUN mkdir -p release/frontend \
   && cp -r frontend/.next/* release/.next \
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
   && cp -r frontend/.next/standalone/* release/ \
-  && cp backend/server.js release/server.js \ 
+  && cp backend/server.js release/server.js \
+  && cp backend/package.json release/package.json \
+  && cp backend/package-lock.json release/package-lock.json \
   && sed -i '/"type": "module"/d' release/package.json \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
@@ -35,7 +37,9 @@ RUN mkdir -p release/frontend \
   && npm install --omit=dev --verbose \
   && echo "\n✅ zustand 확인:" && ls -al node_modules/zustand || echo "❌ zustand 없음" \
   && echo "\n✅ release/package.json 내 zustand 포함 여부:" && cat package.json | grep zustand || echo "❌ package.json에 zustand 없음" \
+  && echo "\n✅ 현재 디렉토리 확인:" && pwd && ls -al \
   && echo "\n✅ dotenv 설치 여부:" && ls -al node_modules/dotenv || echo "❌ dotenv 없음"
+
 
 # 7. 실행용 이미지로 경량화 + 구조 확인 디버깅
 FROM node:18-alpine AS runner
