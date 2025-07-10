@@ -28,9 +28,10 @@ RUN mkdir -p release/frontend \
   && test -f backend/.env.production && cp backend/.env.production release/.env.production || echo "⛔ backend/.env.production not found" \
   && cp -r backend/* release/ \
   && rm -rf release/node_modules release/.next/cache \
-  && cd release && npm install --omit=dev
-
-
+  && cd release \
+  && npm install --omit=dev --verbose \
+  && echo "\n✅ zustand 확인:" && ls -al node_modules/zustand || echo "❌ zustand 없음" \
+  && echo "\n✅ release/package.json 내 zustand 포함 여부:" && cat package.json | grep zustand || echo "❌ package.json에 zustand 없음"
 
 # 7. 실행용 이미지로 경량화 + 구조 확인 디버깅
 FROM node:18-alpine AS runner
