@@ -23,6 +23,8 @@ RUN mkdir -p release/frontend \
   && cp -r frontend/.next/* release/.next \
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
   && cp -r frontend/.next/standalone/* release/ \
+  && cp backend/server.js release/server.js \  
+  && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && test -f frontend/.env.production && cp frontend/.env.production release/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
