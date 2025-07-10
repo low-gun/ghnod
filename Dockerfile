@@ -6,7 +6,8 @@ WORKDIR /app
 
 # 3. 전체 복사
 COPY . .
-
+# ✅ rsync 설치
+RUN apk add --no-cache rsync
 # 4. 프론트엔드 설치 및 빌드
 WORKDIR /app/frontend
 RUN rm -rf .next/cache && npm install && npm run build
