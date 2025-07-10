@@ -12,6 +12,7 @@ backend/.env.local
 # frontend/.env.production
 # backend/.env.production
 
-# release 전체는 무시하되, package.json만 예외적으로 포함
-release/*
-!release/package.json
+# ✅ 기존 문제의 원인: release 전체를 무시하면 빌드 산출물 복사 불가
+# ⛔ 아래 두 줄 제거 or 주석처리
+# release/*
+# !release/package.json
