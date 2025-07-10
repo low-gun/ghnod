@@ -23,7 +23,7 @@ RUN mkdir -p release/frontend \
   && cp -r frontend/.next/* release/.next \
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
   && cp -r frontend/.next/standalone/* release/ \
-  && cp backend/server.js release/server.js \  
+  && cp backend/server.js release/server.cjs \  
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
@@ -48,4 +48,4 @@ RUN echo "📁 /app:" && ls -al /app && \
     echo "\n📄 server.js:" && cat /app/server.js || echo "❌ server.js 없음"
 
 ENV NODE_ENV=production
-CMD ["node", "server.js"]
+CMD ["node", "server.cjs"]
