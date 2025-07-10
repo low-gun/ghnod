@@ -27,7 +27,7 @@ RUN mkdir -p release/frontend \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && test -f frontend/.env.production && cp frontend/.env.production release/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
   && test -f backend/.env.production && cp backend/.env.production release/.env.production || echo "⛔ backend/.env.production not found" \
-  && rsync -av --exclude=package.json --exclude=package-lock.json backend/ release/ \
+  && rsync -av backend/ release/ \
   && rm -rf release/node_modules release/.next/cache \
   && cd release \
   && sed -i '/"type": "module"/d' package.json \
