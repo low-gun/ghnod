@@ -1,4 +1,6 @@
 // frontend/next.config.mjs
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
@@ -21,6 +23,16 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  async rewrites() {
+    return isProd
+      ? [
+          {
+            source: "/api/:path*",
+            destination: "http://localhost:5001/api/:path*", // prod용 프록시
+          },
+        ]
+      : [];
   },
 };
 
