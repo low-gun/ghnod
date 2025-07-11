@@ -44,7 +44,15 @@ RUN mkdir -p release/frontend \
   && echo "\n✅ 현재 디렉토리 확인:" && pwd && ls -al \
   && echo "\n✅ dotenv 설치 여부:" && ls -al node_modules/dotenv || echo "❌ dotenv 없음" \
   && cd .. \
-  && cp -r frontend/.next/standalone/* release/
+  && cp -r frontend/.next/standalone/* release/ \
+  && sed -i '1i\
+console.log("cwd:", process.cwd());\
+try {\
+  console.log("require(\\"zustand\\"):", require.resolve("zustand"));\
+} catch (e) {\
+  console.error("zustand resolve error:", e);\
+}\
+' release/server.js
 
 
 # 7. 실행용 이미지로 경량화 + 구조 확인 디버깅
