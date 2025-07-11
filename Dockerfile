@@ -22,8 +22,7 @@ RUN mkdir -p release/frontend \
   && mkdir -p release/.next \
   && cp -r frontend/.next/* release/.next \
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
-  && cp backend/server.js release/server.js \
-  && cp backend/package.json release/package.json \
+   && cp backend/package.json release/package.json \
   && cp backend/package-lock.json release/package-lock.json \
   && cp -r backend/routes release/routes \
   && cp -r backend/config release/config \
@@ -45,7 +44,7 @@ RUN mkdir -p release/frontend \
   && echo "\n✅ dotenv 설치 여부:" && ls -al node_modules/dotenv || echo "❌ dotenv 없음" \
   && cd .. \
   && cp -r frontend/.next/standalone/* release/ \
-  && sed -i '1i\
+  && sed -i '/const require = module.createRequire(import.meta.url)/a\
 console.log("cwd:", process.cwd());\
 try {\
   console.log("require(\\"zustand\\"):", require.resolve("zustand"));\
