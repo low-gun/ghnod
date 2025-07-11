@@ -26,6 +26,11 @@ RUN mkdir -p release/frontend \
   && cp backend/server.js release/server.js \
   && cp backend/package.json release/package.json \
   && cp backend/package-lock.json release/package-lock.json \
+  && cp -r backend/routes release/routes \
+  && cp -r backend/config release/config \
+  && cp -r backend/controllers release/controllers \
+  && cp -r backend/models release/models \
+  && cp -r backend/middlewares release/middlewares \
   && sed -i '/"type": "module"/d' release/package.json \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
