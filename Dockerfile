@@ -26,8 +26,7 @@ RUN echo "===== [호스트] 빌드 시작 전 release/package.json 상태 ====="
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
   && echo "===== [복사 전] backend/package.json 상태 =====" && \
   cat backend/package.json || echo "❌ backend/package.json 없음" && \
-  cp backend/package.json release/package.json \
-  && cp backend/package-lock.json release/package-lock.json \
+  cp backend/package-lock.json release/package-lock.json \
   && cp -r backend/routes release/routes \
   && cp -r backend/config release/config \
   && cp -r backend/controllers release/controllers \
