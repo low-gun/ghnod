@@ -18,11 +18,15 @@ RUN npm install --omit=dev
 
 # 6. 빌드 결과 통합 (release에 바로 복사)
 WORKDIR /app
-RUN mkdir -p release/frontend \
+RUN echo "===== [호스트] 빌드 시작 전 release/package.json 상태 =====" && \
+    cat release/package.json || echo "❌ release/package.json 없음" && \
+    mkdir -p release/frontend \
   && mkdir -p release/.next \
   && cp -r frontend/.next/* release/.next \
   && cp frontend/.next/BUILD_ID release/.next/BUILD_ID \
-   && cp backend/package.json release/package.json \
+  && echo "===== [복사 전] backend/package.json 상태 =====" && \
+  cat backend/package.json || echo "❌ backend/package.json 없음" && \
+  cp backend/package.json release/package.json \
   && cp backend/package-lock.json release/package-lock.json \
   && cp -r backend/routes release/routes \
   && cp -r backend/config release/config \
@@ -36,12 +40,13 @@ RUN mkdir -p release/frontend \
   && test -f frontend/.env.production && cp frontend/.env.production release/frontend/.env.production || echo "⛔ frontend/.env.production not found" \
   && test -f backend/.env.production && cp backend/.env.production release/.env.production || echo "⛔ backend/.env.production not found" \
   && rm -rf release/node_modules release/.next/cache \
+  && echo "\n===== [npm install 직전] release/package.json 내 zustand 포함 여부 =====" \
+  && cat release/package.json | grep zustand || echo "❌ zustand 없음 (npm install 직전)" \
   && cd release \
   && npm install --omit=dev --verbose \
-  && echo "\n✅ zustand 확인:" && ls -al node_modules/zustand || echo "❌ zustand 없음" \
-  && echo "\n✅ release/package.json 내 zustand 포함 여부:" && cat package.json | grep zustand || echo "❌ package.json에 zustand 없음" \
-  && echo "\n✅ 현재 디렉토리 확인:" && pwd && ls -al \
-  && echo "\n✅ dotenv 설치 여부:" && ls -al node_modules/dotenv || echo "❌ dotenv 없음" \
+  && echo "\n✅ [npm install 이후] zustand 확인:" && ls -al node_modules/zustand || echo "❌ zustand 없음 (npm install 이후)" \
+  && echo "\n✅ [npm install 이후] 현재 디렉토리 확인:" && pwd && ls -al \
+  && echo "\n✅ [npm install 이후] release/package.json 상태:" && cat package.json \
   && cd .. \
   && cp -r frontend/.next/standalone/* release/ \
   && sed -i '/const require = module.createRequire(import.meta.url)/a\
@@ -52,7 +57,6 @@ try {\
   console.error("zustand resolve error:", e);\
 }\
 ' release/server.js
-
 
 # 7. 실행용 이미지로 경량화 + 구조 확인 디버깅
 FROM node:18-alpine AS runner
