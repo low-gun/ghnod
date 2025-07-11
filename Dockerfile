@@ -31,6 +31,7 @@ RUN mkdir -p release/frontend \
   && cp -r backend/controllers release/controllers \
   && cp -r backend/models release/models \
   && cp -r backend/middlewares release/middlewares \
+  && cp -r backend/utils release/utils \
   && sed -i '/"type": "module"/d' release/package.json \
   && test -d frontend/public && cp -r frontend/public release/public || echo "⛔ public/ not found" \
   && cp frontend/.next/BUILD_ID release/BUILD_ID \
