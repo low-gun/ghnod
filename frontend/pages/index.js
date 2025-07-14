@@ -13,7 +13,7 @@ export default function HomePage() {
       }}
     >
       <img
-        src="/main."
+        src="/main.webp"
         alt="진단 워크숍 메인 이미지"
         style={{
           width: "100%",
