@@ -22,9 +22,9 @@ function parseYYYYMMDD(str) {
 export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
-    const baseURL =
-      process.env.API_BASE_URL ||
-      "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net/api";
+    console.log("🔥 process.env.NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!baseURL) throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
     console.log("👉 baseURL:", baseURL);
     const now = moment();
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");

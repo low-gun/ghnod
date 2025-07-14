@@ -2,11 +2,13 @@ import React from "react";
 
 const SocialLoginButtons = () => {
   const handleLogin = (provider) => {
-    const isLocal = window.location.hostname === "localhost";
-    const baseURL = isLocal
-      ? "http://localhost:5001"
-      : "https://ghnod-hvf7h4dhdpahh7h5.koreacentral-01.azurewebsites.net";
-
+    // 반드시 NEXT_PUBLIC_API_BASE_URL에 http://localhost:5001 또는 운영주소 입력되어 있어야 함
+    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api$/, "");
+    if (!baseURL) {
+      alert("API_BASE_URL 환경변수가 설정되지 않았습니다.");
+      return;
+    }
+  
     window.location.href = `${baseURL}/api/auth/${provider}`;
   };
 
