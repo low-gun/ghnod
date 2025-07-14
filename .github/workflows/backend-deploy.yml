@@ -29,10 +29,13 @@ jobs:
         run: npm run build || echo "no build step"
         working-directory: ./backend
 
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ghnod-backend         # 새로 만든 App Service 이름
-          # publish-profile 제거
-          # package 기본값(루트) 사용 시 /backend 지정 필요 없음
+          app-name: ghnod-backend      # 새 App Service 이름
           package: ./backend
