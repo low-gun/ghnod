@@ -12,6 +12,7 @@ export default function CustomCalendar({
   shouldFilterInactive = true,
   mode = "user", // ✅ 추가 (기본값 user)
 }) {
+  console.log("🔥 CustomCalendar schedules prop:", schedules);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);

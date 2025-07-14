@@ -40,6 +40,7 @@ export async function getServerSideProps(context) {
         headers: { Cookie: cookie },
       }
     );
+    console.log("🔥 SSR fetch 결과:", res.data);
 
     const data = res.data;
 
@@ -72,6 +73,7 @@ export async function getServerSideProps(context) {
 }
 
 export default function CalendarPage({ eventsData }) {
+  console.log("🔥 클라이언트 eventsData:", eventsData);
   const [events, setEvents] = useState(() =>
     eventsData.map((item) => ({
       id: item.id,
@@ -141,6 +143,7 @@ export default function CalendarPage({ eventsData }) {
     }
     return true;
   });
+  console.log("🔥 filteredEvents:", filteredEvents.length, filteredEvents);
 
   return (
     <>
