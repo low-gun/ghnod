@@ -36,24 +36,24 @@ export default function ProductReviewModal({
     try {
       setLoading(true);
 
-      let uploadedUrls = [];
+      let uploadedImages = [];
 
-      if (imageFiles.length > 0) {
-        const uploadPromises = imageFiles.map((file) => {
-          const form = new FormData();
-          form.append("file", file);
-          return api.post("/upload", form).then((res) => res.data.url);
-        });
+if (imageFiles.length > 0) {
+  const uploadPromises = imageFiles.map((file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post("/upload", form).then((res) => res.data); // { original, thumbnail }
+  });
 
-        uploadedUrls = await Promise.all(uploadPromises);
-      }
+  uploadedImages = await Promise.all(uploadPromises);
+}
 
-      const payload = {
-        user_id: user.id,
-        rating,
-        comment,
-        images: uploadedUrls,
-      };
+const payload = {
+  user_id: user.id,
+  rating,
+  comment,
+  images: uploadedImages, // [{ original, thumbnail }]
+};
 
       let res;
       if (initialData?.id) {
@@ -129,55 +129,78 @@ export default function ProductReviewModal({
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>이미지 첨부 (최대 10장)</label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {previewUrls.map((url, idx) => (
-              <div key={idx} style={{ position: "relative" }}>
-                <img
-                  src={url}
-                  alt={`이미지 ${idx + 1}`}
-                  style={{
-                    width: 72,
-                    height: 72,
-                    objectFit: "cover",
-                    borderRadius: 4,
-                    border: "1px solid #ccc",
-                  }}
-                />
-                <button
-                  onClick={() => removeImage(idx)}
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    background: "#f00",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: 20,
-                    height: 20,
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {imageFiles.length < 10 && (
-              <label style={uploadLabelStyle}>
-                +
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageChange}
-                  style={{ display: "none" }}
-                />
-              </label>
-            )}
-          </div>
-        </div>
+  <label style={labelStyle}>이미지 첨부 (최대 10장)</label>
+  
+  {/* 서버 저장 리뷰 이미지 썸네일 보여주기 */}
+  {Array.isArray(initialData?.images) && initialData.images.length > 0 && (
+    <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+      {initialData.images.map((img, idx) => (
+        <img
+          key={idx}
+          src={img.thumbnail}
+          alt={`리뷰 이미지 썸네일 ${idx + 1}`}
+          style={{
+            width: 72,
+            height: 72,
+            objectFit: "cover",
+            borderRadius: 4,
+            border: "1px solid #ccc",
+          }}
+        />
+      ))}
+    </div>
+  )}
+
+  {/* 업로드 중인 로컬 이미지 미리보기 */}
+  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+    {previewUrls.map((url, idx) => (
+      <div key={idx} style={{ position: "relative" }}>
+        <img
+          src={url}
+          alt={`이미지 ${idx + 1}`}
+          style={{
+            width: 72,
+            height: 72,
+            objectFit: "cover",
+            borderRadius: 4,
+            border: "1px solid #ccc",
+          }}
+        />
+        <button
+          onClick={() => removeImage(idx)}
+          style={{
+            position: "absolute",
+            top: -6,
+            right: -6,
+            background: "#f00",
+            color: "#fff",
+            border: "none",
+            borderRadius: "50%",
+            width: 20,
+            height: 20,
+            fontSize: 12,
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+      </div>
+    ))}
+    {imageFiles.length < 10 && (
+      <label style={uploadLabelStyle}>
+        +
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImageChange}
+          style={{ display: "none" }}
+        />
+      </label>
+    )}
+  </div>
+</div>
+
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button onClick={onClose} disabled={loading} style={cancelButtonStyle}>

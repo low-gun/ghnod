@@ -18,20 +18,20 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("");
 
   // ✅ URL query.tab이 변할 때 activeTab 업데이트
-  useEffect(() => {
-    if (!query.tab) {
-      router.replace({
-        pathname: router.pathname,
-        query: { ...query, tab: defaultTab },
-      });
-    }
-  }, [query.tab]);
+  // useEffect(() => {
+  //   if (!query.tab) {
+  //     router.replace({
+  //       pathname: router.pathname,
+  //       query: { ...query, tab: defaultTab },
+  //     });
+  //   }
+  // }, [query.tab]);
 
-  useEffect(() => {
-    if (query.tab) {
-      setActiveTab(query.tab);
-    }
-  }, [query.tab]);
+  // useEffect(() => {
+  //   if (query.tab) {
+  //     setActiveTab(query.tab);
+  //   }
+  // }, [query.tab]);
 
   // ✅ 비관리자 접근 제한
   useEffect(() => {

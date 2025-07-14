@@ -10,6 +10,7 @@ import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import useGlobalLoading from "@/stores/globalLoading";
 import ScrollTopButton from "@/components/common/ScrollTopButton"; // ✅ 추가
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
@@ -43,6 +44,7 @@ function CartInitializer() {
 
   return null;
 }
+const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -85,18 +87,19 @@ function MyApp({ Component, pageProps }) {
     : ({ children }) => <MainLayout>{children}</MainLayout>;
 
   return (
-    <CartProvider>
-      <UserProvider>
-        <CartInitializer />
-        <GlobalLoadingBar />
-        <LayoutWrapper>
-          <Component {...pageProps} />
-        </LayoutWrapper>
-        <ScrollTopButton /> {/* ✅ 전역 Scroll To Top 버튼 */}
-        <ToastContainer position="top-right" autoClose={2000} />
-      </UserProvider>
-    </CartProvider>
+    <QueryClientProvider client={queryClient}>
+      <CartProvider>
+        <UserProvider>
+          <CartInitializer />
+          <GlobalLoadingBar />
+          <LayoutWrapper>
+            <Component {...pageProps} />
+          </LayoutWrapper>
+          <ScrollTopButton />
+          <ToastContainer position="top-right" autoClose={2000} />
+        </UserProvider>
+      </CartProvider>
+    </QueryClientProvider>
   );
 }
-
 export default MyApp;

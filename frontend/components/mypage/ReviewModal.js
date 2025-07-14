@@ -78,14 +78,19 @@ export default function ReviewModal({
           ×
         </button>
 
-        {/* 썸네일 이미지 */}
-        {initialData?.thumbnail && (
-          <img
-            src={initialData.thumbnail}
-            alt="강의 썸네일"
-            style={thumbnailStyle}
-          />
-        )}
+        {/* 리뷰 이미지 썸네일 여러 장 지원 */}
+{Array.isArray(initialData?.images) && initialData.images.length > 0 && (
+  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+    {initialData.images.map((img, idx) => (
+      <img
+        key={idx}
+        src={img.thumbnail}
+        alt={`리뷰 이미지 썸네일 ${idx + 1}`}
+        style={thumbnailStyle}
+      />
+    ))}
+  </div>
+)}
 
         {/* 강의명 */}
         {initialData?.title && (

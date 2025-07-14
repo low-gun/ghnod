@@ -3,19 +3,19 @@ const db = require("../config/db");
 const Review = require("../models/review.model");
 
 // ✅ 상품별 후기 조회
-// ✅ 상품별 후기 조회
 exports.getReviewsByProduct = async (req, res) => {
   const productId = req.params.id;
 
   try {
     const [rows] = await db.query(
-      `SELECT r.id AS review_id, r.user_id, u.username AS username, r.rating, r.comment, r.created_at,
-              ri.image_url
-       FROM reviews r
-       JOIN users u ON r.user_id = u.id
-       LEFT JOIN review_images ri ON r.id = ri.review_id
-       WHERE r.product_id = ?
-       ORDER BY r.created_at DESC`,
+      // thumbnail_url까지 포함해서 조회
+`SELECT r.id AS review_id, r.user_id, u.username AS username, r.rating, r.comment, r.created_at,
+ri.image_url, ri.thumbnail_url
+FROM reviews r
+JOIN users u ON r.user_id = u.id
+LEFT JOIN review_images ri ON r.id = ri.review_id
+WHERE r.product_id = ?
+ORDER BY r.created_at DESC`,
       [productId]
     );
 
@@ -37,9 +37,13 @@ exports.getReviewsByProduct = async (req, res) => {
         reviews.push(review);
       }
 
-      if (row.image_url) {
-        reviewMap.get(row.review_id).images.push(row.image_url);
-      }
+      // 이미지: original/thumbnail 같이 넘기기
+if (row.image_url && row.thumbnail_url) {
+  reviewMap.get(row.review_id).images.push({
+    original: row.image_url,
+    thumbnail: row.thumbnail_url,
+  });
+}
     }
 
     res.json({ success: true, reviews });
@@ -85,14 +89,15 @@ exports.createReview = async (req, res) => {
     const reviewId = result[0].insertId;
 
     // 이미지 저장
-    if (Array.isArray(req.uploadedImageUrls)) {
-      for (const url of req.uploadedImageUrls) {
-        await db.query(
-          `INSERT INTO review_images (review_id, image_url) VALUES (?, ?)`,
-          [reviewId, url]
-        );
-      }
-    }
+if (Array.isArray(req.uploadedImageUrls)) {
+  for (const imgObj of req.uploadedImageUrls) {
+    // imgObj = { original, thumbnail }
+    await db.query(
+      `INSERT INTO review_images (review_id, image_url, thumbnail_url) VALUES (?, ?, ?)`,
+      [reviewId, imgObj.original, imgObj.thumbnail]
+    );
+  }
+}
 
     return res.status(201).json({ success: true, message: "후기가 등록되었습니다." });
   } catch (err) {

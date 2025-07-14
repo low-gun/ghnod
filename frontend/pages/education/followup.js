@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
-import SearchFilterBox from "@/components/common/SearchFilterBox"; // ✅ 추가
+import SearchFilterBox from "@/components/common/SearchFilterBox";
 import ScheduleSubTabs from "@/components/education/ScheduleSubTabs";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import MobileSearchFilterBox from "@/components/education/MobileSearchFilterBox";
 import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
+import { useQuery } from "@tanstack/react-query";
+
 export default function FollowupPage() {
-  const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState("start_date");
   const [order, setOrder] = useState("asc");
   const [showPast, setShowPast] = useState(false);
@@ -20,6 +20,7 @@ export default function FollowupPage() {
   const router = useRouter();
   const type = "followup";
   const isMobileOrTablet = useIsTabletOrBelow();
+
   const subTabs = [
     { label: "followup", href: "/education/followup" },
     { label: "certification", href: "/education/certification" },
@@ -27,29 +28,24 @@ export default function FollowupPage() {
     { label: "facilitation", href: "/education/facilitation" },
   ];
 
-  function formatScheduleDate(start, end) {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const format = (d) =>
-      `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`;
-    return startDate.toDateString() === endDate.toDateString()
-      ? format(startDate)
-      : `${format(startDate)} ~ ${format(endDate)}`;
-  }
-
-  useEffect(() => {
-    fetch(
+  // react-query fetchSchedules
+  const fetchSchedules = async ({ queryKey }) => {
+    const [_key, type, sort, order] = queryKey;
+    const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${type}&sort=${sort}&order=${order}`,
       { credentials: "include" }
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setSchedules(data.schedules);
-      })
-      .catch(() => alert("일정을 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [type, sort, order]);
+    );
+    return res.json();
+  };
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["schedules", type, sort, order],
+    queryFn: fetchSchedules,
+    staleTime: 1000 * 60 * 5,
+    keepPreviousData: true,
+  });
+
+  const schedules = data?.schedules || [];
   const today = new Date();
 
   const filteredSchedules = schedules.filter((s) => {
@@ -81,11 +77,9 @@ export default function FollowupPage() {
       <ScheduleSubTabs tabs={subTabs} />
 
       {/* 이미지 + 타이틀 */}
-      <div
-        style={{ position: "relative", textAlign: "left", marginBottom: 16 }}
-      >
+      <div style={{ position: "relative", textAlign: "left", marginBottom: 16 }}>
         <img
-          src="/images/opencourse.png"
+          src="/images/opencourse.webp" // webp로 교체
           alt="opencourse 페이지에서는 누구나 참여할 수 있는 공개교육 프로그램을 소개합니다."
           style={{
             width: "100%",
@@ -99,7 +93,7 @@ export default function FollowupPage() {
         <div
           style={{
             position: "absolute",
-            top: "clamp(12px, 3vw, 24px)", // ✅ 반응형 위치
+            top: "clamp(12px, 3vw, 24px)",
             left: "clamp(16px, 4vw, 32px)",
             color: "#222",
           }}
@@ -107,7 +101,7 @@ export default function FollowupPage() {
           <h1
             style={{
               margin: 0,
-              fontSize: "clamp(18px, 4vw, 24px)", // ✅ 반응형 폰트
+              fontSize: "clamp(18px, 4vw, 24px)",
               fontWeight: "bold",
             }}
           >
@@ -116,7 +110,7 @@ export default function FollowupPage() {
           <p
             style={{
               margin: 0,
-              fontSize: "clamp(12px, 2.8vw, 14px)", // ✅ 반응형 폰트
+              fontSize: "clamp(12px, 2.8vw, 14px)",
               color: "#555",
             }}
           >
@@ -125,7 +119,7 @@ export default function FollowupPage() {
         </div>
       </div>
 
-      {/* ✅ SearchFilterBox 적용 */}
+      {/* SearchFilterBox 적용 */}
       {isMobileOrTablet ? (
         <MobileSearchFilterBox
           searchType={searchType}
@@ -159,7 +153,7 @@ export default function FollowupPage() {
       )}
 
       {/* 일정 카드 리스트 */}
-      {loading ? (
+      {isLoading ? (
         <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
       ) : filteredSchedules.length === 0 ? (
         <p style={{ textAlign: "center", padding: "40px 0" }}>

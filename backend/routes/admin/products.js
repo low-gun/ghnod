@@ -101,24 +101,6 @@ router.patch("/:id/active", authenticateToken, adminOnly, async (req, res) => {
   }
 });
 
-// 상품별 일정 조회
-router.get("/:id/schedules", authenticateToken, adminOnly, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const [rows] = await pool.execute(
-      `SELECT id, title, start_date, end_date, status
-       FROM schedules
-       WHERE product_id = ?
-       ORDER BY start_date ASC`,
-      [id]
-    );
-    res.json({ success: true, schedules: rows });
-  } catch (err) {
-    console.error("❌ 일정 조회 오류:", err);
-    res.status(500).json({ success: false, message: "일정 조회 실패" });
-  }
-});
-
 // 선택 상품 삭제
 router.delete("/", authenticateToken, adminOnly, async (req, res) => {
   const { ids } = req.body;
@@ -137,6 +119,24 @@ router.delete("/", authenticateToken, adminOnly, async (req, res) => {
   } catch (err) {
     console.error("❌ 상품 삭제 오류:", err);
     return res.status(500).json({ success: false, message: "서버 오류" });
+  }
+});
+
+// 상품별 일정 조회
+router.get("/:id/schedules", authenticateToken, adminOnly, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, title, start_date, end_date, status
+       FROM schedules
+       WHERE product_id = ?
+       ORDER BY start_date ASC`,
+      [id]
+    );
+    res.json({ success: true, schedules: rows });
+  } catch (err) {
+    console.error("❌ 일정 조회 오류:", err);
+    res.status(500).json({ success: false, message: "일정 조회 실패" });
   }
 });
 router.get("/:id", authenticateToken, adminOnly, async (req, res) => {

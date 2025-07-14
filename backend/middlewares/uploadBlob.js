@@ -29,16 +29,35 @@ const uploadToBlob = async (req, res, next) => {
 
     const uploadedUrls = [];
 
-    for (const file of req.files) {
-      const blobName = `${Date.now()}-${uuidv4()}-${file.originalname}`;
-      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    const sharp = require("sharp");
 
-      await blockBlobClient.uploadData(file.buffer, {
-        blobHTTPHeaders: { blobContentType: file.mimetype },
-      });
+for (const file of req.files) {
+  // 1) 원본 업로드
+  const originalBlobName = `${Date.now()}-${uuidv4()}-original-${file.originalname}`;
+  const originalBlockBlobClient = containerClient.getBlockBlobClient(originalBlobName);
+  await originalBlockBlobClient.uploadData(file.buffer, {
+    blobHTTPHeaders: { blobContentType: file.mimetype },
+  });
 
-      uploadedUrls.push(blockBlobClient.url);
-    }
+  // 2) 썸네일(WebP, 400px 가로, 80% 품질)
+  const thumbBuffer = await sharp(file.buffer)
+    .resize({ width: 400 }) // 썸네일 가로 크기 400px
+    .webp({ quality: 80 })  // webp로 변환
+    .toBuffer();
+
+  const thumbBlobName = `${Date.now()}-${uuidv4()}-thumb-${file.originalname}.webp`;
+  const thumbBlockBlobClient = containerClient.getBlockBlobClient(thumbBlobName);
+  await thumbBlockBlobClient.uploadData(thumbBuffer, {
+    blobHTTPHeaders: { blobContentType: "image/webp" },
+  });
+
+  // URL 저장: { original, thumbnail } 구조로
+  uploadedUrls.push({
+    original: originalBlockBlobClient.url,
+    thumbnail: thumbBlockBlobClient.url,
+  });
+}
+
 
     req.uploadedImageUrls = uploadedUrls; // ✅ 다음 미들웨어/컨트롤러에서 사용
     next();

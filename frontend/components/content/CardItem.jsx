@@ -20,42 +20,54 @@ export default function CardItem({ item, type }) {
       }}
     >
       {/* 썸네일 */}
-      {item.image_url ? (
-        <img
-          src={item.image_url}
-          alt={item.title}
-          style={{
-            width: "100%",
-            height: 140,
-            objectFit: "contain",
-          }}
-        />
-      ) : item.product_image ? (
-        <img
-          src={item.product_image}
-          alt={item.title}
-          style={{
-            width: "100%",
-            height: 140,
-            objectFit: "contain",
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            width: "100%",
-            height: 140,
-            background: "#f2f2f2",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#999",
-            fontSize: 13,
-          }}
-        >
-          썸네일 없음
-        </div>
-      )}
+      {/* 썸네일 */}
+{item.thumbnail_url ? (
+  <img
+    src={item.thumbnail_url}
+    alt={item.title}
+    style={{
+      width: "100%",
+      height: 140,
+      objectFit: "contain",
+    }}
+  />
+) : item.image_url ? (
+  <img
+    src={item.image_url}
+    alt={item.title}
+    style={{
+      width: "100%",
+      height: 140,
+      objectFit: "contain",
+    }}
+  />
+) : item.product_image ? (
+  <img
+    src={item.product_image}
+    alt={item.title}
+    style={{
+      width: "100%",
+      height: 140,
+      objectFit: "contain",
+    }}
+  />
+) : (
+  <div
+    style={{
+      width: "100%",
+      height: 140,
+      background: "#f2f2f2",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#999",
+      fontSize: 13,
+    }}
+  >
+    썸네일 없음
+  </div>
+)}
+
 
       {/* 텍스트 */}
       <div style={{ padding: 12 }}>

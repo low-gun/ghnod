@@ -38,15 +38,18 @@ export function UserProvider({ children }) {
 
   // ✅ 2. accessToken 복구 또는 refresh-token 자동 요청
   useEffect(() => {
+    // 👇 로그인 페이지에서는 refresh-token 시도 안함
+    if (router.pathname === "/login") return;
+  
     const storedToken = sessionStorage.getItem("accessToken");
-
+  
     if (storedToken) {
       setAccessToken(storedToken);
       applyAccessTokenToAxios(storedToken);
     } else {
       const sessionId = getClientSessionId();
       console.log("📌 refresh-token 요청 전 clientSessionId:", sessionId);
-
+  
       api
         .post(
           "/auth/refresh-token",
@@ -60,7 +63,7 @@ export function UserProvider({ children }) {
         })
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
-
+  
           const guestAllowedRoutes = [
             "/cart",
             "/education",
@@ -69,23 +72,23 @@ export function UserProvider({ children }) {
           const isGuestPage = guestAllowedRoutes.some((path) =>
             router.pathname.startsWith(path)
           );
-
+  
           if (isGuestPage) {
             console.info("🔓 게스트 접근 허용 페이지이므로 리디렉션 생략");
             return;
           }
-
+  
           logout();
           router.push("/login");
         });
     }
-
+  
     const storedUser = localStorage.getItem("user");
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
     }
-  }, []);
-
+  }, [router.pathname]);
+  
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
     if (!accessToken) return;

@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import SearchFilterBox from "@/components/common/SearchFilterBox";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import ScheduleSubTabs from "@/components/education/ScheduleSubTabs";
 import MobileSearchFilterBox from "@/components/education/MobileSearchFilterBox";
 import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
+import { useQuery } from "@tanstack/react-query";
 
 export default function FacilitationPage() {
-  const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState("start_date");
   const [order, setOrder] = useState("asc");
   const [showPast, setShowPast] = useState(false);
@@ -29,29 +28,24 @@ export default function FacilitationPage() {
     { label: "facilitation", href: "/education/facilitation" },
   ];
 
-  function formatScheduleDate(start, end) {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const format = (d) =>
-      `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`;
-    return startDate.toDateString() === endDate.toDateString()
-      ? format(startDate)
-      : `${format(startDate)} ~ ${format(endDate)}`;
-  }
-
-  useEffect(() => {
-    fetch(
+  // react-query fetchSchedules
+  const fetchSchedules = async ({ queryKey }) => {
+    const [_key, type, sort, order] = queryKey;
+    const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${type}&sort=${sort}&order=${order}`,
       { credentials: "include" }
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setSchedules(data.schedules);
-      })
-      .catch(() => alert("일정을 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [type, sort, order]);
+    );
+    return res.json();
+  };
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["schedules", type, sort, order],
+    queryFn: fetchSchedules,
+    staleTime: 1000 * 60 * 5,
+    keepPreviousData: true,
+  });
+
+  const schedules = data?.schedules || [];
   const today = new Date();
 
   const filteredSchedules = schedules.filter((s) => {
@@ -89,7 +83,7 @@ export default function FacilitationPage() {
         }}
       >
         <img
-          src="/images/facilitation.png"
+          src="/images/facilitation.webp"
           alt="facilitation 페이지에서는 퍼실리테이션 기법과 활용 사례 등을 다룹니다."
           style={{
             width: "100%",
@@ -161,7 +155,7 @@ export default function FacilitationPage() {
         />
       )}
 
-      {loading ? (
+      {isLoading ? (
         <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
       ) : filteredSchedules.length === 0 ? (
         <p style={{ textAlign: "center", padding: "40px 0" }}>

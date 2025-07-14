@@ -26,22 +26,24 @@ export default function UserTable({ onResetPassword }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showDeleted, setShowDeleted] = useState(false);
   useEffect(() => {
+    // list 탭 아닐 때는 호출하지 않음
     if (router.query.tab && router.query.tab !== "list") return;
-
+  
     const delayDebounceFn = setTimeout(() => {
       fetchUsers();
     }, 300);
-
+  
     return () => clearTimeout(delayDebounceFn);
   }, [
     searchQuery,
     searchType,
     showDeleted,
     router.query.tab,
-    currentPage,
-    pageSize,
-    sortConfig,
+    currentPage,      // 추가
+    pageSize,         // 추가
+    sortConfig        // 추가
   ]);
+  
 
   // URL 쿼리 갱신 함수
   const handleResetPassword = async (userId) => {

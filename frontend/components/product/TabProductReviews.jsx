@@ -263,6 +263,25 @@ export default function TabProductReviews({ productId, scheduleId }) {
 
               {/* 내용 */}
               <p style={{ marginTop: 8 }}>{r.comment}</p>
+              {/* 리뷰 이미지 썸네일 */}
+{Array.isArray(r.images) && r.images.length > 0 && (
+  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+    {r.images.map((img, idx) => (
+      <img
+        key={idx}
+        src={img.thumbnail}
+        alt={`리뷰 이미지 썸네일 ${idx + 1}`}
+        style={{
+          width: 72,
+          height: 72,
+          objectFit: "cover",
+          borderRadius: 4,
+          border: "1px solid #ccc",
+        }}
+      />
+    ))}
+  </div>
+)}
             </li>
           ))}
         </ul>
