@@ -50,10 +50,16 @@ app.use(trackVisitor);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// ✅ CORS 허용 도메인 리스트 추가 (이 줄을 추가)
+const allowedOrigins = [
+  "https://ghnod.vercel.app",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      console.log("📌 CORS 요청 origin:", origin); // 요청 로그 확인
+      console.log("📌 CORS 요청 origin:", origin);
 
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
@@ -65,6 +71,7 @@ app.use(
     credentials: true,
   })
 );
+
 
 app.use(cookieParser());
 app.use(passport.initialize());
