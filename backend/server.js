@@ -1,10 +1,20 @@
 // ✅ backend/server.js – 통합형 완성본
 const path = require("path"); // 이 줄이 dotenv보다 위에 있어야 안전
 
+// ✅ 예기치 않은 에러 캐치
+console.log("🟢 server.cjs 진입");
+process.on("uncaughtException", (err) => {
+  console.error("🔥 uncaughtException:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("🔥 unhandledRejection:", reason);
+});
+
 const envPath =
   process.env.NODE_ENV === "production"
     ? path.resolve(__dirname, ".env.production")
     : path.resolve(__dirname, ".env.local");
+
 
 require("dotenv").config({ path: envPath });
 console.log("✅ .env 로딩됨:", envPath);
