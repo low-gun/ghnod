@@ -70,6 +70,8 @@ RUN echo "📁 /app:" && ls -al /app && \
     echo "\n📄 server.js:" && cat /app/server.js || echo "❌ server.js 없음"
 
 RUN echo "=== BUILDTIME NODE VERSION ===" && node -v
+RUN echo "IT_IS_REAL_DOCKER_CONTAINER" > /IM_REAL_DOCKER
 
 ENV NODE_ENV=production
 CMD ["sh", "-c", "echo '=== RUNTIME NODE VERSION ===' $(node -v); echo 'process.execPath:' $(which node); echo 'process.env.PATH:' $PATH; node server.js"]
+
