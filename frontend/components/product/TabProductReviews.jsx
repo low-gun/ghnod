@@ -209,7 +209,7 @@ export default function TabProductReviews({ productId, scheduleId }) {
                           lineHeight: 1,
                         }}
                       >
-                        sdfsdf⋯
+                        ⋯
                       </button>
 
                       {menuOpenId === r.id && (

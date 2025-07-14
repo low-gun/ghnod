@@ -84,3 +84,6 @@ textarea {
   font-family: inherit;
   font-size: inherit;
 }
+input, select, textarea {
+  font-family: "Noto Sans KR", sans-serif !important;
+}
