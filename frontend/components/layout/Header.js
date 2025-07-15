@@ -7,7 +7,7 @@ import ProfileDropdown from "../ProfileDropdown";
 import LogoutButton from "@/components/common/LogoutButton";
 import { useCartContext } from "@/context/CartContext";
 
-export default function Header() {
+export default function Header({ showProfile, setShowProfile }) {
   const { user } = useContext(UserContext);
   const router = useRouter();
   const { cartItems, cartReady } = useCartContext();
@@ -27,9 +27,7 @@ export default function Header() {
     }, 300);
   }
 
-  const [showProfile, setShowProfile] = useState(false);
-
-  // ✅ 반응형 상태
+    // ✅ 반응형 상태
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -108,13 +106,21 @@ export default function Header() {
           flex: 1,
           display: "flex",
           justifyContent: "center",
-          gap: isTablet ? "32px" : "60px", // ✅ 태블릿이면 간격 줄임
+          gap: isTablet ? "16px" : "32px", // gap 더 줄임(원하면 값 조정)
+          minWidth: 0,
+          flexWrap: "nowrap", // 줄바꿈 방지
+          overflowX: "auto", // 가로 스크롤 허용
+          scrollbarWidth: "thin",
         }}
       >
         {centerGroup.map((item, idx) => (
           <div
             key={item.label}
-            style={{ position: "relative" }}
+            style={{
+              position: "relative",
+              minWidth: 0, // 추가: ellipsis 정상작동 보장
+              maxWidth: "140px", // 메뉴 하나 최대폭 제한 (원하면 값 조정)
+            }}
             onMouseEnter={() => handleMouseEnter(idx)}
             onMouseLeave={handleMouseLeave}
           >
@@ -129,7 +135,14 @@ export default function Header() {
                       color: "#333",
                       fontWeight: "bold",
                       fontSize: "16px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "inline-block",
+                      verticalAlign: "middle",
+                      maxWidth: "100%", // 부모에 맞춰 ellipsis
                     }}
+                    title={item.label}
                   >
                     {item.label}
                   </a>
@@ -144,15 +157,20 @@ export default function Header() {
                       color: "#333",
                       fontWeight: "bold",
                       fontSize: "16px",
-                      whiteSpace: "nowrap", // ✅ 줄바꿈 방지
-                      display: "inline-block", // ✅ 텍스트가 블록처럼 보이되, 한 줄 유지
-                      lineHeight: "1.2", // ✅ 세로 정렬 안정화 (옵션)
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "inline-block",
+                      lineHeight: "1.2",
+                      verticalAlign: "middle",
+                      maxWidth: "100%", // 부모에 맞춰 ellipsis
                     }}
+                    title={item.label}
                   >
                     {item.label}
                   </Link>
                 )}
-
+  
             {item.link && item.sub && hoverIndex === idx && (
               <div
                 style={{
@@ -192,6 +210,7 @@ export default function Header() {
       </div>
     );
   }
+  
 
   function renderRightGroup() {
     const group = getRightGroup(user);
@@ -247,7 +266,8 @@ export default function Header() {
               <div
                 key="FaUser"
                 style={{ position: "relative", marginLeft: "20px" }}
-                onClick={() => setShowProfile(!showProfile)}
+                onClick={() => setShowProfile((v) => !v)}
+
               >
                 <span style={{ fontSize: "22px", cursor: "pointer" }}>👤</span>
                 <ProfileDropdown

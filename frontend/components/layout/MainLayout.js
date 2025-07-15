@@ -1,9 +1,14 @@
 // components/layout/MainLayout.js
 
+import { useState } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
+import ProfileDropdown from "@/components/ProfileDropdown";
 
 export default function MainLayout({ children }) {
+  // 추가: 상단 프로필 드롭다운 상태
+  const [showProfile, setShowProfile] = useState(false);
+
   return (
     <div
       className="layout-wrapper"
@@ -13,7 +18,11 @@ export default function MainLayout({ children }) {
         minHeight: "100vh",
       }}
     >
-      <Header />
+      {/* Header에 onProfileClick prop 전달(연결 필요) */}
+      <Header onProfileClick={() => setShowProfile((v) => !v)} />
+
+      {/* 프로필 드롭다운도 showProfile로 제어 */}
+      <ProfileDropdown showProfile={showProfile} setShowProfile={setShowProfile} />
 
       <main
         style={{
@@ -23,13 +32,14 @@ export default function MainLayout({ children }) {
           marginLeft: "auto",
           marginRight: "auto",
           width: "100%",
-          position: "relative", // ✅ 추가!
+          position: "relative",
         }}
       >
         {children}
       </main>
 
-      <Footer />
+      {/* Footer에 showProfile prop 전달 */}
+      <Footer showProfile={showProfile} />
     </div>
   );
 }

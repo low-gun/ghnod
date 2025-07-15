@@ -2,15 +2,17 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import TermsModal from "@/components/modals/TermsModal";
 import PrivacyModal from "@/components/modals/PrivacyModal";
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
-
+import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import { useContext } from "react";
 import { UserContext } from "@/context/UserContext"; // 추가
 
-export default function Footer() {
-  const { user, logout } = useContext(UserContext); // ✅ 추가
+export default function Footer({ showProfile }) {
+  const { user, logout } = useContext(UserContext);
   const router = useRouter();
   const isMobile = useIsMobile();
+  const isTabletOrBelow = useIsTabletOrBelow();
+  const showMobileFooter = isMobile || isTabletOrBelow; // <=768px까지 모바일푸터
+
 
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -36,7 +38,7 @@ export default function Footer() {
   return (
     <footer
       style={{
-        marginTop: isMobile ? "0px" : "40px", // ✅ 모바일이면 여백 제거
+        marginTop: showMobileFooter ? "0px" : "40px", // ✅ 모바일이면 여백 제거
         padding: "40px 20px",
         backgroundColor: "#f8f8f8",
         borderTop: "1px solid #ddd",
@@ -44,7 +46,7 @@ export default function Footer() {
         color: "#555",
       }}
     >
-      {isMobile ? (
+       {showMobileFooter ? (
         // ✅ 모바일 간소화
         <div style={{ textAlign: "center" }}>
           <img
@@ -83,24 +85,24 @@ export default function Footer() {
             © 2025 ORPi. All rights reserved.
           </div>
 
-          {user && (
-            <button
-              onClick={logout}
-              style={{
-                marginTop: "12px",
-                fontSize: "13px",
-                color: "#fff",
-                background: "#0070f3",
-                border: "none",
-                borderRadius: "4px",
-                padding: "8px 16px",
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              로그아웃
-            </button>
-          )}
+          {user && !showProfile && (
+  <button
+    onClick={logout}
+    style={{
+      marginTop: "12px",
+      fontSize: "13px",
+      color: "#fff",
+      background: "#0070f3",
+      border: "none",
+      borderRadius: "4px",
+      padding: "8px 16px",
+      cursor: "pointer",
+      fontWeight: "bold",
+    }}
+  >
+    로그아웃
+  </button>
+)}
         </div>
       ) : (
         // ✅ 데스크탑/태블릿
