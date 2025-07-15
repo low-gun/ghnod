@@ -63,23 +63,24 @@ export function UserProvider({ children }) {
         })
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
-  
-          const guestAllowedRoutes = [
-            "/cart",
-            "/education",
-            "/education/facilitation",
-          ];
-          const isGuestPage = guestAllowedRoutes.some((path) =>
-            router.pathname.startsWith(path)
-          );
-  
-          if (isGuestPage) {
-            console.info("🔓 게스트 접근 허용 페이지이므로 리디렉션 생략");
-            return;
-          }
-  
-          logout();
-          router.push("/login");
+          // 보호가 필요한 경로만 명시
+const protectedRoutes = [
+  "/mypage",
+  "/orders",
+  "/checkout",
+  "/admin",
+];
+
+const isProtected = protectedRoutes.some((path) =>
+  router.pathname.startsWith(path)
+);
+
+if (isProtected && !accessToken) {
+  logout();
+  router.push("/login");
+  return;
+}
+
         });
     }
   
