@@ -101,115 +101,125 @@ export default function Header({ showProfile, setShowProfile }) {
   function renderCenterGroup() {
     if (isMobile) return null;
     return (
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          justifyContent: "center",
-          gap: isTablet ? "16px" : "32px", // gap 더 줄임(원하면 값 조정)
-          minWidth: 0,
-          flexWrap: "nowrap", // 줄바꿈 방지
-          overflowX: "auto", // 가로 스크롤 허용
-          scrollbarWidth: "thin",
-        }}
-      >
-        {centerGroup.map((item, idx) => (
-          <div
-            key={item.label}
-            style={{
-              position: "relative",
-              minWidth: 0, // 추가: ellipsis 정상작동 보장
-              maxWidth: "140px", // 메뉴 하나 최대폭 제한 (원하면 값 조정)
-            }}
-            onMouseEnter={() => handleMouseEnter(idx)}
-            onMouseLeave={handleMouseLeave}
-          >
-            {item.newTab
-              ? item.link && (
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      textDecoration: "none",
-                      color: "#333",
-                      fontWeight: "bold",
-                      fontSize: "16px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "inline-block",
-                      verticalAlign: "middle",
-                      maxWidth: "100%", // 부모에 맞춰 ellipsis
-                    }}
-                    title={item.label}
-                  >
-                    {item.label}
-                  </a>
-                )
-              : item.link && (
-                  <Link
-                    href={
-                      item.sub ? `${item.link}/${item.sub[0].slug}` : item.link
-                    }
-                    style={{
-                      textDecoration: "none",
-                      color: "#333",
-                      fontWeight: "bold",
-                      fontSize: "16px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "inline-block",
-                      lineHeight: "1.2",
-                      verticalAlign: "middle",
-                      maxWidth: "100%", // 부모에 맞춰 ellipsis
-                    }}
-                    title={item.label}
-                  >
-                    {item.label}
-                  </Link>
-                )}
+      <>
+        <style>{`
+          .header-menu::-webkit-scrollbar { display: none !important; }
+        `}</style>
+        <div
+          className="header-menu"
+          style={{
+            flex: 1,
+            display: "flex",
+            justifyContent: "center",
+            gap: isTablet ? "16px" : "32px",
+            minWidth: 0,
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          {centerGroup.map((item, idx) => (
+            <div
+              key={item.label}
+              style={{
+                position: "relative",
+                minWidth: 0,
+                maxWidth: "140px",
+              }}
+              onMouseEnter={() => handleMouseEnter(idx)}
+              onMouseLeave={handleMouseLeave}
+            >
+              {item.newTab
+                ? item.link && (
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        textDecoration: "none",
+                        color: "#333",
+                        fontWeight: "bold",
+                        fontSize: "16px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "inline-block",
+                        verticalAlign: "middle",
+                        maxWidth: "100%",
+                      }}
+                      title={item.label}
+                    >
+                      {item.label}
+                    </a>
+                  )
+                : item.link && (
+                    <Link
+                      href={
+                        item.sub
+                          ? `${item.link}/${item.sub[0].slug}`
+                          : item.link
+                      }
+                      style={{
+                        textDecoration: "none",
+                        color: "#333",
+                        fontWeight: "bold",
+                        fontSize: "16px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "inline-block",
+                        lineHeight: "1.2",
+                        verticalAlign: "middle",
+                        maxWidth: "100%",
+                      }}
+                      title={item.label}
+                    >
+                      {item.label}
+                    </Link>
+                  )}
   
-            {item.link && item.sub && hoverIndex === idx && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50px",
-                  left: 0,
-                  backgroundColor: "#fff",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                  padding: "16px 24px",
-                  zIndex: 9999,
-                  minWidth: "200px",
-                }}
-              >
-                {item.sub.map(
-                  (subItem) =>
-                    item.link &&
-                    subItem.slug && (
-                      <Link
-                        key={subItem.slug}
-                        href={`${item.link}/${subItem.slug}`}
-                        style={{
-                          display: "block",
-                          padding: "6px 12px",
-                          textDecoration: "none",
-                          color: "#333",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {subItem.label}
-                      </Link>
-                    )
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+              {item.link && item.sub && hoverIndex === idx && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50px",
+                    left: 0,
+                    backgroundColor: "#fff",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    padding: "16px 24px",
+                    zIndex: 9999,
+                    minWidth: "200px",
+                  }}
+                >
+                  {item.sub.map(
+                    (subItem) =>
+                      item.link &&
+                      subItem.slug && (
+                        <Link
+                          key={subItem.slug}
+                          href={`${item.link}/${subItem.slug}`}
+                          style={{
+                            display: "block",
+                            padding: "6px 12px",
+                            textDecoration: "none",
+                            color: "#333",
+                            fontSize: "14px",
+                          }}
+                        >
+                          {subItem.label}
+                        </Link>
+                      )
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
+  
   
 
   function renderRightGroup() {
