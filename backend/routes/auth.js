@@ -64,7 +64,7 @@ router.get(
 // ===========`=========== 소셜 로그인 (Kakao) ======================
 router.get("/kakao", passport.authenticate("kakao"));
 router.get(
-  "/kakao/callwlback",
+  "/kakao/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
       console.log("🔓 로컬 환경: Kakao 로그인 우회 처리");

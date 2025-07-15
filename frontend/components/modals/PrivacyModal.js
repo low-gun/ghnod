@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { privacyText } from "../policy/policyText";
 
 export default function PrivacyModal({ visible, onClose }) {
   useEffect(() => {
@@ -23,17 +24,18 @@ export default function PrivacyModal({ visible, onClose }) {
         </button>
         <h2 style={titleStyle}>개인정보처리방침</h2>
         <div style={contentStyle}>
-          <p style={{ whiteSpace: "pre-line", lineHeight: "1.6" }}>
-            ORPi는 「개인정보 보호법」에 따라 이용자의 개인정보를 보호하고 이와
-            관련한 고충을 신속하고 원활하게 처리할 수 있도록 다음과 같은 방침을
-            수립·공개합니다.{"\n\n"}
-            제1조 (개인정보의 처리 목적){"\n"}
-            회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리한 개인정보는
-            다음의 목적 이외의 용도로는 사용되지 않으며, 이용 목적이 변경될
-            시에는 사전 동의를 구할 예정입니다.{"\n\n"}
-            ...(이하 추가 내용)...
-          </p>
-        </div>
+  <div
+    style={{
+      fontSize: "15px",
+      color: "#333",
+      lineHeight: "1.7",
+      whiteSpace: "pre-line",
+      fontFamily: "inherit", // 또는 "Noto Sans KR, sans-serif" 등 원하는 웹폰트 지정
+    }}
+  >
+    {privacyText}
+  </div>
+</div>
       </div>
     </div>
   );
