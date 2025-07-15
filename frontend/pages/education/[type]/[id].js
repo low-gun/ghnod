@@ -12,7 +12,7 @@ import ScrollTopButton from "@/components/common/ScrollTopButton";
 import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize"; // 상단 import에 추가
 export default function EducationScheduleDetailPage() {
   const router = useRouter();
-  const { cartItems, setCartItems } = useCartContext(); // ✅ 이 줄 추가
+  const { cartItems, setCartItems, refreshCart } = useCartContext();
   const { user } = useUserContext();
   const { type, id } = router.query;
   const [schedule, setSchedule] = useState(null);
@@ -314,7 +314,7 @@ export default function EducationScheduleDetailPage() {
                       schedule_id: schedule.id,
                       quantity,
                       unit_price: unitPrice,
-                      type: "buyNow",
+                      type: "cart",
                     };
 
                     const guestToken = localStorage.getItem("guest_token");
@@ -326,23 +326,12 @@ export default function EducationScheduleDetailPage() {
 
                     if (res.data.success) {
                       alert("🛒 장바구니에 담았습니다!");
-
-                      const newItem = {
-                        id: Date.now(),
-                        schedule_id: schedule.id,
-                        schedule_title: schedule.title,
-                        image_url:
-                          schedule.image_url || schedule.product_image || null,
-                        quantity: 1,
-                        unit_price: Number(schedule.price),
-                        discount_price: null,
-                        subtotal: Number(schedule.price),
-                      };
-
-                      setCartItems((prev) => [...prev, newItem]);
+                      // 장바구니를 서버에서 새로 받아서 최신 상태로 갱신
+                      await refreshCart();
                     } else {
                       alert("❌ 장바구니 담기에 실패했습니다.");
                     }
+                    
                   } catch (err) {
                     console.error("장바구니 담기 오류:", err);
                     alert("오류가 발생했습니다. 다시 시도해주세요.");
@@ -393,7 +382,7 @@ export default function EducationScheduleDetailPage() {
                       schedule_id: schedule.id,
                       quantity,
                       unit_price: unitPrice,
-                      type: "buyNow",
+                      type: "cart",
                     };
 
                     const guestToken = localStorage.getItem("guest_token");
@@ -405,23 +394,11 @@ export default function EducationScheduleDetailPage() {
 
                     if (res.data.success) {
                       alert("🛒 장바구니에 담았습니다!");
-
-                      const newItem = {
-                        id: Date.now(),
-                        schedule_id: schedule.id,
-                        schedule_title: schedule.title,
-                        image_url:
-                          schedule.image_url || schedule.product_image || null,
-                        quantity: 1,
-                        unit_price: Number(schedule.price),
-                        discount_price: null,
-                        subtotal: Number(schedule.price),
-                      };
-
-                      setCartItems((prev) => [...prev, newItem]);
+                      await refreshCart();
                     } else {
                       alert("❌ 장바구니 담기에 실패했습니다.");
                     }
+                    
                   } catch (err) {
                     console.error("장바구니 담기 오류:", err);
                     alert("오류가 발생했습니다. 다시 시도해주세요.");

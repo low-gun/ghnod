@@ -153,19 +153,27 @@ exports.addToCart = async (req, res) => {
 
     if (existing.length > 0) {
       const newQty = existing[0].quantity + Number(quantity);
+      // 👇 여기 콘솔로그 추가!
+      console.log(
+        "[장바구니] 기존 수량:", existing[0].quantity,
+        "| 받은 quantity:", quantity,
+        "| newQty(누적):", newQty
+      );
+    
       await pool.execute(
         `UPDATE cart_items
          SET quantity = ?, unit_price = ?, discount_price = ?, updated_at = NOW()
          WHERE id = ?`,
         [newQty, unit_price, discount_price || 0, existing[0].id]
       );
-
+    
       return res.json({
         success: true,
         message: "장바구니 수량 추가 완료",
-        item: { id: existing[0].id }, // ✅ 이걸로 맞춰주세요
+        item: { id: existing[0].id },
       });
-    } else {
+    }
+    else {
       const buyNowType = type === "buyNow" ? "buyNow" : "cart";
 
       console.log("📦 [INSERT 요청] type 값 최종:", buyNowType); // ✅ 로그 추가

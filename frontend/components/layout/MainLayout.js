@@ -19,11 +19,7 @@ export default function MainLayout({ children }) {
       }}
     >
       {/* Header에 onProfileClick prop 전달(연결 필요) */}
-      <Header onProfileClick={() => setShowProfile((v) => !v)} />
-
-      {/* 프로필 드롭다운도 showProfile로 제어 */}
-      <ProfileDropdown showProfile={showProfile} setShowProfile={setShowProfile} />
-
+      <Header showProfile={showProfile} setShowProfile={setShowProfile} />
       <main
         style={{
           flex: 1,

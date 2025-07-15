@@ -1,5 +1,18 @@
+import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { useRouter } from "next/router";
+
+// 반응형 감지
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 520);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
 
 export default function CartItemCard({
   item,
@@ -10,6 +23,7 @@ export default function CartItemCard({
   disableActions = false,
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   const {
     id,
@@ -36,43 +50,50 @@ export default function CartItemCard({
       style={{
         border: "1px solid #ddd",
         borderRadius: "12px",
-        padding: "16px",
+        padding: isMobile ? "10px" : "16px",
         background: "#fff",
-        display: "flex",
-        flexDirection: "row", // 가로 배치
-        gap: "16px",
+        display: isMobile ? "block" : "flex",
+        flexDirection: isMobile ? "column" : "row",
+        gap: isMobile ? "8px" : "16px",
         position: "relative",
         height: "100%",
         boxSizing: "border-box",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.05)", // 그림자
+        boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+        minWidth: 0,
       }}
     >
       {/* 삭제 버튼 */}
       {!disableActions && (
-        <button
-          onClick={() => onDelete(id)}
-          style={{
-            position: "absolute",
-            top: 6,
-            right: 6,
-            background: "transparent",
-            border: "none",
-            fontSize: "20px",
-            color: "#aaa",
-            cursor: "pointer",
-          }}
-          title="삭제"
-        >
-          ×
-        </button>
-      )}
+  <button
+    onClick={() => onDelete(id)}
+    style={{
+      position: "absolute",
+      top: isMobile ? 2 : 6,
+      right: isMobile ? 2 : 6,
+      background: "transparent",
+      border: "none",
+      fontSize: isMobile ? "17px" : "20px",
+      color: "#aaa",
+      cursor: "pointer",
+      zIndex: 2,
+      padding: 0,
+      width: isMobile ? 28 : 32,   // X버튼 클릭영역 넉넉히
+      height: isMobile ? 28 : 32,
+      lineHeight: isMobile ? "28px" : "32px",
+      textAlign: "center",
+    }}
+    title="삭제"
+  >
+    ×
+  </button>
+)}
 
       {!disableActions && (
         <input
           type="checkbox"
           checked={selected}
           onChange={(e) => onCheck(id, e.target.checked)}
-          style={{ position: "absolute", top: 12, left: 12 }}
+          style={{ position: "absolute", top: isMobile ? 8 : 12, left: isMobile ? 8 : 12, zIndex: 2 }}
         />
       )}
 
@@ -80,8 +101,8 @@ export default function CartItemCard({
       <div
         onClick={() => router.push(`/education/facilitation/${schedule_id}`)}
         style={{
-          width: 80,
-          height: 80,
+          width: isMobile ? 60 : 80,
+          height: isMobile ? 60 : 80,
           flexShrink: 0,
           borderRadius: 4,
           overflow: "hidden",
@@ -90,6 +111,7 @@ export default function CartItemCard({
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
+          marginBottom: isMobile ? 8 : 0,
         }}
       >
         {image_url ? (
@@ -99,39 +121,54 @@ export default function CartItemCard({
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (
-          <span style={{ color: "#999", fontSize: 12 }}>썸네일 없음</span>
+          <span style={{ color: "#999", fontSize: isMobile ? 10 : 12 }}>썸네일 없음</span>
         )}
       </div>
 
       {/* 텍스트 */}
-      <div style={{ flex: 1, paddingTop: 4 }}>
-        <h3
-          style={{
-            fontSize: "15px",
-            marginBottom: "4px",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {schedule_title}
-        </h3>
+      <div style={{ flex: 1, paddingTop: isMobile ? 2 : 4, minWidth: 0 }}>
+        {/* 제목: 두줄까지, 말줄임 적용 */}
+        <div
+  style={{
+    fontSize: isMobile ? "13px" : "15px",
+    marginBottom: "4px",
+    fontWeight: 400,
+    lineHeight: 1.3,
+    display: "-webkit-box",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 2,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    wordBreak: "break-all",
+    minHeight: isMobile ? "34px" : "40px",
+    // 👇 X버튼 영역만큼 패딩
+    paddingRight: isMobile ? 32 : 36,
+    marginTop: isMobile ? 18 : 0, // 모바일이면 X버튼 공간
+    position: "relative",
+  }}
+>
+  {schedule_title}
+</div>
 
+        {/* 날짜 */}
         <p
           style={{
-            fontSize: "13px",
+            fontSize: isMobile ? "11px" : "13px",
             color: "#666",
             marginBottom: "8px",
           }}
         >
-          {start.toLocaleDateString()}
-          {!sameDay && ` ~ ${end.toLocaleDateString()}`}
+          {isValidDate(start)
+            ? start.toLocaleDateString()
+            : ""}
+          {isValidDate(start) && isValidDate(end) && !sameDay &&
+            ` ~ ${end.toLocaleDateString()}`}
+          {!isValidDate(start) && !isValidDate(end) && "일정 미정"}
         </p>
 
         {/* 수량 조절 */}
-        {/* 수량 표시 또는 조절 */}
         {disableActions ? (
-          <div style={{ fontSize: 14, marginTop: 4 }}>수량: {quantity}</div>
+          <div style={{ fontSize: isMobile ? 12 : 14, marginTop: 4 }}>수량: {quantity}</div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div
@@ -141,18 +178,39 @@ export default function CartItemCard({
                 borderRadius: 4,
                 overflow: "hidden",
                 alignItems: "center",
+                height: isMobile ? 28 : 32,
               }}
             >
               <button
                 onClick={() => onQuantityChange(item, -1)}
-                style={qtyBtnStyle}
+                style={{
+                  ...qtyBtnStyle,
+                  width: isMobile ? 26 : 32,
+                  height: isMobile ? 28 : 32,
+                  fontSize: isMobile ? 14 : 16,
+                }}
               >
                 –
               </button>
-              <div style={qtyValueStyle}>{quantity}</div>
+              <div
+                style={{
+                  ...qtyValueStyle,
+                  width: isMobile ? 28 : 36,
+                  height: isMobile ? 24 : 28,
+                  fontSize: isMobile ? 12 : 14,
+                  lineHeight: isMobile ? "24px" : "28px",
+                }}
+              >
+                {quantity}
+              </div>
               <button
                 onClick={() => onQuantityChange(item, 1)}
-                style={qtyBtnStyle}
+                style={{
+                  ...qtyBtnStyle,
+                  width: isMobile ? 26 : 32,
+                  height: isMobile ? 28 : 32,
+                  fontSize: isMobile ? 14 : 16,
+                }}
               >
                 +
               </button>
@@ -161,7 +219,7 @@ export default function CartItemCard({
         )}
 
         {/* 가격 */}
-        <div style={{ marginTop: 8, fontSize: "15px" }}>
+        <div style={{ marginTop: 8, fontSize: isMobile ? "12px" : "15px" }}>
           {discount_price ? (
             <>
               <span
@@ -173,15 +231,14 @@ export default function CartItemCard({
               >
                 {formatPrice(unit_price)}원
               </span>
-              <span style={{ color: "#d9534f", fontWeight: "bold" }}>
+              <span style={{ color: "#d9534f", marginRight: 4 }}>
                 {formatPrice(discount_price)}원
               </span>
               <span
                 style={{
-                  fontSize: "11px",
-                  marginLeft: 6,
+                  fontSize: isMobile ? "10px" : "11px",
+                  marginLeft: 3,
                   color: "#d9534f",
-                  fontWeight: "bold",
                 }}
               >
                 ({Math.round((1 - discount_price / unit_price) * 100)}% 할인)
@@ -189,19 +246,14 @@ export default function CartItemCard({
               <div
                 style={{
                   textAlign: "right",
-                  fontWeight: "bold",
-                  marginTop: 4,
+                  marginTop: 2,
                 }}
               >
                 {formatPrice(subtotal)}원
               </div>
             </>
           ) : (
-            <>
-              <div style={{ textAlign: "right", fontWeight: "bold" }}>
-                {formatPrice(subtotal)}원
-              </div>
-            </>
+            <div style={{ textAlign: "right" }}>{formatPrice(subtotal)}원</div>
           )}
         </div>
       </div>
@@ -209,22 +261,20 @@ export default function CartItemCard({
   );
 }
 
+// 버튼 스타일
 const qtyBtnStyle = {
-  width: 32,
-  height: 32,
   border: "1px solid #ddd",
   background: "#f5f5f5",
-  fontWeight: "bold",
-  fontSize: 16,
+  fontWeight: 400,
   cursor: "pointer",
   borderRadius: "4px",
 };
 
 const qtyValueStyle = {
-  width: 36,
-  height: 28,
-  lineHeight: "28px",
   textAlign: "center",
-  fontSize: 14,
   background: "#fff",
 };
+
+function isValidDate(d) {
+  return d instanceof Date && !isNaN(d.getTime());
+}

@@ -1,23 +1,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
-import SearchFilter from "@/components/common/SearchFilter";
 import CartSummary from "@/components/cart/CartSummary";
 import { useCartContext } from "@/context/CartContext";
 import CartItemCard from "@/components/cart/CartItemCard";
 
 export default function CartPage() {
   const router = useRouter();
-  const { cartItems, cartReady, refreshCart, setCartItems } = useCartContext();
+  const { cartItems, cartReady, refreshCart } = useCartContext();
 
-  const [searchType, setSearchType] = useState("title");
-  const [searchValue, setSearchValue] = useState("");
+  // 필요한 state 선언 바로 추가!
   const [selectedItems, setSelectedItems] = useState([]);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [pointUsed, setPointUsed] = useState(0);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [availablePoint, setAvailablePoint] = useState(0);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
+
+  // 여기 추가!
+  
+  useEffect(() => {
+    if (!cartReady || cartItems.length === 0) return;
+    setSelectedItems(cartItems.map((it) => it.id));
+  }, [cartReady, cartItems]);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -31,24 +36,6 @@ export default function CartPage() {
     };
     fetchUserInfo();
   }, []);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    const { searchType = "title", searchValue = "" } = router.query;
-    setSearchType(searchType);
-    setSearchValue(searchValue);
-  }, [router.isReady, router.query]);
-
-  useEffect(() => {
-    if (!cartReady || cartItems.length === 0) return;
-    setSelectedItems(cartItems.map((it) => it.id));
-  }, [cartReady, cartItems]);
-
-  const handleSearchUpdate = (type, val) => {
-    setSearchType(type);
-    setSearchValue(val);
-    updateQueryParams({ searchType: type, searchValue: val });
-  };
 
   const isAllChecked =
     cartItems.length > 0 &&
@@ -103,69 +90,68 @@ export default function CartPage() {
     }
   };
 
-  const resetFilters = () => {
-    setSearchType("title");
-    setSearchValue("");
-    updateQueryParams({
-      searchType: "title",
-      searchValue: "",
-    });
-  };
-
-  return (
+    return (
     <div style={{ padding: "20px" }}>
       <h2 style={{ fontSize: "1.2rem", marginBottom: "16px" }}>장바구니</h2>
-
-      <div style={layoutFilterBar}>
-        <div style={filterLeft}>
-          <SearchFilter
-            searchType={searchType}
-            setSearchType={(val) => handleSearchUpdate(val, searchValue)}
-            searchQuery={searchValue}
-            setSearchQuery={(val) => handleSearchUpdate(searchType, val)}
-            searchOptions={[{ value: "title", label: "교육명", type: "text" }]}
-            onSearchUpdate={handleSearchUpdate}
-          />
-          <button onClick={resetFilters} style={buttonStyle("#ccc", "#333")}>
-            초기화
-          </button>
-        </div>
-        <div style={filterRight}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input
-              type="checkbox"
-              checked={isAllChecked}
-              onChange={(e) => handleCheckAll(e.target.checked)}
-            />
-            <span style={{ fontSize: "14px" }}>전체선택</span>
-          </label>
-          {selectedItems.length > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              style={{
-                backgroundColor: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 12px", // ✅ 작게
-                fontSize: "14px", // ✅ 통일
-                fontWeight: "bold",
-                cursor: "pointer",
-                marginLeft: "8px", // ✅ 여백 추가
-              }}
-            >
-              삭제
-            </button>
-          )}
-        </div>
-      </div>
-
-      {!cartReady ? null : cartItems.length === 0 ? (
+          {!cartReady ? null : cartItems.length === 0 ? (
         <p style={{ textAlign: "center", width: "100%", marginTop: 40 }}>
           장바구니가 비어있습니다.
         </p>
       ) : (
         <div style={layoutMain}>
+        {/* 좌측: 전체선택/선택삭제 + 카드리스트 */}
+        <div
+    style={{
+      flex: 1,
+      minWidth: 0,
+      background: "#fff",
+      border: "1px solid #e5e5e5",
+      borderRadius: "12px",
+      padding: "24px 20px 20px 20px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+      marginRight: "24px", // 우측 주문정보와 공간 분리
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        marginBottom: 16,
+        justifyContent: "space-between",
+        minHeight: "32px",
+      }}
+    >
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <input
+          type="checkbox"
+          checked={isAllChecked}
+          onChange={(e) => handleCheckAll(e.target.checked)}
+        />
+        <span style={{ fontSize: "14px" }}>전체선택</span>
+            </label>
+            {selectedItems.length > 0 && (
+              <button
+              onClick={handleDeleteSelected}
+              style={{
+                backgroundColor: "#fff",
+                color: "#222",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                fontSize: "14px",
+                fontWeight: "normal",
+                cursor: "pointer",
+                marginLeft: "8px",
+                boxShadow: "none",
+                transition: "all 0.15s",
+              }}
+            >
+              선택 삭제
+            </button>
+            )}
+          </div>
           <div style={gridCards}>
             {cartItems.map((it) => (
               <CartItemCard
@@ -178,46 +164,39 @@ export default function CartPage() {
               />
             ))}
           </div>
-
-          <div style={layoutSummary}>
-            <CartSummary
-              items={cartItems.filter((it) => selectedItems.includes(it.id))}
-              couponDiscount={couponDiscount}
-              pointUsed={pointUsed}
-              onCouponChange={(coupon) => {
-                setCouponDiscount(coupon.amount || 0);
-                setSelectedCoupon(coupon);
-              }}
-              onPointChange={setPointUsed}
-              couponList={availableCoupons}
-              maxPoint={availablePoint}
-              onCheckout={() =>
-                router.push({
-                  pathname: "/checkout",
-                  query: {
-                    itemIds: selectedItems.join(","),
-                    couponId: selectedCoupon?.id,
-                    point: pointUsed,
-                  },
-                })
-              }
-            />
-          </div>
         </div>
-      )}
+        {/* 우측: 주문정보 카드 */}
+        <div style={layoutSummary}>
+          <CartSummary
+            items={cartItems.filter((it) => selectedItems.includes(it.id))}
+            couponDiscount={couponDiscount}
+            pointUsed={pointUsed}
+            onCouponChange={(coupon) => {
+              setCouponDiscount(coupon.amount || 0);
+              setSelectedCoupon(coupon);
+            }}
+            onPointChange={setPointUsed}
+            couponList={availableCoupons}
+            maxPoint={availablePoint}
+            onCheckout={() =>
+              router.push({
+                pathname: "/checkout",
+                query: {
+                  itemIds: selectedItems.join(","),
+                  couponId: selectedCoupon?.id,
+                  point: pointUsed,
+                },
+              })
+            }
+          />
+        </div>
+      </div>
+      
+          )}
     </div>
   );
 }
 
-const buttonStyle = (bg, color) => ({
-  padding: "8px 14px",
-  backgroundColor: bg,
-  color: color,
-  border: "none",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  cursor: "pointer",
-});
 
 const layoutFilterBar = {
   display: "flex",
@@ -227,22 +206,6 @@ const layoutFilterBar = {
   marginBottom: "16px",
   gap: "10px",
   rowGap: "12px",
-};
-
-const filterLeft = {
-  display: "flex",
-  gap: 10,
-  flex: 1,
-  minWidth: 0,
-  flexWrap: "wrap",
-};
-
-const filterRight = {
-  display: "flex",
-  gap: "8px",
-  flexWrap: "wrap",
-  flexShrink: 0,
-  alignItems: "center",
 };
 
 const layoutMain = {

@@ -152,27 +152,6 @@ export default function MyCourse() {
     setSortConfig({ key: "", direction: "" });
     setCurrentPage(1);
   };
-  const handleDownloadCertificate = async (item) => {
-    try {
-      const res = await api.get(
-        `/user/certificates/${item.certificate_id}/download`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${item.title}_수료증.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error("❌ 수료증 다운로드 실패:", err);
-      alert("수료증 다운로드 중 오류가 발생했습니다.");
-    }
-  };
 
   const totalPages = Math.ceil(filteredCourses.length / pageSize);
 
@@ -278,17 +257,6 @@ export default function MyCourse() {
               <div style={mobileRow}>
                 <strong>상태</strong> {renderStatusBadge(item.status)}
               </div>
-              {item.certificate_id && (
-                <div style={mobileRow}>
-                  <strong>수료증</strong>
-                  <button
-                    style={certButtonStyle}
-                    onClick={() => handleDownloadCertificate(item)}
-                  >
-                    다운로드
-                  </button>
-                </div>
-              )}
               <div style={mobileRow}>
                 <strong>후기</strong>{" "}
                 {item.status === "완료" ? (
@@ -323,7 +291,6 @@ export default function MyCourse() {
                   "location",
                   "instructor",
                   "status",
-                  "certificate",
                   "review",
                 ].map((key) => {
                   const sortKey =
@@ -406,24 +373,6 @@ export default function MyCourse() {
                     <td style={tdCenter}>{item.instructor}</td>
                     <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
                     <td style={tdCenter}>
-                      {item.certificate_id ? (
-                        <button
-                          style={{
-                            ...certButtonStyle,
-                            backgroundColor: "#0070f3",
-                            color: "#fff",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                          onClick={() => handleDownloadCertificate(item)}
-                        >
-                          다운로드
-                        </button>
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-                    <td style={tdCenter}>
                       {item.status === "완료" ? (
                         <button
                           style={{
@@ -501,7 +450,6 @@ const columnMap = {
   location: "장소",
   instructor: "강사",
   status: "상태",
-  certificate: "수료증",
   review: "후기", // ✅ 추가
 };
 

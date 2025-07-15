@@ -210,27 +210,29 @@ export default function RegisterStep2({
         style={{ ...inputStyle, marginBottom: "18px" }}
       />
 
-      <AgreementItem
-        checked={termsAgree}
-        onClick={() => setOpenModal("terms")}
-        label="(필수) 이용약관 동의"
-        disabled={!termsAgree}
-        onChange={() => termsAgree && setTermsAgree(false)}
-      />
-      <AgreementItem
-        checked={privacyAgree}
-        onClick={() => setOpenModal("privacy")}
-        label="(필수) 개인정보 수집 및 이용 동의"
-        disabled={!privacyAgree}
-        onChange={() => privacyAgree && setPrivacyAgree(false)}
-      />
-      <AgreementItem
-        checked={marketingAgree}
-        onClick={() => setOpenModal("marketing")}
-        label="(선택) 마케팅 정보 수신 동의"
-        disabled={false}
-        onChange={() => setMarketingAgree(!marketingAgree)}
-      />
+<AgreementItem
+  checked={termsAgree}
+  setAgree={setTermsAgree}
+  setOpenModal={setOpenModal}
+  openKey="terms"
+  label="(필수) 이용약관 동의"
+/>
+<AgreementItem
+  checked={privacyAgree}
+  setAgree={setPrivacyAgree}
+  setOpenModal={setOpenModal}
+  openKey="privacy"
+  label="(필수) 개인정보 수집 및 이용 동의"
+/>
+<AgreementItem
+  checked={marketingAgree}
+  setAgree={setMarketingAgree}
+  setOpenModal={setOpenModal}
+  openKey="marketing"
+  label="(선택) 마케팅 정보 수신 동의"
+  isOptional
+/>
+
 
       {error && (
         <p style={{ color: "red", fontSize: "14px", marginBottom: "10px" }}>
@@ -253,21 +255,24 @@ export default function RegisterStep2({
   );
 }
 
-function AgreementItem({ checked, onChange, onClick, label, disabled }) {
+function AgreementItem({ checked, setAgree, setOpenModal, openKey, label, isOptional = false }) {
   return (
-    <div
-      style={{ display: "flex", alignItems: "center", marginBottom: "14px" }}
-    >
+    <div style={{ display: "flex", alignItems: "center", marginBottom: "14px" }}>
       <input
         type="checkbox"
         checked={checked}
-        onChange={onChange}
-        disabled={disabled}
+        onChange={() => {
+          if (checked) {
+            setAgree(false); // OFF는 바로
+          } else {
+            setOpenModal(openKey); // ON은 보기 모달 먼저
+          }
+        }}
         style={{ marginRight: "8px" }}
       />
       <button
         type="button"
-        onClick={onClick}
+        onClick={() => setOpenModal(openKey)}
         style={{
           all: "unset",
           cursor: "pointer",
