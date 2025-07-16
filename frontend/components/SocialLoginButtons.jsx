@@ -1,38 +1,43 @@
 import React from "react";
 
 const SocialLoginButtons = () => {
+  // 소셜로그인만 별도 OAUTH BASE_URL 사용
+  const OAUTH_BASE_URL = process.env.NEXT_PUBLIC_OAUTH_BASE_URL;
+  if (!OAUTH_BASE_URL) {
+    alert("OAUTH_BASE_URL 환경변수가 설정되지 않았습니다.");
+    return null;
+  }
+
   const handleLogin = (provider) => {
-    // 환경별 API Base URL (NEXT_PUBLIC_API_BASE_URL에 http://localhost:5001 또는 운영 주소 입력)
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api$/, "");
-    if (!baseURL) {
-      alert("API_BASE_URL 환경변수가 설정되지 않았습니다.");
-      return;
-    }
-    // provider: "google", "kakao", "naver"에 따라 이동
-    window.location.href = `${baseURL}/auth/${provider}`;
+    window.location.href = `${OAUTH_BASE_URL}/auth/${provider}`;
   };
 
   return (
     <div style={containerStyle}>
       <div style={iconWrapperStyle}>
         {/* Google 버튼 */}
-        <button style={googleStyle} onClick={() => handleLogin("google")}>
-          {/* ...SVG 그대로 */}
+        <button style={googleStyle} onClick={() => handleLogin("google")} aria-label="구글 로그인">
+          <svg width="24" height="24" viewBox="0 0 24 24" style={iconStyle}>
+            <g>
+              <path fill="#4285F4" d="M23.52 12.272c0-.832-.074-1.624-.208-2.392H12v4.532h6.484c-.28 1.464-1.125 2.706-2.384 3.548v2.952h3.858c2.262-2.084 3.562-5.156 3.562-8.64z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.96-1.068 7.946-2.912l-3.858-2.952c-1.072.724-2.452 1.16-4.088 1.16-3.144 0-5.808-2.124-6.768-4.96H1.226v3.112C3.198 21.438 7.248 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.232 14.296A7.492 7.492 0 0 1 4.7 12c0-.8.144-1.584.4-2.296V6.592H1.226A12.002 12.002 0 0 0 0 12c0 1.94.468 3.772 1.226 5.408l4.006-3.112z"/>
+              <path fill="#EA4335" d="M12 4.752c1.776 0 3.36.608 4.616 1.792l3.462-3.462C17.96 1.16 15.24 0 12 0 7.248 0 3.198 2.562 1.226 6.592l4.006 3.112C6.192 6.876 8.856 4.752 12 4.752z"/>
+            </g>
+          </svg>
         </button>
 
         {/* Kakao 버튼 */}
-        <button style={kakaoStyle} onClick={() => handleLogin("kakao")}>
-          {/* ...SVG 그대로 */}
+        <button style={kakaoStyle} onClick={() => handleLogin("kakao")} aria-label="카카오 로그인">
+          <svg width="24" height="24" viewBox="0 0 24 24" style={iconStyle}>
+            <ellipse cx="12" cy="12" rx="12" ry="12" fill="#FEE500" />
+            <text x="12" y="16" textAnchor="middle" fontSize="9" fill="#381e1f" fontFamily="Arial, sans-serif" fontWeight="bold">K</text>
+          </svg>
         </button>
 
         {/* Naver 버튼 */}
-        <button style={naverStyle} onClick={() => handleLogin("naver")}>
-          {/* 네이버 로고 SVG 예시 */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            style={iconStyle}
-          >
+        <button style={naverStyle} onClick={() => handleLogin("naver")} aria-label="네이버 로그인">
+          <svg width="24" height="24" viewBox="0 0 24 24" style={iconStyle}>
             <rect width="24" height="24" rx="6" fill="#03c75a" />
             <path
               d="M7.2 6.5h2.77l2.45 3.86 2.45-3.86H17.8v11h-2.63V11.7l-2.05 3.31h-.04l-2.05-3.29v5.81H7.2V6.5z"
@@ -61,8 +66,8 @@ const iconWrapperStyle = {
 };
 
 const buttonBase = {
-  width: "40px",
-  height: "40px",
+  width: "44px",
+  height: "44px",
   borderRadius: "50%",
   border: "none",
   padding: "5px",
@@ -76,19 +81,23 @@ const buttonBase = {
 const googleStyle = {
   ...buttonBase,
   backgroundColor: "white",
+  border: "1px solid #ececec",
 };
 
 const kakaoStyle = {
   ...buttonBase,
   backgroundColor: "#FEE500",
+  border: "1px solid #e5d352",
 };
 
 const naverStyle = {
   ...buttonBase,
   backgroundColor: "#03c75a",
+  border: "1px solid #03b053",
 };
 
 const iconStyle = {
-  width: "60%",
-  height: "60%",
+  width: "24px",
+  height: "24px",
 };
+
