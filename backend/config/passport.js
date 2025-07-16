@@ -15,13 +15,12 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("🚩 GOOGLE_REDIRECT_URI 런타임값:", process.env.GOOGLE_REDIRECT_URI);
         const email = profile.emails[0].value;
         const username = profile.displayName;
 
         // DB에서 사용자 조회
-        const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
-          email,
-        ]);
+        const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
         if (users.length > 0) {
           console.log("✅ 기존 사용자 로그인:", email);
