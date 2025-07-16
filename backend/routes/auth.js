@@ -97,7 +97,6 @@ router.get(
   },
   passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    // 카카오 로그인 성공 후 프론트엔드로 리다이렉트
     return res.redirect("https://ghnod.vercel.app/login?success=kakao");
   }
 );
@@ -142,10 +141,10 @@ router.get(
   },
   passport.authenticate("naver", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    // 네이버 로그인 성공 후 프론트엔드로 리다이렉트
     return res.redirect("https://ghnod.vercel.app/login?success=naver");
   }
 );
+
 
 // ====================== 이메일 중복 확인 ======================
 router.post("/check-email", async (req, res) => {
