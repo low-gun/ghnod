@@ -51,14 +51,15 @@ router.get(
     return next();
   },
   passport.authenticate("google", {
-    failureRedirect: "/login",
+    failureRedirect: "/login", // 실패 시 백엔드 리다이렉션 (필요 없으면 삭제)
     session: false,
   }),
   (req, res) => {
-    // 구글 로그인 성공 후 프론트엔드로 리다이렉트
-    return res.redirect("https://ghnod.vercel.app/login?success=google");
+    // 구글 로그인 성공 후 프론트엔드 URL로 리다이렉트
+    return res.redirect("https://ghnod.vercel.app/login?success=google"); // 프론트엔드 URL로 리다이렉트
   }
 );
+
 
 // ====================== 소셜 로그인 (Kakao) ======================
 router.get("/kakao", passport.authenticate("kakao"));
