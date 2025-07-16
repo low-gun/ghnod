@@ -17,12 +17,36 @@ router.get(
   "/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
+
 router.get(
   "/google/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      // ... (생략: 로컬 우회 응답 그대로)
-      return res.json({ message: "🔓 로컬 Google 로그인 성공 (우회)", accessToken, user: mockUser });
+      // 로컬 환경에서 우회 처리
+      const mockUser = {
+        id: 1,
+        username: "로컬유저",
+        email: "localtest@example.com",
+        role: "user",
+      };
+      const tokenPayload = { id: mockUser.id, role: mockUser.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000, // 1시간
+      });
+
+      return res.json({
+        message: "🔓 로컬 Google 로그인 성공 (우회)",
+        accessToken,
+        user: mockUser,
+      });
     }
     return next();
   },
@@ -31,44 +55,98 @@ router.get(
     session: false,
   }),
   (req, res) => {
-    // 성공시 프론트로 리다이렉트 (토큰 필요하면 쿼리로 넘겨도 됨)
+    // 구글 로그인 성공 후 프론트엔드로 리다이렉트
     return res.redirect("https://ghnod.vercel.app/login?success=google");
   }
 );
 
 // ====================== 소셜 로그인 (Kakao) ======================
 router.get("/kakao", passport.authenticate("kakao"));
+
 router.get(
   "/kakao/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      // ... (생략)
-      return res.json({ message: "🔓 로컬 Kakao 로그인 성공 (우회)", accessToken, user: mockUser });
+      // 로컬 환경에서 우회 처리
+      const mockUser = {
+        id: 2,
+        username: "로컬카카오유저",
+        email: "kakaotest@example.com",
+        role: "user",
+      };
+      const tokenPayload = { id: mockUser.id, role: mockUser.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000, // 1시간
+      });
+
+      return res.json({
+        message: "🔓 로컬 Kakao 로그인 성공 (우회)",
+        accessToken,
+        user: mockUser,
+      });
     }
     return next();
   },
   passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
   (req, res) => {
+    // 카카오 로그인 성공 후 프론트엔드로 리다이렉트
     return res.redirect("https://ghnod.vercel.app/login?success=kakao");
   }
 );
 
 // ====================== 소셜 로그인 (Naver) ======================
-router.get("/naver", passport.authenticate("naver", { scope: ["name", "email", "mobile"] }));
+router.get(
+  "/naver",
+  passport.authenticate("naver", { scope: ["name", "email", "mobile"] })
+);
+
 router.get(
   "/naver/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      // ... (생략)
-      return res.json({ message: "🔓 로컬 Naver 로그인 성공 (우회)", accessToken, user: mockUser });
+      // 로컬 환경에서 우회 처리
+      const mockUser = {
+        id: 3,
+        username: "로컬네이버유저",
+        email: "navertest@example.com",
+        role: "user",
+      };
+      const tokenPayload = { id: mockUser.id, role: mockUser.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000, // 1시간
+      });
+
+      return res.json({
+        message: "🔓 로컬 Naver 로그인 성공 (우회)",
+        accessToken,
+        user: mockUser,
+      });
     }
     return next();
   },
   passport.authenticate("naver", { failureRedirect: "/login", session: false }),
   (req, res) => {
+    // 네이버 로그인 성공 후 프론트엔드로 리다이렉트
     return res.redirect("https://ghnod.vercel.app/login?success=naver");
   }
 );
+
 // ====================== 이메일 중복 확인 ======================
 router.post("/check-email", async (req, res) => {
   const { email } = req.body;
