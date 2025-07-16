@@ -24,16 +24,14 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    if (isDev) {
-      // 개발 환경에서는 API를 로컬로 프록시
-      return [
-        {
-          source: "/api/:path*", // 요청 경로에 맞춰
-          destination: "http://localhost:5001/api/:path*", // 로컬 개발 서버의 주소로 프록시
-        },
-      ];
-    }
-    return [];
+    return [
+      {
+        source: "/api/:path*",
+        destination: isDev
+          ? "http://localhost:5001/api/:path*"
+          : "https://ghnod-backend.azurewebsites.net/api/:path*",
+      },
+    ];
   },
 };
 

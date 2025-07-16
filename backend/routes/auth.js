@@ -31,7 +31,7 @@ router.get(
     }
     return next();
   },
-  passport.authenticate("google", { failureRedirect: "/login", session: false }),
+  passport.authenticate("google", { failureRedirect: "https://ghnod.vercel.app/login", session: false }),
   (req, res) => {
     if (req.user) {
       // ✅ accessToken/refreshToken 발급
@@ -66,7 +66,7 @@ router.get(
     }
     return next();
   },
-  passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
+  passport.authenticate("kakao", { failureRedirect: "https://ghnod.vercel.app/login", session: false }),
   (req, res) => {
     if (req.user) {
       const tokenPayload = { id: req.user.id, role: req.user.role };
@@ -98,7 +98,7 @@ router.get(
     }
     return next();
   },
-  passport.authenticate("naver", { failureRedirect: "/login", session: false }),
+  passport.authenticate("naver", { failureRedirect: "https://ghnod.vercel.app/login", session: false }),
   (req, res) => {
     if (req.user) {
       const tokenPayload = { id: req.user.id, role: req.user.role };
