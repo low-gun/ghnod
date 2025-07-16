@@ -28,7 +28,8 @@ jobs:
       - name: Build backend (optional)
         run: npm run build || echo "no build step"
         working-directory: ./backend
-
+      - name: Remove node_modules before packaging
+        run: rm -rf ./backend/node_modules
       - name: Azure Login
         uses: azure/login@v1
         with:
