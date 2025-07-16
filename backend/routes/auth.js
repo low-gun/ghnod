@@ -201,6 +201,68 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ error: "회원가입 실패" });
   }
 });
+
+router.post("/register-social", async (req, res) => {
+  const { token, username, phone, company, department, position, terms_agree, privacy_agree, marketing_agree } = req.body;
+  try {
+    // 1. 임시토큰 복호화 (만료 체크/에러처리)
+    let payload;
+    try {
+      payload = require("jsonwebtoken").verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(400).json({ error: "인증 토큰이 만료되었습니다. 소셜로그인을 다시 시도하세요." });
+      }
+      return res.status(500).json({ error: "토큰 복호화 실패" });
+    }
+    const { email, socialProvider, googleId, kakaoId, naverId } = payload;
+
+    // 2. 필수 정보 누락 방지
+    if (!username || !phone) {
+      return res.status(400).json({ error: "이름과 휴대폰번호는 필수입니다." });
+    }
+
+    // 3. 이메일/전화번호 중복 체크
+    const [exists] = await db.query(
+      "SELECT id FROM users WHERE email = ? OR phone = ?",
+      [email, phone]
+    );
+    if (exists.length > 0) return res.status(409).json({ error: "이미 가입된 이메일/전화번호입니다." });
+
+    // 4. 더미 비밀번호 생성
+    const hashedPassword = await bcrypt.hash("social_oauth_dummy", 10);
+
+    // 5. DB INSERT (소셜 식별자 포함)
+    await db.query(
+      `INSERT INTO users
+        (username, email, phone, password, google_id, kakao_id, naver_id, company, department, position, marketing_agree, terms_agree, privacy_agree, role)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user')`,
+      [
+        username,
+        email,
+        phone,
+        hashedPassword,
+        googleId || null,
+        kakaoId || null,
+        naverId || null,
+        company || "",
+        department || "",
+        position || "",
+        marketing_agree ? 1 : 0,
+        terms_agree ? 1 : 0,
+        privacy_agree ? 1 : 0,
+      ]
+    );
+
+    // 6. (선택) 회원가입 후 바로 로그인/토큰 발급
+
+    return res.status(200).json({ success: true, message: "소셜 회원가입 완료" });
+  } catch (err) {
+    console.error("❌ 소셜회원가입 오류:", err);
+    return res.status(500).json({ error: "서버 오류" });
+  }
+});
+
 router.post("/check-phone", async (req, res) => {
   const { phone } = req.body;
 

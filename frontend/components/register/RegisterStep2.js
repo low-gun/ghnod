@@ -1,4 +1,9 @@
 export default function RegisterStep2({
+  socialMode = false,      // 추가
+  email,                   // 추가
+  setEmail,                // 추가
+  password,                // 추가
+  setPassword,             // 추가
   username,
   setUsername,
   phone,
@@ -40,16 +45,39 @@ export default function RegisterStep2({
   const isDisabled =
     phone.length < 10 || phoneExists || (hasRequestedCode && timeLeft > 0);
 
-  return (
-    <form onSubmit={handleRegister}>
-      <input
-        type="text"
-        placeholder="이름"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        required
-        style={{ ...inputStyle, marginBottom: "18px" }}
-      />
+    return (
+      <form onSubmit={handleRegister}>
+        {/* socialMode가 아니면 이메일/비밀번호 입력 */}
+        {!socialMode && (
+          <>
+            <input
+              type="email"
+              placeholder="이메일"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              readOnly={true} //
+              required
+              style={{ ...inputStyle, marginBottom: "18px" }}
+            />
+            <input
+              type="password"
+              placeholder="비밀번호"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              style={{ ...inputStyle, marginBottom: "18px" }}
+            />
+          </>
+        )}
+        <input
+          type="text"
+          placeholder="이름"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          readOnly={socialMode}
+          required
+          style={{ ...inputStyle, marginBottom: "18px" }}
+        />
 
       <div style={{ position: "relative", marginBottom: "18px" }}>
         <input

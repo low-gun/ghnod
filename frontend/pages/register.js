@@ -108,10 +108,53 @@ export default function RegisterPage() {
           </div>
 
           {step === 1 ? (
-            <RegisterStep1 {...form} />
-          ) : (
-            <RegisterStep2 {...form} />
-          )}
+  <RegisterStep1 {...form} />
+) : (
+  <RegisterStep2
+    socialMode={false}
+    email={form.email}
+    setEmail={form.setEmail}
+    password={form.password}
+    setPassword={form.setPassword}
+    username={form.username}
+    setUsername={form.setUsername}
+    phone={form.phone}
+    setPhone={form.setPhone}
+    formatPhone={form.formatPhone}
+    checkPhoneDuplicate={form.checkPhoneDuplicate}
+    isVerified={form.isVerified}
+    setIsVerified={form.setIsVerified}
+    verificationCode={form.verificationCode}
+    setVerificationCode={form.setVerificationCode}
+    showVerificationInput={form.showVerificationInput}
+    setShowVerificationInput={form.setShowVerificationInput}
+    hasRequestedCode={form.hasRequestedCode}
+    setHasRequestedCode={form.setHasRequestedCode}
+    timeLeft={form.timeLeft}
+    setTimeLeft={form.setTimeLeft}
+    timerRef={form.timerRef}
+    verificationError={form.verificationError}
+    setVerificationError={form.setVerificationError}
+    company={form.company}
+    setCompany={form.setCompany}
+    department={form.department}
+    setDepartment={form.setDepartment}
+    position={form.position}
+    setPosition={form.setPosition}
+    termsAgree={form.termsAgree}
+    setTermsAgree={form.setTermsAgree}
+    privacyAgree={form.privacyAgree}
+    setPrivacyAgree={form.setPrivacyAgree}
+    marketingAgree={form.marketingAgree}
+    setMarketingAgree={form.setMarketingAgree}
+    setOpenModal={form.setOpenModal}
+    handleRegister={form.handleRegister}
+    canRegister={form.canRegister}
+    error={form.error}
+    phoneExists={form.phoneExists}
+    handleErrorClear={form.handleErrorClear}
+  />
+)}
         </div>
       </div>
     </>
