@@ -9,7 +9,7 @@ const SocialLoginButtons = () => {
   }
 
   const handleLogin = (provider) => {
-    window.location.href = `${OAUTH_BASE_URL}/auth/${provider}`;
+    window.location.href = `${OAUTH_BASE_URL}/api/auth/${provider}`;
   };
 
   return (
