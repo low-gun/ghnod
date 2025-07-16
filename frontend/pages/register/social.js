@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
-import jwt_decode from "jwt-decode"; // 꼭 설치: npm install jwt-decode
+import * as jwt_decode from "jwt-decode"; // 꼭 설치: npm install jwt-decode
 
 export default function SocialRegisterPage() {
   const router = useRouter();
