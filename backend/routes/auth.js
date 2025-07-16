@@ -38,8 +38,10 @@ router.get(
       const tokenPayload = { id: req.user.id, role: req.user.role };
       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
       const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 4 * 60 * 60 * 1000 });
-      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: true,
+        sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
+      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true,
+        sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
       return res.redirect("https://ghnod.vercel.app/");
     } else if (req.authInfo && req.authInfo.tempToken) {
       // 신규 유저 - 추가 정보 입력
@@ -61,7 +63,8 @@ router.get(
       const mockUser = { id: 2, username: "로컬카카오유저", email: "kakaotest@example.com", role: "user" };
       const tokenPayload = { id: mockUser.id, role: mockUser.role };
       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
-      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 1000 });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: true,
+        sameSite: "None", path: "/", maxAge: 60 * 60 * 1000 });
       return res.json({ message: "🔓 로컬 Kakao 로그인 성공 (우회)", accessToken, user: mockUser });
     }
     return next();
@@ -72,8 +75,10 @@ router.get(
       const tokenPayload = { id: req.user.id, role: req.user.role };
       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
       const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 4 * 60 * 60 * 1000 });
-      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: true,
+        sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
+      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true,
+        sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
       return res.redirect("https://ghnod.vercel.app/");
     } else if (req.authInfo && req.authInfo.tempToken) {
       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
@@ -104,8 +109,8 @@ router.get(
       const tokenPayload = { id: req.user.id, role: req.user.role };
       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
       const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 4 * 60 * 60 * 1000 });
-      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: true, sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
+      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true, sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
       return res.redirect("https://ghnod.vercel.app/");
     } else if (req.authInfo && req.authInfo.tempToken) {
       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
@@ -512,16 +517,16 @@ router.post("/login", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       path: "/",
       maxAge: 60 * 60 * 1000,
     });
@@ -619,8 +624,8 @@ router.post("/refresh-token", async (req, res) => {
     // 5) 쿠키에 새로 발급한 Access Token 저장
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
-      secure: false, // HTTPS 배포 시 true 권장
-      sameSite: "Strict",
+      secure: true, // HTTPS 배포 시 true 권장
+      sameSite: "None",
       maxAge: 60 * 60 * 1000, // 1시간
     });
 
@@ -663,15 +668,15 @@ router.post("/logout", async (req, res) => {
     // ✅ 쿠키 제거 시 sameSite와 path를 set-cookie 시점과 동일하게 설정해야 함
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax", // ✅ 로그인 시 설정과 동일하게
+      secure: true,
+      sameSite: "None", // ✅ 로그인 시 설정과 동일하게
       path: "/", // ✅ 반드시 필요
     });
 
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax", // ✅ 로그인 시 설정과 동일하게
+      secure: true,
+      sameSite: "None", // ✅ 로그인 시 설정과 동일하게
       path: "/", // ✅ 반드시 필요
     });
 
