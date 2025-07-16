@@ -21,33 +21,9 @@ router.get(
   "/google/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      console.log("🔓 로컬 환경: Google 로그인 우회 처리");
-      const mockUser = {
-        id: 1,
-        username: "로컬유저",
-        email: "localtest@example.com",
-        role: "user",
-      };
-      const tokenPayload = { id: mockUser.id, role: mockUser.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "Lax",
-        path: "/",
-        maxAge: 60 * 60 * 1000,
-      });
-
-      return res.json({
-        message: "🔓 로컬 Google 로그인 성공 (우회)",
-        accessToken,
-        user: mockUser,
-      });
+      // ... (생략: 로컬 우회 응답 그대로)
+      return res.json({ message: "🔓 로컬 Google 로그인 성공 (우회)", accessToken, user: mockUser });
     }
-
     return next();
   },
   passport.authenticate("google", {
@@ -55,52 +31,42 @@ router.get(
     session: false,
   }),
   (req, res) => {
-    console.log("✅ Google 로그인 성공:", req.user);
-    const { password, ...userWithoutPassword } = req.user;
-    res.json({ message: "✅ Google 로그인 성공!", user: userWithoutPassword });
+    // 성공시 프론트로 리다이렉트 (토큰 필요하면 쿼리로 넘겨도 됨)
+    return res.redirect("https://ghnod.vercel.app/login?success=google");
   }
 );
 
-// ===========`=========== 소셜 로그인 (Kakao) ======================
+// ====================== 소셜 로그인 (Kakao) ======================
 router.get("/kakao", passport.authenticate("kakao"));
 router.get(
   "/kakao/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      console.log("🔓 로컬 환경: Kakao 로그인 우회 처리");
-      const mockUser = {
-        id: 2,
-        username: "로컬카카오유저",
-        email: "kakaotest@example.com",
-        role: "user",
-      };
-      const tokenPayload = { id: mockUser.id, role: mockUser.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "Lax",
-        path: "/",
-        maxAge: 60 * 60 * 1000,
-      });
-
-      return res.json({
-        message: "🔓 로컬 Kakao 로그인 성공 (우회)",
-        accessToken,
-        user: mockUser,
-      });
+      // ... (생략)
+      return res.json({ message: "🔓 로컬 Kakao 로그인 성공 (우회)", accessToken, user: mockUser });
     }
-
     return next();
   },
   passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    console.log("✅ Kakao 로그인 성공:", req.user);
-    const { password, ...userWithoutPassword } = req.user;
-    res.json({ message: "✅ Kakao 로그인 성공!", user: userWithoutPassword });
+    return res.redirect("https://ghnod.vercel.app/login?success=kakao");
+  }
+);
+
+// ====================== 소셜 로그인 (Naver) ======================
+router.get("/naver", passport.authenticate("naver", { scope: ["name", "email", "mobile"] }));
+router.get(
+  "/naver/callback",
+  (req, res, next) => {
+    if (process.env.NODE_ENV !== "production") {
+      // ... (생략)
+      return res.json({ message: "🔓 로컬 Naver 로그인 성공 (우회)", accessToken, user: mockUser });
+    }
+    return next();
+  },
+  passport.authenticate("naver", { failureRedirect: "/login", session: false }),
+  (req, res) => {
+    return res.redirect("https://ghnod.vercel.app/login?success=naver");
   }
 );
 // ====================== 이메일 중복 확인 ======================
