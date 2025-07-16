@@ -33,15 +33,18 @@ router.get(
   },
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    // 기존 유저면 req.user, 신규 유저면 req.authInfo.tempToken
     if (req.user) {
-      // 기존 회원 → 메인/마이페이지 등으로 이동(로그인 처리)
+      // ✅ accessToken/refreshToken 발급
+      const tokenPayload = { id: req.user.id, role: req.user.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 4 * 60 * 60 * 1000 });
+      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
       return res.redirect("https://ghnod.vercel.app/");
     } else if (req.authInfo && req.authInfo.tempToken) {
-      // 신규 회원 → 소셜 추가정보 입력페이지로 이동
+      // 신규 유저 - 추가 정보 입력
       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
     } else {
-      // 예외
       return res.redirect("https://ghnod.vercel.app/login?error=social");
     }
   }
@@ -66,6 +69,11 @@ router.get(
   passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
   (req, res) => {
     if (req.user) {
+      const tokenPayload = { id: req.user.id, role: req.user.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 4 * 60 * 60 * 1000 });
+      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
       return res.redirect("https://ghnod.vercel.app/");
     } else if (req.authInfo && req.authInfo.tempToken) {
       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
@@ -93,6 +101,11 @@ router.get(
   passport.authenticate("naver", { failureRedirect: "/login", session: false }),
   (req, res) => {
     if (req.user) {
+      const tokenPayload = { id: req.user.id, role: req.user.role };
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 4 * 60 * 60 * 1000 });
+      res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
       return res.redirect("https://ghnod.vercel.app/");
     } else if (req.authInfo && req.authInfo.tempToken) {
       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
