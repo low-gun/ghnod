@@ -22,44 +22,30 @@ router.get(
   "/google/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      // 로컬 환경에서 우회 처리
-      const mockUser = {
-        id: 1,
-        username: "로컬유저",
-        email: "localtest@example.com",
-        role: "user",
-      };
+      // 로컬 우회 처리
+      const mockUser = { id: 1, username: "로컬유저", email: "localtest@example.com", role: "user" };
       const tokenPayload = { id: mockUser.id, role: mockUser.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "Lax",
-        path: "/",
-        maxAge: 60 * 60 * 1000, // 1시간
-      });
-
-      return res.json({
-        message: "🔓 로컬 Google 로그인 성공 (우회)",
-        accessToken,
-        user: mockUser,
-      });
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 1000 });
+      return res.json({ message: "🔓 로컬 Google 로그인 성공 (우회)", accessToken, user: mockUser });
     }
     return next();
   },
-  passport.authenticate("google", {
-    failureRedirect: "/login", // 실패 시 백엔드 리다이렉션 (필요 없으면 삭제)
-    session: false,
-  }),
+  passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    // 구글 로그인 성공 후 프론트엔드 URL로 리다이렉트
-    return res.redirect("https://ghnod.vercel.app/login?success=google"); // 프론트엔드 URL로 리다이렉트
+    // 기존 유저면 req.user, 신규 유저면 req.authInfo.tempToken
+    if (req.user) {
+      // 기존 회원 → 메인/마이페이지 등으로 이동(로그인 처리)
+      return res.redirect("https://ghnod.vercel.app/");
+    } else if (req.authInfo && req.authInfo.tempToken) {
+      // 신규 회원 → 소셜 추가정보 입력페이지로 이동
+      return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
+    } else {
+      // 예외
+      return res.redirect("https://ghnod.vercel.app/login?error=social");
+    }
   }
 );
-
 
 // ====================== 소셜 로그인 (Kakao) ======================
 router.get("/kakao", passport.authenticate("kakao"));
@@ -68,84 +54,53 @@ router.get(
   "/kakao/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      // 로컬 환경에서 우회 처리
-      const mockUser = {
-        id: 2,
-        username: "로컬카카오유저",
-        email: "kakaotest@example.com",
-        role: "user",
-      };
+      // 로컬 우회 처리
+      const mockUser = { id: 2, username: "로컬카카오유저", email: "kakaotest@example.com", role: "user" };
       const tokenPayload = { id: mockUser.id, role: mockUser.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "Lax",
-        path: "/",
-        maxAge: 60 * 60 * 1000, // 1시간
-      });
-
-      return res.json({
-        message: "🔓 로컬 Kakao 로그인 성공 (우회)",
-        accessToken,
-        user: mockUser,
-      });
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 1000 });
+      return res.json({ message: "🔓 로컬 Kakao 로그인 성공 (우회)", accessToken, user: mockUser });
     }
     return next();
   },
   passport.authenticate("kakao", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    return res.redirect("https://ghnod.vercel.app/login?success=kakao");
+    if (req.user) {
+      return res.redirect("https://ghnod.vercel.app/");
+    } else if (req.authInfo && req.authInfo.tempToken) {
+      return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
+    } else {
+      return res.redirect("https://ghnod.vercel.app/login?error=social");
+    }
   }
 );
 
 // ====================== 소셜 로그인 (Naver) ======================
-router.get(
-  "/naver",
-  passport.authenticate("naver", { scope: ["name", "email", "mobile"] })
-);
+router.get("/naver", passport.authenticate("naver", { scope: ["name", "email", "mobile"] }));
 
 router.get(
   "/naver/callback",
   (req, res, next) => {
     if (process.env.NODE_ENV !== "production") {
-      // 로컬 환경에서 우회 처리
-      const mockUser = {
-        id: 3,
-        username: "로컬네이버유저",
-        email: "navertest@example.com",
-        role: "user",
-      };
+      const mockUser = { id: 3, username: "로컬네이버유저", email: "navertest@example.com", role: "user" };
       const tokenPayload = { id: mockUser.id, role: mockUser.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "Lax",
-        path: "/",
-        maxAge: 60 * 60 * 1000, // 1시간
-      });
-
-      return res.json({
-        message: "🔓 로컬 Naver 로그인 성공 (우회)",
-        accessToken,
-        user: mockUser,
-      });
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
+      res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 1000 });
+      return res.json({ message: "🔓 로컬 Naver 로그인 성공 (우회)", accessToken, user: mockUser });
     }
     return next();
   },
   passport.authenticate("naver", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    return res.redirect("https://ghnod.vercel.app/login?success=naver");
+    if (req.user) {
+      return res.redirect("https://ghnod.vercel.app/");
+    } else if (req.authInfo && req.authInfo.tempToken) {
+      return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
+    } else {
+      return res.redirect("https://ghnod.vercel.app/login?error=social");
+    }
   }
 );
-
 
 // ====================== 이메일 중복 확인 ======================
 router.post("/check-email", async (req, res) => {
