@@ -17,7 +17,13 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email = profile.emails[0].value;
+        // ✅ 디버깅용 로그 추가 (여기부터)
+        console.log("==== [GoogleStrategy 콜백 진입] ====");
+        console.log("accessToken:", accessToken);
+        console.log("refreshToken:", refreshToken);
+        console.log("profile:", JSON.stringify(profile, null, 2));
+
+        const email = profile.emails?.[0]?.value || "";
         const username = profile.displayName;
         // 기존 유저 조회
         const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
@@ -29,12 +35,14 @@ passport.use(
         const tempPayload = {
           socialProvider: "google",
           googleId: profile.id,
-          email: profile.emails?.[0]?.value || "",
-          name: profile.displayName || profile.name?.givenName || "",
-          phone: profile.phoneNumber || "", // 구글은 일반 OAuth로는 phone을 거의 못 받음
+          email: email,
+          name: username || profile.name?.givenName || "",
+          phone: profile.phoneNumber || "",
           photo: profile.photos?.[0]?.value || "",
         };
         const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+
+        console.log("신규 유저, tempToken 발급:", tempToken);
         return done(null, false, { message: "NEED_ADDITIONAL_INFO", tempToken });
       } catch (error) {
         console.error("❌ Google OAuth 처리 중 오류:", error);
@@ -43,6 +51,7 @@ passport.use(
     }
   )
 );
+
 
 // ✅ Kakao OAuth 전략 설정
 passport.use(
