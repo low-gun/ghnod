@@ -17,12 +17,15 @@ const {
 const router = express.Router();
 const { parseDeviceInfo } = require("../utils/parseDeviceInfo");
 // Google OAuth2 code 처리용 REST API
+// backend/routes/auth.js
 router.post("/google/callback", async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
-    // 1. Google access_token 발급 요청
+    console.log("[google/callback] code:", code);
+
+    // 1. 토큰 요청
     const tokenRes = await axios.post(
       "https://oauth2.googleapis.com/token",
       null,
@@ -37,24 +40,29 @@ router.post("/google/callback", async (req, res) => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
     );
+    console.log("[google/callback] tokenRes.data:", tokenRes.data);
     const { access_token } = tokenRes.data;
 
-    // 2. Google 사용자 정보 조회
+    // 2. 프로필 요청
     const profileRes = await axios.get(
       "https://www.googleapis.com/oauth2/v2/userinfo",
       { headers: { Authorization: `Bearer ${access_token}` } }
     );
+    console.log("[google/callback] profileRes.data:", profileRes.data);
     const profile = profileRes.data;
     const email = profile.email;
     const username = profile.name || profile.email.split("@")[0];
 
-    // 3. 사용자 DB 조회
+    // 3. DB조회
     const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    console.log("[google/callback] users.length:", users.length);
+
     if (users.length > 0) {
-      // 기존 유저: 바로 로그인 처리
+      // 기존 유저
       const user = users[0];
       const tokenPayload = { id: user.id, role: user.role };
       const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      console.log("[google/callback] 로그인 성공, user.id:", user.id);
       return res.json({
         success: true,
         accessToken: jwtAccessToken,
@@ -66,7 +74,7 @@ router.post("/google/callback", async (req, res) => {
         },
       });
     } else {
-      // 신규 유저: 임시 토큰 발급 (추가 정보 입력 필요)
+      // 신규 유저
       const tempPayload = {
         socialProvider: "google",
         googleId: profile.id,
@@ -75,16 +83,18 @@ router.post("/google/callback", async (req, res) => {
         photo: profile.picture || "",
       };
       const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
-      return res.json({ tempToken }); // 프론트는 /register/social?token=...로 이동해야함
+      console.log("[google/callback] 신규유저 tempToken 발급, email:", email);
+      return res.json({ tempToken });
     }
   } catch (err) {
-    console.error("Google OAuth Error:", err);
+    console.error("[google/callback] Google OAuth Error:", err);
     if (err.response) {
-      console.error("Google OAuth Error [response.data]:", err.response.data);
+      console.error("[google/callback] Error response.data:", err.response.data);
     }
     return res.status(500).json({ error: "Google OAuth Error", detail: err.message });
   }
 });
+
 
 // 카카오 code 처리 REST API
 router.post("/kakao/callback", async (req, res) => {
