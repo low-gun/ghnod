@@ -8,14 +8,17 @@ export default function GoogleCallbackPage() {
   const { login } = useUserContext();
 
   useEffect(() => {
-    const handleGoogleLogin = async () => {
+    const fetchGoogleLogin = async () => {
       try {
-        const res = await api.get("/auth/google/callback" + window.location.search);
+        const res = await api.get("/auth/google/callback" + window.location.search, {
+          withCredentials: true,
+        });
+
         const { accessToken, user } = res.data;
 
         if (accessToken && user) {
-          login(user, accessToken); // sessionStorage에도 저장됨
-          router.replace("/");
+          login(user, accessToken); // sessionStorage에 저장됨
+          router.replace("/"); // 원하는 경로로 이동
         } else {
           router.replace("/login?error=token-missing");
         }
@@ -25,8 +28,8 @@ export default function GoogleCallbackPage() {
       }
     };
 
-    handleGoogleLogin();
+    fetchGoogleLogin();
   }, []);
 
-  return <p>로그인 처리 중입니다...</p>;
+  return <p>구글 로그인 처리 중입니다...</p>;
 }
