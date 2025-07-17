@@ -1,4 +1,3 @@
-// ✅ backend/server.js – Express API 전용 완성본
 const path = require("path");
 
 // ✅ 예기치 않은 에러 캐치
@@ -32,17 +31,13 @@ console.log("✅ NODE_ENV:", process.env.NODE_ENV);
 console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
 console.log("✅ PORT:", PORT);
 
-// ✅ 미들웨어
-const trackVisitor = require("./middlewares/trackVisitor");
-app.use(trackVisitor);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
 // ✅ CORS 허용 도메인 리스트
 const allowedOrigins = [
   "https://ghnod.vercel.app",
   "http://localhost:3000",
 ];
+
+// ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 추가
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -58,6 +53,13 @@ app.use(
     credentials: true,
   })
 );
+// OPTIONS 프리플라이트 전체 허용
+app.options("*", cors());
+
+const trackVisitor = require("./middlewares/trackVisitor");
+app.use(trackVisitor);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use(cookieParser());
 app.use(passport.initialize());
