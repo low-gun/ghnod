@@ -45,55 +45,53 @@ router.post("/google/callback", async (req, res) => {
       { headers: { Authorization: `Bearer ${access_token}` } }
     );
     const profile = profileRes.data;
-
-    // 3. 사용자 DB 처리 및 JWT 발급 (예시)
     const email = profile.email;
     const username = profile.name || profile.email.split("@")[0];
-    let user;
+
+    // 3. 사용자 DB 조회
     const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
     if (users.length > 0) {
-      user = users[0];
+      // 기존 유저: 바로 로그인 처리
+      const user = users[0];
+      const tokenPayload = { id: user.id, role: user.role };
+      const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      return res.json({
+        success: true,
+        accessToken: jwtAccessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      });
     } else {
-      // 신규 가입 처리 (간단 예시)
-      await db.query(
-        `INSERT INTO users (username, email, role) VALUES (?, ?, 'user')`,
-        [username, email]
-      );
-      const [newUsers] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-      user = newUsers[0];
+      // 신규 유저: 임시 토큰 발급 (추가 정보 입력 필요)
+      const tempPayload = {
+        socialProvider: "google",
+        googleId: profile.id,
+        email,
+        name: username,
+        photo: profile.picture || "",
+      };
+      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+      return res.json({ tempToken }); // 프론트는 /register/social?token=...로 이동해야함
     }
-
-    const tokenPayload = { id: user.id, role: user.role };
-    const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-
-    // 응답
-    return res.json({
-      success: true,
-      accessToken: jwtAccessToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-      },
-    });
   } catch (err) {
     console.error("Google OAuth Error:", err);
-    // 혹시 err.response?.data가 있으면 찍고
     if (err.response) {
       console.error("Google OAuth Error [response.data]:", err.response.data);
     }
     return res.status(500).json({ error: "Google OAuth Error", detail: err.message });
   }
-
 });
+
 // 카카오 code 처리 REST API
 router.post("/kakao/callback", async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
-    // 1. 카카오 access_token 요청
     const tokenRes = await axios.post(
       "https://kauth.kakao.com/oauth/token",
       null,
@@ -103,7 +101,7 @@ router.post("/kakao/callback", async (req, res) => {
           client_id: process.env.KAKAO_CLIENT_ID,
           redirect_uri: process.env.KAKAO_REDIRECT_URI,
           code,
-          client_secret: process.env.KAKAO_CLIENT_SECRET, // 없으면 생략
+          client_secret: process.env.KAKAO_CLIENT_SECRET,
         },
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
@@ -116,46 +114,51 @@ router.post("/kakao/callback", async (req, res) => {
     });
     const kakao = profileRes.data;
     const email = kakao.kakao_account?.email;
-    const username = kakao.properties?.nickname || email.split("@")[0];
+    const username = kakao.properties?.nickname || (email ? email.split("@")[0] : "");
 
-    // 3. 사용자 DB 처리 및 JWT 발급 (예시)
-    let user;
+    // 3. 사용자 DB 조회
     const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
     if (users.length > 0) {
-      user = users[0];
+      // 기존 유저
+      const user = users[0];
+      const tokenPayload = { id: user.id, role: user.role };
+      const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      return res.json({
+        success: true,
+        accessToken: jwtAccessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      });
     } else {
-      await db.query(
-        `INSERT INTO users (username, email, role) VALUES (?, ?, 'user')`,
-        [username, email]
-      );
-      const [newUsers] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-      user = newUsers[0];
+      // 신규 유저: 임시 토큰 발급
+      const kakaoAccount = kakao.kakao_account || {};
+      const tempPayload = {
+        socialProvider: "kakao",
+        kakaoId: kakao.id,
+        email: kakaoAccount.email || "",
+        name: kakaoAccount.profile?.nickname || username,
+        phone: kakaoAccount.phone_number || "",
+        photo: kakaoAccount.profile?.profile_image_url || "",
+      };
+      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+      return res.json({ tempToken });
     }
-    const tokenPayload = { id: user.id, role: user.role };
-    const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-
-    return res.json({
-      success: true,
-      accessToken: jwtAccessToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-      },
-    });
   } catch (err) {
     console.error("Kakao OAuth Error:", err.response?.data || err.message);
     return res.status(500).json({ error: "Kakao OAuth Error" });
   }
 });
+
 // 네이버 code 처리 REST API
 router.post("/naver/callback", async (req, res) => {
   const { code, state } = req.body;
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
-    // 1. 네이버 access_token 요청
     const tokenRes = await axios.post(
       "https://nid.naver.com/oauth2.0/token",
       null,
@@ -165,7 +168,7 @@ router.post("/naver/callback", async (req, res) => {
           client_id: process.env.NAVER_CLIENT_ID,
           client_secret: process.env.NAVER_CLIENT_SECRET,
           code,
-          state, // state 필수 (프론트에서 그대로 받아서 보내야 함)
+          state,
         },
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
@@ -178,39 +181,44 @@ router.post("/naver/callback", async (req, res) => {
     });
     const naver = profileRes.data.response;
     const email = naver.email;
-    const username = naver.nickname || email.split("@")[0];
+    const username = naver.nickname || (email ? email.split("@")[0] : "");
 
-    // 3. 사용자 DB 처리 및 JWT 발급 (예시)
-    let user;
+    // 3. 사용자 DB 조회
     const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
     if (users.length > 0) {
-      user = users[0];
+      // 기존 유저
+      const user = users[0];
+      const tokenPayload = { id: user.id, role: user.role };
+      const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      return res.json({
+        success: true,
+        accessToken: jwtAccessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      });
     } else {
-      await db.query(
-        `INSERT INTO users (username, email, role) VALUES (?, ?, 'user')`,
-        [username, email]
-      );
-      const [newUsers] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-      user = newUsers[0];
+      // 신규 유저: 임시 토큰 발급
+      const tempPayload = {
+        socialProvider: "naver",
+        naverId: naver.id,
+        email: naver.email || "",
+        name: naver.nickname || username,
+        phone: naver.mobile || naver.phone || "",
+        photo: naver.profile_image || "",
+      };
+      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+      return res.json({ tempToken });
     }
-    const tokenPayload = { id: user.id, role: user.role };
-    const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-
-    return res.json({
-      success: true,
-      accessToken: jwtAccessToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-      },
-    });
   } catch (err) {
     console.error("Naver OAuth Error:", err.response?.data || err.message);
     return res.status(500).json({ error: "Naver OAuth Error" });
   }
 });
+
 
 // // ====================== 소셜 로그인 (Google) ======================
 // router.get(
