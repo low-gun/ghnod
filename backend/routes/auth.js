@@ -42,7 +42,16 @@ router.get(
         sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
       res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true,
         sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-      return res.redirect("https://ghnod.vercel.app/");
+        return res.json({
+          success: true,
+          accessToken,
+          user: {
+            id: req.user.id,
+            email: req.user.email,
+            username: req.user.username,
+            role: req.user.role,
+          },
+        });
     } else if (req.authInfo && req.authInfo.tempToken) {
       // 신규 유저 - 추가 정보 입력
       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
