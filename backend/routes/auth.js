@@ -13,7 +13,6 @@ const {
 
 const router = express.Router();
 const { parseDeviceInfo } = require("../utils/parseDeviceInfo");
-const axios = require("axios");
 // Google OAuth2 code 처리용 REST API
 router.post("/google/callback", async (req, res) => {
   const { code } = req.body;
