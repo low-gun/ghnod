@@ -9,8 +9,36 @@ const SocialLoginButtons = () => {
   }
 
   const handleLogin = (provider) => {
-    window.location.href = `${OAUTH_BASE_URL}/api/auth/${provider}`;
+    if (provider === "google") {
+      const params = new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+        redirect_uri: process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI,
+        response_type: "code",
+        scope: "profile email",
+        access_type: "offline",
+        prompt: "consent",
+      });
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    } else if (provider === "kakao") {
+      const params = new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID,
+        redirect_uri: process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI,
+        response_type: "code",
+      });
+      window.location.href = `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
+    } else if (provider === "naver") {
+      const state = Math.random().toString(36).substring(2); // 임시 state
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID,
+        redirect_uri: process.env.NEXT_PUBLIC_NAVER_REDIRECT_URI,
+        state,
+      });
+      window.location.href = `https://nid.naver.com/oauth2.0/authorize?${params.toString()}`;
+      // state는 callback에서 그대로 req.body로 넘겨줘야 함!
+    }
   };
+  
   return (
     <div style={containerStyle}>
       <div style={iconWrapperStyle}>
