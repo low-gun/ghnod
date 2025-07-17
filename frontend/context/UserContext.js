@@ -60,7 +60,9 @@ export function UserProvider({ children }) {
           const newAccessToken = res.data.accessToken;
           setAccessToken(newAccessToken);
           applyAccessTokenToAxios(newAccessToken);
+          sessionStorage.setItem("accessToken", newAccessToken); // ✅ 추가
         })
+        
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
           // 보호가 필요한 경로만 명시
