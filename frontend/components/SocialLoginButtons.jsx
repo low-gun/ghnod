@@ -10,14 +10,22 @@ const SocialLoginButtons = () => {
 
   const handleLogin = (provider) => {
     if (provider === "google") {
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      const redirectUri = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI;
       const params = new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        redirect_uri: process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI,
+        client_id: clientId,
+        redirect_uri: redirectUri,
         response_type: "code",
         scope: "profile email",
         access_type: "offline",
         prompt: "consent",
       });
+  
+      // ✅ 콘솔로그 추가
+      console.log("[Google Login] client_id:", clientId);
+      console.log("[Google Login] redirect_uri:", redirectUri);
+      console.log("[Google Login] 최종 URL:", `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  
       window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     } else if (provider === "kakao") {
       const params = new URLSearchParams({
