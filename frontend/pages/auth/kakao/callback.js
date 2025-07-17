@@ -17,18 +17,20 @@ export default function KakaoCallbackPage() {
     }
 
     api.post("/auth/kakao/callback", { code })
-      .then(res => {
-        const { accessToken, user } = res.data;
-        if (accessToken && user) {
-          login(user, accessToken);
-          router.replace("/");
-        } else {
-          router.replace("/login?error=token-missing");
-        }
-      })
-      .catch(() => {
-        router.replace("/login?error=kakao-fail");
-      });
+    .then(res => {
+      const { accessToken, user, tempToken } = res.data;
+      if (accessToken && user) {
+        login(user, accessToken);
+        router.replace("/");
+      } else if (tempToken) {
+        router.replace(`/register/social?token=${tempToken}`);
+      } else {
+        router.replace("/login?error=token-missing");
+      }
+    })
+    .catch(() => {
+      router.replace("/login?error=kakao-fail");
+    });
   }, []);
 
   return <p>카카오 로그인 처리 중입니다...</p>;

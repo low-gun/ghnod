@@ -18,18 +18,20 @@ export default function NaverCallbackPage() {
     }
 
     api.post("/auth/naver/callback", { code, state })
-      .then(res => {
-        const { accessToken, user } = res.data;
-        if (accessToken && user) {
-          login(user, accessToken);
-          router.replace("/");
-        } else {
-          router.replace("/login?error=token-missing");
-        }
-      })
-      .catch(() => {
-        router.replace("/login?error=naver-fail");
-      });
+    .then(res => {
+      const { accessToken, user, tempToken } = res.data;
+      if (accessToken && user) {
+        login(user, accessToken);
+        router.replace("/");
+      } else if (tempToken) {
+        router.replace(`/register/social?token=${tempToken}`);
+      } else {
+        router.replace("/login?error=token-missing");
+      }
+    })
+    .catch(() => {
+      router.replace("/login?error=naver-fail");
+    });
   }, []);
 
   return <p>네이버 로그인 처리 중입니다...</p>;
