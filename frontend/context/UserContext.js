@@ -42,10 +42,16 @@ export function UserProvider({ children }) {
     if (router.pathname === "/login") return;
   
     const storedToken = sessionStorage.getItem("accessToken");
-  
+    const cookieToken = getCookie("accessToken"); // 👈 추가
+    
     if (storedToken) {
       setAccessToken(storedToken);
       applyAccessTokenToAxios(storedToken);
+    } else if (cookieToken) {
+      // 👈 쿠키에서 accessToken을 찾았으면 바로 저장
+      setAccessToken(cookieToken);
+      applyAccessTokenToAxios(cookieToken);
+      sessionStorage.setItem("accessToken", cookieToken);
     } else {
       const sessionId = getClientSessionId();
       console.log("📌 refresh-token 요청 전 clientSessionId:", sessionId);
@@ -175,3 +181,11 @@ if (isProtected && !accessToken) {
   );
 }
 export const useUserContext = () => useContext(UserContext);
+// 👇 useEffect 바깥에 추가 (함수 안 or 파일 맨 아래에 둬도 됨)
+const getCookie = (name) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+};
