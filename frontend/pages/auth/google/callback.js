@@ -10,9 +10,28 @@ export default function GoogleCallbackPage() {
   useEffect(() => {
     const fetchGoogleLogin = async () => {
       try {
-        const res = await api.get("/auth/google/callback" + window.location.search, {
-          withCredentials: true,
-        });
+        useEffect(() => {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get("code");
+            if (!code) {
+              router.replace("/login?error=no_code");
+              return;
+            }
+          
+            api.post("/auth/google/callback", { code })
+              .then(res => {
+                const { accessToken, user } = res.data;
+                if (accessToken && user) {
+                  login(user, accessToken);
+                  router.replace("/");
+                } else {
+                  router.replace("/login?error=token-missing");
+                }
+              })
+              .catch(() => {
+                router.replace("/login?error=google-fail");
+              });
+          }, []);
 
         const { accessToken, user } = res.data;
 
