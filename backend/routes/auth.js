@@ -1,4 +1,7 @@
 // backend/routes/auth.js
+console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
+console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
+console.log("GOOGLE_REDIRECT_URI:", process.env.GOOGLE_REDIRECT_URI);
 
 const express = require("express");
 const bcrypt = require("bcryptjs");
@@ -75,9 +78,14 @@ router.post("/google/callback", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Google OAuth Error:", err.response?.data || err.message);
-    return res.status(500).json({ error: "Google OAuth Error" });
+    console.error("Google OAuth Error:", err);
+    // 혹시 err.response?.data가 있으면 찍고
+    if (err.response) {
+      console.error("Google OAuth Error [response.data]:", err.response.data);
+    }
+    return res.status(500).json({ error: "Google OAuth Error", detail: err.message });
   }
+
 });
 // 카카오 code 처리 REST API
 router.post("/kakao/callback", async (req, res) => {
