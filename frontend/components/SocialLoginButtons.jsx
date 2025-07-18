@@ -1,8 +1,17 @@
 import React from "react";
 
+
 const SocialLoginButtons = () => {
   // 소셜로그인만 별도 OAUTH BASE_URL 사용
   const OAUTH_BASE_URL = process.env.NEXT_PUBLIC_OAUTH_BASE_URL;
+  useEffect(() => {
+    // 환경변수 실제 값 확인
+    console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+    console.log("NEXT_PUBLIC_OAUTH_BASE_URL:", process.env.NEXT_PUBLIC_OAUTH_BASE_URL);
+    console.log("NEXT_PUBLIC_GOOGLE_CLIENT_ID:", process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+    console.log("NEXT_PUBLIC_GOOGLE_REDIRECT_URI:", process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI);
+  }, []);
+
   if (!OAUTH_BASE_URL) {
     alert("OAUTH_BASE_URL 환경변수가 설정되지 않았습니다.");
     return null;
