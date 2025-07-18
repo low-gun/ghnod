@@ -96,9 +96,6 @@ export function UserProvider({ children }) {
     }
   }, [router.pathname, accessToken]);
   
-
-  
-  
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
     if (!accessToken) return;
@@ -114,7 +111,13 @@ export function UserProvider({ children }) {
       })
       .catch((error) => {
         console.error("유저 정보를 불러오지 못했습니다.", error);
-        logout();
+        // 401/403 에러일 때는 logout() 호출하지 않고 무시 (게스트 허용)
+        if (
+          error?.response?.status !== 401 &&
+          error?.response?.status !== 403
+        ) {
+          logout();
+        }
       });
   }, [accessToken]);
 
