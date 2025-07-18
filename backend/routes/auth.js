@@ -58,11 +58,17 @@ router.post("/google/callback", async (req, res) => {
     console.log("[google/callback] users.length:", users.length);
 
     if (users.length > 0) {
-      // 기존 유저
       const user = users[0];
+      // (1) 삭제/비활성화 계정 방지
+      if (user.is_deleted === 1) {
+        return res.status(403).json({ error: "비활성화된 계정입니다. 관리자에게 문의하세요." });
+      }
+      // (2) 권한 누락 방지
+      if (!user.role) {
+        return res.status(403).json({ error: "권한 없는 계정입니다. 관리자에게 문의하세요." });
+      }
       const tokenPayload = { id: user.id, role: user.role };
       const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-      console.log("[google/callback] 로그인 성공, user.id:", user.id);
       return res.json({
         success: true,
         accessToken: jwtAccessToken,
