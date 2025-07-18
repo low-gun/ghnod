@@ -99,7 +99,7 @@ export function UserProvider({ children }) {
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
     if (!accessToken) return;
-    if (user) return; // 이미 user 있으면 /user 요청 생략
+    if (user && user.id) return; // ✅ user.id까지 꼭 있을 때만 /user 요청 생략
   
     api
       .get("/user")
@@ -119,7 +119,8 @@ export function UserProvider({ children }) {
           logout();
         }
       });
-  }, [accessToken, user]); // user도 의존성에 추가
+  }, [accessToken, user]);
+  
   
 
   // 3️⃣ 로그인 시 호출

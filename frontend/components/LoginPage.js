@@ -61,8 +61,9 @@ export default function LoginPage() {
         const userData = {
           id: data.user.id,
           email: data.user.email,
-          name: data.user.username,
+          username: data.user.username, // 👈 반드시 username
           role: data.user.role,
+          // (필요하면 company, department, phone 등 users 테이블의 컬럼 다 맞춤)
         };
   
         setAccessToken(data.accessToken);
