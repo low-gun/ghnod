@@ -42,16 +42,25 @@ export function UserProvider({ children }) {
     if (router.pathname === "/login") return;
   
     const storedToken = sessionStorage.getItem("accessToken");
-    const cookieToken = getCookie("accessToken"); // 👈 추가
-    
+    const cookieToken = getCookie("accessToken");
+  
     if (storedToken) {
       setAccessToken(storedToken);
       applyAccessTokenToAxios(storedToken);
+      // 최초 복구에만 user 세팅 (accessToken 있을 때만!)
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     } else if (cookieToken) {
-      // 👈 쿠키에서 accessToken을 찾았으면 바로 저장
       setAccessToken(cookieToken);
       applyAccessTokenToAxios(cookieToken);
       sessionStorage.setItem("accessToken", cookieToken);
+      // 쿠키 복구에도 user 세팅
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     } else {
       const sessionId = getClientSessionId();
       console.log("📌 refresh-token 요청 전 clientSessionId:", sessionId);
@@ -66,43 +75,40 @@ export function UserProvider({ children }) {
           const newAccessToken = res.data.accessToken;
           setAccessToken(newAccessToken);
           applyAccessTokenToAxios(newAccessToken);
-          sessionStorage.setItem("accessToken", newAccessToken); // ✅ 추가
+          sessionStorage.setItem("accessToken", newAccessToken);
+  
+          // 토큰 복구 성공 시 user 세팅(최초만)
+          const storedUser = localStorage.getItem("user");
+          if (storedUser) {
+            setUser(JSON.parse(storedUser));
+          }
         })
-        
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
-          // 보호가 필요한 경로만 명시
-const protectedRoutes = [
-  "/mypage",
-  "/orders",
-  "/checkout",
-  "/admin",
-];
-
-const isProtected = protectedRoutes.some((path) =>
-  router.pathname.startsWith(path)
-);
-
-if (isProtected && !accessToken) {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser && JSON.parse(storedUser).role === "admin") {
-    // admin이면 강제 로그아웃시키지 않고 /admin 이동
-    router.replace("/admin");
-    return;
-  }
-  logout();
-  router.replace("/login");
-  return;
-}
-
+          const protectedRoutes = [
+            "/mypage",
+            "/orders",
+            "/checkout",
+            "/admin",
+          ];
+          const isProtected = protectedRoutes.some((path) =>
+            router.pathname.startsWith(path)
+          );
+  
+          if (isProtected && !accessToken) {
+            const storedUser = localStorage.getItem("user");
+            if (storedUser && JSON.parse(storedUser).role === "admin") {
+              router.replace("/admin");
+              return;
+            }
+            logout();
+            router.replace("/login");
+            return;
+          }
         });
     }
+  }, []);  // 💡 의존성 빈 배열!
   
-    const storedUser = localStorage.getItem("user");
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, [router.pathname]);
   
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
