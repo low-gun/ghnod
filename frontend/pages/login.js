@@ -12,6 +12,10 @@ import SocialLoginButtons from "@/components/SocialLoginButtons";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
 export default function LoginPage() {
+  useEffect(() => {
+    // 환경 변수 확인용
+    console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
@@ -20,11 +24,7 @@ export default function LoginPage() {
   const { user, login } = useContext(UserContext);
   const { setCartItems, setCartReady } = useCartContext();
   const isMobile = useIsMobile();
-  export default function LoginPage() {
-    useEffect(() => {
-      // 환경 변수 확인용
-      console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
-    }, []);
+
   // 로그인 상태에서 /login 접근시 바로 이동
   useEffect(() => {
     if (user) {
