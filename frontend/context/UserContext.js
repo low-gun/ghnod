@@ -92,6 +92,8 @@ export function UserProvider({ children }) {
               router.replace("/admin");
               return;
             }
+            // 만약 이미 /login이면 아무 것도 하지 마라 (로그아웃 금지)
+            if (router.pathname === "/login") return;
             logout();
             router.replace("/login");
           }
