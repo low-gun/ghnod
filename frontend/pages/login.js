@@ -1,7 +1,7 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react"; // useEffect 추가!
 import { useRouter } from "next/router";
 import { UserContext } from "../context/UserContext";
-import { useCartContext } from "../context/CartContext"; // ✅ 여기에 추가
+import { useCartContext } from "../context/CartContext";
 import api, { setAccessToken as applyAccessTokenToAxios } from "@/lib/api";
 import ChangePasswordModal from "@/components/mypage/ChangePasswordModal";
 import { getClientSessionId } from "@/lib/session";
@@ -9,16 +9,25 @@ import { toast } from "react-toastify";
 import { ChevronLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import SocialLoginButtons from "@/components/SocialLoginButtons";
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize"; // 상단에 추가
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [userId, setUserId] = useState(null);
   const router = useRouter();
-  const { login } = useContext(UserContext);
-  const { setCartItems, setCartReady } = useCartContext(); // ✅ cartReady도 같이 꺼냄
-  const isMobile = useIsMobile(); // 컴포넌트 안에 추가
+  const { user, login } = useContext(UserContext);
+  const { setCartItems, setCartReady } = useCartContext();
+  const isMobile = useIsMobile();
+
+  // 로그인 상태에서 /login 접근시 바로 이동
+  useEffect(() => {
+    if (user) {
+      router.replace(user.role === "admin" ? "/admin" : "/");
+    }
+  }, [user]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -46,10 +55,8 @@ export default function LoginPage() {
           role: data.user.role,
         };
 
-        // ✅ accessToken 세팅 (user 인증 전환)
         applyAccessTokenToAxios(data.accessToken);
 
-        // ✅ 로그인 후 서버 기준으로 장바구니 재요청 (병합 반영됨)
         let finalCartItems = [];
         try {
           const cartRes = await api.get("/cart/items");
@@ -60,17 +67,13 @@ export default function LoginPage() {
           console.warn("🛒 로그인 직후 장바구니 fetch 실패:", err.message);
         }
 
-        login(userData, data.accessToken, finalCartItems); // ✅ 정확하게 전달
-
-        // ✅ 전역 상태 반영
+        login(userData, data.accessToken, finalCartItems);
         setCartItems(finalCartItems);
         setCartReady(true);
 
-        // ✅ 병합 끝난 이후에 guest_token 제거
         localStorage.removeItem("guest_token");
         delete api.defaults.headers.common["x-guest-token"];
 
-        // ✅ 리다이렉트
         router.replace(data.user.role === "admin" ? "/admin" : "/");
       } else {
         toast.error("로그인 실패: " + data.message);
