@@ -28,12 +28,14 @@ export default function LoginPage() {
 
   // 로그인 상태에서 /login 접근시 바로 이동
   useEffect(() => {
+    if (typeof user === "undefined") return; // context 준비 전 대기(CSR 안전)
     if (!user) return;
     const target = user.role === "admin" ? "/admin" : "/";
     if (router.pathname !== target) {
       router.replace(target);
     }
   }, [user, router.pathname]);
+  
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -43,26 +45,26 @@ export default function LoginPage() {
         clientSessionId: getClientSessionId(),
       });
       const data = res.data;
-
+  
       if (data.success) {
         console.log("✅ 로그인 성공 - accessToken:", data.accessToken);
         toast.success("로그인 성공! 환영합니다 😊");
-
+  
         if (data.user?.needsPasswordReset) {
           setUserId(data.user.id);
           setShowPasswordResetModal(true);
           return;
         }
-
+  
         const userData = {
           id: data.user.id,
           email: data.user.email,
           name: data.user.username,
           role: data.user.role,
         };
-
+  
         applyAccessTokenToAxios(data.accessToken);
-
+  
         let finalCartItems = [];
         try {
           const cartRes = await api.get("/cart/items");
@@ -72,25 +74,17 @@ export default function LoginPage() {
         } catch (err) {
           console.warn("🛒 로그인 직후 장바구니 fetch 실패:", err.message);
         }
-
+  
+        // 👇 여기서 한 번만 실행
         login(userData, data.accessToken, finalCartItems);
-setCartItems(finalCartItems);
-setCartReady(true);
-
-localStorage.removeItem("guest_token");
-delete api.defaults.headers.common["x-guest-token"];
-
-// 👇 setTimeout으로 context 반영 후 이동 보장
-login(userData, data.accessToken, finalCartItems);
-console.log("[LoginPage] login 함수 호출, userData:", userData);
-setCartItems(finalCartItems);
-setCartReady(true);
-
-setTimeout(() => {
-  console.log("[LoginPage] setTimeout 라우팅 시도, 현재 user:", user); // user 상태도 찍기
-  router.replace(data.user.role === "admin" ? "/admin" : "/");
-}, 0);
-
+        setCartItems(finalCartItems);
+        setCartReady(true);
+  
+        localStorage.removeItem("guest_token");
+        delete api.defaults.headers.common["x-guest-token"];
+  
+        // ❌ 중복 login, setCartItems, setCartReady, setTimeout 모두 제거
+  
       } else {
         toast.error("로그인 실패: " + data.message);
       }
@@ -100,6 +94,7 @@ setTimeout(() => {
       toast.error(msg);
     }
   };
+  
 
   const containerStyle = {
     display: "flex",
