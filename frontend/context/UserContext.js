@@ -106,6 +106,7 @@ export function UserProvider({ children }) {
       .then((res) => {
         const data = res.data;
         if (data.success && data.user) {
+          console.log("✅ [/user] data.user", data.user);
           setUser(data.user);
           localStorage.setItem("user", JSON.stringify(data.user));
         }

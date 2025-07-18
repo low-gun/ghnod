@@ -32,7 +32,7 @@ export default function LoginPage() {
     if (typeof user === "undefined") return;
     if (!user) return;
     const target = user.role === "admin" ? "/admin" : "/";
-    // pathname이 /login에서만 이동하도록 (불필요한 재이동 방지)
+    // 👇 수정: /login에서만 이동 (반복 방지)
     if (router.pathname === "/login" && router.pathname !== target) {
       router.replace(target);
     }
@@ -65,7 +65,7 @@ export default function LoginPage() {
           role: data.user.role,
           // (필요하면 company, department, phone 등 users 테이블의 컬럼 다 맞춤)
         };
-  
+        console.log("✅ [login] userData", userData);
         setAccessToken(data.accessToken);
   
         let finalCartItems = [];
