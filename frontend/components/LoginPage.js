@@ -29,10 +29,11 @@ export default function LoginPage() {
 
   // 로그인 상태에서 /login 접근시 바로 이동
   useEffect(() => {
-    if (typeof user === "undefined") return; // context 준비 전 대기(CSR 안전)
+    if (typeof user === "undefined") return;
     if (!user) return;
     const target = user.role === "admin" ? "/admin" : "/";
-    if (router.pathname !== target) {
+    // pathname이 /login에서만 이동하도록 (불필요한 재이동 방지)
+    if (router.pathname === "/login" && router.pathname !== target) {
       router.replace(target);
     }
   }, [user, router.pathname]);

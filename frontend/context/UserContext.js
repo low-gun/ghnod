@@ -99,7 +99,8 @@ export function UserProvider({ children }) {
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
     if (!accessToken) return;
-
+    if (user) return; // 이미 user 있으면 /user 요청 생략
+  
     api
       .get("/user")
       .then((res) => {
@@ -111,7 +112,6 @@ export function UserProvider({ children }) {
       })
       .catch((error) => {
         console.error("유저 정보를 불러오지 못했습니다.", error);
-        // 401/403 에러일 때는 logout() 호출하지 않고 무시 (게스트 허용)
         if (
           error?.response?.status !== 401 &&
           error?.response?.status !== 403
@@ -119,7 +119,8 @@ export function UserProvider({ children }) {
           logout();
         }
       });
-  }, [accessToken]);
+  }, [accessToken, user]); // user도 의존성에 추가
+  
 
   // 3️⃣ 로그인 시 호출
   const login = (userData, token, cartItems = []) => {
