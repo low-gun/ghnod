@@ -135,12 +135,16 @@ exports.getMyInfo = async (req, res) => {
     );
 
     return res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      coupons,
-      point_balance: Number(pointRow[0].point_balance || 0), // ✅ 여기만 바꾸면 끝
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        coupons,
+        point_balance: Number(pointRow[0].point_balance || 0),
+      }
     });
+    
   } catch (err) {
     console.error("❌ 내 정보 조회 오류:", err);
     res.status(500).json({ success: false, message: "내 정보 조회 실패" });
