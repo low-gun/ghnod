@@ -1,3 +1,5 @@
+// pages/_app.js
+
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import MainLayout from "../components/layout/MainLayout";
@@ -9,7 +11,7 @@ import "react-toastify/dist/ReactToastify.css";
 import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import useGlobalLoading from "@/stores/globalLoading";
-import ScrollTopButton from "@/components/common/ScrollTopButton"; // ✅ 추가
+import ScrollTopButton from "@/components/common/ScrollTopButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function CartInitializer() {
@@ -51,6 +53,11 @@ function MyApp({ Component, pageProps }) {
   const { showLoading, hideLoading } = useGlobalLoading();
   let startTime = 0;
   let maxTimeout = null;
+
+  // ✅ 여기에 console.log 추가
+  useEffect(() => {
+    console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+  }, []);
 
   useEffect(() => {
     const handleStart = () => {
