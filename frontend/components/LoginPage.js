@@ -72,13 +72,17 @@ export default function LoginPage() {
         }
 
         login(userData, data.accessToken, finalCartItems);
-        setCartItems(finalCartItems);
-        setCartReady(true);
+setCartItems(finalCartItems);
+setCartReady(true);
 
-        localStorage.removeItem("guest_token");
-        delete api.defaults.headers.common["x-guest-token"];
+localStorage.removeItem("guest_token");
+delete api.defaults.headers.common["x-guest-token"];
 
-        router.replace(data.user.role === "admin" ? "/admin" : "/");
+// 👇 setTimeout으로 context 반영 후 이동 보장
+setTimeout(() => {
+  router.replace(data.user.role === "admin" ? "/admin" : "/");
+}, 0);
+
       } else {
         toast.error("로그인 실패: " + data.message);
       }

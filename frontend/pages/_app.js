@@ -95,17 +95,17 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <UserProvider>
-          <CartInitializer />
-          <GlobalLoadingBar />
-          <LayoutWrapper>
-            <Component {...pageProps} />
-          </LayoutWrapper>
-          <ScrollTopButton />
-          <ToastContainer position="top-right" autoClose={2000} />
-        </UserProvider>
-      </CartProvider>
+<UserProvider>
+  <CartProvider>
+    <CartInitializer />
+    <GlobalLoadingBar />
+    <LayoutWrapper>
+      <Component {...pageProps} />
+    </LayoutWrapper>
+    <ScrollTopButton />
+    <ToastContainer position="top-right" autoClose={2000} />
+  </CartProvider>
+</UserProvider>
     </QueryClientProvider>
   );
 }
