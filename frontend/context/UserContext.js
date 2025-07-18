@@ -84,8 +84,14 @@ const isProtected = protectedRoutes.some((path) =>
 );
 
 if (isProtected && !accessToken) {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser && JSON.parse(storedUser).role === "admin") {
+    // admin이면 강제 로그아웃시키지 않고 /admin 이동
+    router.replace("/admin");
+    return;
+  }
   logout();
-  router.push("/login");
+  router.replace("/login");
   return;
 }
 
