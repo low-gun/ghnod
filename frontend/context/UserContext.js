@@ -39,7 +39,8 @@ export function UserProvider({ children }) {
   // ✅ 2. accessToken 복구 또는 refresh-token 자동 요청
   useEffect(() => {
     console.log("UserContext useEffect 실행, path:", router.pathname);
-    // 👇 로그인 페이지에서는 refresh-token 시도 안함
+  
+    // 👇 로그인 페이지에서는 refresh-token 시도/로그아웃 절대 금지
     if (router.pathname === "/login") return;
   
     const storedToken = sessionStorage.getItem("accessToken");
@@ -48,20 +49,14 @@ export function UserProvider({ children }) {
     if (storedToken) {
       setAccessToken(storedToken);
       applyAccessTokenToAxios(storedToken);
-      // 최초 복구에만 user 세팅 (accessToken 있을 때만!)
       const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
+      if (storedUser) setUser(JSON.parse(storedUser));
     } else if (cookieToken) {
       setAccessToken(cookieToken);
       applyAccessTokenToAxios(cookieToken);
       sessionStorage.setItem("accessToken", cookieToken);
-      // 쿠키 복구에도 user 세팅
       const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
+      if (storedUser) setUser(JSON.parse(storedUser));
     } else {
       const sessionId = getClientSessionId();
       console.log("📌 refresh-token 요청 전 clientSessionId:", sessionId);
@@ -77,26 +72,21 @@ export function UserProvider({ children }) {
           setAccessToken(newAccessToken);
           applyAccessTokenToAxios(newAccessToken);
           sessionStorage.setItem("accessToken", newAccessToken);
-  
-          // 토큰 복구 성공 시 user 세팅(최초만)
           const storedUser = localStorage.getItem("user");
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-          }
+          if (storedUser) setUser(JSON.parse(storedUser));
         })
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
+  
+          // 🚨 보호 경로에서만 logout, /login은 절대 예외처리
           const protectedRoutes = [
-            "/mypage",
-            "/orders",
-            "/checkout",
-            "/admin",
+            "/mypage", "/orders", "/checkout", "/admin"
           ];
           const isProtected = protectedRoutes.some((path) =>
             router.pathname.startsWith(path)
           );
   
-          if (isProtected && !accessToken) {
+          if (isProtected && router.pathname !== "/login" && !accessToken) {
             const storedUser = localStorage.getItem("user");
             if (storedUser && JSON.parse(storedUser).role === "admin") {
               router.replace("/admin");
@@ -104,11 +94,11 @@ export function UserProvider({ children }) {
             }
             logout();
             router.replace("/login");
-            return;
           }
+          // /login이면 아무것도 하지 마라
         });
     }
-  }, [router.pathname]); // ✅ pathname 추가!
+  }, [router.pathname]); // 반드시 의존성 추가
 
   
   
