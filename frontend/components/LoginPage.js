@@ -10,6 +10,7 @@ import { ChevronLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import SocialLoginButtons from "@/components/SocialLoginButtons.dynamic";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
+import { setAccessToken } from "@/lib/api";
 
 export default function LoginPage() {
   useEffect(() => {
