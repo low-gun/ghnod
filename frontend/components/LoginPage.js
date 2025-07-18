@@ -80,7 +80,13 @@ localStorage.removeItem("guest_token");
 delete api.defaults.headers.common["x-guest-token"];
 
 // 👇 setTimeout으로 context 반영 후 이동 보장
+login(userData, data.accessToken, finalCartItems);
+console.log("[LoginPage] login 함수 호출, userData:", userData);
+setCartItems(finalCartItems);
+setCartReady(true);
+
 setTimeout(() => {
+  console.log("[LoginPage] setTimeout 라우팅 시도, 현재 user:", user); // user 상태도 찍기
   router.replace(data.user.role === "admin" ? "/admin" : "/");
 }, 0);
 

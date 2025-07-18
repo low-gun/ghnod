@@ -125,6 +125,7 @@ export function UserProvider({ children }) {
 
   // 3️⃣ 로그인 시 호출
   const login = (userData, token, cartItems = []) => {
+    console.log("[UserContext.login] 호출됨", userData, token, cartItems);
     setUser(userData);
     setAccessToken(token);
     applyAccessTokenToAxios(token);
