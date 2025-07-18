@@ -79,7 +79,7 @@ export function UserProvider({ children }) {
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
   
-          // 🚨 보호 경로에서만 logout, /login은 절대 예외처리
+          // 보호 경로에서만 로그아웃, /login 예외처리
           const protectedRoutes = [
             "/mypage", "/orders", "/checkout", "/admin"
           ];
@@ -87,21 +87,15 @@ export function UserProvider({ children }) {
             router.pathname.startsWith(path)
           );
   
-          if (isProtected && router.pathname !== "/login" && !accessToken) {
-            const storedUser = localStorage.getItem("user");
-            if (storedUser && JSON.parse(storedUser).role === "admin") {
-              router.replace("/admin");
-              return;
-            }
-            // 만약 이미 /login이면 아무 것도 하지 마라 (로그아웃 금지)
-            if (router.pathname === "/login") return;
+          // 👇 accessToken까지 null(진짜 무효)일 때만 로그아웃
+          if (isProtected && router.pathname !== "/login" && !storedToken && !cookieToken && !accessToken) {
             logout();
             router.replace("/login");
           }
-          // /login이면 아무것도 하지 마라
         });
     }
-  }, [router.pathname]); // 반드시 의존성 추가
+  }, [router.pathname, accessToken]);
+  
 
   
   
