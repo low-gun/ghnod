@@ -99,16 +99,19 @@ export function UserProvider({ children }) {
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
     if (!accessToken) return;
-    if (user && user.id) return; // ✅ user.id까지 꼭 있을 때만 /user 요청 생략
+    if (user?.id) return; // user.id 있으면 /user 호출 생략
   
     api
       .get("/user")
       .then((res) => {
         const data = res.data;
         if (data.success && data.user) {
-          console.log("✅ [/user] data.user", data.user);
-          setUser(data.user);
-          localStorage.setItem("user", JSON.stringify(data.user));
+          // 기존 user와 id가 다를 때만 setUser 실행
+          if (!user || user.id !== data.user.id) {
+            console.log("✅ [/user] data.user", data.user);
+            setUser(data.user);
+            localStorage.setItem("user", JSON.stringify(data.user));
+          }
         }
       })
       .catch((error) => {
@@ -120,7 +123,8 @@ export function UserProvider({ children }) {
           logout();
         }
       });
-  }, [accessToken, user]);
+  }, [accessToken, user?.id]);
+  
   
   
 

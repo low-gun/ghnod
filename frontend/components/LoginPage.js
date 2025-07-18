@@ -29,14 +29,12 @@ export default function LoginPage() {
 
   // 로그인 상태에서 /login 접근시 바로 이동
   useEffect(() => {
-    if (typeof user === "undefined") return;
-    if (!user) return;
+    if (!user?.id) return;
     const target = user.role === "admin" ? "/admin" : "/";
-    // 👇 수정: /login에서만 이동 (반복 방지)
     if (router.pathname === "/login" && router.pathname !== target) {
       router.replace(target);
     }
-  }, [user, router.pathname]);
+  }, [user?.id, user?.role, router.pathname]);
   
   const handleLogin = async (e) => {
     e.preventDefault();
