@@ -16,6 +16,11 @@ export default function GoogleCallbackPage() {
     const code = params.get("code");
     console.log("[callback] 쿼리 code:", code);
 
+    // **중복방지: code 쿼리스트링을 URL에서 제거**
+    if (code) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     if (!code) {
       console.log("[callback] code 없음 → /login?error=no_code 이동");
       router.replace("/login?error=no_code");
