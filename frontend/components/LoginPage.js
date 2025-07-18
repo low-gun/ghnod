@@ -8,7 +8,7 @@ import { getClientSessionId } from "@/lib/session";
 import { toast } from "react-toastify";
 import { ChevronLeft } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
-import SocialLoginButtons from "@/components/SocialLoginButtons";
+import SocialLoginButtons from "@/components/SocialLoginButtons.dynamic";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
 export default function LoginPage() {
