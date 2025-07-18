@@ -108,7 +108,8 @@ export function UserProvider({ children }) {
           }
         });
     }
-  }, []);  // 💡 의존성 빈 배열!
+  }, [router.pathname]); // ✅ pathname 추가!
+
   
   
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
