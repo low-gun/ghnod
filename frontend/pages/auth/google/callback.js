@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
@@ -6,8 +6,12 @@ import { useUserContext } from "@/context/UserContext";
 export default function GoogleCallbackPage() {
   const router = useRouter();
   const { login } = useUserContext();
+  const didRequest = useRef(false); // 중복 요청 방지 ref
 
   useEffect(() => {
+    if (didRequest.current) return;  // 한 번만 실행
+    didRequest.current = true;
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     if (!code) {
@@ -15,22 +19,21 @@ export default function GoogleCallbackPage() {
       return;
     }
     api.post("/auth/google/callback", { code })
-    .then(res => {
-      const { accessToken, user, tempToken } = res.data;
-      if (accessToken && user) {
-        login(user, accessToken);
-        router.replace("/");
-      } else if (tempToken) {
-        // 신규 소셜 회원 → 추가정보 입력
-        router.replace(`/register/social?token=${tempToken}`);
-      } else {
-        router.replace("/login?error=token-missing");
-      }
-    })
-    .catch(() => {
-      router.replace("/login?error=google-fail");
-    });
-   }, []);
+      .then(res => {
+        const { accessToken, user, tempToken } = res.data;
+        if (accessToken && user) {
+          login(user, accessToken);
+          router.replace("/");
+        } else if (tempToken) {
+          router.replace(`/register/social?token=${tempToken}`);
+        } else {
+          router.replace("/login?error=token-missing");
+        }
+      })
+      .catch(() => {
+        router.replace("/login?error=google-fail");
+      });
+  }, [router, login]); // 의존성 명시
 
   return <p>구글 로그인 처리 중입니다...</p>;
 }
