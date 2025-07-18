@@ -1,4 +1,5 @@
 // backend/routes/auth.js
+console.log("실제 서버 JWT_SECRET:", process.env.JWT_SECRET);
 console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
 console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
 console.log("GOOGLE_REDIRECT_URI:", process.env.GOOGLE_REDIRECT_URI);
