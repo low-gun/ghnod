@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [userId, setUserId] = useState(null);
   const router = useRouter();
   const { user, login } = useContext(UserContext);
+  console.log("[LoginPage] useContext의 user:", user);
   const { setCartItems, setCartReady } = useCartContext();
   const isMobile = useIsMobile();
 

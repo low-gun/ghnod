@@ -10,6 +10,7 @@ import { useContext } from "react"; // 💡 이건 파일 상단에 import
 export const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
+  console.log("[UserProvider 렌더] 진입");
   const router = useRouter();
   const { setCartItems, setCartReady } = useCartContext();
 
@@ -127,6 +128,7 @@ export function UserProvider({ children }) {
   const login = (userData, token, cartItems = []) => {
     console.log("[UserContext.login] 호출됨", userData, token, cartItems);
     setUser(userData);
+    console.log("[UserContext.login] setUser 후 user값:", userData);
     setAccessToken(token);
     applyAccessTokenToAxios(token);
 
@@ -179,7 +181,9 @@ export function UserProvider({ children }) {
     // ✅ 로그인 페이지 이동
     router.push("/login");
   };
-
+  useEffect(() => {
+    console.log("[UserContext.useEffect] user 값 변경:", user);
+  }, [user]);
   return (
     <UserContext.Provider
       value={{ user, setUser, accessToken, setAccessToken, login, logout }}
