@@ -63,7 +63,7 @@ export default function LoginPage() {
           role: data.user.role,
         };
   
-        applyAccessTokenToAxios(data.accessToken);
+        setAccessToken(data.accessToken);
   
         let finalCartItems = [];
         try {

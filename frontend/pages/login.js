@@ -1,2 +1,3 @@
-import LoginPage from "../components/LoginPage";
-export default LoginPage;
+// /pages/login.js
+import dynamic from "next/dynamic";
+export default dynamic(() => import("../components/LoginPage"), { ssr: false });
