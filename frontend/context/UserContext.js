@@ -38,6 +38,7 @@ export function UserProvider({ children }) {
 
   // ✅ 2. accessToken 복구 또는 refresh-token 자동 요청
   useEffect(() => {
+    console.log("UserContext useEffect 실행, path:", router.pathname);
     // 👇 로그인 페이지에서는 refresh-token 시도 안함
     if (router.pathname === "/login") return;
   
@@ -147,6 +148,7 @@ export function UserProvider({ children }) {
 
   // 4️⃣ 로그아웃 시 호출
   const logout = async () => {
+    console.log("[UserContext] 로그아웃 함수 진입");
     const clientSessionId = getClientSessionId();
 
     if (!clientSessionId) {
