@@ -21,7 +21,7 @@ export function UserProvider({ children }) {
   }, []);
   const { setCartItems, setCartReady } = useCartContext();
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined); // 최초엔 undefined!:contentReference[oaicite:0]{index=0}
   const [accessToken, setAccessToken] = useState(null);
 
   // ✅ 1. guest 장바구니 → 유저로 이전 함수

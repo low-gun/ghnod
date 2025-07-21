@@ -24,10 +24,10 @@ export default function LoginPage() {
   const alreadyRedirected = useRef(false);
   const isMobile = useIsMobile();
 
-  if (!router.isReady || user === undefined) return null;  // 🚩 최상단 1번
+  if (!router.isReady || user === undefined) return null; // 이때만 렌더 차단
 
   // 🚩 2. 로그인된 상태면 바로 리턴
-  if (user && user.id) return null;
+  if (user?.id) return null; // 로그인 되어있으면 폼 안보여줌
 
   // 🚩 3. 로그인 상태 변화 감지해서 1번만 리다이렉트
   useEffect(() => {
