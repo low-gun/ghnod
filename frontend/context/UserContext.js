@@ -12,6 +12,13 @@ export const UserContext = createContext(null);
 export function UserProvider({ children }) {
   console.log("[UserProvider 진입] 최초 실행, pathname:", typeof window !== "undefined" ? window.location.pathname : "SSR");
   const router = useRouter();
+  // 👇 마운트/언마운트 로그 추가
+  useEffect(() => {
+    console.log("🔵 [UserProvider] MOUNTED");
+    return () => {
+      console.log("🔴 [UserProvider] UNMOUNTED");
+    };
+  }, []);
   const { setCartItems, setCartReady } = useCartContext();
 
   const [user, setUser] = useState(null);

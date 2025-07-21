@@ -27,10 +27,23 @@ export default function LoginPage() {
   console.log("[LoginPage] useContext의 user:", user);
   const { setCartItems, setCartReady } = useCartContext();
   const alreadyRedirected = useRef(false);
+   // 👇 마운트/언마운트 로그 추가
+   useEffect(() => {
+    console.log("🟢 [LoginPage] MOUNTED");
+    return () => {
+      console.log("🟠 [LoginPage] UNMOUNTED");
+    };
+  }, []);
   const isMobile = useIsMobile();
 
-  // 로그인 상태에서 /login 접근시 바로 이동
   useEffect(() => {
+    console.log(
+      "🟩 [LoginPage] 라우팅 useEffect 진입, alreadyRedirected:",
+      alreadyRedirected.current,
+      "user.id:", user?.id,
+      "pathname:", router.pathname
+    );
+  
     if (!user?.id) return;
     const target = user.role === "admin" ? "/admin" : "/";
     if (alreadyRedirected.current) return; // 이미 이동했으면 실행 금지!
@@ -40,6 +53,7 @@ export default function LoginPage() {
       console.log("[LoginPage 라우팅] 최초 이동 시도:", target);
     }
   }, [user?.id, user?.role, router.pathname]);
+  
   
   const handleLogin = async (e) => {
     e.preventDefault();
