@@ -25,6 +25,7 @@ const SocialLoginButtons = () => {
     if (provider === "google") {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       const redirectUri = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI;
+      console.log("최종 redirectUri:", redirectUri); // ⭐️ 찍어봐!
       const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
@@ -33,7 +34,9 @@ const SocialLoginButtons = () => {
         access_type: "offline",
         prompt: "consent",
       });
-      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      console.log("구글 인증 URL:", url); // ⭐️ 이거도 찍어!
+      window.location.href = url;
     } else if (provider === "kakao") {
       const params = new URLSearchParams({
         client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID,
