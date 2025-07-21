@@ -32,7 +32,7 @@ export default function LoginPage() {
     if (!user?.id) return;
     const target = user.role === "admin" ? "/admin" : "/";
     if (router.pathname === "/login" && router.pathname !== target) {
-      router.replace(target);
+      router.push(target); // replace → push
     }
   }, [user?.id, user?.role, router.pathname]);
   
