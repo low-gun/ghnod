@@ -94,19 +94,19 @@ function MyApp({ Component, pageProps }) {
     : ({ children }) => <MainLayout>{children}</MainLayout>;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <UserProvider>
-          <CartInitializer />
-          <GlobalLoadingBar />
-          <LayoutWrapper>
-            <Component {...pageProps} />
-          </LayoutWrapper>
-          <ScrollTopButton />
-          <ToastContainer position="top-right" autoClose={2000} />
-        </UserProvider>
-      </CartProvider>
-    </QueryClientProvider>
+<QueryClientProvider client={queryClient}>
+  <CartProvider>
+    <CartInitializer />    {/* 이 위치!! */}
+    <UserProvider>
+      <GlobalLoadingBar />
+      <LayoutWrapper>
+        <Component {...pageProps} />
+      </LayoutWrapper>
+      <ScrollTopButton />
+      <ToastContainer position="top-right" autoClose={2000} />
+    </UserProvider>
+  </CartProvider>
+</QueryClientProvider>
   );
 }
 export default MyApp;
