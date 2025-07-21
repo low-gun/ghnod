@@ -1,35 +1,43 @@
-import { useRef, useState, useContext, useEffect } from "react";
-import { useRouter } from "next/router";
-import { UserContext } from "../context/UserContext";
-import { useCartContext } from "../context/CartContext";
-import api, { setAccessToken as applyAccessTokenToAxios } from "@/lib/api";
-import ChangePasswordModal from "@/components/mypage/ChangePasswordModal";
-import { getClientSessionId } from "@/lib/session";
-import { toast } from "react-toastify";
-import { ChevronLeft } from "lucide-react";
-import "react-toastify/dist/ReactToastify.css";
-import SocialLoginButtons from "@/components/SocialLoginButtons.dynamic";
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
-import { setAccessToken } from "@/lib/api";
-
 export default function LoginPage() {
-    console.log("✅✅✅ [login.js] 렌더 강제 확인!! 이 로그가 찍히면 컴포넌트 정상 렌더 중");
-  
-    // ...state, useContext, etc. 생략 (필요 없는 부분 지워도 됨)
+    // ...state, useContext, etc. 위와 동일...
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
-    const [userId, setUserId] = useState(null);
     const router = useRouter();
     const { user, login } = useContext(UserContext);
     const { setCartItems, setCartReady } = useCartContext();
-    const isMobile = false; // useIsMobile() 지워도 됨
+    const alreadyRedirected = useRef(false);
   
-    // ⭐️ 조건부 return만 남김
+    // ⭐️ 마운트/언마운트 로그 추가
+    useEffect(() => {
+      console.log("🟢 [LoginPage] MOUNTED");
+      return () => {
+        console.log("🟠 [LoginPage] UNMOUNTED");
+      };
+    }, []);
+  
+    // ⭐️ 라우팅 useEffect 복원 (기본 버전)
+    useEffect(() => {
+      console.log(
+        "🟩 [LoginPage] 라우팅 useEffect 진입, alreadyRedirected:",
+        alreadyRedirected.current,
+        "user.id:", user?.id,
+        "pathname:", router.pathname
+      );
+      if (!user?.id) return;
+      const target = user.role === "admin" ? "/admin" : "/";
+      if (alreadyRedirected.current) return;
+      if (router.pathname === "/login" && router.pathname !== target) {
+        router.push(target);
+        alreadyRedirected.current = true;
+        console.log("[LoginPage 라우팅] 최초 이동 시도:", target);
+      }
+      console.log("🟦 [LoginPage] alreadyRedirected 값(마지막):", alreadyRedirected.current);
+    }, [user?.id, user?.role, router.pathname]);
+  
     if (user?.id) return null;
   
-    // 👇 로그인 폼 전체 복원
     return (
+      // 1단계 폼 그대로
       <div style={{
         display: "flex",
         justifyContent: "center",
@@ -104,3 +112,4 @@ export default function LoginPage() {
       </div>
     );
   }
+  
