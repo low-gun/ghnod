@@ -1,19 +1,29 @@
-// ✅ admin/products.js (리팩터 완료 버전)
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ProductTable from "@/components/admin/ProductTable";
 import api from "@/lib/api";
 import { toast } from "react-toastify";
+import { useRouter } from "next/router";
+import { UserContext } from "@/context/UserContext"; // ✅ 추가
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useContext(UserContext); // ✅ 추가
+  const router = useRouter(); // ✅ 추가
+
+  // 🔥 권한 체크용 useEffect
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace("/");
+    }
+  }, [user, router]);
 
   const fetchProducts = async () => {
     try {
       const res = await api.get("admin/products", {
-        params: { all: true }, // ✅ 전체 데이터 한번에 요청
+        params: { all: true },
       });
       if (res.data.success) {
         setProducts(res.data.products);
@@ -31,13 +41,16 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (user && user.role === "admin") { // 🔥 관리자일 때만 fetch!
+      fetchProducts();
+    }
+  }, [user]);
 
-  const handleEdit = (product) => {
-    window.location.href = `/admin/products/${product.id}`;
-  };
+  // 로딩 처리
+  if (user === null) return <div style={{ padding: 100, textAlign: "center" }}>로딩중...</div>;
+  if (user && user.role !== "admin") return null; // 권한 없는 경우 리턴
 
+  // 기존 코드
   return (
     <AdminLayout pageTitle="📦 상품관리">
       <div
@@ -67,9 +80,13 @@ export default function AdminProductsPage() {
           products={products}
           productTypes={productTypes}
           onEdit={handleEdit}
-          onRefresh={setProducts} // ✅ 상태 반영만 상위에서
+          onRefresh={setProducts}
         />
       )}
     </AdminLayout>
   );
+
+  function handleEdit(product) {
+    window.location.href = `/admin/products/${product.id}`;
+  }
 }

@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useRouter } from "next/router";
 import AdminLayout from "@/components/layout/AdminLayout";
 import SchedulesTable from "@/components/admin/SchedulesTable";
 import ScheduleModal from "@/components/schedules/ScheduleModal";
 import moment from "moment";
-// 🔁 기존 Calendar 삭제
-// import Calendar from "@/components/schedules/Calendar";
 import CustomCalendar from "@/components/schedules/CustomCalendar";
 import api from "@/lib/api";
+import { UserContext } from "@/context/UserContext"; // 🔥 추가
 
 export default function AdminSchedulesPage() {
   const router = useRouter();
@@ -16,14 +15,21 @@ export default function AdminSchedulesPage() {
   const [selectedId, setSelectedId] = useState(null);
 
   const [calendarSchedules, setCalendarSchedules] = useState([]);
-  const [currentMonth, setCurrentMonth] = useState(moment()); // 👈 현재 달 상태 추가
+  const [currentMonth, setCurrentMonth] = useState(moment());
+  const { user } = useContext(UserContext); // 🔥 추가
+
+  // 🔥 권한 체크
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.replace("/");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (tab !== "calendar") return;
-    const startOfMonth = currentMonth
-      .clone()
-      .startOf("month")
-      .format("YYYY-MM-DD");
+    if (!user || user.role !== "admin") return; // 🔥 권한 있을 때만 호출
+
+    const startOfMonth = currentMonth.clone().startOf("month").format("YYYY-MM-DD");
     const endOfMonth = currentMonth.clone().endOf("month").format("YYYY-MM-DD");
 
     api
@@ -33,33 +39,29 @@ export default function AdminSchedulesPage() {
           pageSize: 1000,
           sort: "start_date",
           order: "asc",
-          start_date: startOfMonth, // 👈 백엔드에서 이거 기준으로 필터
+          start_date: startOfMonth,
           end_date: endOfMonth,
         },
       })
-
       .then((res) => {
-        console.log("🔥 [API 응답 결과]", res.data); // ✅ 추가
         if (res.data.success) {
           const formatted = res.data.schedules.map((s) => ({
             ...s,
-            start: moment(s.start_date), // ✅ moment 객체로
+            start: moment(s.start_date),
             end: moment(s.end_date),
-            type: s.category, // ✅ 여기 추가!
+            type: s.category,
           }));
-          console.log("🔥 [변환 후 일정]", formatted); // ✅ 추가
-          console.log(
-            "✅ start type:",
-            typeof formatted[0]?.start,
-            formatted[0]?.start
-          );
           setCalendarSchedules(formatted);
         }
       })
       .catch(() => {
         alert("일정 불러오기 실패");
       });
-  }, [tab]);
+  }, [tab, user, currentMonth]);
+
+  // 🔥 로딩/권한 체크
+  if (user === null) return <div style={{ padding: 100, textAlign: "center" }}>로딩중...</div>;
+  if (user && user.role !== "admin") return null;
 
   return (
     <AdminLayout pageTitle="📅 교육일정">
