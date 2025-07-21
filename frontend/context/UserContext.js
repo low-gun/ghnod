@@ -47,13 +47,13 @@ export function UserProvider({ children }) {
   // ✅ 2. accessToken 복구 또는 refresh-token 자동 요청
   useEffect(() => {
     console.log("UserContext useEffect 실행, path:", router.pathname);
-  
+
     // 👇 로그인 페이지에서는 refresh-token 시도/로그아웃 절대 금지
     if (router.pathname === "/login") return;
-  
+
     const storedToken = sessionStorage.getItem("accessToken");
     const cookieToken = getCookie("accessToken");
-  
+
     if (storedToken) {
       setAccessToken(storedToken);
       applyAccessTokenToAxios(storedToken);
@@ -66,9 +66,10 @@ export function UserProvider({ children }) {
       const storedUser = localStorage.getItem("user");
       if (storedUser) setUser(JSON.parse(storedUser));
     } else {
+      setUser(null); // ⭐️ 이 줄 추가! (로그인 아님 상태 명확히)
       const sessionId = getClientSessionId();
       console.log("📌 refresh-token 요청 전 clientSessionId:", sessionId);
-  
+
       api
         .post(
           "/auth/refresh-token",
@@ -85,7 +86,7 @@ export function UserProvider({ children }) {
         })
         .catch((err) => {
           console.warn("❌ 자동 로그인 실패: 리프레시 토큰 만료 또는 미존재");
-  
+
           // 보호 경로에서만 로그아웃, /login 예외처리
           const protectedRoutes = [
             "/mypage", "/orders", "/checkout", "/admin"
@@ -93,7 +94,7 @@ export function UserProvider({ children }) {
           const isProtected = protectedRoutes.some((path) =>
             router.pathname.startsWith(path)
           );
-  
+
           // 👇 accessToken까지 null(진짜 무효)일 때만 로그아웃
           if (isProtected && router.pathname !== "/login" && !storedToken && !cookieToken && !accessToken) {
             logout();
@@ -102,11 +103,12 @@ export function UserProvider({ children }) {
         });
     }
   }, [router.pathname, accessToken]);
+
   
   // 2️⃣ accessToken이 설정된 후에만 user 정보 요청
   useEffect(() => {
     if (!accessToken) return;
-    if (user?.id) return; // user.id 있으면 /user 호출 생략
+    if (user !== undefined) return; // undefined(최초)에서만 호출
   
     api
       .get("/user")

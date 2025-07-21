@@ -2,7 +2,7 @@ import { useRef, useState, useContext, useEffect } from "react";
 import { useRouter } from "next/router";
 import { UserContext } from "../context/UserContext";
 import { useCartContext } from "../context/CartContext";
-import api, { setAccessToken as applyAccessTokenToAxios } from "@/lib/api";
+import api from "@/lib/api";
 import ChangePasswordModal from "@/components/mypage/ChangePasswordModal";
 import { getClientSessionId } from "@/lib/session";
 import { toast } from "react-toastify";
@@ -13,7 +13,7 @@ import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import { setAccessToken } from "@/lib/api";
 
 export default function LoginPage() {
-  // 🚩 1. 무조건 컴포넌트 최상단에서 렌더차단 (딱 1번!)
+  // 1. hooks는 무조건 최상단에서 선언(조건문 안X)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
@@ -24,17 +24,11 @@ export default function LoginPage() {
   const alreadyRedirected = useRef(false);
   const isMobile = useIsMobile();
 
-  if (!router.isReady || user === undefined) return null; // 이때만 렌더 차단
-
-  // 🚩 2. 로그인된 상태면 바로 리턴
-  if (user?.id) return null; // 로그인 되어있으면 폼 안보여줌
-
-  // 🚩 3. 로그인 상태 변화 감지해서 1번만 리다이렉트
+  // ✅ 모든 훅 선언 후에 조건 분기!
   useEffect(() => {
     if (user?.id && !alreadyRedirected.current) {
       alreadyRedirected.current = true;
       const target = user.role === "admin" ? "/admin" : "/";
-      // 🚩 반드시 context setUser 완료 후 라우팅은 setTimeout
       setTimeout(() => {
         if (router.pathname === "/login" && router.pathname !== target) {
           router.replace(target);
@@ -42,9 +36,7 @@ export default function LoginPage() {
       }, 0);
     }
   }, [user, router]);
-  
 
-  // 🚩 4. 아래부턴 폼(미로그인상태 전용)
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -94,6 +86,10 @@ export default function LoginPage() {
       toast.error(msg);
     }
   };
+
+  // ✅ 여기서 조건부 렌더
+  if (typeof window === "undefined" || !router.isReady) return null;
+  if (user?.id) return null;
 
   return (
     <div style={{

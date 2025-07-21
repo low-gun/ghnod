@@ -15,6 +15,7 @@ export default function AdminPage() {
     }
   }, [user, router]);
 
+  if (user === undefined) return null; // 🚩 제일 먼저 undefined 체크
   // (1) user null → 로딩중
   if (user === null) return <div style={{ padding: 100, textAlign: "center" }}>로딩중...</div>;
   // (2) user는 있는데 admin이 아님

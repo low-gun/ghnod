@@ -5,8 +5,9 @@ const nextConfig = {
   output: "standalone",
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+    NEXT_PUBLIC_OAUTH_BASE_URL: process.env.NEXT_PUBLIC_OAUTH_BASE_URL,  // ⭐️ 꼭 명시!
     API_BASE_URL: process.env.API_BASE_URL,
-  },
+      },
   experimental: {
     isrMemoryCacheSize: 0,
   },

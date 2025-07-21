@@ -107,6 +107,6 @@ function MyApp({ Component, pageProps }) {
     </UserProvider>
   </CartProvider>
 </QueryClientProvider>
-  );
+  );  
 }
 export default MyApp;

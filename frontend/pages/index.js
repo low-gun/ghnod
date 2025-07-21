@@ -25,18 +25,7 @@ export default function HomePage() {
   }, [user, login]);
 
   return (
-    <main
-      style={{
-        marginTop: 0,
-        margin: 0,
-        padding: 0,
-        width: "100%",
-        maxWidth: "100%",
-        overflow: "hidden",
-        minHeight: "auto",
-        flex: "unset",
-      }}
-    >
+    <div style={{ width: "100%", overflow: "hidden" }}>
       <img
         src="/main.webp"
         alt="진단 워크숍 메인 이미지"
@@ -48,6 +37,7 @@ export default function HomePage() {
           padding: 0,
         }}
       />
-    </main>
+    </div>
   );
+  
 }

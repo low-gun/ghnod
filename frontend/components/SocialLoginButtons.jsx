@@ -1,9 +1,8 @@
 import React, { useEffect } from "react";
 
-
 const SocialLoginButtons = () => {
-  // 소셜로그인만 별도 OAUTH BASE_URL 사용
   const OAUTH_BASE_URL = process.env.NEXT_PUBLIC_OAUTH_BASE_URL;
+
   useEffect(() => {
     // 환경변수 실제 값 확인
     console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
@@ -12,9 +11,14 @@ const SocialLoginButtons = () => {
     console.log("NEXT_PUBLIC_GOOGLE_REDIRECT_URI:", process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI);
   }, []);
 
+  // 🚩 환경변수 없을 때는 그냥 안내만 보여줌. (alert 절대 금지)
   if (!OAUTH_BASE_URL) {
-    alert("OAUTH_BASE_URL 환경변수가 설정되지 않았습니다.");
-    return null;
+    return (
+      <div style={{ color: "red", textAlign: "center" }}>
+        OAUTH_BASE_URL 환경변수가 없습니다.<br />
+        .env.local에 NEXT_PUBLIC_OAUTH_BASE_URL 추가하고 서버 재시작 하세요.
+      </div>
+    );
   }
 
   const handleLogin = (provider) => {
@@ -29,12 +33,6 @@ const SocialLoginButtons = () => {
         access_type: "offline",
         prompt: "consent",
       });
-  
-      // ✅ 콘솔로그 추가
-      console.log("[Google Login] client_id:", clientId);
-      console.log("[Google Login] redirect_uri:", redirectUri);
-      console.log("[Google Login] 최종 URL:", `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
-  
       window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     } else if (provider === "kakao") {
       const params = new URLSearchParams({
@@ -52,14 +50,13 @@ const SocialLoginButtons = () => {
         state,
       });
       window.location.href = `https://nid.naver.com/oauth2.0/authorize?${params.toString()}`;
-      // state는 callback에서 그대로 req.body로 넘겨줘야 함!
     }
   };
-  
+
   return (
     <div style={containerStyle}>
       <div style={iconWrapperStyle}>
-        {/* Google 버튼 */}
+        {/* Google */}
         <button style={googleStyle} onClick={() => handleLogin("google")} aria-label="구글 로그인">
           <svg width="24" height="24" viewBox="0 0 24 24" style={iconStyle}>
             <g>
@@ -70,23 +67,18 @@ const SocialLoginButtons = () => {
             </g>
           </svg>
         </button>
-
-        {/* Kakao 버튼 */}
+        {/* Kakao */}
         <button style={kakaoStyle} onClick={() => handleLogin("kakao")} aria-label="카카오 로그인">
           <svg width="24" height="24" viewBox="0 0 24 24" style={iconStyle}>
             <ellipse cx="12" cy="12" rx="12" ry="12" fill="#FEE500" />
             <text x="12" y="16" textAnchor="middle" fontSize="9" fill="#381e1f" fontFamily="Arial, sans-serif" fontWeight="bold">K</text>
           </svg>
         </button>
-
-        {/* Naver 버튼 */}
+        {/* Naver */}
         <button style={naverStyle} onClick={() => handleLogin("naver")} aria-label="네이버 로그인">
           <svg width="24" height="24" viewBox="0 0 24 24" style={iconStyle}>
             <rect width="24" height="24" rx="6" fill="#03c75a" />
-            <path
-              d="M7.2 6.5h2.77l2.45 3.86 2.45-3.86H17.8v11h-2.63V11.7l-2.05 3.31h-.04l-2.05-3.29v5.81H7.2V6.5z"
-              fill="#fff"
-            />
+            <path d="M7.2 6.5h2.77l2.45 3.86 2.45-3.86H17.8v11h-2.63V11.7l-2.05 3.31h-.04l-2.05-3.29v5.81H7.2V6.5z" fill="#fff" />
           </svg>
         </button>
       </div>
@@ -94,21 +86,16 @@ const SocialLoginButtons = () => {
   );
 };
 
-export default SocialLoginButtons;
-
 // ================= CSS =================
-
 const containerStyle = {
   display: "flex",
   justifyContent: "center",
   marginTop: "20px",
 };
-
 const iconWrapperStyle = {
   display: "flex",
   gap: "10px",
 };
-
 const buttonBase = {
   width: "44px",
   height: "44px",
@@ -121,27 +108,24 @@ const buttonBase = {
   cursor: "pointer",
   boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.1)",
 };
-
 const googleStyle = {
   ...buttonBase,
   backgroundColor: "white",
   border: "1px solid #ececec",
 };
-
 const kakaoStyle = {
   ...buttonBase,
   backgroundColor: "#FEE500",
   border: "1px solid #e5d352",
 };
-
 const naverStyle = {
   ...buttonBase,
   backgroundColor: "#03c75a",
   border: "1px solid #03b053",
 };
-
 const iconStyle = {
   width: "24px",
   height: "24px",
 };
 
+export default SocialLoginButtons;

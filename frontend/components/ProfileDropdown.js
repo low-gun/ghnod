@@ -42,7 +42,7 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
 
   if (!user || !showProfile) return null;
 
-  const userName = user.name || "홍길동";
+  const userName = user.name || user.username || "홍길동";
   const userEmail = user.email || "test@example.com";
 
   const goToMyPage = () => {
