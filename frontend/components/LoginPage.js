@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react"; // useEffect 추가!
+import { useRef, useState, useContext, useEffect } from "react"; // useRef 추가!
 import { useRouter } from "next/router";
 import { UserContext } from "../context/UserContext";
 import { useCartContext } from "../context/CartContext";
@@ -26,16 +26,18 @@ export default function LoginPage() {
   const { user, login } = useContext(UserContext);
   console.log("[LoginPage] useContext의 user:", user);
   const { setCartItems, setCartReady } = useCartContext();
+  const alreadyRedirected = useRef(false);
   const isMobile = useIsMobile();
 
   // 로그인 상태에서 /login 접근시 바로 이동
   useEffect(() => {
     if (!user?.id) return;
     const target = user.role === "admin" ? "/admin" : "/";
-    console.log("[LoginPage 라우팅 체크] user.id:", user.id, "pathname:", router.pathname, "target:", target);
+    if (alreadyRedirected.current) return; // 이미 이동했으면 실행 금지!
     if (router.pathname === "/login" && router.pathname !== target) {
       router.push(target);
-      console.log("[LoginPage 라우팅] 이동 시도:", target);
+      alreadyRedirected.current = true; // 이동 플래그 ON
+      console.log("[LoginPage 라우팅] 최초 이동 시도:", target);
     }
   }, [user?.id, user?.role, router.pathname]);
   
