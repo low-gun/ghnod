@@ -13,6 +13,7 @@ import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import { setAccessToken } from "@/lib/api";
 
 export default function LoginPage() {
+  console.log("[LoginPage 진입] 최초 실행, pathname:", window.location.pathname);
   useEffect(() => {
     // 환경 변수 확인용
     console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
@@ -31,8 +32,10 @@ export default function LoginPage() {
   useEffect(() => {
     if (!user?.id) return;
     const target = user.role === "admin" ? "/admin" : "/";
+    console.log("[LoginPage 라우팅 체크] user.id:", user.id, "pathname:", router.pathname, "target:", target);
     if (router.pathname === "/login" && router.pathname !== target) {
-      router.push(target); // replace → push
+      router.push(target);
+      console.log("[LoginPage 라우팅] 이동 시도:", target);
     }
   }, [user?.id, user?.role, router.pathname]);
   

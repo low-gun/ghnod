@@ -10,7 +10,7 @@ import { useContext } from "react"; // 💡 이건 파일 상단에 import
 export const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
-  console.log("[UserProvider 렌더] 진입");
+  console.log("[UserProvider 진입] 최초 실행, pathname:", typeof window !== "undefined" ? window.location.pathname : "SSR");
   const router = useRouter();
   const { setCartItems, setCartReady } = useCartContext();
 
