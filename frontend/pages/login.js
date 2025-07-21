@@ -38,6 +38,7 @@ export default function LoginPage() {
   }, [user, router]);
 
   // 🚩 [3] 로그인 상태에서는 절대 로그인폼 렌더 안함(렌더 차단)
+  if (!router.isReady || user === undefined) return null;
   if (user?.id) return null;
 
   // 🚩 [4] 미로그인 상태(또는 로그인 실패/완료 후)에만 폼 렌더
