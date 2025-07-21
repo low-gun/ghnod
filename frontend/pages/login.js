@@ -31,14 +31,18 @@ export default function LoginPage() {
 
   // 🚩 3. 로그인 상태 변화 감지해서 1번만 리다이렉트
   useEffect(() => {
-    if (user && user.id && !alreadyRedirected.current) {
+    if (user?.id && !alreadyRedirected.current) {
+      alreadyRedirected.current = true;
       const target = user.role === "admin" ? "/admin" : "/";
-      if (router.pathname === "/login" && router.pathname !== target) {
-        alreadyRedirected.current = true;
-        router.replace(target);  // 기록 안쌓임
-      }
+      // 🚩 반드시 context setUser 완료 후 라우팅은 setTimeout
+      setTimeout(() => {
+        if (router.pathname === "/login" && router.pathname !== target) {
+          router.replace(target);
+        }
+      }, 0);
     }
   }, [user, router]);
+  
 
   // 🚩 4. 아래부턴 폼(미로그인상태 전용)
   const handleLogin = async (e) => {
