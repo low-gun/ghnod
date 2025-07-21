@@ -13,6 +13,7 @@ import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import { setAccessToken } from "@/lib/api";
 
 export default function LoginPage() {
+  // 🚩 1. 무조건 컴포넌트 최상단에서 렌더차단 (딱 1번!)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
@@ -23,25 +24,23 @@ export default function LoginPage() {
   const alreadyRedirected = useRef(false);
   const isMobile = useIsMobile();
 
-  // 🚩 [1] router, user 판별 완료 전엔 렌더 차단
-  if (!router.isReady || user === undefined) return null;
+  if (!router.isReady || user === undefined) return null;  // 🚩 최상단 1번
 
-  // 🚩 [2] 로그인된 상태면 리다이렉트 (딱 1번만)
+  // 🚩 2. 로그인된 상태면 바로 리턴
+  if (user && user.id) return null;
+
+  // 🚩 3. 로그인 상태 변화 감지해서 1번만 리다이렉트
   useEffect(() => {
-    if (user?.id && !alreadyRedirected.current) {
+    if (user && user.id && !alreadyRedirected.current) {
       const target = user.role === "admin" ? "/admin" : "/";
       if (router.pathname === "/login" && router.pathname !== target) {
         alreadyRedirected.current = true;
-        router.replace(target); // push 말고 replace
+        router.replace(target);  // 기록 안쌓임
       }
     }
   }, [user, router]);
 
-  // 🚩 [3] 로그인 상태에서는 절대 로그인폼 렌더 안함(렌더 차단)
-  if (!router.isReady || user === undefined) return null;
-  if (user?.id) return null;
-
-  // 🚩 [4] 미로그인 상태(또는 로그인 실패/완료 후)에만 폼 렌더
+  // 🚩 4. 아래부턴 폼(미로그인상태 전용)
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
