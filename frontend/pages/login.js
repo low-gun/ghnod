@@ -23,31 +23,24 @@ export default function LoginPage() {
   const alreadyRedirected = useRef(false);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    console.log("🟢 [LoginPage] MOUNTED");
-    return () => {
-      console.log("🟠 [LoginPage] UNMOUNTED");
-    };
-  }, []);
+  // 🚩 [1] router, user 판별 완료 전엔 렌더 차단
+  if (!router.isReady || user === undefined) return null;
 
+  // 🚩 [2] 로그인된 상태면 리다이렉트 (딱 1번만)
   useEffect(() => {
-    console.log(
-      "🟩 [LoginPage] 라우팅 useEffect 진입, alreadyRedirected:",
-      alreadyRedirected.current,
-      "user.id:", user?.id,
-      "pathname:", router.pathname
-    );
-    if (!user?.id) return;
-    const target = user.role === "admin" ? "/admin" : "/";
-    if (alreadyRedirected.current) return;
-    if (router.pathname === "/login" && router.pathname !== target) {
-      router.push(target);
-      alreadyRedirected.current = true;
-      console.log("[LoginPage 라우팅] 최초 이동 시도:", target);
+    if (user?.id && !alreadyRedirected.current) {
+      const target = user.role === "admin" ? "/admin" : "/";
+      if (router.pathname === "/login" && router.pathname !== target) {
+        alreadyRedirected.current = true;
+        router.replace(target); // push 말고 replace
+      }
     }
-    console.log("🟦 [LoginPage] alreadyRedirected 값(마지막):", alreadyRedirected.current);
-  }, [user?.id, user?.role, router.pathname]);
+  }, [user, router]);
 
+  // 🚩 [3] 로그인 상태에서는 절대 로그인폼 렌더 안함(렌더 차단)
+  if (user?.id) return null;
+
+  // 🚩 [4] 미로그인 상태(또는 로그인 실패/완료 후)에만 폼 렌더
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -59,7 +52,6 @@ export default function LoginPage() {
       const data = res.data;
 
       if (data.success) {
-        console.log("✅ 로그인 성공 - accessToken:", data.accessToken);
         toast.success("로그인 성공! 환영합니다 😊");
 
         if (data.user?.needsPasswordReset) {
@@ -74,7 +66,6 @@ export default function LoginPage() {
           username: data.user.username,
           role: data.user.role,
         };
-        console.log("✅ [login] userData", userData);
         setAccessToken(data.accessToken);
 
         let finalCartItems = [];
@@ -83,9 +74,7 @@ export default function LoginPage() {
           if (cartRes.data.success) {
             finalCartItems = cartRes.data.items;
           }
-        } catch (err) {
-          console.warn("🛒 로그인 직후 장바구니 fetch 실패:", err.message);
-        }
+        } catch (err) {}
 
         login(userData, data.accessToken, finalCartItems);
         setCartItems(finalCartItems);
@@ -97,13 +86,10 @@ export default function LoginPage() {
         toast.error("로그인 실패: " + data.message);
       }
     } catch (err) {
-      console.error("로그인 중 오류:", err);
       const msg = err.response?.data?.message || "로그인 요청 실패";
       toast.error(msg);
     }
   };
-
-  if (user?.id) return null;
 
   return (
     <div style={{
