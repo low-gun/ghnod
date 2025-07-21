@@ -149,6 +149,14 @@ export default function LoginPage() {
     fontWeight: "bold",
     cursor: "pointer",
   };
+
+  
+  // 👇👇👇 여기에 추가 (렌더 강제확인용)
+  console.log("✅✅✅ [login.js] 렌더 강제 확인!! 이 로그가 찍히면 컴포넌트 정상 렌더 중");
+  // 👇👇👇
+  // 강제렌더 div(진짜 화면에 보이게)
+  // return <div style={{fontSize:"32px",color:"red"}}>로그인페이지 강제 렌더!!</div>
+  
   if (user?.id) return null;
   return (
     <div style={containerStyle}>
