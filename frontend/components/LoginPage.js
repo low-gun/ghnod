@@ -141,7 +141,7 @@ export default function LoginPage() {
     fontWeight: "bold",
     cursor: "pointer",
   };
-
+  if (user?.id) return null;
   return (
     <div style={containerStyle}>
       <div style={boxStyle}>
