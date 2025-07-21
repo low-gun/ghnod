@@ -52,6 +52,8 @@ export default function LoginPage() {
       alreadyRedirected.current = true; // 이동 플래그 ON
       console.log("[LoginPage 라우팅] 최초 이동 시도:", target);
     }
+    // 👇 추가: 이동 후에도 상태 추적
+    console.log("🟦 [LoginPage] alreadyRedirected 값(마지막):", alreadyRedirected.current);
   }, [user?.id, user?.role, router.pathname]);
   
   
