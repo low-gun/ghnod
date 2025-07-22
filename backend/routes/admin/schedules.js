@@ -7,27 +7,28 @@ const {
   adminOnly,
 } = require("../../middlewares/authMiddleware"); // ✅ 이 줄 추가!
 
-const {
-  page = 1,
-  pageSize = 20,
-  sortKey = "start_date",
-  sortDir = "desc",
-  tabType, // 탭 필터용
-  searchField, // 검색 대상 컬럼 (프론트에서 보냄)
-  searchQuery,
-} = req.query;
 
-const sort = sortKey;
-const order = sortDir;
-const search = searchQuery;
+router.get("/", authenticateToken, adminOnly, async (req, res) => {
+  const {
+    page = 1,
+    pageSize = 20,
+    sortKey = "start_date",
+    sortDir = "desc",
+    tabType,
+    searchField,
+    searchQuery,
+  } = req.query;
+
+  const sort = sortKey;
+  const order = sortDir;
+  const search = searchQuery;
 
   try {
-    // 1. 전체 일정 조회 (JOIN 포함)
     const [rows] = await pool.execute(`
       SELECT
         s.*,
         s.image_url AS schedule_image,
-        s.thumbnail,             -- ✅ 썸네일 컬럼 추가 (DB에 thumbnail 컬럼이 있다고 가정)
+        s.thumbnail_url AS thumbnail,
         p.title AS product_title,
         p.type AS product_type,
         p.category AS product_category,
@@ -42,14 +43,9 @@ const search = searchQuery;
       filtered = filtered.filter((s) => s.product_type === tabType);
     }
 
-    // 3. 필터 - 검색 필드
     if (searchField === "is_active") {
-      // 비활성 포함 전체 보기
       if (search === "") {
-        // 전체 선택 시 필터링 하지 않음
-        // 그대로 filtered 유지
       } else {
-        // 활성 또는 비활성만 필터
         filtered = filtered.filter((s) => String(s.is_active) === search);
       }
     } else if (searchField && search) {
@@ -70,8 +66,6 @@ const search = searchQuery;
       });
     }
 
-    // 4. 정렬
-    // 4. 정렬 (null-safe 처리 추가)
     const sorted = [...filtered].sort((a, b) => {
       const aVal =
         sort === "product_title"
@@ -107,7 +101,6 @@ const search = searchQuery;
       return 0;
     });
 
-    // 5. 페이징
     const start = (page - 1) * pageSize;
 
     res.json({
@@ -120,6 +113,7 @@ const search = searchQuery;
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+
 router.get("/types", authenticateToken, adminOnly, async (req, res) => {
   try {
     const [rows] = await pool.execute(`

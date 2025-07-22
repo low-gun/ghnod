@@ -13,8 +13,8 @@ export default function SchedulesTable() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortConfig, setSortConfig] = useState({
-    key: "start_date",
-    direction: "asc",
+    key: "updated_at",
+    direction: "desc",
   });
   const [searchField, setSearchField] = useState("title");
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +24,8 @@ export default function SchedulesTable() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [total, setTotal] = useState(0);
+
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     const datePart = format(date, "yyyy. M. d.");
@@ -59,7 +61,7 @@ export default function SchedulesTable() {
 
   useEffect(() => {
     fetchSchedules();
-  }, [tabType]);
+  }, [tabType, sortConfig, page, pageSize, searchField, searchQuery]);
 
   const handleSort = (key) => {
     const isSameKey = sortConfig.key === key;
@@ -351,58 +353,17 @@ export default function SchedulesTable() {
                 가격 {renderArrow("price", sortConfig)}
               </th>
               <th
-                onClick={() => handleSort("is_active")}
-                style={{
-                  ...thCenter,
-                  width: "60px",
-                  cursor: "pointer",
-                  position: "relative",
-                }}
-              >
-                <div
-                  style={{
-                    position: "relative",
-                    display: "inline-block",
-                    width: "42px",
-                    height: "24px",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor:
-                        sortConfig.key !== "is_active"
-                          ? "#bbb"
-                          : sortConfig.direction === "asc"
-                            ? "#bbb"
-                            : "#28a745",
-                      borderRadius: "24px",
-                      transition: "0.3s",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        height: "18px",
-                        width: "18px",
-                        left:
-                          sortConfig.key === "is_active" &&
-                          sortConfig.direction === "desc"
-                            ? "21px"
-                            : "3px",
-                        bottom: "3px",
-                        backgroundColor: "white",
-                        borderRadius: "50%",
-                        transition: "0.3s",
-                      }}
-                    />
-                  </div>
-                </div>
-              </th>
+  onClick={() => handleSort("is_active")}
+  style={{
+    ...thCenter,
+    width: "60px",
+    cursor: "pointer",
+    textAlign: "center",
+  }}
+>
+  {renderArrow("is_active", sortConfig)}
+</th>
+
               <th
                 style={{ ...thCenter, width: "140px" }}
                 onClick={() => handleSort("created_at")}
@@ -510,56 +471,49 @@ export default function SchedulesTable() {
                     : "-"}
                 </td>
                 <td style={{ ...tdCenter, width: "60px" }}>
-                  <div
-                    onClick={() => handleToggleActive(s.id, s.is_active)}
-                    style={{
-                      position: "relative",
-                      display: "inline-block",
-                      width: "42px",
-                      height: "24px",
-                      cursor: "pointer",
-                      overflow: "hidden", // ✅ 핵심: 튀어나온 점 잘라냄
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={s.is_active}
-                      readOnly
-                      style={{
-                        opacity: 0,
-                        width: 0,
-                        height: 0,
-                        position: "absolute",
-                        pointerEvents: "none",
-                      }}
-                    />
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: s.is_active ? "#28a745" : "#ccc",
-                        borderRadius: "24px",
-                        transition: "0.4s",
-                      }}
-                    >
-                      <span
-                        style={{
-                          position: "absolute",
-                          width: "18px",
-                          height: "18px",
-                          left: s.is_active ? "21px" : "3px",
-                          bottom: "3px",
-                          backgroundColor: "white",
-                          borderRadius: "50%",
-                          transition: "0.4s",
-                        }}
-                      />
-                    </span>
-                  </div>
-                </td>
+  <label style={{
+    display: "inline-block",
+    position: "relative",
+    width: 38,
+    height: 22,
+    cursor: "pointer",
+    verticalAlign: "middle",
+  }}>
+    <input
+      type="checkbox"
+      checked={s.is_active}
+      onChange={() => handleToggleActive(s.id, s.is_active)}
+      style={{
+        opacity: 0,
+        width: 0,
+        height: 0,
+      }}
+    />
+    <span style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: s.is_active ? "#28a745" : "#ccc",
+      borderRadius: 22,
+      transition: "0.3s",
+      boxShadow: "0 0 3px rgba(0,0,0,0.05)",
+    }} />
+    <span style={{
+      position: "absolute",
+      top: 3,
+      left: s.is_active ? 18 : 3,
+      width: 16,
+      height: 16,
+      backgroundColor: "#fff",
+      borderRadius: "50%",
+      transition: "0.3s",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+    }} />
+  </label>
+</td>
+
                 <td style={{ ...tdCenter, width: "140px" }}>
                   {formatDateTime(s.created_at)}
                 </td>
@@ -584,12 +538,13 @@ export default function SchedulesTable() {
 const tdCenter = {
   padding: "12px",
   textAlign: "center",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
+  // whiteSpace: "nowrap", // 삭제 또는 주석 처리
+  // overflow: "hidden",   // 삭제 또는 주석 처리
+  // textOverflow: "ellipsis", // 삭제 또는 주석 처리
   height: "60px",
   verticalAlign: "middle",
 };
+
 
 const thCenter = {
   ...tdCenter,
