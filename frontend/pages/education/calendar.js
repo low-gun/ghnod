@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
-import moment from "moment"; // 상단에 import 추가
-import CustomCalendar from "../../components/schedules/CustomCalendar"; // ✅ 교체
-import axios from "axios"; // ✅ SSR self-fetch
+import moment from "moment";
+import CustomCalendar from "../../components/schedules/CustomCalendar";
+import axios from "axios";
 import ScheduleDetailModal from "@/components/schedules/ScheduleDetailModal";
 
+// 날짜 포맷/파싱 함수
 function formatYYYYMMDD(date) {
   if (!(date instanceof Date)) return "";
   const yyyy = date.getFullYear();
@@ -12,7 +13,6 @@ function formatYYYYMMDD(date) {
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
 function parseYYYYMMDD(str) {
   if (!str) return null;
   const [y, m, d] = str.split("-");
@@ -22,37 +22,19 @@ function parseYYYYMMDD(str) {
 export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
-    console.log("🔥 process.env.NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
     const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!baseURL) throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
-    console.log("👉 baseURL:", baseURL);
     const now = moment();
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
-    const endOfMonth = now
-      .clone()
-      .endOf("month")
-      .add(1, "month")
-      .format("YYYY-MM-DD");
-
+    const endOfMonth = now.clone().endOf("month").add(1, "month").format("YYYY-MM-DD");
     const res = await axios.get(
       `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
-      {
-        headers: { Cookie: cookie },
-      }
+      { headers: { Cookie: cookie } }
     );
-    console.log("🔥 SSR fetch 결과:", res.data);
-
     const data = res.data;
-
-    if (!data?.schedules) {
-      return {
-        props: { eventsData: [] },
-      };
-    }
-
     return {
       props: {
-        eventsData: data.schedules.map((item) => ({
+        eventsData: (data?.schedules || []).map((item) => ({
           id: item.id,
           title: item.title,
           start_date: item.start_date,
@@ -61,20 +43,20 @@ export async function getServerSideProps(context) {
           instructor: item.instructor,
           total_spots: item.total_spots,
           type: item.type || item.category || null,
+          description: item.description,
         })),
       },
     };
   } catch (error) {
-    console.error("SSR education/calendar error:", error);
-    return {
-      props: { eventsData: [] },
-    };
+    return { props: { eventsData: [] } };
   }
 }
 
 export default function CalendarPage({ eventsData }) {
-  console.log("🔥 클라이언트 eventsData:", eventsData);
-  const [events, setEvents] = useState(() =>
+  const router = useRouter();
+
+  // 상태
+  const [events] = useState(() =>
     eventsData.map((item) => ({
       id: item.id,
       title: item.title,
@@ -84,83 +66,82 @@ export default function CalendarPage({ eventsData }) {
       instructor: item.instructor,
       description: item.description,
       total_spots: item.total_spots,
-      type: item.type || item.category || null, // ✅ 여기서 제대로 넣어줘야 함
+      type: item.type || item.category || null,
     }))
   );
-
   const [searchType, setSearchType] = useState("전체");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date(2025, 11, 31));
   const [calendarDate, setCalendarDate] = useState(moment());
 
-  const router = useRouter();
+  // 선택 일정 모달(메모이제이션)
   const selectedEvent = useMemo(() => {
     const id = router.query.id;
     return events.find((e) => String(e.id) === String(id));
-  }, [router.query.id, events]); // 📌 이걸 여기 넣기
-  const handleSelectEvent = (event) => {
-    console.log("🧪 클릭된 일정:", event);
+  }, [router.query.id, events]);
 
+  // 일정 클릭 핸들러
+  const handleSelectEvent = useCallback((event) => {
     if (!event?.type) {
       alert("교육 타입 정보가 없습니다.");
       return;
     }
-
     router.push(`/education/${event.type}/${event.id}`);
-  };
+  }, [router]);
 
+  // 검색 타입이 바뀌면 날짜 리셋
   useEffect(() => {
-    if (searchType === "교육기간") {
-      setCalendarDate(startDate);
-    }
+    if (searchType === "교육기간") setCalendarDate(moment(startDate));
   }, [searchType, startDate]);
 
-  const filteredEvents = events.filter((evt) => {
+  // 필터링(메모이제이션)
+  const filteredEvents = useMemo(() => {
     const kw = searchKeyword.toLowerCase();
-
-    if (searchType === "전체") {
-      if (
-        kw &&
-        !(
-          evt.title?.toLowerCase().includes(kw) ||
-          evt.location?.toLowerCase().includes(kw) ||
-          evt.instructor?.toLowerCase().includes(kw) ||
-          evt.description?.toLowerCase().includes(kw)
+    return events.filter((evt) => {
+      if (searchType === "전체") {
+        if (
+          kw &&
+          !(
+            evt.title?.toLowerCase().includes(kw) ||
+            evt.location?.toLowerCase().includes(kw) ||
+            evt.instructor?.toLowerCase().includes(kw) ||
+            evt.description?.toLowerCase().includes(kw)
+          )
         )
-      )
+          return false;
+      } else if (searchType === "교육명" && kw && !evt.title?.toLowerCase().includes(kw)) {
         return false;
-    } else if (
-      searchType === "교육명" &&
-      kw &&
-      !evt.title?.toLowerCase().includes(kw)
-    ) {
-      return false;
-    } else if (searchType === "교육기간") {
-      const evtStart = evt.start;
-      const evtEnd = evt.end;
-      if (evtEnd < startDate || evtStart > endDate) return false;
-    }
-    return true;
-  });
-  console.log("🔥 filteredEvents:", filteredEvents.length, filteredEvents);
+      } else if (searchType === "교육기간") {
+        if (evt.end < startDate || evt.start > endDate) return false;
+      }
+      return true;
+    });
+  }, [events, searchType, searchKeyword, startDate, endDate]);
+
+  // 스타일 상수
+  const searchBarStyle = {
+    margin: "0 20px 10px",
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    backgroundColor: "#f9f9f9",
+  };
+
+  const calendarHeaderStyle = {
+    textAlign: "center",
+    margin: "8px 0 16px",
+    fontSize: "20px",
+    fontWeight: "bold",
+  };
 
   return (
     <>
       {/* 달 이동 컨트롤 */}
-      <div
-        style={{
-          textAlign: "center",
-          margin: "8px 0 16px",
-          fontSize: "20px",
-          fontWeight: "bold",
-        }}
-      >
+      <div style={calendarHeaderStyle}>
         <span
           style={{ marginRight: "20px", cursor: "pointer", fontSize: "24px" }}
-          onClick={() =>
-            setCalendarDate(calendarDate.clone().subtract(1, "month"))
-          }
+          onClick={() => setCalendarDate(calendarDate.clone().subtract(1, "month"))}
         >
           ◀
         </span>
@@ -172,24 +153,10 @@ export default function CalendarPage({ eventsData }) {
           ▶
         </span>
       </div>
+
       {/* 검색 영역 */}
-      <div
-        style={{
-          margin: "0 20px 10px",
-          padding: "10px",
-          border: "1px solid #ccc",
-          borderRadius: "4px",
-          backgroundColor: "#f9f9f9",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            flexWrap: "wrap",
-          }}
-        >
+      <div style={searchBarStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <select
             value={searchType}
             onChange={(e) => {
@@ -226,14 +193,7 @@ export default function CalendarPage({ eventsData }) {
           )}
 
           {searchType === "교육기간" && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                width: "50%",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", width: "50%" }}>
               <input
                 type="date"
                 value={formatYYYYMMDD(startDate)}
@@ -272,12 +232,10 @@ export default function CalendarPage({ eventsData }) {
           />
         </div>
       </div>
-      {/* 모달은 바깥에서 렌더링 */}
+      {/* 모달 */}
       <ScheduleDetailModal
         schedule={selectedEvent}
-        onClose={() =>
-          router.push(router.pathname, undefined, { shallow: true })
-        }
+        onClose={() => router.push(router.pathname, undefined, { shallow: true })}
         mode="user"
       />
     </>

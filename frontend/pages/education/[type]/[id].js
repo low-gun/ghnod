@@ -1,15 +1,16 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import api from "@/lib/api"; // 상단에 이미 import 돼 있어야 함
+import { useEffect, useState, useMemo, useCallback } from "react";
+import api from "@/lib/api";
 import { useCartContext } from "@/context/CartContext";
-import { useUserContext } from "@/context/UserContext"; // ✅ 추가
+import { useUserContext } from "@/context/UserContext";
 import ProductTabs from "@/components/product/ProductTabs";
 import TabProductDetail from "@/components/product/TabProductDetail";
 import TabProductReviews from "@/components/product/TabProductReviews";
 import TabProductInquiry from "@/components/product/TabProductInquiry";
 import TabRefundPolicy from "@/components/product/TabRefundPolicy";
 import ScrollTopButton from "@/components/common/ScrollTopButton";
-import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize"; // 상단 import에 추가
+import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+
 export default function EducationScheduleDetailPage() {
   const router = useRouter();
   const { cartItems, setCartItems, refreshCart } = useCartContext();
@@ -21,16 +22,30 @@ export default function EducationScheduleDetailPage() {
   const isMobile = useIsMobile();
   const isTabletOrBelow = useIsTabletOrBelow();
 
-  const handleBuyNow = async () => {
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    api.get(`/education/schedules/${id}`)
+      .then((res) => {
+        if (res.data.success) setSchedule(res.data.schedule);
+        else alert("일정 정보를 불러오지 못했습니다.");
+      })
+      .catch(() => alert("일정 정보를 불러오지 못했습니다."))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const unitPrice = useMemo(
+    () => Number(schedule?.price ?? schedule?.product_price ?? 0),
+    [schedule]
+  );
+
+  const handleBuyNow = useCallback(async () => {
     if (!user) {
       alert("로그인 후 결제하실 수 있습니다.");
-      return router.push("/login");
+      router.push("/login");
+      return;
     }
-
-    if (!schedule) {
-      return alert("일정 정보를 불러오지 못했습니다.");
-    }
-
+    if (!schedule) return alert("일정 정보를 불러오지 못했습니다.");
     try {
       router.push({
         pathname: "/checkout",
@@ -39,35 +54,59 @@ export default function EducationScheduleDetailPage() {
             JSON.stringify({
               schedule_id: schedule.id,
               quantity,
-              unit_price: Number(schedule.price),
+              unit_price: unitPrice,
               discount_price: 0,
             })
           ),
         },
       });
     } catch (err) {
-      console.error("❌ 바로구매 처리 중 오류:", err);
       alert("바로구매 중 오류가 발생했습니다.");
     }
-  };
+  }, [user, schedule, quantity, unitPrice, router]);
 
-  useEffect(() => {
-    if (!id) return;
+  // 장바구니 함수 분리
+  const handleAddToCart = useCallback(async () => {
+    try {
+      const payload = {
+        schedule_id: schedule.id,
+        quantity,
+        unit_price: unitPrice,
+        type: "cart",
+      };
+      const guestToken = localStorage.getItem("guest_token");
+      const res = await api.post("/cart/items", payload, {
+        headers: { "x-guest-token": guestToken || "" },
+      });
+      if (res.data.success) {
+        alert("🛒 장바구니에 담았습니다!");
+        await refreshCart();
+      } else {
+        alert("❌ 장바구니 담기에 실패했습니다.");
+      }
+    } catch {
+      alert("오류가 발생했습니다. 다시 시도해주세요.");
+    }
+  }, [schedule, quantity, unitPrice, refreshCart]);
 
-    api
-      .get(`/education/schedules/${id}`)
-      .then((res) => {
-        console.log("🔥 받은 일정:", res.data.schedule);
-        if (res.data.success) setSchedule(res.data.schedule);
-      })
-      .catch(() => alert("일정 정보를 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) return <p style={{ padding: 40 }}>불러오는 중...</p>;
+  if (loading)
+    return <p style={{ padding: 40 }}>불러오는 중...</p>;
   if (!schedule)
     return <p style={{ padding: 40 }}>일정 정보를 찾을 수 없습니다.</p>;
-  const unitPrice = Number(schedule.price ?? schedule.product_price ?? 0);
+
+  // 스타일 상수화(중복 제거)
+  const actionBtnStyle = (main) => ({
+    flex: 1,
+    minWidth: isMobile ? undefined : "40%",
+    padding: isMobile ? "12px 0" : "10px 16px",
+    border: main ? "none" : "1px solid #0070f3",
+    backgroundColor: main ? "#0070f3" : "#fff",
+    color: main ? "#fff" : "#0070f3",
+    borderRadius: 6,
+    fontWeight: 500,
+    cursor: "pointer",
+  });
+
   return (
     <div
       style={{
@@ -78,24 +117,18 @@ export default function EducationScheduleDetailPage() {
         color: "#333",
       }}
     >
-      {/* ✅ 브레드크럼브 */}
+      {/* 브레드크럼브 */}
       <div style={{ fontSize: 13, color: "#999", marginBottom: 24 }}>
         <span
           onClick={() => router.push("/education")}
-          style={{
-            cursor: "pointer",
-            marginRight: 6,
-          }}
+          style={{ cursor: "pointer", marginRight: 6 }}
         >
           교육
         </span>
         &gt;
         <span
           onClick={() => router.push(`/education/${type}`)}
-          style={{
-            cursor: "pointer",
-            marginLeft: 6,
-          }}
+          style={{ cursor: "pointer", marginLeft: 6 }}
         >
           {type}
         </span>
@@ -104,12 +137,12 @@ export default function EducationScheduleDetailPage() {
       <div
         style={{
           display: "flex",
-          flexDirection: isTabletOrBelow ? "column" : "row", // ✅ 반응형 분기
-          gap: isTabletOrBelow ? 24 : 40, // ✅ gap 조정
+          flexDirection: isTabletOrBelow ? "column" : "row",
+          gap: isTabletOrBelow ? 24 : 40,
           alignItems: isTabletOrBelow ? "stretch" : "flex-start",
         }}
       >
-        {/* 좌측: 썸네일 (비율로) */}
+        {/* 썸네일 */}
         <div style={{ flex: 1 }}>
           {schedule.image_url || schedule.product_image ? (
             <img
@@ -119,7 +152,7 @@ export default function EducationScheduleDetailPage() {
                 width: "100%",
                 height: "auto",
                 borderRadius: 8,
-                objectFit: "cover", // 또는 contain
+                objectFit: "cover",
                 display: "block",
               }}
             />
@@ -140,25 +173,14 @@ export default function EducationScheduleDetailPage() {
             </div>
           )}
         </div>
-
         {/* 텍스트 정보 */}
         <div style={{ flex: 1 }}>
-          <h1
-            style={{
-              fontSize: 22, // ✅ 작게
-              fontWeight: 600, // ✅ bold 대신
-              marginBottom: 10,
-            }}
-          >
+          <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 10 }}>
             {schedule.title}
           </h1>
-
-          {/* 가격 */}
           <p style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
             {Number(schedule.price).toLocaleString()}원
           </p>
-
-          {/* 정보 구역 */}
           <div style={{ paddingTop: 12 }}>
             {[
               {
@@ -167,9 +189,7 @@ export default function EducationScheduleDetailPage() {
                   const start = new Date(schedule.start_date);
                   const end = new Date(schedule.end_date);
                   const sameDay =
-                    start.getFullYear() === end.getFullYear() &&
-                    start.getMonth() === end.getMonth() &&
-                    start.getDate() === end.getDate();
+                    start.toDateString() === end.toDateString();
                   return sameDay
                     ? start.toLocaleDateString()
                     : `${start.toLocaleDateString()} ~ ${end.toLocaleDateString()}`;
@@ -184,9 +204,9 @@ export default function EducationScheduleDetailPage() {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  padding: "10px 0", // ✅ 간격 줄임
-                  borderBottom: "0.5px solid rgba(0,0,0,0.05)", // ✅ 더 연하고 얇게
-                  fontSize: 14, // ✅ 약간 줄임
+                  padding: "10px 0",
+                  borderBottom: "0.5px solid rgba(0,0,0,0.05)",
+                  fontSize: 14,
                   lineHeight: 1.7,
                   color: "#444",
                 }}
@@ -196,7 +216,6 @@ export default function EducationScheduleDetailPage() {
               </div>
             ))}
           </div>
-
           <div
             style={{
               display: "flex",
@@ -205,7 +224,7 @@ export default function EducationScheduleDetailPage() {
               borderBottom: "1px solid #eee",
               fontSize: 15,
               whiteSpace: "pre-line",
-              lineHeight: 1.8, // ✅ 가독성 향상
+              lineHeight: 1.8,
               color: "#444",
             }}
           >
@@ -213,14 +232,13 @@ export default function EducationScheduleDetailPage() {
               {schedule.description || "-"}
             </span>
           </div>
-
-          {/* 수량 선택 + 총 수량/금액 */}
+          {/* 수량 */}
           <div style={{ marginTop: 30 }}>
             <div
               style={{
                 marginBottom: 28,
-                padding: "10px",
-                backgroundColor: "#f7f9fc", // ✅ 살짝 배경색 추가
+                padding: 10,
+                backgroundColor: "#f7f9fc",
                 borderRadius: 6,
                 display: "flex",
                 justifyContent: "space-between",
@@ -281,7 +299,7 @@ export default function EducationScheduleDetailPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 marginBottom: 16,
-                fontSize: 16, // ✅ 살짝 키움
+                fontSize: 16,
               }}
             >
               <span style={{ color: "#333" }}>총 {quantity}명</span>
@@ -290,8 +308,7 @@ export default function EducationScheduleDetailPage() {
               </span>
             </div>
           </div>
-
-          {/* ✅ 요 아래에 이거 붙여줘 */}
+          {/* 구매/장바구니 버튼 */}
           {isMobile ? (
             <div
               style={{
@@ -307,62 +324,10 @@ export default function EducationScheduleDetailPage() {
                 zIndex: 999,
               }}
             >
-              <button
-                onClick={async () => {
-                  try {
-                    const payload = {
-                      schedule_id: schedule.id,
-                      quantity,
-                      unit_price: unitPrice,
-                      type: "cart",
-                    };
-
-                    const guestToken = localStorage.getItem("guest_token");
-                    const res = await api.post("/cart/items", payload, {
-                      headers: {
-                        "x-guest-token": guestToken || "",
-                      },
-                    });
-
-                    if (res.data.success) {
-                      alert("🛒 장바구니에 담았습니다!");
-                      // 장바구니를 서버에서 새로 받아서 최신 상태로 갱신
-                      await refreshCart();
-                    } else {
-                      alert("❌ 장바구니 담기에 실패했습니다.");
-                    }
-                    
-                  } catch (err) {
-                    console.error("장바구니 담기 오류:", err);
-                    alert("오류가 발생했습니다. 다시 시도해주세요.");
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  padding: "12px 0",
-                  border: "1px solid #0070f3",
-                  backgroundColor: "#fff",
-                  color: "#0070f3",
-                  borderRadius: 6,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={handleAddToCart} style={actionBtnStyle(false)}>
                 장바구니
               </button>
-              <button
-                onClick={handleBuyNow}
-                style={{
-                  flex: 1,
-                  padding: "12px 0",
-                  backgroundColor: "#0070f3",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={handleBuyNow} style={actionBtnStyle(true)}>
                 바로 구매
               </button>
             </div>
@@ -375,63 +340,10 @@ export default function EducationScheduleDetailPage() {
                 marginTop: 20,
               }}
             >
-              <button
-                onClick={async () => {
-                  try {
-                    const payload = {
-                      schedule_id: schedule.id,
-                      quantity,
-                      unit_price: unitPrice,
-                      type: "cart",
-                    };
-
-                    const guestToken = localStorage.getItem("guest_token");
-                    const res = await api.post("/cart/items", payload, {
-                      headers: {
-                        "x-guest-token": guestToken || "",
-                      },
-                    });
-
-                    if (res.data.success) {
-                      alert("🛒 장바구니에 담았습니다!");
-                      await refreshCart();
-                    } else {
-                      alert("❌ 장바구니 담기에 실패했습니다.");
-                    }
-                    
-                  } catch (err) {
-                    console.error("장바구니 담기 오류:", err);
-                    alert("오류가 발생했습니다. 다시 시도해주세요.");
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  minWidth: "40%",
-                  padding: "10px 16px",
-                  border: "1px solid #0070f3",
-                  backgroundColor: "#fff",
-                  color: "#0070f3",
-                  borderRadius: 6,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={handleAddToCart} style={actionBtnStyle(false)}>
                 장바구니
               </button>
-              <button
-                onClick={handleBuyNow}
-                style={{
-                  flex: 1,
-                  minWidth: "40%",
-                  padding: "10px 16px",
-                  backgroundColor: "#0070f3",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={handleBuyNow} style={actionBtnStyle(true)}>
                 바로 구매
               </button>
             </div>
@@ -439,7 +351,7 @@ export default function EducationScheduleDetailPage() {
         </div>
       </div>
 
-      {/* 상세 설명 */}
+      {/* 상세 설명, 탭 */}
       <ProductTabs
         tabs={[
           { id: "detail", label: "상품상세" },
@@ -448,8 +360,6 @@ export default function EducationScheduleDetailPage() {
           { id: "refund", label: "환불안내" },
         ]}
       />
-
-      {/* 탭 콘텐츠 실제 위치에 렌더링 */}
       <div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabProductDetail html={schedule.detail} />
       </div>

@@ -1,13 +1,13 @@
-import { useState, useMemo, useEffect } from "react";
-import PaymentDetailModal from "./PaymentDetailModal"; // ✅ 추가
+import { useState, useMemo } from "react";
+import PaymentDetailModal from "./PaymentDetailModal";
 import { formatPrice } from "@/lib/format";
 import "react-datepicker/dist/react-datepicker.css";
 import SearchFilter from "@/components/common/SearchFilter";
-import PaginationControls from "@/components/common/PaginationControls"; // ✅ 추가
+import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
+
 export default function PaymentsTable({ payments = [] }) {
-  console.log("✅ PaymentsTable 안에서 받은 payments:", payments);
   const [searchType, setSearchType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState(null);
@@ -16,7 +16,15 @@ export default function PaymentsTable({ payments = [] }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [modalPaymentId, setModalPaymentId] = useState(null); // ✅ 상세 모달 ID
+  const [modalPaymentId, setModalPaymentId] = useState(null);
+
+  // 환불 처리 (구현체에 맞게 연결)
+  const handleRefund = (orderId) => {
+    // 환불 로직 구현 필요(예: 환불 모달 등)
+    alert(`환불 처리 기능은 미구현 상태입니다.\n환불 대상: ${orderId}`);
+  };
+
+  // 검색/정렬 리셋
   const handleReset = () => {
     setSearchType("all");
     setSearchQuery("");
@@ -25,27 +33,24 @@ export default function PaymentsTable({ payments = [] }) {
     setCurrentPage(1);
   };
 
+  // 정렬
   const handleSort = (key) => {
-    setSortConfig((prev) => {
-      if (!prev || prev.key !== key) return { key, direction: "asc" };
-      return {
-        key,
-        direction: prev.direction === "asc" ? "desc" : "asc",
-      };
-    });
+    setSortConfig((prev) =>
+      !prev || prev.key !== key
+        ? { key, direction: "asc" }
+        : { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+    );
+    setCurrentPage(1);
   };
 
+  // 필터링 useMemo
   const filteredPayments = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return payments.filter((p) => {
       if (searchType === "created_at" || searchType === "updated_at") {
         const date = new Date(p[searchType]);
-        const startOnly = startDate
-          ? new Date(startDate.setHours(0, 0, 0, 0))
-          : null;
-        const endOnly = endDate
-          ? new Date(endDate.setHours(23, 59, 59, 999))
-          : null;
+        const startOnly = startDate ? new Date(startDate.setHours(0, 0, 0, 0)) : null;
+        const endOnly = endDate ? new Date(endDate.setHours(23, 59, 59, 999)) : null;
         if (startOnly && endOnly) return date >= startOnly && date <= endOnly;
         if (startOnly) return date >= startOnly;
         if (endOnly) return date <= endOnly;
@@ -68,67 +73,49 @@ export default function PaymentsTable({ payments = [] }) {
         );
       }
       if (searchType === "status") {
-        if (!searchQuery) return true; // ✅ 전체 선택 시 모든 항목 통과
-        console.log("📦 status 비교", {
-          actual: p.status,
-          target: searchQuery,
-        });
+        if (!searchQuery) return true;
         return p.status === searchQuery;
       }
       return p[searchType]?.toString().toLowerCase().includes(query);
     });
   }, [searchQuery, searchType, startDate, endDate, payments]);
 
+  // 정렬 useMemo
   const sortedPayments = useMemo(() => {
     if (!sortConfig) return filteredPayments;
     const { key, direction } = sortConfig;
     return [...filteredPayments].sort((a, b) => {
-      const aVal =
-        key === "discount_total"
-          ? (a.used_point || 0) + (a.coupon_discount || 0)
-          : a[key];
-      const bVal =
-        key === "discount_total"
-          ? (b.used_point || 0) + (b.coupon_discount || 0)
-          : b[key];
+      const aVal = key === "discount_total"
+        ? (a.used_point || 0) + (a.coupon_discount || 0)
+        : a[key];
+      const bVal = key === "discount_total"
+        ? (b.used_point || 0) + (b.coupon_discount || 0)
+        : b[key];
       if (aVal < bVal) return direction === "asc" ? -1 : 1;
       if (aVal > bVal) return direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredPayments, sortConfig]);
 
-  const pagedPayments = sortedPayments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // 페이징 useMemo
+  const pagedPayments = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedPayments.slice(start, start + itemsPerPage);
+  }, [sortedPayments, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
+  const totalPages = useMemo(() => Math.ceil(sortedPayments.length / itemsPerPage), [sortedPayments, itemsPerPage]);
 
-  const isAllChecked =
-    pagedPayments.length > 0 &&
-    pagedPayments.every((p) => selectedIds.includes(p.payment_id || p.id));
+  // 체크박스
+  const isAllChecked = pagedPayments.length > 0 && pagedPayments.every((p) => selectedIds.includes(p.payment_id || p.id));
+  const toggleAll = (checked) => setSelectedIds(checked ? pagedPayments.map((p) => p.payment_id || p.id) : []);
+  const toggleOne = (id, checked) =>
+    setSelectedIds((prev) => checked ? [...prev, id] : prev.filter((item) => item !== id));
 
-  const toggleAll = (checked) => {
-    setSelectedIds(
-      checked ? pagedPayments.map((p) => p.payment_id || p.id) : []
-    );
-  };
-
-  const toggleOne = (id, checked) => {
-    setSelectedIds((prev) =>
-      checked ? [...prev, id] : prev.filter((item) => item !== id)
-    );
-  };
-
+  // 상태 뱃지
   const renderStatusBadge = (status) => {
     const dict = { paid: "결제완료", refunded: "환불완료", failed: "결제실패" };
-    const colors = {
-      결제완료: "#10b981",
-      환불완료: "#3b82f6",
-      결제실패: "#ef4444",
-    };
-    const label = dict[status] || status; // 서버 값 → 한글 라벨 매핑
-
+    const colors = { 결제완료: "#10b981", 환불완료: "#3b82f6", 결제실패: "#ef4444" };
+    const label = dict[status] || status;
     return (
       <span
         style={{
@@ -144,6 +131,7 @@ export default function PaymentsTable({ payments = [] }) {
     );
   };
 
+  // 날짜 포맷
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -158,6 +146,7 @@ export default function PaymentsTable({ payments = [] }) {
     });
   };
 
+  // 정렬 화살표
   const renderArrow = (key) => {
     const baseStyle = { marginLeft: "6px", fontSize: "12px" };
     if (!sortConfig || key !== sortConfig.key)
@@ -168,12 +157,7 @@ export default function PaymentsTable({ payments = [] }) {
       </span>
     );
   };
-  useEffect(() => {
-    console.log("전체 payments 길이:", payments.length);
-    console.log("필터된 payments 길이:", filteredPayments.length);
-    console.log("정렬된 payments 길이:", sortedPayments.length);
-    console.log("화면에 보이는 payments 길이:", pagedPayments.length);
-  }, [payments, filteredPayments, sortedPayments, pagedPayments]);
+
   return (
     <div>
       <div
@@ -198,7 +182,7 @@ export default function PaymentsTable({ payments = [] }) {
               { value: "username", label: "사용자", type: "text" },
               { value: "total_quantity", label: "수강인원", type: "text" },
               { value: "amount", label: "결제금액", type: "text" },
-              { value: "discount_total", label: "할인적용", type: "text" }, // 계산값
+              { value: "discount_total", label: "할인적용", type: "text" },
               {
                 value: "payment_method",
                 label: "결제수단",
@@ -222,7 +206,6 @@ export default function PaymentsTable({ payments = [] }) {
               },
             ]}
             onSearchUpdate={(type, query) => {
-              console.log("🔍 필터 변경됨:", type, query); // 👈 이거 찍자
               setSearchType(type);
               setSearchQuery(query);
               setStartDate(null);
@@ -322,12 +305,7 @@ export default function PaymentsTable({ payments = [] }) {
           {pagedPayments.map((p, index) => {
             const paymentId = p.payment_id || p.id;
             return (
-              <tr
-                key={paymentId} // ✅ 안전한 key
-                style={{
-                  backgroundColor: index % 2 === 0 ? "#fff" : "#fafafa",
-                }}
-              >
+              <tr key={paymentId} style={{ backgroundColor: index % 2 === 0 ? "#fff" : "#fafafa" }}>
                 <td style={tdCenter}>
                   <input
                     type="checkbox"
@@ -338,9 +316,7 @@ export default function PaymentsTable({ payments = [] }) {
                 <td style={tdCenter}>#{paymentId}</td>
                 <td style={tdCenter}>
                   {p.username || "-"} <br />
-                  <span style={{ fontSize: 13, color: "#888" }}>
-                    {p.email || "-"}
-                  </span>
+                  <span style={{ fontSize: 13, color: "#888" }}>{p.email || "-"}</span>
                 </td>
                 <td style={tdCenter}>{p.total_quantity || 0}명</td>
                 <td style={tdCenter}>{formatPrice(p.amount)}원</td>
@@ -389,7 +365,6 @@ export default function PaymentsTable({ payments = [] }) {
           })}
         </tbody>
       </table>
-
       <PaginationControls
         page={currentPage}
         totalPages={totalPages}

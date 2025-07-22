@@ -1,17 +1,15 @@
 import { useUserContext } from "@/context/UserContext";
-import { useEffect } from "react";
+// useEffect 등 필요 없음
 
 export default function HomePage() {
   const { user } = useUserContext();
-
-  // 절대 상태 조작/복구하지 마라. 무한루프 원인.
-  // useEffect(() => {}, []);
 
   return (
     <div style={{ width: "100%", overflow: "hidden" }}>
       <img
         src="/main.webp"
         alt="진단 워크숍 메인 이미지"
+        loading="lazy" // 레이지로딩 적용
         style={{
           width: "100%",
           height: "auto",
