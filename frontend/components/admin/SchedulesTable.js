@@ -143,8 +143,9 @@ export default function SchedulesTable() {
   
   
   const totalPages = useMemo(() => {
-    return Math.ceil(sortedSchedules.length / pageSize);
-  }, [sortedSchedules, pageSize]);
+    return Math.ceil(schedules.length / pageSize);
+  }, [schedules, pageSize]);
+  
   const pagedSchedules = schedules;
   return (
     <div>
@@ -252,7 +253,7 @@ export default function SchedulesTable() {
               "등록일시",
               "수정일시",
             ]}
-            data={sortedSchedules.map((s) => ({
+            data={schedules.map((s) => ({
               일정명: s.title,
               상품명: s.product_title,
               유형: s.product_type,
@@ -270,7 +271,7 @@ export default function SchedulesTable() {
                 name: "일정별_신청자목록",
                 fetch: async () => {
                   const allRows = [];
-                  for (const s of sortedSchedules) {
+                  for (const s of schedules) {
                     const res = await api.get(
                       `admin/schedules/${s.id}/students`
                     );
