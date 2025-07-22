@@ -19,7 +19,7 @@ import EditorModeButtons from "./extensions/EditorModeButtons";
 import BulletList from "@tiptap/extension-bullet-list";
 import OrderedList from "@tiptap/extension-ordered-list";
 import ListItem from "@tiptap/extension-list-item";
-
+import api from "@/lib/api"; // 반드시 상단에 추가
 export default function TiptapEditor({ value, onChange, height = 280 }) {
   const [sourceMode, setSourceMode] = useState(false);
   const [mounted, setMounted] = useState(false); // ✅ 추가
@@ -74,22 +74,29 @@ export default function TiptapEditor({ value, onChange, height = 280 }) {
     }
   }, [value, editor]);
 
-  const insertImage = (file) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      editor.commands.insertContent(
-        `<img src="${reader.result}" alt="image" />`
-      );
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length || !editor) return;
+  
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+  
+    try {
+      const res = await api.post("/upload/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+  
+      const urls = res.data.urls || [];
+  
+      // 여러 장 한 번에 삽입!
+      const html = urls.map(item => `<img src="${item.original}" alt="image" />`).join("");
+      editor.commands.insertContent(html);
       onChange(editor.getHTML());
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      alert("이미지 업로드 실패");
+    }
   };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && editor) insertImage(file);
-  };
-
+  
   if (!mounted || !editor) return null;
   return (
     <div>
@@ -102,13 +109,7 @@ export default function TiptapEditor({ value, onChange, height = 280 }) {
           .tiptap-editor *:first-child {
             margin-top: 0;
           }
-          .tiptap-editor img,
-          .preview-wrapper img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0.5rem 0;
-          }
+
           .tiptap-editor,
           .preview-wrapper {
             word-break: break-word;
@@ -140,6 +141,22 @@ export default function TiptapEditor({ value, onChange, height = 280 }) {
           .tiptap-editor .selectedCell {
             background-color: rgba(0, 112, 243, 0.1);
           }
+                     .tiptap-editor img,
+.preview-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  vertical-align: top;
+  line-height: 0;
+}
+
+.tiptap-editor img + img {
+  margin-top: 0;
+}
 
           /* 👉 가로 드래그 커서 영역 (우측 border 선 위에서만) */
           .tiptap-editor td::after,
@@ -217,6 +234,7 @@ export default function TiptapEditor({ value, onChange, height = 280 }) {
         ref={fileInputRef}
         style={{ display: "none" }}
         onChange={handleImageUpload}
+        multiple // ✅ 다중 업로드 지원
       />
     </div>
   );

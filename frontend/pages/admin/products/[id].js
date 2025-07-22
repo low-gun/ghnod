@@ -272,7 +272,7 @@ export default function ProductFormPage() {
         {/* 상세 설명 에디터 */}
         <div style={{ marginTop: 40 }}>
           <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
-            상세 설명
+            상세설명
           </label>
           <TiptapEditor
             value={form.detail}

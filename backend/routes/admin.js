@@ -19,25 +19,8 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { giveUserCouponsBatch } = require("../controllers/adminController");
-const {
-  generateCertificate,
-  toggleCertificateActive,
-  updateCertificateTemplate,
-} = require("../controllers/adminController");
 
-// ✔️ 업로드 저장 경로 설정
-const certificateStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = "./uploads/certificates/backgrounds/";
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
-  },
-});
-const certificateUpload = multer({ storage: certificateStorage });
+
 router.get(
   "/dashboard-summary",
   authenticateToken,
@@ -593,46 +576,6 @@ router.delete("/users/coupons/:couponId", async (req, res) => {
   }
 });
 
-// ✔️ 수료증 배경 업로드 API 추가
-router.post(
-  "/certificates/upload",
-  authenticateToken,
-  authenticateAdmin,
-  certificateUpload.single("file"),
-  (req, res) => {
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ success: false, message: "파일이 없습니다." });
-    }
-    const url = `/uploads/certificates/backgrounds/${req.file.filename}`;
-    res.json({ success: true, url });
-  }
-);
-
-// ✔️ 수료증 발급
-router.post(
-  "/certificates/generate",
-  authenticateToken,
-  authenticateAdmin,
-  generateCertificate
-);
-
-// ✔️ 수료증 활성/비활성 토글
-router.patch(
-  "/certificates/:id/activate",
-  authenticateToken,
-  authenticateAdmin,
-  toggleCertificateActive
-);
-
-// ✔️ 수료증 템플릿 저장
-router.put(
-  "/schedules/:id/certificate-template",
-  authenticateToken,
-  authenticateAdmin,
-  updateCertificateTemplate
-);
 // 📌 포인트 일괄 지급 API
 router.post(
   "/batch-points",

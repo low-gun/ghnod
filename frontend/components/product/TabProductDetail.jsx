@@ -27,8 +27,8 @@ export default function TabProductDetail({ html }) {
         ref={contentRef}
         className="detail-box"
         style={{
-          maxHeight: expanded ? "none" : 800,
-          overflow: "hidden",
+          maxHeight: "none",
+          overflow: "visible",
           transition: "max-height 0.3s ease",
         }}
         dangerouslySetInnerHTML={{

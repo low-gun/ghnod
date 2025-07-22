@@ -6,7 +6,6 @@ const {
   adminOnly,
 } = require("../middlewares/authMiddleware");
 const {
-  downloadCertificatePdf,
   getMyInfo,
 } = require("../controllers/userController");
 
@@ -32,12 +31,6 @@ router.get("/all", authenticateToken, adminOnly, async (req, res) => {
   }
 });
 
-// ✔️ 수료증 다운로드 API
-router.get(
-  "/certificates/:scheduleId/download",
-  authenticateToken,
-  downloadCertificatePdf
-);
 
 // ✔️ 로그아웃
 router.post("/logout", (req, res) => {

@@ -2,15 +2,19 @@ const express = require("express");
 const router = express.Router();
 const { upload, uploadToBlob } = require("../middlewares/uploadBlob");
 
-router.post("/", upload.single("file"), uploadToBlob, (req, res) => {
-  if (!req.file || !req.file.blobUrl) {
-    return res.status(500).json({ success: false, message: "업로드 실패" });
+router.post(
+  "/image",
+  upload.array("files"),     // input name="files"로 여러 장
+  uploadToBlob,
+  (req, res) => {
+    if (!req.uploadedImageUrls || req.uploadedImageUrls.length === 0) {
+      return res.status(400).json({ success: false, message: "업로드 실패" });
+    }
+    res.json({
+      success: true,
+      urls: req.uploadedImageUrls,  // [{ original, thumbnail }, ...]
+    });
   }
-
-  res.json({
-    success: true,
-    url: req.file.blobUrl, // 🔥 Azure Blob URL 반환
-  });
-});
+);
 
 module.exports = router;

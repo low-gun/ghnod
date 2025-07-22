@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
 import TiptapEditor from "@/components/editor/TiptapEditor";
-import CertificateTemplateModal from "@/components/admin/CertificateTemplateModal";
 export default function ScheduleFormPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -28,7 +27,6 @@ export default function ScheduleFormPage() {
     detail: "", // ✅ 추가
     image_url: "", // ✅ 여기에 꼭 추가되어야 저장됨
   });
-  const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [originalImageUrl, setOriginalImageUrl] = useState(""); // 일정 썸네일 초기값 기억용
@@ -153,63 +151,8 @@ export default function ScheduleFormPage() {
     total_spots: "정원",
     price: "가격",
   };
-  const handleGenerateCertificate = async () => {
-    if (!id) return;
-    if (!confirm("정말로 이 일정의 수료증을 발급하시겠습니까?")) return;
-
-    try {
-      const res = await api.post("admin/certificates/generate", {
-        schedule_id: id,
-      });
-
-      if (res.data.success) {
-        alert("수료증 발급이 완료되었습니다.");
-      } else {
-        alert("수료증 발급 실패: " + res.data.message);
-      }
-    } catch (error) {
-      console.error("❌ 수료증 발급 오류:", error);
-      alert("수료증 발급 중 오류가 발생했습니다.");
-    }
-  };
-  const handleSaveCertificateTemplate = async ({
-    html,
-    backgroundUrl,
-    release_date,
-    is_active,
-  }) => {
-    try {
-      const payload = {
-        certificate_template: html,
-        certificate_background_url: backgroundUrl || null,
-        certificate_release_date: release_date || null,
-        certificate_is_active: is_active ? 1 : 0,
-      };
-
-      const res = await api.put(
-        `admin/schedules/${id}/certificate-template`,
-        payload
-      );
-
-      if (res.data.success) {
-        alert("수료증 템플릿이 저장되었습니다.");
-        setForm((prev) => ({
-          ...prev,
-          certificate_template: html,
-          certificate_background_url: backgroundUrl || null,
-          certificate_release_date: release_date || null,
-          certificate_is_active: is_active ? 1 : 0,
-        }));
-        setShowCertificateModal(false);
-      } else {
-        alert("수료증 템플릿 저장 실패: " + res.data.message);
-      }
-    } catch (error) {
-      console.error("❌ 수료증 템플릿 저장 오류:", error);
-      alert("저장 중 오류가 발생했습니다.");
-    }
-  };
-
+  
+  
   return (
     <AdminLayout pageTitle={isEdit ? "일정수정" : "일정등록"}>
       <div
@@ -493,7 +436,7 @@ export default function ScheduleFormPage() {
               <label
                 style={{ display: "block", fontWeight: 600, marginBottom: 8 }}
               >
-                상세 설명
+                상세설명
               </label>
               <TiptapEditor
                 value={form.detail}
@@ -547,23 +490,7 @@ export default function ScheduleFormPage() {
                       }}
                     >
                       삭제
-                    </button>
-
-                    {/* ✅ 수료증 등록/수정 버튼으로 변경 */}
-                    <button
-                      onClick={() => setShowCertificateModal(true)}
-                      style={{
-                        backgroundColor: "#10b981",
-                        color: "#fff",
-                        padding: "10px 16px",
-                        border: "none",
-                        borderRadius: 6,
-                      }}
-                    >
-                      {form.certificate_template
-                        ? "수료증 수정"
-                        : "수료증 등록"}
-                    </button>
+                    </button>             
                   </>
                 )}
 
@@ -583,15 +510,7 @@ export default function ScheduleFormPage() {
             </div>
           </>
         )}
-        {showCertificateModal && (
-          <CertificateTemplateModal
-            visible={showCertificateModal}
-            onClose={() => setShowCertificateModal(false)}
-            onSave={handleSaveCertificateTemplate}
-            initialValue={form.certificate_template}
-          />
-        )}
-      </div>
+              </div>
     </AdminLayout>
   );
 }

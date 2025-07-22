@@ -230,15 +230,7 @@ SELECT
   ) AS is_reviewed,
 
   -- ✅ 새로 추가할 부분
-  (
-    SELECT c.id
-    FROM certificates c
-    WHERE c.user_id = o.user_id
-      AND c.schedule_id = s.id
-      AND c.is_active = 1
-    LIMIT 1
-  ) AS certificate_id
-
+  
 FROM order_items oi
 JOIN orders o ON oi.order_id = o.id
 JOIN schedules s ON oi.schedule_id = s.id

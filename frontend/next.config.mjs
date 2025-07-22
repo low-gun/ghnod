@@ -31,6 +31,10 @@ const nextConfig = {
           source: "/api/:path*",
           destination: "http://localhost:5001/api/:path*",
         },
+        {
+          source: "/uploads/:path*", // ✅ 추가!
+          destination: "http://localhost:5001/uploads/:path*",
+        },
       ];
     }
     // **프로덕션용 프록시 추가**
@@ -39,8 +43,13 @@ const nextConfig = {
         source: "/api/:path*",
         destination: "https://ghnod-backend.azurewebsites.net/api/:path*",
       },
+      {
+        source: "/uploads/:path*",
+        destination: "https://ghnod-backend.azurewebsites.net/uploads/:path*",
+      },
     ];
   },
+  
 };
 
 export default nextConfig;
