@@ -27,30 +27,39 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
       const sharp = require("sharp");
 
       for (const file of req.files) {
-        // 1. 원본 업로드
-        const originalBlobName = `${Date.now()}-${uuidv4()}-original-${file.originalname}`;
-        const originalBlockBlobClient = containerClient.getBlockBlobClient(originalBlobName);
-        await originalBlockBlobClient.uploadData(file.buffer, {
-          blobHTTPHeaders: { blobContentType: file.mimetype },
-        });
-
-        // 2. 썸네일(WebP, 400px)
+        const sharp = require("sharp");
+      
+        // 썸네일(WebP, 400px)
         const thumbBuffer = await sharp(file.buffer)
           .resize({ width: 400 })
           .webp({ quality: 80 })
           .toBuffer();
-
+      
         const thumbBlobName = `${Date.now()}-${uuidv4()}-thumb-${file.originalname}.webp`;
         const thumbBlockBlobClient = containerClient.getBlockBlobClient(thumbBlobName);
         await thumbBlockBlobClient.uploadData(thumbBuffer, {
           blobHTTPHeaders: { blobContentType: "image/webp" },
         });
-
+      
+        // 상세(detail, WebP, 1200px)
+        const detailBuffer = await sharp(file.buffer)
+          .resize({ width: 1200 })
+          .webp({ quality: 80 })
+          .toBuffer();
+      
+        const detailBlobName = `${Date.now()}-${uuidv4()}-detail-${file.originalname}.webp`;
+        const detailBlockBlobClient = containerClient.getBlockBlobClient(detailBlobName);
+        await detailBlockBlobClient.uploadData(detailBuffer, {
+          blobHTTPHeaders: { blobContentType: "image/webp" },
+        });
+      
+        // original은 원본 webp detail로 대체(필요하다면!)
         uploadedUrls.push({
-          original: originalBlockBlobClient.url,
           thumbnail: thumbBlockBlobClient.url,
+          detail: detailBlockBlobClient.url,
         });
       }
+      
       console.log("🟢 uploadedUrls.length:", uploadedUrls.length);
 
       req.uploadedImageUrls = uploadedUrls;

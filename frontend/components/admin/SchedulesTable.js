@@ -42,15 +42,20 @@ export default function SchedulesTable() {
     const res = await api.get("admin/schedules", {
       params: {
         type: tabType,
-        all: true,
-        pageSize: pageSize, // ← 이거 추가
-        page: page, // ← 선택사항 (현재 페이지)
+        pageSize,
+        page,
+        sortKey: sortConfig.key,
+        sortDir: sortConfig.direction,
+        searchField,
+        searchQuery,
       },
     });
     if (res.data.success) {
-      setSchedules(res.data.schedules);
+      setSchedules(res.data.schedules);    // 한 페이지 데이터만
+      setTotal(res.data.total);            // 총 갯수(페이징 계산용)
     }
   };
+  
 
   useEffect(() => {
     fetchSchedules();
@@ -135,87 +140,12 @@ export default function SchedulesTable() {
       }
     });
   }, []);
-  const filteredSchedules = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return schedules.filter((s) => {
-      if (searchField === "title") {
-        if (!searchQuery) return true;
-        return s.title?.toLowerCase().includes(q);
-      }
-      if (searchField === "product_title") {
-        return s.product_title?.toLowerCase().includes(q);
-      }
-      if (searchField === "product_type") {
-        return s.product_type?.toLowerCase().includes(q);
-      }
-      if (searchField === "instructor") {
-        return s.instructor?.toLowerCase().includes(q);
-      }
-      if (searchField === "price") {
-        return String(s.price || "").includes(q);
-      }
-      if (searchField === "is_active") {
-        console.log("is_active 비교:", {
-          value: s.is_active,
-          type: typeof s.is_active,
-          searchQuery,
-        });
-
-        if (!searchQuery) return true;
-        return String(s.is_active) === searchQuery;
-      }
-
-      if (searchField === "start_date") {
-        if (!startDate && !endDate) return true;
-        const date = new Date(s.start_date);
-        if (startDate && date < new Date(startDate)) return false;
-        if (endDate && date > new Date(endDate)) return false;
-        return true;
-      }
-      if (searchField === "created_at") {
-        if (!startDate && !endDate) return true;
-        const date = new Date(s.created_at);
-        if (startDate && date < new Date(startDate)) return false;
-        if (endDate && date > new Date(endDate)) return false;
-        return true;
-      }
-      if (searchField === "updated_at") {
-        if (!startDate && !endDate) return true;
-        if (!s.updated_at) return false;
-        const date = new Date(s.updated_at);
-        if (startDate && date < new Date(startDate)) return false;
-        if (endDate && date > new Date(endDate)) return false;
-        return true;
-      }
-      // 전체 검색 (fallback)
-      return true;
-    });
-  }, [schedules, searchQuery, searchField]);
-  const sortedSchedules = useMemo(() => {
-    const { key, direction } = sortConfig;
-    return [...filteredSchedules].sort((a, b) => {
-      const aVal = a[key] ?? "";
-      const bVal = b[key] ?? "";
-
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return direction === "asc" ? aVal - bVal : bVal - aVal;
-      }
-
-      return direction === "asc"
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
-    });
-  }, [filteredSchedules, sortConfig]);
-
+  
+  
   const totalPages = useMemo(() => {
     return Math.ceil(sortedSchedules.length / pageSize);
   }, [sortedSchedules, pageSize]);
-
-  const pagedSchedules = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
-    return sortedSchedules.slice(start, end);
-  }, [sortedSchedules, page, pageSize]);
+  const pagedSchedules = schedules;
   return (
     <div>
       {/* 🔍 검색 + 컨트롤 */}
@@ -523,13 +453,21 @@ export default function SchedulesTable() {
                   </span>
                 </td>
                 <td style={{ ...tdCenter, width: "80px" }}>
-                  {s.image_url ? (
-                    <img
-                      src={s.image_url}
-                      alt="일정 썸네일"
-                      style={{ width: 60, height: 60, objectFit: "cover" }}
-                    />
-                  ) : s.product_image ? (
+  {s.thumbnail ? (
+    <img
+      src={s.thumbnail}
+      alt="일정 썸네일"
+      style={{ width: 60, height: 60, objectFit: "cover" }}
+      loading="lazy"
+    />
+  ) : s.image_url ? (
+    <img
+      src={s.image_url}
+      alt="일정 썸네일"
+      style={{ width: 60, height: 60, objectFit: "cover" }}
+      loading="lazy"
+    />
+  ) : s.product_image ? (
                     <img
                       src={s.product_image}
                       alt="상품 썸네일"

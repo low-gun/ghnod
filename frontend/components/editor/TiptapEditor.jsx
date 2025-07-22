@@ -89,7 +89,7 @@ export default function TiptapEditor({ value, onChange, height = 280 }) {
       const urls = res.data.urls || [];
   
       // 여러 장 한 번에 삽입!
-      const html = urls.map(item => `<img src="${item.original}" alt="image" />`).join("");
+      const html = urls.map(item => `<img src="${item.detail}" alt="image" loading="lazy" />`).join("");
       editor.commands.insertContent(html);
       onChange(editor.getHTML());
     } catch (err) {

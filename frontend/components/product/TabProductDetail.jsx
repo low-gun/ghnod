@@ -4,6 +4,9 @@ export default function TabProductDetail({ html }) {
   const contentRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
   const [exceeds, setExceeds] = useState(false);
+  // img 태그에 loading="lazy" 자동 추가
+const processedHtml = (html || "<p>상세 설명이 없습니다.</p>")
+.replace(/<img /g, '<img loading="lazy" ');
 
   useEffect(() => {
     if (contentRef.current && contentRef.current.scrollHeight > 1200) {
@@ -22,7 +25,7 @@ export default function TabProductDetail({ html }) {
       <h2 style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
         상품상세
       </h2>
-
+  
       <div
         ref={contentRef}
         className="detail-box"
@@ -32,10 +35,10 @@ export default function TabProductDetail({ html }) {
           transition: "max-height 0.3s ease",
         }}
         dangerouslySetInnerHTML={{
-          __html: html || "<p>상세 설명이 없습니다.</p>",
+          __html: processedHtml,
         }}
       />
-
+  
       {!expanded && exceeds && (
         <div style={{ textAlign: "center", marginTop: 36 }}>
           <button
