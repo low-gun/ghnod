@@ -20,6 +20,8 @@ const { parseDeviceInfo } = require("../utils/parseDeviceInfo");
 // Google OAuth2 code 처리용 REST API
 // backend/routes/auth.js
 router.post("/google/callback", async (req, res) => {
+  console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+  console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET);
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: "No code provided" });
 
