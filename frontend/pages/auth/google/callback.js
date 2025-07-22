@@ -8,25 +8,18 @@ export default function GoogleCallbackPage() {
   const { login } = useUserContext();
 
   useEffect(() => {
-    // SSR/StrictMode 대응: 브라우저에서만 동작
     if (typeof window === "undefined") return;
-
-    // 중복 요청 완전 방지 (전역 락)
     if (window.__google_callback_requested) return;
 
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
 
-    // code 없으면 종료
     if (!code) {
       router.replace("/login?error=no_code");
       return;
     }
 
-    // 전역 락
     window.__google_callback_requested = true;
-
-    // code로 요청 직전에 쿼리스트링 제거
     window.history.replaceState({}, document.title, window.location.pathname);
 
     api.post("/auth/google/callback", { code })
@@ -35,9 +28,14 @@ export default function GoogleCallbackPage() {
 
         if (accessToken && user) {
           login(user, accessToken);
-          router.replace("/");
+          if (user.role === "admin") {
+            router.replace("/admin");
+          } else {
+            router.replace("/");
+          }
           return;
         }
+        
 
         if (tempToken) {
           router.replace(`/register/social?token=${tempToken}`);
@@ -47,8 +45,21 @@ export default function GoogleCallbackPage() {
         router.replace("/login?error=token-missing");
       })
       .catch((err) => {
+        const serverMsg = err?.response?.data?.error;
+        if (serverMsg && serverMsg.includes("관리자는 자동 로그인을")) {
+          alert("관리자 계정은 일반(이메일/비밀번호) 로그인을 이용해 주세요.");
+          router.replace("/login");
+          return;
+        }
+        // 비활성화 등 기타 에러 메시지도 얼럿으로 노출
+        if (serverMsg) {
+          alert(serverMsg);
+          router.replace("/login");
+          return;
+        }
         router.replace("/login?error=google-fail");
       });
+      
   }, [router]);
 
   return <p>구글 로그인 처리 중입니다...</p>;
