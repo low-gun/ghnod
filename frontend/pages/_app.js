@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
 import { CartProvider, useCartContext } from "../context/CartContext";
-import { UserProvider } from "../context/UserContext";
+import UserProvider from "../context/UserContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "@/lib/api";
@@ -50,7 +50,8 @@ const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const { showLoading, hideLoading } = useGlobalLoading();
+  const showLoading = useGlobalLoading((state) => state.showLoading);
+const hideLoading = useGlobalLoading((state) => state.hideLoading);
   let startTime = 0;
   let maxTimeout = null;
 
@@ -87,7 +88,7 @@ function MyApp({ Component, pageProps }) {
       router.events.off("routeChangeComplete", handleEnd);
       router.events.off("routeChangeError", handleEnd);
     };
-  }, [router, showLoading, hideLoading]);
+  }, [router]);
 
   const LayoutWrapper = router.pathname.startsWith("/admin")
     ? ({ children }) => <>{children}</>

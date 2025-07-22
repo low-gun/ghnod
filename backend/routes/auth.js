@@ -27,20 +27,20 @@ router.post("/google/callback", async (req, res) => {
     console.log("[google/callback] code:", code);
 
     // 1. 토큰 요청
-    const tokenRes = await axios.post(
-      "https://oauth2.googleapis.com/token",
-      null,
-      {
-        params: {
-          code,
-          client_id: process.env.GOOGLE_CLIENT_ID,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET,
-          redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-          grant_type: "authorization_code",
-        },
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      }
-    );
+    // params를 body로 넘긴다! 절대 null, params: X
+const params = new URLSearchParams({
+  code,
+  client_id: process.env.GOOGLE_CLIENT_ID,
+  client_secret: process.env.GOOGLE_CLIENT_SECRET,
+  redirect_uri: process.env.GOOGLE_REDIRECT_URI,  // 예시: http://localhost:3000/auth/google/callback
+  grant_type: "authorization_code",
+});
+
+const tokenRes = await axios.post(
+  "https://oauth2.googleapis.com/token",
+  params, // ← 두번째 인자로 직접 넘김
+  { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+);
     console.log("[google/callback] tokenRes.data:", tokenRes.data);
     const { access_token } = tokenRes.data;
 

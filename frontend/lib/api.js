@@ -13,14 +13,20 @@ if (typeof window !== "undefined") {
 
 // accessToken 설정 함수
 export const setAccessToken = (token) => {
-  inMemoryAccessToken = token;
-
-  if (token) {
+  // token이 undefined, null, 빈 문자열, "undefined" 문자열이면 헤더 삭제
+  if (
+    token &&
+    token !== "undefined" &&
+    token !== null &&
+    token !== ""
+  ) {
+    inMemoryAccessToken = token;
     axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    sessionStorage.setItem("accessToken", token); // ✅ 세션 저장
+    sessionStorage.setItem("accessToken", token);
   } else {
+    inMemoryAccessToken = null;
     delete axiosInstance.defaults.headers.common["Authorization"];
-    sessionStorage.removeItem("accessToken"); // ✅ 세션 제거
+    sessionStorage.removeItem("accessToken");
   }
 };
 
@@ -36,8 +42,22 @@ const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use((config) => {
-  if (!config.headers.Authorization && inMemoryAccessToken) {
+  if (
+    !config.headers.Authorization &&
+    inMemoryAccessToken &&
+    inMemoryAccessToken !== "undefined" &&
+    inMemoryAccessToken !== null &&
+    inMemoryAccessToken !== ""
+  ) {
     config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
+  } else if (
+    !inMemoryAccessToken ||
+    inMemoryAccessToken === "undefined" ||
+    inMemoryAccessToken === null ||
+    inMemoryAccessToken === ""
+  ) {
+    // 토큰이 없거나, 비정상 값일 때 Authorization 헤더 제거
+    delete config.headers.Authorization;
   }
 
   if (typeof window !== "undefined") {
@@ -63,6 +83,7 @@ axiosInstance.interceptors.request.use((config) => {
 
   return config;
 });
+
 
 axiosInstance.interceptors.response.use(
   (response) => response,
