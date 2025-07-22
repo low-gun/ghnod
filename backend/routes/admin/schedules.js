@@ -7,17 +7,19 @@ const {
   adminOnly,
 } = require("../../middlewares/authMiddleware"); // ✅ 이 줄 추가!
 
-router.get("/", authenticateToken, adminOnly, async (req, res) => {
-  const {
-    page = 1,
-    pageSize = 20,
-    sort = "start_date",
-    order = "desc",
-    tabType, // 탭 필터용
-    searchField, // 검색 대상 컬럼 (프론트에서 보냄)
-    search,
-  } = req.query;
-  // ✅ 로그 추가 ①: 쿼리 파라미터 수신 확인
+const {
+  page = 1,
+  pageSize = 20,
+  sortKey = "start_date",
+  sortDir = "desc",
+  tabType, // 탭 필터용
+  searchField, // 검색 대상 컬럼 (프론트에서 보냄)
+  searchQuery,
+} = req.query;
+
+const sort = sortKey;
+const order = sortDir;
+const search = searchQuery;
 
   try {
     // 1. 전체 일정 조회 (JOIN 포함)
