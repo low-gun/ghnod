@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
-import jwt_decode from "jwt-decode"; // ✅ 딱 1줄, default import로만 사용
+import { jwtDecode } from "jwt-decode";
 
 export default function SocialRegisterPage() {
   const router = useRouter();
@@ -29,24 +29,23 @@ export default function SocialRegisterPage() {
 
     console.log("[social] token 값:", token);
     // ✅ typeof 체크로 빌드/번들 문제 즉시 확인
-    console.log("[social] typeof jwt_decode:", typeof jwt_decode, jwt_decode);
-
-    if (!jwt_decode || typeof jwt_decode !== "function") {
-      alert("jwt_decode 함수 import 실패! 번들/빌드 환경 오류, 관리자 문의 필요");
-      console.error("[social] jwt_decode import 실패: ", jwt_decode);
-      return;
-    }
+      console.log("[social] typeof jwtDecode:", typeof jwtDecode, jwtDecode);
+      if (!jwtDecode || typeof jwtDecode !== "function") {
+        alert("jwtDecode 함수 import 실패! 번들/빌드 환경 오류, 관리자 문의 필요");
+        console.error("[social] jwtDecode import 실패: ", jwtDecode);
+        return;
+      }
 
     if (!token) {
       console.log("[social] token이 undefined/null/빈값");
       return;
     }
 
-    console.log("[social] jwt_decode 호출 try 블록 진입");
+    console.log("[social] jwtDecode 호출 try 블록 진입");
     try {
-      console.log("[social] jwt_decode 호출 직전");
-      const payload = jwt_decode(token);
-      console.log("[social] jwt_decode 호출 직후");
+      console.log("[social] jwtDecode 호출 직전");
+      const payload = jwtDecode(token);
+      console.log("[social] jwtDecode 호출 직후");
       console.log("[social] jwt payload:", payload);
 
       setForm(prev => ({
@@ -56,19 +55,19 @@ export default function SocialRegisterPage() {
         email: payload.email || prev.email,
       }));
     } catch (e) {
-      console.log("[social] jwt_decode catch 진입. e:", e);
+      console.log("[social] jwtDecode catch 진입. e:", e);
       if (e) {
-        console.log("[social] jwt_decode 실패. name:", e.name);
-        console.log("[social] jwt_decode 실패. message:", e.message);
-        console.log("[social] jwt_decode 실패. stack:", e.stack);
+        console.log("[social] jwtDecode 실패. name:", e.name);
+        console.log("[social] jwtDecode 실패. message:", e.message);
+        console.log("[social] jwtDecode 실패. stack:", e.stack);
         alert(
-          "[social] jwt_decode 실패\n" +
-            "name: " + e.name + "\n" +
-            "message: " + e.message + "\n" +
-            "stack: " + (e.stack ? e.stack.split("\n")[0] : "")
+          "[social] jwtDecode 실패\n" +
+          "name: " + e.name + "\n" +
+          "message: " + e.message + "\n" +
+          "stack: " + (e.stack ? e.stack.split("\n")[0] : "")
         );
       } else {
-        alert("[social] jwt_decode catch문에서 e가 undefined 또는 null");
+        alert("[social] jwtDecode catch문에서 e가 undefined 또는 null");
       }
       router.replace("/login");
     }
