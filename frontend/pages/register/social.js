@@ -27,18 +27,22 @@ export default function SocialRegisterPage() {
 
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
+    window.onerror = function (message, source, lineno, colno, error) {
+      console.log("[window.onerror] 메시지:", message);
+      console.log("[window.onerror] error 객체:", error);
+    };
+  
     console.log("[social] token 값:", token);
-
     if (!token) return;
-
+  
     console.log("[social] jwt_decode 호출 try 블록 진입");
     try {
       console.log("[social] typeof jwt_decode:", typeof jwt_decode, jwt_decode);
-
+  
       console.log("[social] jwt_decode 호출 직전");
       const payload = jwt_decode(token);
       console.log("[social] jwt_decode 호출 직후");
-
+  
       console.log("[social] jwt payload:", payload);
       setForm(prev => ({
         ...prev,
@@ -47,10 +51,14 @@ export default function SocialRegisterPage() {
         email: payload.email || prev.email,
       }));
     } catch (e) {
-      // 반드시 콘솔에 아래 3줄이 찍히도록
-      console.log("[social] jwt_decode 실패. name:", e && e.name);
-      console.log("[social] jwt_decode 실패. message:", e && e.message);
-      console.log("[social] jwt_decode 실패. stack:", e && e.stack);
+      console.log("[social] jwt_decode catch 진입. e:", e);
+      if (e) {
+        console.log("[social] jwt_decode 실패. name:", e.name);
+        console.log("[social] jwt_decode 실패. message:", e.message);
+        console.log("[social] jwt_decode 실패. stack:", e.stack);
+      } else {
+        console.log("[social] catch문에서 e가 undefined 또는 null");
+      }
       router.replace("/login");
     }
   }, [token, router]);
