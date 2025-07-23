@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
 import jwt_decode from "jwt-decode"; // default import
+
 export default function SocialRegisterPage() {
   const router = useRouter();
   const { token } = router.query; // 쿼리에서 임시토큰 추출
@@ -27,17 +28,17 @@ export default function SocialRegisterPage() {
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
     console.log("[social] token 값:", token);
-  
+
     if (!token) return;
-  
+
     console.log("[social] jwt_decode 호출 try 블록 진입");
     try {
       console.log("[social] typeof jwt_decode:", typeof jwt_decode, jwt_decode);
-  
+
       console.log("[social] jwt_decode 호출 직전");
       const payload = jwt_decode(token);
-      console.log("[social] jwt_decode 호출 직후"); // 이 줄이 안 나오면 에러 발생!
-  
+      console.log("[social] jwt_decode 호출 직후");
+
       console.log("[social] jwt payload:", payload);
       setForm(prev => ({
         ...prev,
@@ -46,14 +47,14 @@ export default function SocialRegisterPage() {
         email: payload.email || prev.email,
       }));
     } catch (e) {
-      // 반드시 에러명/메시지/스택까지 찍기
-      console.log("[social] jwt_decode 실패. name:", e.name);
-      console.log("[social] jwt_decode 실패. message:", e.message);
-      console.log("[social] jwt_decode 실패. stack:", e.stack);
+      // 반드시 콘솔에 아래 3줄이 찍히도록
+      console.log("[social] jwt_decode 실패. name:", e && e.name);
+      console.log("[social] jwt_decode 실패. message:", e && e.message);
+      console.log("[social] jwt_decode 실패. stack:", e && e.stack);
       router.replace("/login");
     }
   }, [token, router]);
-  
+
   // 입력 핸들러 예시
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -77,7 +78,6 @@ export default function SocialRegisterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "서버 오류");
       setSuccess(true);
-      // 가입완료 후 로그인 처리/이동 등
       router.replace("/login?success=social");
     } catch (err) {
       setError(err.message);
@@ -85,12 +85,11 @@ export default function SocialRegisterPage() {
     setSubmitting(false);
   };
 
-  // RegisterStep2를 소셜모드로 활용
   return (
     <RegisterStep2
       socialMode={true}
       email={form.email}
-  setEmail={val => setForm(f => ({ ...f, email: val }))}
+      setEmail={val => setForm(f => ({ ...f, email: val }))}
       username={form.username}
       setUsername={val => setForm(f => ({ ...f, username: val }))}
       phone={form.phone}
@@ -132,5 +131,4 @@ export default function SocialRegisterPage() {
       handleErrorClear={() => {}}
     />
   );
-  
 }
