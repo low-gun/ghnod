@@ -26,36 +26,33 @@ export default function SocialRegisterPage() {
 
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
-    console.log("[social] token 값(raw):", token);
-    if (token) {
-      console.log("[social] token 길이:", token.length);
-      console.log("[social] token 앞 10:", token.slice(0,10));
-      console.log("[social] token 뒤 10:", token.slice(-10));
-      console.log("[social] jwt_decode typeof:", typeof jwt_decode, jwt_decode);
-      if (jwt_decode && typeof jwt_decode === "function") {
-        try {
-          const payload = jwt_decode(token);
-          console.log("[social] jwt payload:", payload);
-          setForm(prev => ({
-            ...prev,
-            username: payload.name || prev.username,
-            phone: payload.phone || prev.phone,
-            email: payload.email || prev.email,
-          }));
-        } catch (e) {
-          console.error("[social] jwt_decode 실패. 에러명:", e.name);
-          console.error("[social] jwt_decode 실패. 메시지:", e.message);
-          console.error("[social] jwt_decode 실패. 스택:", e.stack);
-          router.replace("/login");
-        }
-      } else {
-        console.error("[social] jwt_decode가 function이 아님!", jwt_decode);
+    console.log("[social] token 값:", token);
+    if (!token) return;
+  
+    // 추가: jwt_decode 함수 타입/구조
+    console.log("[social] typeof jwt_decode:", typeof jwt_decode);
+    if (jwt_decode && typeof jwt_decode === "function") {
+      try {
+        const payload = jwt_decode(token);
+        console.log("[social] jwt payload:", payload);
+        setForm(prev => ({
+          ...prev,
+          username: payload.name || prev.username,
+          phone: payload.phone || prev.phone,
+          email: payload.email || prev.email,
+        }));
+      } catch (e) {
+        console.log("[social] jwt_decode 실패. name:", e.name);
+        console.log("[social] jwt_decode 실패. message:", e.message);
+        console.log("[social] jwt_decode 실패. stack:", e.stack);
         router.replace("/login");
       }
     } else {
-      console.warn("[social] token이 없음(undefined/null/빈값)");
+      console.log("[social] jwt_decode is not a function!", jwt_decode);
+      router.replace("/login");
     }
   }, [token, router]);
+  
 
   // 입력 핸들러 예시
   const handleChange = (e) => {
