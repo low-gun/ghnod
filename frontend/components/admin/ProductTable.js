@@ -153,8 +153,6 @@ export default function ProductTable({ onEdit }) {
     );
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>로딩중...</div>;
-
   return (
     <div>
       {/* 검색/컨트롤 영역 */}

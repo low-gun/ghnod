@@ -1,3 +1,4 @@
+import useGlobalLoading from "@/stores/globalLoading"; // 최상단 import 추가
 import axios from "axios";
 
 // ✅ 추가: 새로고침 대비 sessionStorage 복구
@@ -156,4 +157,39 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+axiosInstance.interceptors.request.use(
+  (config) => {
+    // ✅ [추가] 모든 요청 직전: 전역 로딩 ON
+    if (typeof window !== "undefined") {
+      useGlobalLoading.getState().showLoading();
+    }
+    // (Authorization, guest_token 등 기존 처리)
+    return config;
+  },
+  (error) => {
+    // ✅ [추가] 요청 에러 발생시: 전역 로딩 OFF
+    if (typeof window !== "undefined") {
+      useGlobalLoading.getState().hideLoading();
+    }
+    return Promise.reject(error);
+  }
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => {
+    // ✅ [추가] 응답 성공시: 전역 로딩 OFF
+    if (typeof window !== "undefined") {
+      useGlobalLoading.getState().hideLoading();
+    }
+    return response;
+  },
+  async (error) => {
+    // ✅ [추가] 응답 에러시: 전역 로딩 OFF
+    if (typeof window !== "undefined") {
+      useGlobalLoading.getState().hideLoading();
+    }
+    // (이하 기존 에러/refresh-token 처리)
+    return Promise.reject(error);
+  }
+);
 export default axiosInstance;

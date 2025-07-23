@@ -60,7 +60,6 @@ export default function AdminSchedulesPage() {
   }, [tab, user, currentMonth]);
 
   // 🔥 로딩/권한 체크
-  if (user === null) return <div style={{ padding: 100, textAlign: "center" }}>로딩중...</div>;
   if (user && user.role !== "admin") return null;
 
   return (

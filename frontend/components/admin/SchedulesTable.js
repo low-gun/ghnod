@@ -61,15 +61,27 @@ export default function SchedulesTable() {
 
   useEffect(() => {
     fetchSchedules();
-  }, [tabType, sortConfig, page, pageSize, searchField, searchQuery]);
+  }, [
+    tabType,
+    page,
+    pageSize,
+    searchField,
+    searchQuery,
+    sortConfig.key,
+    sortConfig.direction,
+  ]);
+  
 
   const handleSort = (key) => {
-    const isSameKey = sortConfig.key === key;
-    const nextDirection =
-      isSameKey && sortConfig.direction === "asc" ? "desc" : "asc";
-    setSortConfig({ key, direction: nextDirection });
     setPage(1);
+    setSortConfig((prev) => {
+      const isSameKey = prev.key === key;
+      const nextDirection =
+        isSameKey && prev.direction === "asc" ? "desc" : "asc";
+      return { key, direction: nextDirection };
+    });
   };
+  
 
   const handleDeleteSelected = async () => {
     if (!window.confirm("정말로 선택한 일정을 삭제하시겠습니까?")) return;

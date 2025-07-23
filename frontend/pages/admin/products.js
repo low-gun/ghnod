@@ -47,7 +47,6 @@ export default function AdminProductsPage() {
   }, [user]);
 
   // 로딩 처리
-  if (user === null) return <div style={{ padding: 100, textAlign: "center" }}>로딩중...</div>;
   if (user && user.role !== "admin") return null; // 권한 없는 경우 리턴
 
   // 기존 코드
