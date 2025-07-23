@@ -1,8 +1,7 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
-// 네임스페이스+default+require 방식 모두 체크
-import jwt_decode_def, * as jwt_decode_ns from "jwt-decode";
+import jwt_decode from "jwt-decode"; // ✅ 딱 1줄, default import로만 사용
 
 export default function SocialRegisterPage() {
   const router = useRouter();
@@ -21,35 +20,20 @@ export default function SocialRegisterPage() {
   });
 
   useEffect(() => {
-    // window.onerror로 예기치 못한 에러까지 확인
     window.onerror = function (message, source, lineno, colno, error) {
+      // 예기치 못한 런타임 에러도 확인
       console.log("[window.onerror] 메시지:", message);
       console.log("[window.onerror] error 객체:", error);
       alert(`[window.onerror]\n${message}\n${error}`);
     };
 
-    // jwt-decode import, 번들링 상태 전체 점검
     console.log("[social] token 값:", token);
+    // ✅ typeof 체크로 빌드/번들 문제 즉시 확인
+    console.log("[social] typeof jwt_decode:", typeof jwt_decode, jwt_decode);
 
-    // 네임스페이스/디폴트/직접 require까지 모두 체크
-    const jwt_decode_func =
-      jwt_decode_def && typeof jwt_decode_def === "function"
-        ? jwt_decode_def
-        : jwt_decode_ns && typeof jwt_decode_ns.default === "function"
-        ? jwt_decode_ns.default
-        : jwt_decode_ns && typeof jwt_decode_ns === "function"
-        ? jwt_decode_ns
-        : undefined;
-
-    // 함수 타입/네임스페이스/직접 값 콘솔 전체 찍기
-    console.log("[social] typeof jwt_decode_def:", typeof jwt_decode_def, jwt_decode_def);
-    console.log("[social] typeof jwt_decode_ns:", typeof jwt_decode_ns, jwt_decode_ns);
-    console.log("[social] typeof jwt_decode_func:", typeof jwt_decode_func, jwt_decode_func);
-
-    // 함수 아닌 경우 (빌드/번들 문제) 얼럿 + 콘솔
-    if (!jwt_decode_func || typeof jwt_decode_func !== "function") {
-      console.log("[social] jwt_decode_func이 function이 아님! 빌드/번들/import 문제입니다.");
-      alert("jwt_decode import 실패! 번들/배포 환경 문제! 관리자에게 문의해주세요.");
+    if (!jwt_decode || typeof jwt_decode !== "function") {
+      alert("jwt_decode 함수 import 실패! 번들/빌드 환경 오류, 관리자 문의 필요");
+      console.error("[social] jwt_decode import 실패: ", jwt_decode);
       return;
     }
 
@@ -61,9 +45,10 @@ export default function SocialRegisterPage() {
     console.log("[social] jwt_decode 호출 try 블록 진입");
     try {
       console.log("[social] jwt_decode 호출 직전");
-      const payload = jwt_decode_func(token);
+      const payload = jwt_decode(token);
       console.log("[social] jwt_decode 호출 직후");
       console.log("[social] jwt payload:", payload);
+
       setForm(prev => ({
         ...prev,
         username: payload.name || prev.username,
@@ -78,19 +63,18 @@ export default function SocialRegisterPage() {
         console.log("[social] jwt_decode 실패. stack:", e.stack);
         alert(
           "[social] jwt_decode 실패\n" +
-          "name: " + e.name + "\n" +
-          "message: " + e.message + "\n" +
-          "stack: " + (e.stack ? e.stack.split("\n")[0] : "")
+            "name: " + e.name + "\n" +
+            "message: " + e.message + "\n" +
+            "stack: " + (e.stack ? e.stack.split("\n")[0] : "")
         );
       } else {
-        console.log("[social] catch문에서 e가 undefined 또는 null");
         alert("[social] jwt_decode catch문에서 e가 undefined 또는 null");
       }
       router.replace("/login");
     }
   }, [token, router]);
 
-  // 입력 핸들러 예시
+  // 입력 핸들러
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -100,6 +84,9 @@ export default function SocialRegisterPage() {
   };
 
   // 소셜 추가정보 최종 제출
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -129,9 +116,11 @@ export default function SocialRegisterPage() {
       setUsername={val => setForm(f => ({ ...f, username: val }))}
       phone={form.phone}
       setPhone={val => setForm(f => ({ ...f, phone: val }))}
-      formatPhone={v => v.replace(/(\d{3})(\d{3,4})?(\d{4})?/, function(_, a, b, c) {
-        return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
-      })}
+      formatPhone={v =>
+        v.replace(/(\d{3})(\d{3,4})?(\d{4})?/, function (_, a, b, c) {
+          return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
+        })
+      }
       checkPhoneDuplicate={() => {}}
       isVerified={false}
       setIsVerified={() => {}}
