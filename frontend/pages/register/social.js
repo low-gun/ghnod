@@ -107,51 +107,115 @@ export default function SocialRegisterPage() {
   };
 
   return (
-    <RegisterStep2
-      socialMode={true}
-      email={form.email}
-      setEmail={val => setForm(f => ({ ...f, email: val }))}
-      username={form.username}
-      setUsername={val => setForm(f => ({ ...f, username: val }))}
-      phone={form.phone}
-      setPhone={val => setForm(f => ({ ...f, phone: val }))}
-      formatPhone={v =>
-        v.replace(/(\d{3})(\d{3,4})?(\d{4})?/, function (_, a, b, c) {
-          return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
-        })
-      }
-      checkPhoneDuplicate={() => {}}
-      isVerified={false}
-      setIsVerified={() => {}}
-      verificationCode={form.verificationCode}
-      setVerificationCode={val => setForm(f => ({ ...f, verificationCode: val }))}
-      showVerificationInput={form.showVerificationInput}
-      setShowVerificationInput={val => setForm(f => ({ ...f, showVerificationInput: val }))}
-      hasRequestedCode={form.hasRequestedCode}
-      setHasRequestedCode={val => setForm(f => ({ ...f, hasRequestedCode: val }))}
-      timeLeft={form.timeLeft}
-      setTimeLeft={val => setForm(f => ({ ...f, timeLeft: val }))}
-      timerRef={{ current: null }}
-      verificationError={form.verificationError}
-      setVerificationError={val => setForm(f => ({ ...f, verificationError: val }))}
-      company={form.company}
-      setCompany={val => setForm(f => ({ ...f, company: val }))}
-      department={form.department}
-      setDepartment={val => setForm(f => ({ ...f, department: val }))}
-      position={form.position}
-      setPosition={val => setForm(f => ({ ...f, position: val }))}
-      termsAgree={form.terms_agree}
-      setTermsAgree={val => setForm(f => ({ ...f, terms_agree: val }))}
-      privacyAgree={form.privacy_agree}
-      setPrivacyAgree={val => setForm(f => ({ ...f, privacy_agree: val }))}
-      marketingAgree={form.marketing_agree}
-      setMarketingAgree={val => setForm(f => ({ ...f, marketing_agree: val }))}
-      setOpenModal={() => {}}
-      handleRegister={handleSubmit}
-      canRegister={true}
-      error={error}
-      phoneExists={false}
-      handleErrorClear={() => {}}
-    />
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        height: "80vh",
+        alignItems: "center",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          width: "360px",
+          padding: "40px",
+          borderRadius: "8px",
+          background: "#fff",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          position: "relative",
+        }}
+      >
+        <div style={{ position: "relative", marginBottom: "24px" }}>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{
+              position: "absolute",
+              left: 0,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              color: "#666",
+              fontWeight: "bold",
+            }}
+            aria-label="뒤로가기"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18l-6-6 6-6" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <div style={{ textAlign: "center" }}>
+            <h1
+              style={{
+                fontSize: "20px",
+                fontWeight: "bold",
+                color: "#666",
+                margin: 0,
+              }}
+            >
+              회원가입
+            </h1>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#999",
+                marginTop: "6px",
+              }}
+            >
+              개인정보
+            </p>
+          </div>
+        </div>
+  
+        <RegisterStep2
+          socialMode={true}
+          email={form.email}
+          setEmail={val => setForm(f => ({ ...f, email: val }))}
+          username={form.username}
+          setUsername={val => setForm(f => ({ ...f, username: val }))}
+          phone={form.phone}
+          setPhone={val => setForm(f => ({ ...f, phone: val }))}
+          formatPhone={v =>
+            v.replace(/(\d{3})(\d{3,4})?(\d{4})?/, function (_, a, b, c) {
+              return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
+            })
+          }
+          checkPhoneDuplicate={() => {}}
+          isVerified={false}
+          setIsVerified={() => {}}
+          verificationCode={form.verificationCode}
+          setVerificationCode={val => setForm(f => ({ ...f, verificationCode: val }))}
+          showVerificationInput={form.showVerificationInput}
+          setShowVerificationInput={val => setForm(f => ({ ...f, showVerificationInput: val }))}
+          hasRequestedCode={form.hasRequestedCode}
+          setHasRequestedCode={val => setForm(f => ({ ...f, hasRequestedCode: val }))}
+          timeLeft={form.timeLeft}
+          setTimeLeft={val => setForm(f => ({ ...f, timeLeft: val }))}
+          timerRef={{ current: null }}
+          verificationError={form.verificationError}
+          setVerificationError={val => setForm(f => ({ ...f, verificationError: val }))}
+          company={form.company}
+          setCompany={val => setForm(f => ({ ...f, company: val }))}
+          department={form.department}
+          setDepartment={val => setForm(f => ({ ...f, department: val }))}
+          position={form.position}
+          setPosition={val => setForm(f => ({ ...f, position: val }))}
+          termsAgree={form.terms_agree}
+          setTermsAgree={val => setForm(f => ({ ...f, terms_agree: val }))}
+          privacyAgree={form.privacy_agree}
+          setPrivacyAgree={val => setForm(f => ({ ...f, privacy_agree: val }))}
+          marketingAgree={form.marketing_agree}
+          setMarketingAgree={val => setForm(f => ({ ...f, marketing_agree: val }))}
+          setOpenModal={() => {}}
+          handleRegister={handleSubmit}
+          canRegister={true}
+          error={error}
+          phoneExists={false}
+          handleErrorClear={() => {}}
+        />
+      </div>
+    </div>
   );
-}
+  }
