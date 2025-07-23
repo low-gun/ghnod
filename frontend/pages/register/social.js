@@ -27,11 +27,11 @@ export default function SocialRegisterPage() {
 
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
-    // token 파라미터가 아직 안 들어오면 아무 동작도 하지 않음
+    console.log("[social] token 값:", token);
     if (!token) return;
-  
     try {
       const payload = jwt_decode(token);
+      console.log("[social] jwt payload:", payload);
       setForm(prev => ({
         ...prev,
         username: payload.name || prev.username,
@@ -39,7 +39,7 @@ export default function SocialRegisterPage() {
         email: payload.email || prev.email,
       }));
     } catch (e) {
-      // 진짜로 유효하지 않은 토큰(만료/변조)일 때만 로그인으로
+      console.log("[social] jwt_decode 실패. /login 이동");
       router.replace("/login");
     }
   }, [token, router]);
