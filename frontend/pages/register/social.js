@@ -1,8 +1,7 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
-import * as jwt_decode from "jwt-decode"; // 꼭 설치: npm install jwt-decode
-
+import jwt_decode from "jwt-decode"; // default import
 export default function SocialRegisterPage() {
   const router = useRouter();
   const { token } = router.query; // 쿼리에서 임시토큰 추출
