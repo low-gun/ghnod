@@ -1,18 +1,17 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
-// 다양한 환경에서 안전하게 import
+// 네임스페이스+default+require 방식 모두 체크
 import jwt_decode_def, * as jwt_decode_ns from "jwt-decode";
 
 export default function SocialRegisterPage() {
   const router = useRouter();
-  const { token } = router.query; // 쿼리에서 임시토큰 추출
+  const { token } = router.query;
 
-  // Step2용 상태값 준비
   const [form, setForm] = useState({
     username: "",
     phone: "",
-    email: "",  
+    email: "",
     company: "",
     department: "",
     position: "",
@@ -21,46 +20,49 @@ export default function SocialRegisterPage() {
     marketing_agree: false,
   });
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-
   useEffect(() => {
-    // window.onerror로 예상치 못한 런타임 에러까지 포착
+    // window.onerror로 예기치 못한 에러까지 확인
     window.onerror = function (message, source, lineno, colno, error) {
       console.log("[window.onerror] 메시지:", message);
       console.log("[window.onerror] error 객체:", error);
+      alert(`[window.onerror]\n${message}\n${error}`);
     };
 
+    // jwt-decode import, 번들링 상태 전체 점검
     console.log("[social] token 값:", token);
-    if (!token) return;
 
-    // 다양한 번들링 환경을 위한 함수 선택
+    // 네임스페이스/디폴트/직접 require까지 모두 체크
     const jwt_decode_func =
-      jwt_decode_def || jwt_decode_ns.default || jwt_decode_ns;
+      jwt_decode_def && typeof jwt_decode_def === "function"
+        ? jwt_decode_def
+        : jwt_decode_ns && typeof jwt_decode_ns.default === "function"
+        ? jwt_decode_ns.default
+        : jwt_decode_ns && typeof jwt_decode_ns === "function"
+        ? jwt_decode_ns
+        : undefined;
 
-    console.log(
-      "[social] typeof jwt_decode_def:",
-      typeof jwt_decode_def,
-      jwt_decode_def
-    );
-    console.log(
-      "[social] typeof jwt_decode_ns:",
-      typeof jwt_decode_ns,
-      jwt_decode_ns
-    );
-    console.log(
-      "[social] typeof jwt_decode_func:",
-      typeof jwt_decode_func,
-      jwt_decode_func
-    );
+    // 함수 타입/네임스페이스/직접 값 콘솔 전체 찍기
+    console.log("[social] typeof jwt_decode_def:", typeof jwt_decode_def, jwt_decode_def);
+    console.log("[social] typeof jwt_decode_ns:", typeof jwt_decode_ns, jwt_decode_ns);
+    console.log("[social] typeof jwt_decode_func:", typeof jwt_decode_func, jwt_decode_func);
+
+    // 함수 아닌 경우 (빌드/번들 문제) 얼럿 + 콘솔
+    if (!jwt_decode_func || typeof jwt_decode_func !== "function") {
+      console.log("[social] jwt_decode_func이 function이 아님! 빌드/번들/import 문제입니다.");
+      alert("jwt_decode import 실패! 번들/배포 환경 문제! 관리자에게 문의해주세요.");
+      return;
+    }
+
+    if (!token) {
+      console.log("[social] token이 undefined/null/빈값");
+      return;
+    }
 
     console.log("[social] jwt_decode 호출 try 블록 진입");
     try {
       console.log("[social] jwt_decode 호출 직전");
       const payload = jwt_decode_func(token);
       console.log("[social] jwt_decode 호출 직후");
-
       console.log("[social] jwt payload:", payload);
       setForm(prev => ({
         ...prev,
@@ -74,8 +76,15 @@ export default function SocialRegisterPage() {
         console.log("[social] jwt_decode 실패. name:", e.name);
         console.log("[social] jwt_decode 실패. message:", e.message);
         console.log("[social] jwt_decode 실패. stack:", e.stack);
+        alert(
+          "[social] jwt_decode 실패\n" +
+          "name: " + e.name + "\n" +
+          "message: " + e.message + "\n" +
+          "stack: " + (e.stack ? e.stack.split("\n")[0] : "")
+        );
       } else {
         console.log("[social] catch문에서 e가 undefined 또는 null");
+        alert("[social] jwt_decode catch문에서 e가 undefined 또는 null");
       }
       router.replace("/login");
     }
