@@ -27,6 +27,8 @@ export default function SocialRegisterPage() {
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
     console.log("[social] token 값:", token);
+    console.log("[social] jwt_decode typeof:", typeof jwt_decode, jwt_decode);
+  
     if (!token) return;
     try {
       const payload = jwt_decode(token);
@@ -38,10 +40,11 @@ export default function SocialRegisterPage() {
         email: payload.email || prev.email,
       }));
     } catch (e) {
-      console.log("[social] jwt_decode 실패. /login 이동");
+      console.log("[social] jwt_decode 실패. 에러:", e);
       router.replace("/login");
     }
   }, [token, router]);
+  
 
   // 입력 핸들러 예시
   const handleChange = (e) => {
