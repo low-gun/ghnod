@@ -1,7 +1,8 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
-import jwt_decode from "jwt-decode"; // default import
+// 다양한 환경에서 안전하게 import
+import jwt_decode_def, * as jwt_decode_ns from "jwt-decode";
 
 export default function SocialRegisterPage() {
   const router = useRouter();
@@ -18,31 +19,48 @@ export default function SocialRegisterPage() {
     terms_agree: false,
     privacy_agree: false,
     marketing_agree: false,
-    // name, email, photo 등 자동값도 필요하면 추가 가능
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
+    // window.onerror로 예상치 못한 런타임 에러까지 포착
     window.onerror = function (message, source, lineno, colno, error) {
       console.log("[window.onerror] 메시지:", message);
       console.log("[window.onerror] error 객체:", error);
     };
-  
+
     console.log("[social] token 값:", token);
     if (!token) return;
-  
+
+    // 다양한 번들링 환경을 위한 함수 선택
+    const jwt_decode_func =
+      jwt_decode_def || jwt_decode_ns.default || jwt_decode_ns;
+
+    console.log(
+      "[social] typeof jwt_decode_def:",
+      typeof jwt_decode_def,
+      jwt_decode_def
+    );
+    console.log(
+      "[social] typeof jwt_decode_ns:",
+      typeof jwt_decode_ns,
+      jwt_decode_ns
+    );
+    console.log(
+      "[social] typeof jwt_decode_func:",
+      typeof jwt_decode_func,
+      jwt_decode_func
+    );
+
     console.log("[social] jwt_decode 호출 try 블록 진입");
     try {
-      console.log("[social] typeof jwt_decode:", typeof jwt_decode, jwt_decode);
-  
       console.log("[social] jwt_decode 호출 직전");
-      const payload = jwt_decode(token);
+      const payload = jwt_decode_func(token);
       console.log("[social] jwt_decode 호출 직후");
-  
+
       console.log("[social] jwt payload:", payload);
       setForm(prev => ({
         ...prev,
@@ -105,9 +123,9 @@ export default function SocialRegisterPage() {
       formatPhone={v => v.replace(/(\d{3})(\d{3,4})?(\d{4})?/, function(_, a, b, c) {
         return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
       })}
-      checkPhoneDuplicate={() => {}}  // (실제 구현에 맞게)
-      isVerified={false}              // (실제 인증로직에 맞게)
-      setIsVerified={() => {}}        // (실제 인증로직에 맞게)
+      checkPhoneDuplicate={() => {}}
+      isVerified={false}
+      setIsVerified={() => {}}
       verificationCode={form.verificationCode}
       setVerificationCode={val => setForm(f => ({ ...f, verificationCode: val }))}
       showVerificationInput={form.showVerificationInput}
@@ -116,7 +134,7 @@ export default function SocialRegisterPage() {
       setHasRequestedCode={val => setForm(f => ({ ...f, hasRequestedCode: val }))}
       timeLeft={form.timeLeft}
       setTimeLeft={val => setForm(f => ({ ...f, timeLeft: val }))}
-      timerRef={{ current: null }}    // (타이머 로직 연결 시 실제 값)
+      timerRef={{ current: null }}
       verificationError={form.verificationError}
       setVerificationError={val => setForm(f => ({ ...f, verificationError: val }))}
       company={form.company}
@@ -131,11 +149,11 @@ export default function SocialRegisterPage() {
       setPrivacyAgree={val => setForm(f => ({ ...f, privacy_agree: val }))}
       marketingAgree={form.marketing_agree}
       setMarketingAgree={val => setForm(f => ({ ...f, marketing_agree: val }))}
-      setOpenModal={() => {}}  // (실제 약관 모달로직 연결)
+      setOpenModal={() => {}}
       handleRegister={handleSubmit}
-      canRegister={true}       // (조건 맞게 구현)
+      canRegister={true}
       error={error}
-      phoneExists={false}      // (중복확인로직 연결 시 값)
+      phoneExists={false}
       handleErrorClear={() => {}}
     />
   );
