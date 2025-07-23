@@ -27,33 +27,33 @@ export default function SocialRegisterPage() {
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
     console.log("[social] token 값:", token);
+  
     if (!token) return;
   
-    // 추가: jwt_decode 함수 타입/구조
-    console.log("[social] typeof jwt_decode:", typeof jwt_decode);
-    if (jwt_decode && typeof jwt_decode === "function") {
-      try {
-        const payload = jwt_decode(token);
-        console.log("[social] jwt payload:", payload);
-        setForm(prev => ({
-          ...prev,
-          username: payload.name || prev.username,
-          phone: payload.phone || prev.phone,
-          email: payload.email || prev.email,
-        }));
-      } catch (e) {
-        console.log("[social] jwt_decode 실패. name:", e.name);
-        console.log("[social] jwt_decode 실패. message:", e.message);
-        console.log("[social] jwt_decode 실패. stack:", e.stack);
-        router.replace("/login");
-      }
-    } else {
-      console.log("[social] jwt_decode is not a function!", jwt_decode);
+    console.log("[social] jwt_decode 호출 try 블록 진입");
+    try {
+      console.log("[social] typeof jwt_decode:", typeof jwt_decode, jwt_decode);
+  
+      console.log("[social] jwt_decode 호출 직전");
+      const payload = jwt_decode(token);
+      console.log("[social] jwt_decode 호출 직후"); // 이 줄이 안 나오면 에러 발생!
+  
+      console.log("[social] jwt payload:", payload);
+      setForm(prev => ({
+        ...prev,
+        username: payload.name || prev.username,
+        phone: payload.phone || prev.phone,
+        email: payload.email || prev.email,
+      }));
+    } catch (e) {
+      // 반드시 에러명/메시지/스택까지 찍기
+      console.log("[social] jwt_decode 실패. name:", e.name);
+      console.log("[social] jwt_decode 실패. message:", e.message);
+      console.log("[social] jwt_decode 실패. stack:", e.stack);
       router.replace("/login");
     }
   }, [token, router]);
   
-
   // 입력 핸들러 예시
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
