@@ -10,22 +10,18 @@ export default function GoogleCallbackPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__google_callback_requested) return;
-
+  
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-
-    if (!code) {
-      router.replace("/login?error=no_code");
-      return;
-    }
-
+  
+    if (!code) return;
+  
     window.__google_callback_requested = true;
     window.history.replaceState({}, document.title, window.location.pathname);
-
+  
     api.post("/auth/google/callback", { code })
       .then(res => {
         const { accessToken, user, tempToken } = res.data;
-
         if (accessToken && user) {
           login(user, accessToken);
           if (user.role === "admin") {
@@ -35,13 +31,10 @@ export default function GoogleCallbackPage() {
           }
           return;
         }
-        
-
         if (tempToken) {
           router.replace(`/register/social?token=${tempToken}`);
           return;
         }
-
         router.replace("/login?error=token-missing");
       })
       .catch((err) => {
@@ -51,7 +44,6 @@ export default function GoogleCallbackPage() {
           router.replace("/login");
           return;
         }
-        // 비활성화 등 기타 에러 메시지도 얼럿으로 노출
         if (serverMsg) {
           alert(serverMsg);
           router.replace("/login");
@@ -59,8 +51,8 @@ export default function GoogleCallbackPage() {
         }
         router.replace("/login?error=google-fail");
       });
-      
-  }, [router]);
-
+  
+  }, []); // 반드시 빈 배열!
+  
   return <p>구글 로그인 처리 중입니다...</p>;
 }
