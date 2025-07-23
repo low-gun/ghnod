@@ -54,5 +54,5 @@ export default function GoogleCallbackPage() {
   
   }, []); // 반드시 빈 배열!
   
-  return <p>구글 로그인 처리 중입니다...</p>;
+  return null; // 
 }

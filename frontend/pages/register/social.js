@@ -27,22 +27,19 @@ export default function SocialRegisterPage() {
 
   // (선택) 토큰 없으면 진입 막기
   useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
+    // token 파라미터가 아직 안 들어오면 아무 동작도 하지 않음
+    if (!token) return;
+  
     try {
-      // token 값이 있으면 프로필 값 자동 세팅
       const payload = jwt_decode(token);
       setForm(prev => ({
         ...prev,
         username: payload.name || prev.username,
         phone: payload.phone || prev.phone,
         email: payload.email || prev.email,
-        // photo: payload.photo || prev.photo,
       }));
     } catch (e) {
-      // 토큰 파싱 오류(유효하지 않은 토큰) → 로그인으로 리디렉션
+      // 진짜로 유효하지 않은 토큰(만료/변조)일 때만 로그인으로
       router.replace("/login");
     }
   }, [token, router]);
