@@ -122,7 +122,7 @@ export default function SocialRegisterPage() {
           padding: "40px",
           borderRadius: "8px",
           background: "#fff",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          boxShadow: "none",
           position: "relative",
         }}
       >

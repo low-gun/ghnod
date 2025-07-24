@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import api, { setAccessToken } from "@/lib/api";
 import { getClientSessionId } from "@/lib/session";
 import { UserContext } from "@/context/UserContext";
+import { toast } from "react-toastify"; // 상단 import 추가
 
 export default function useRegisterForm() {
   const [step, setStep] = useState(1);
@@ -159,7 +160,7 @@ export default function useRegisterForm() {
         terms_agree: termsAgree ? 1 : 0,
         privacy_agree: privacyAgree ? 1 : 0,
       });
-      alert("회원가입이 완료되었습니다!\n이전 페이지로 이동합니다.");
+      toast.success("회원가입이 완료되었습니다!\n이전 페이지로 이동합니다.");
       const clientSessionId = getClientSessionId();
       const loginRes = await api.post("/auth/login", {
         email,
@@ -185,10 +186,11 @@ export default function useRegisterForm() {
           router.back();
         }
       } else {
-        setError("로그인은 실패했지만 회원가입은 완료되었습니다.");
+        toast.error("로그인은 실패했지만 회원가입은 완료되었습니다.");
       }
     } catch (err) {
       const msg = err.response?.data?.error || "회원가입 또는 로그인 실패";
+      toast.error(msg);
       setError(msg);
     }
   };

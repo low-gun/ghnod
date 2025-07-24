@@ -1,4 +1,3 @@
-// frontend/pages/auth/naver/callback.js
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
@@ -9,6 +8,9 @@ export default function NaverCallbackPage() {
   const { login } = useUserContext();
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.__naver_callback_requested) return;
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
@@ -17,22 +19,36 @@ export default function NaverCallbackPage() {
       return;
     }
 
-    api.post("/auth/naver/callback", { code, state })
-    .then(res => {
-      const { accessToken, user, tempToken } = res.data;
-      if (accessToken && user) {
-        login(user, accessToken);
-        router.replace("/");
-      } else if (tempToken) {
-        router.replace(`/register/social?token=${tempToken}`);
-      } else {
-        router.replace("/login?error=token-missing");
-      }
-    })
-    .catch(() => {
-      router.replace("/login?error=naver-fail");
-    });
+    // ✅ autoLogin 값 읽어서 같이 넘김
+    const autoLogin = localStorage.getItem("autoLogin") === "true";
+
+    window.__naver_callback_requested = true;
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    api.post("/auth/naver/callback", { code, state, autoLogin })
+      .then(res => {
+        const { accessToken, user, tempToken } = res.data;
+        if (accessToken && user) {
+          login(user, accessToken);
+          if (user.role === "admin") {
+            router.replace("/admin");
+          } else {
+            router.replace("/");
+          }
+        } else if (tempToken) {
+          router.replace(`/register/social?token=${tempToken}`);
+        } else {
+          router.replace("/login?error=token-missing");
+        }
+      })
+      .catch((err) => {
+        const serverMsg = err?.response?.data?.error;
+        if (serverMsg) {
+          alert(serverMsg);
+        }
+        router.replace("/login?error=naver-fail");
+      });
   }, []);
 
-  return <p>네이버 로그인 처리 중입니다...</p>;
+  return null; // 처리 중에는 아무것도 표시하지 않음
 }

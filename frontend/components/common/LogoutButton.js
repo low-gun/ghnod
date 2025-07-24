@@ -25,6 +25,8 @@ export default function LogoutButton({ collapsed = false }) {
       logout(); // context 초기화
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("clientSessionId");
+      localStorage.removeItem("autoLogin");       // ← 이 한 줄 추가하면 끝
+
 
       // ✅ 사용자에게 피드백
       toast.success("로그아웃 되었습니다.");

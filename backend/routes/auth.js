@@ -22,27 +22,26 @@ const { parseDeviceInfo } = require("../utils/parseDeviceInfo");
 router.post("/google/callback", async (req, res) => {
   console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
   console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET);
-  const { code } = req.body;
+  const { code, autoLogin } = req.body; // ← 변경
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
     console.log("[google/callback] code:", code);
 
     // 1. 토큰 요청
-    // params를 body로 넘긴다! 절대 null, params: X
-const params = new URLSearchParams({
-  code,
-  client_id: process.env.GOOGLE_CLIENT_ID,
-  client_secret: process.env.GOOGLE_CLIENT_SECRET,
-  redirect_uri: process.env.GOOGLE_REDIRECT_URI,  // 예시: http://localhost:3000/auth/google/callback
-  grant_type: "authorization_code",
-});
+    const params = new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      grant_type: "authorization_code",
+    });
 
-const tokenRes = await axios.post(
-  "https://oauth2.googleapis.com/token",
-  params, // ← 두번째 인자로 직접 넘김
-  { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-);
+    const tokenRes = await axios.post(
+      "https://oauth2.googleapis.com/token",
+      params,
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
     console.log("[google/callback] tokenRes.data:", tokenRes.data);
     const { access_token } = tokenRes.data;
 
@@ -62,19 +61,36 @@ const tokenRes = await axios.post(
 
     if (users.length > 0) {
       const user = users[0];
-      // (1) 삭제/비활성화 계정 방지
       if (user.is_deleted === 1) {
         return res.status(403).json({ error: "비활성화된 계정입니다. 관리자에게 문의하세요." });
       }
-      // (2) 권한 누락 방지
       if (!user.role) {
         return res.status(403).json({ error: "권한 없는 계정입니다. 관리자에게 문의하세요." });
       }
       const tokenPayload = { id: user.id, role: user.role };
-      const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" }); // 변수명 변경
+      const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined, // ← 분기(7일/세션)
+      });
+      console.log("쿠키 세팅 시 autoLogin:", autoLogin, "maxAge:", autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined);
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
       return res.json({
         success: true,
-        accessToken: jwtAccessToken,
+        accessToken,
         user: {
           id: user.id,
           username: user.username,
@@ -83,7 +99,6 @@ const tokenRes = await axios.post(
         },
       });
     } else {
-      // 신규 유저
       const tempPayload = {
         socialProvider: "google",
         googleId: profile.id,
@@ -104,10 +119,9 @@ const tokenRes = await axios.post(
   }
 });
 
-
 // 카카오 code 처리 REST API
 router.post("/kakao/callback", async (req, res) => {
-  const { code } = req.body;
+  const { code, autoLogin } = req.body; // ← autoLogin 추가
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
@@ -141,10 +155,27 @@ router.post("/kakao/callback", async (req, res) => {
       // 기존 유저
       const user = users[0];
       const tokenPayload = { id: user.id, role: user.role };
-      const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" }); // 변수명 변경
+      const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined, // 7일 또는 세션
+      });
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
       return res.json({
         success: true,
-        accessToken: jwtAccessToken,
+        accessToken,
         user: {
           id: user.id,
           username: user.username,
@@ -172,9 +203,10 @@ router.post("/kakao/callback", async (req, res) => {
   }
 });
 
+
 // 네이버 code 처리 REST API
 router.post("/naver/callback", async (req, res) => {
-  const { code, state } = req.body;
+  const { code, state, autoLogin } = req.body; // ← autoLogin 추가
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
@@ -208,10 +240,27 @@ router.post("/naver/callback", async (req, res) => {
       // 기존 유저
       const user = users[0];
       const tokenPayload = { id: user.id, role: user.role };
-      const jwtAccessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" }); // 변수명 변경
+      const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined, // 7일 또는 세션
+      });
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
       return res.json({
         success: true,
-        accessToken: jwtAccessToken,
+        accessToken,
         user: {
           id: user.id,
           username: user.username,
@@ -237,125 +286,6 @@ router.post("/naver/callback", async (req, res) => {
     return res.status(500).json({ error: "Naver OAuth Error" });
   }
 });
-
-
-// // ====================== 소셜 로그인 (Google) ======================
-// router.get(
-//   "/google",
-//   passport.authenticate("google", { scope: ["profile", "email"] })
-// );
-
-// router.get(
-//   "/google/callback",
-//   (req, res, next) => {
-//     if (process.env.NODE_ENV !== "production") {
-//       // 로컬 우회 처리
-//       const mockUser = { id: 1, username: "로컬유저", email: "localtest@example.com", role: "user" };
-//       const tokenPayload = { id: mockUser.id, role: mockUser.role };
-//       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
-//       res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 1000 });
-//       return res.json({ message: "🔓 로컬 Google 로그인 성공 (우회)", accessToken, user: mockUser });
-//     }
-//     return next();
-//   },
-//   passport.authenticate("google", { failureRedirect: "https://ghnod.vercel.app/login", session: false }),
-//   (req, res) => {
-//     if (req.user) {
-//       // ✅ accessToken/refreshToken 발급
-//       const tokenPayload = { id: req.user.id, role: req.user.role };
-//       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-//       const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-//       res.cookie("accessToken", accessToken, { httpOnly: true, secure: true,
-//         sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
-//       res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true,
-//         sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-//         return res.json({
-//           success: true,
-//           accessToken,
-//           user: {
-//             id: req.user.id,
-//             email: req.user.email,
-//             username: req.user.username,
-//             role: req.user.role,
-//           },
-//         });
-//     } else if (req.authInfo && req.authInfo.tempToken) {
-//       // 신규 유저 - 추가 정보 입력
-//       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
-//     } else {
-//       return res.redirect("https://ghnod.vercel.app/login?error=social");
-//     }
-//   }
-// );
-
-// // ====================== 소셜 로그인 (Kakao) ======================
-// router.get("/kakao", passport.authenticate("kakao"));
-
-// router.get(
-//   "/kakao/callback",
-//   (req, res, next) => {
-//     if (process.env.NODE_ENV !== "production") {
-//       // 로컬 우회 처리
-//       const mockUser = { id: 2, username: "로컬카카오유저", email: "kakaotest@example.com", role: "user" };
-//       const tokenPayload = { id: mockUser.id, role: mockUser.role };
-//       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
-//       res.cookie("accessToken", accessToken, { httpOnly: true, secure: true,
-//         sameSite: "None", path: "/", maxAge: 60 * 60 * 1000 });
-//       return res.json({ message: "🔓 로컬 Kakao 로그인 성공 (우회)", accessToken, user: mockUser });
-//     }
-//     return next();
-//   },
-//   passport.authenticate("kakao", { failureRedirect: "https://ghnod.vercel.app/login", session: false }),
-//   (req, res) => {
-//     if (req.user) {
-//       const tokenPayload = { id: req.user.id, role: req.user.role };
-//       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-//       const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-//       res.cookie("accessToken", accessToken, { httpOnly: true, secure: true,
-//         sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
-//       res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true,
-//         sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-//       return res.redirect("https://ghnod.vercel.app/");
-//     } else if (req.authInfo && req.authInfo.tempToken) {
-//       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
-//     } else {
-//       return res.redirect("https://ghnod.vercel.app/login?error=social");
-//     }
-//   }
-// );
-
-// // ====================== 소셜 로그인 (Naver) ======================
-// router.get("/naver", passport.authenticate("naver", { scope: ["name", "email", "mobile"] }));
-
-// router.get(
-//   "/naver/callback",
-//   (req, res, next) => {
-//     if (process.env.NODE_ENV !== "production") {
-//       const mockUser = { id: 3, username: "로컬네이버유저", email: "navertest@example.com", role: "user" };
-//       const tokenPayload = { id: mockUser.id, role: mockUser.role };
-//       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
-//       res.cookie("accessToken", accessToken, { httpOnly: true, secure: false, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 1000 });
-//       return res.json({ message: "🔓 로컬 Naver 로그인 성공 (우회)", accessToken, user: mockUser });
-//     }
-//     return next();
-//   },
-//   passport.authenticate("naver", { failureRedirect: "https://ghnod.vercel.app/login", session: false }),
-//   (req, res) => {
-//     if (req.user) {
-//       const tokenPayload = { id: req.user.id, role: req.user.role };
-//       const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" });
-//       const refreshToken = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-//       res.cookie("accessToken", accessToken, { httpOnly: true, secure: true, sameSite: "None", path: "/", maxAge: 4 * 60 * 60 * 1000 });
-//       res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true, sameSite: "None", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-//       return res.redirect("https://ghnod.vercel.app/");
-//     } else if (req.authInfo && req.authInfo.tempToken) {
-//       return res.redirect(`https://ghnod.vercel.app/register/social?token=${req.authInfo.tempToken}`);
-//     } else {
-//       return res.redirect("https://ghnod.vercel.app/login?error=social");
-//     }
-//   }
-// );
-
 // ====================== 이메일 중복 확인 ======================
 router.post("/check-email", async (req, res) => {
   const { email } = req.body;
@@ -537,7 +467,10 @@ router.post("/check-phone", async (req, res) => {
 router.post("/login", async (req, res) => {
   console.log("📌 로그인 요청 데이터:", req.body);
 
-  const { email, password, clientSessionId } = req.body;
+  const { email, password, clientSessionId, autoLogin } = req.body; // ✅ autoLogin 추가
+  console.log("autoLogin 파라미터:", autoLogin); // ← 여기!
+  // 반드시 로그로 확인
+  console.log("autoLogin:", autoLogin);
   if (!email || !password) {
     return res
       .status(400)
@@ -598,16 +531,20 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // JWT 발급 (role 포함)
-    const tokenPayload = { id: user.id, role: user.role };
-    const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-      expiresIn: "4h",
-    });
+   // JWT 발급 (role 포함)
+  const tokenPayload = { id: user.id, role: user.role };
 
-    // refreshToken 발급
-    const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+  // ✅ 자동로그인 분기: accessToken/refreshToken 만료 분기
+  const accessTokenExpiresIn = "4h"; // accessToken은 그대로
+  const refreshTokenExpiresIn = autoLogin ? "30d" : "7d"; // ✅ 30일/7일 분기
+
+  const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+    expiresIn: accessTokenExpiresIn,
+  });
+
+  const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    expiresIn: refreshTokenExpiresIn,
+  });
 
     // (1) refresh_tokens 테이블에 새로 insert (삭제 안 함)
     const userAgent = req.headers["user-agent"];
@@ -756,9 +693,8 @@ router.post("/login", async (req, res) => {
       secure: true,
       sameSite: "None",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined, // ← autoLogin O: 7일, autoLogin X: 세션쿠키
     });
-
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,

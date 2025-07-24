@@ -19,8 +19,8 @@ export default function GoogleCallbackPage() {
     window.__google_callback_requested = true;
     window.history.replaceState({}, document.title, window.location.pathname);
   
-    api.post("/auth/google/callback", { code })
-      .then(res => {
+    const autoLogin = localStorage.getItem("autoLogin") === "true"; // 값 읽기
+api.post("/auth/google/callback", { code, autoLogin })      .then(res => {
         const { accessToken, user, tempToken } = res.data;
         console.log("[callback] res.data:", res.data);
   

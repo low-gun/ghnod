@@ -374,8 +374,8 @@ export default function Header({ showProfile, setShowProfile }) {
                 style={{
                   textDecoration: "none",
                   color: "#fff",
-                  fontSize: "20px",
-                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontWeight: "normal",
                   transition: "color 0.2s", // ✅ 부드러운 색 전환
                 }}
                 onClick={() => setShowMobileMenu(false)}

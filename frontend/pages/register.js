@@ -1,4 +1,4 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, UserPlus } from "lucide-react";
 import AgreementModal from "@/components/AgreementModal";
 import RegisterStep1 from "@/components/register/RegisterStep1";
 import RegisterStep2 from "@/components/register/RegisterStep2";
@@ -6,15 +6,9 @@ import useRegisterForm from "@/components/register/useRegisterForm";
 
 export default function RegisterPage() {
   const form = useRegisterForm();
-
   const {
-    step,
-    setStep,
-    openModal,
-    setOpenModal,
-    setTermsAgree,
-    setPrivacyAgree,
-    setMarketingAgree,
+    step, setStep, openModal, setOpenModal,
+    setTermsAgree, setPrivacyAgree, setMarketingAgree
   } = form;
 
   return (
@@ -47,115 +41,108 @@ export default function RegisterPage() {
         setMarketingAgree={setMarketingAgree}
       />
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          height: "80vh",
-          alignItems: "center",
-          position: "relative",
-        }}
-      >
-        <div
-          style={{
-            width: "360px",
-            padding: "40px",
-            borderRadius: "8px",
-            background: "#fff",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            position: "relative",
-          }}
-        >
-          <div style={{ position: "relative", marginBottom: "24px" }}>
+      <div className="register-root">
+        <div className="register-card">
+          <div className="register-title-bar">
             <button
               type="button"
-              onClick={() => (step === 1 ? history.back() : setStep(1))}
-              style={{
-                position: "absolute",
-                left: 0,
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                color: "#666",
-                fontWeight: "bold",
-              }}
+              className="register-back-btn"
+              onClick={() => (form.step === 1 ? history.back() : setStep(1))}
               aria-label="뒤로가기"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={22} />
             </button>
-            <div style={{ textAlign: "center" }}>
-              <h1
-                style={{
-                  fontSize: "20px",
-                  fontWeight: "bold",
-                  color: "#666",
-                  margin: 0,
-                }}
-              >
-                회원가입
-              </h1>
-              <p
-                style={{
-                  fontSize: "14px",
-                  color: "#999",
-                  marginTop: "6px",
-                }}
-              >
-                {step === 1 ? "계정정보" : "개인정보"}
+            <div className="register-title-wrap">
+              <UserPlus size={30} color="#3577f1" style={{marginBottom: 2}} />
+              <h1 className="register-title">회원가입</h1>
+              <p className="register-step-txt">
+                {form.step === 1 ? "계정정보" : "개인정보"}
               </p>
             </div>
           </div>
-
-          {step === 1 ? (
-  <RegisterStep1 {...form} />
-) : (
-  <RegisterStep2
-    socialMode={false}
-    email={form.email}
-    setEmail={form.setEmail}
-    password={form.password}
-    setPassword={form.setPassword}
-    username={form.username}
-    setUsername={form.setUsername}
-    phone={form.phone}
-    setPhone={form.setPhone}
-    formatPhone={form.formatPhone}
-    checkPhoneDuplicate={form.checkPhoneDuplicate}
-    isVerified={form.isVerified}
-    setIsVerified={form.setIsVerified}
-    verificationCode={form.verificationCode}
-    setVerificationCode={form.setVerificationCode}
-    showVerificationInput={form.showVerificationInput}
-    setShowVerificationInput={form.setShowVerificationInput}
-    hasRequestedCode={form.hasRequestedCode}
-    setHasRequestedCode={form.setHasRequestedCode}
-    timeLeft={form.timeLeft}
-    setTimeLeft={form.setTimeLeft}
-    timerRef={form.timerRef}
-    verificationError={form.verificationError}
-    setVerificationError={form.setVerificationError}
-    company={form.company}
-    setCompany={form.setCompany}
-    department={form.department}
-    setDepartment={form.setDepartment}
-    position={form.position}
-    setPosition={form.setPosition}
-    termsAgree={form.termsAgree}
-    setTermsAgree={form.setTermsAgree}
-    privacyAgree={form.privacyAgree}
-    setPrivacyAgree={form.setPrivacyAgree}
-    marketingAgree={form.marketingAgree}
-    setMarketingAgree={form.setMarketingAgree}
-    setOpenModal={form.setOpenModal}
-    handleRegister={form.handleRegister}
-    canRegister={form.canRegister}
-    error={form.error}
-    phoneExists={form.phoneExists}
-    handleErrorClear={form.handleErrorClear}
-  />
-)}
+          <div className="register-contents">
+            {form.step === 1 ? (
+              <RegisterStep1 {...form} />
+            ) : (
+              <RegisterStep2 {...form} />
+            )}
+          </div>
         </div>
+        <style jsx>{`
+          .register-root {
+            min-height: 100vh;
+            background: #f8faff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .register-card {
+            width: 100%;
+            max-width: 410px;
+            background: #fff;
+            border-radius: 26px;
+            box-shadow: 0 8px 40px 0 rgba(48,100,220,0.12);
+            padding: 46px 32px 36px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            animation: fadeup .34s cubic-bezier(.22,.68,.64,1.12);
+          }
+          .register-title-bar {
+            width: 100%;
+            position: relative;
+            margin-bottom: 19px;
+          }
+          .register-back-btn {
+            background: none;
+            border: none;
+            position: absolute;
+            left: -6px;
+            top: 3px;
+            color: #3577f1;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 3px 7px;
+            border-radius: 7px;
+            transition: background 0.14s;
+          }
+          .register-back-btn:hover {
+            background: #eef5ff;
+          }
+          .register-title-wrap {
+            text-align: center;
+          }
+          .register-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #27354c;
+            margin: 0 0 0 0;
+            letter-spacing: -1px;
+          }
+          .register-step-txt {
+            font-size: 14.5px;
+            color: #959fb4;
+            margin: 7px 0 0 0;
+            font-weight: 500;
+          }
+          .register-contents {
+            width: 100%;
+            margin-top: 4px;
+          }
+          @keyframes fadeup {
+            from { opacity: 0; transform: translateY(48px);}
+            to { opacity: 1; transform: translateY(0);}
+          }
+          @media (max-width: 600px) {
+            .register-card {
+              padding: 24px 6vw 26px 6vw;
+              border-radius: 17px;
+              min-width: unset;
+            }
+          }
+        `}</style>
       </div>
     </>
   );
