@@ -401,7 +401,7 @@ export default function Header({ showProfile, setShowProfile }) {
           position: "fixed",
           top: 0,
           width: "100%",
-          height: "80px",
+          height: isMobile ? "48px" : "80px",
           backgroundColor: "#fff",
           zIndex: 999,
           boxShadow: isMobile ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
@@ -422,43 +422,85 @@ export default function Header({ showProfile, setShowProfile }) {
           {!isMobile && renderCenterGroup()}
           {!isMobile && renderRightGroup()}
           {isMobile && (
-            <div
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      marginLeft: "auto",
+      gap: "12px",
+    }}
+  >
+    {/* 로그인 안 했을 때 */}
+    {!user && (
+      <Link
+        href="/login"
+        style={{
+          fontWeight: "bold",
+          fontSize: "16px",
+          color: "#333333",
+          textDecoration: "none",
+        }}
+      >
+        로그인
+      </Link>
+    )}
+    {/* 로그인 했을 때: 장바구니(🛒) + MY(👤) */}
+    {user && (
+      <>
+        {/* 🛒 장바구니 아이콘 */}
+        <Link
+          href="/cart"
+          style={{
+            fontSize: "22px",
+            color: "#333",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            position: "relative",
+          }}
+        >
+          <span role="img" aria-label="장바구니">🛒</span>
+          {cartReady && cartItems.length > 0 && (
+            <span
               style={{
+                position: "absolute",
+                top: -8,
+                right: -9,
+                backgroundColor: "#ef4444",
+                color: "#fff",
+                fontSize: "10px",
+                fontWeight: "bold",
+                width: 16,
+                height: 16,
                 display: "flex",
                 alignItems: "center",
-                marginLeft: "auto",
-                gap: "12px",
+                justifyContent: "center",
+                borderRadius: "50%",
+                boxShadow: "0 0 0 1px #fff",
               }}
             >
-              {!user && (
-                <Link
-                  href="/login"
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                    color: "#333333",
-                    textDecoration: "none",
-                  }}
-                >
-                  로그인
-                </Link>
-              )}
-              {user && (
-                <Link
-                  href="/mypage"
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                    color: "#333",
-                    textDecoration: "none",
-                  }}
-                >
-                  MY
-                </Link>
-              )}
-              {renderMobileMenuButton()}
-            </div>
+              {cartItems.length}
+            </span>
           )}
+        </Link>
+        {/* 👤 MY 아이콘 */}
+        <Link
+          href="/mypage"
+          style={{
+            fontWeight: "bold",
+            fontSize: "16px",
+            color: "#333",
+            textDecoration: "none",
+          }}
+        >
+          MY
+        </Link>
+      </>
+    )}
+    {renderMobileMenuButton()}
+  </div>
+)}
+
         </div>
       </header>
       {isMobile && showMobileMenu && renderMobileMenu()}
