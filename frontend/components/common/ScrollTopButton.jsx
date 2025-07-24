@@ -20,7 +20,7 @@ export default function ScrollTopButton() {
 
     const handleScroll = () => {
       const vh = window.innerHeight * 0.01;
-      setShow(window.scrollY > vh);
+      setShow(window.scrollY > vh * 1.5);
     };
 
     handleResize();
