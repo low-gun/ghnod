@@ -99,24 +99,41 @@ export default function AgreementsPage() {
       </div>
 
       <div className="agree-btns">
-  <button
-    type="button"
-    className="prev-btn"
-    onClick={() => {
-      if (window.history.length > 1) router.back();
-      else router.push("/register");
-    }}
-  >
-    이전
-  </button>
-  <button
-    type="button"
-    className="next-btn"
-    onClick={handleAgree}
-    disabled={!(termsChecked && privacyChecked)}
-  >
-    다음
-  </button>
+      <button
+  type="button"
+  className="prev-btn"
+  onClick={() => {
+    // 동의값 모두 false로 저장(초기화) 후 step2로 이동
+    localStorage.setItem("registerStep2Form", JSON.stringify({
+      termsAgree: false,
+      privacyAgree: false,
+      marketingAgree: false,
+      // 필요시 입력값 등 추가
+    }));
+    router.push("/register?step=2");
+  }}
+>
+  이전
+</button>
+
+<button
+  type="button"
+  className="next-btn"
+  onClick={() => {
+    // 체크한 값만 true로 저장 후 step2로 이동
+    localStorage.setItem("registerStep2Form", JSON.stringify({
+      termsAgree: termsChecked,
+      privacyAgree: privacyChecked,
+      marketingAgree: marketingChecked,
+      // 필요시 입력값 등 추가
+    }));
+    router.push("/register?step=2");
+  }}
+  disabled={!(termsChecked && privacyChecked)}
+>
+  다음
+</button>
+
 </div>
 
 

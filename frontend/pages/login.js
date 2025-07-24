@@ -90,27 +90,27 @@ export default function LoginPage() {
 
   return (
     <div className="login-root">
-<div className="login-card">
-<div className="title-bar">
-  <button
-    type="button"
-    className="back-btn"
-    onClick={() => history.back()}
-    aria-label="뒤로가기"
-  >
-    <ChevronLeft size={22} />
-  </button>
-  <div className="title-wrap">
-    <LogIn size={32} color="#3577f1" style={{ marginBottom: 4 }} />
-    <h2 className="title">로그인</h2>
-  </div>
-</div>
- <form
-  id="login-form"
-  onSubmit={handleLogin}
-  autoComplete="off"
-  className="login-form"
->
+      <div className="login-card">
+        <div className="title-bar">
+          <button
+            type="button"
+            className="back-btn"
+            onClick={() => router.back()}
+            aria-label="뒤로가기"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="title-wrap">
+            <LogIn size={32} color="#3577f1" style={{ marginBottom: 4 }} />
+            <h2 className="title">로그인</h2>
+          </div>
+        </div>
+        <form
+          id="login-form"
+          onSubmit={handleLogin}
+          autoComplete="off"
+          className="login-form"
+        >
           <input
             type="email"
             placeholder="이메일"
@@ -147,12 +147,12 @@ export default function LoginPage() {
               <a href="/find-password">비밀번호 찾기</a>
             </div>
           </div>
-                <button
-    type="submit"
-    className="login-btn desktop-only"
-  >
-          로그인
-        </button>
+          <button
+            type="submit"
+            className="login-btn desktop-only"
+          >
+            로그인
+          </button>
         </form>
         <p className="login-footer">
           아직 회원이 아니신가요?{" "}
@@ -165,19 +165,18 @@ export default function LoginPage() {
       </div>
 
       <div className="login-bottom-bar mobile-only">
-  <div className="login-social-box">
-    <div className="social-label">소셜 계정으로 로그인</div>
-    <SocialLoginButtons />
-  </div>
-  <button
-    type="submit"
-    className="login-btn"
-    form="login-form"
-  >
-    로그인
-  </button>
-</div>
-
+        <div className="login-social-box">
+          <div className="social-label">소셜 계정으로 로그인</div>
+          <SocialLoginButtons />
+        </div>
+        <button
+          type="submit"
+          className="login-btn"
+          form="login-form"
+        >
+          로그인
+        </button>
+      </div>
 
       {showPasswordResetModal && (
         <ChangePasswordModal
@@ -186,321 +185,6 @@ export default function LoginPage() {
           isForcedReset={true}
         />
       )}
-      <style jsx>{`
-      .title-bar {
-  width: 100%;
-  /* display: flex;               ← 삭제 */
-  /* align-items: center;         ← 삭제 */
-  margin-bottom: 18px;
-  position: relative;           /* ★ 유지 */
-}
-.back-btn {
-  background: none;
-  border: none;
-  color: #3577f1;
-  font-weight: bold;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 2px 8px 2px 0;
-  border-radius: 7px;
-  transition: background 0.14s;
-  /* margin-right: 6px;           ← 삭제 */
-  position: absolute;           /* ★ static → absolute */
-  left: 0;                      /* ★ 추가 */
-  top: 50%;                     /* ★ 추가 */
-  transform: translateY(-50%);  /* ★ 추가 */
-  line-height: 1;
-  display: flex;
-  align-items: center;
-}
-.back-btn:hover {
-  background: #eef5ff;
-}
-.title-wrap {
-  width: 100%;                  /* ★ 추가 (flex: 1 1 0% → width: 100%) */
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  margin-bottom: 0;
-}
-.title {
-  font-size: 22px;
-  font-weight: 800;
-  color: #27354c;
-  margin: 0;
-}
-@media (max-width: 500px) {
-  .title-bar {
-    margin-bottom: 10px;
-  }
-  .title {
-    font-size: 18.5px;
-  }
-  .back-btn {
-    padding: 2px 7px 2px 0;
-    margin-right: 2px;
-    font-size: 18px;
-  }
-}
-      .login-title-bar {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  margin-bottom: 18px;
-  position: relative;
-}
-        .login-root {
-          min-height: 100vh;
-          background: #f8faff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .login-card {
-          width: 100%;
-          max-width: 370px;
-          background: #fff;
-          border-radius: 26px;
-          box-shadow: 0 8px 40px 0 rgba(48,100,220,0.13);
-          padding: 44px 30px 32px 30px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          position: relative;
-          animation: fadeup .33s cubic-bezier(.22,.68,.64,1.12);
-        }
-        .login-title-wrap {
-  flex: 1 1 0%;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  margin-bottom: 0; /* margin-bottom 제거 */
-}
-.login-title {
-  font-size: 22px;
-  font-weight: 800;
-  color: #27354c;
-  margin: 0;
-}
-@media (max-width: 500px) {
-  .login-title-bar {
-    margin-bottom: 10px;
-  }
-  .login-title {
-    font-size: 18.5px;
-  }
-  .login-back-btn {
-    padding: 2px 7px 2px 0;
-    margin-right: 2px;
-  }
-}
-        .login-form {
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .login-input {
-          border: 1.5px solid #e3e9fa;
-          border-radius: 12px;
-          font-size: 16.5px;
-          padding: 13px 16px;
-          width: 100%;
-          background: #fafdff;
-          transition: border 0.2s, box-shadow 0.2s;
-          box-shadow: 0 2px 8px 0 rgba(60,100,220,0.03);
-        }
-        .login-input:focus {
-          outline: none;
-          border: 1.8px solid #3577f1;
-          box-shadow: 0 4px 16px 0 rgba(48,100,220,0.06);
-        }
-        .login-extra-bar {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: -2px;
-          margin-bottom: 1px;
-        }
-        .auto-login-checkbox {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 14.3px;
-          color: #2b3a5a;
-          font-weight: 500;
-          user-select: none;
-        }
-        .auto-login-checkbox input[type="checkbox"] {
-          accent-color: #3577f1;
-          width: 15px;
-          height: 15px;
-          margin: 0;
-        }
-        .find-links {
-          display: flex;
-          gap: 7px;
-          font-size: 14.2px;
-        }
-        .find-links a {
-          color: #3577f1;
-          text-decoration: none;
-          font-weight: 500;
-          transition: color 0.13s;
-        }
-        .find-links a:hover {
-          color: #1647af;
-          text-decoration: underline;
-        }
-        .bar {
-          color: #d1d5e1;
-        }
-        .login-btn {
-          margin-top: 6px;
-          padding: 13px 0;
-          border: none;
-          border-radius: 10px;
-          background: linear-gradient(90deg, #3577f1 60%, #296fff 100%);
-          color: #fff;
-          font-size: 17.4px;
-          font-weight: 700;
-          letter-spacing: -1px;
-          cursor: pointer;
-          box-shadow: 0 2px 14px 0 rgba(60,120,250,0.08);
-          transition: background 0.19s, box-shadow 0.19s;
-        }
-        .desktop-only.login-btn {
-  margin-top: 6px; /* 데스크탑 버튼만 위 여백 */
-}
-        .login-btn:active {
-          background: linear-gradient(90deg, #296fff 80%, #3577f1 100%);
-          box-shadow: 0 2px 12px 0 rgba(48,100,220,0.12);
-        }
-        .login-btn:disabled {
-          background: #b7c6e4;
-          color: #fff;
-          cursor: not-allowed;
-        }
-        .login-footer {
-          margin: 18px 0 0 0;
-          font-size: 14.7px;
-          color: #66799c;
-          text-align: center;
-        }
-        .login-footer a {
-          color: #3577f1;
-          font-weight: 400;
-          text-decoration: none;
-        }
-        .login-social-box {
-          width: 100%;
-          margin-top: 33px;
-        }
-        .social-label {
-          text-align: center;
-          font-size: 14.2px;
-          margin-bottom: 14px;
-          color: #9399ad;
-        }
-        .desktop-only { display: block; }
-        .mobile-only { display: none; }
-        @keyframes fadeup {
-          from { opacity: 0; transform: translateY(38px);}
-          to { opacity: 1; transform: translateY(0);}
-        }
-        @media (max-width: 500px) {
-  .desktop-only { display: none !important; }
-  .mobile-only { display: flex !important; }
-  .login-root {
-    padding: 0 !important;
-    margin: 0 !important;
-    min-height: 100dvh !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    background: #f8faff;
-    box-sizing: border-box;
-    overflow: hidden !important;
-  }
-  .login-card {
-    max-width: 100vw;
-    min-width: 0;
-    background: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0 7vw !important;
-    min-height: 100dvh !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    box-sizing: border-box;
-    overflow: hidden !important;
-  }
-  .login-title {
-    font-size: 18.5px;
-  }
-  .login-form {
-    gap: 12px;
-  }
-  .login-input {
-    font-size: 15px;
-    padding: 11px 12px;
-    border-radius: 8px;
-  }
-  .login-extra-bar {
-    flex-direction: row;
-    align-items: center;      /* ← center로 맞춤 */
-    justify-content: space-between;
-    gap: 0;
-    margin-bottom: 4px;
-    margin-top: 2px;
-  }
-  .find-links {
-    font-size: 13.2px;
-    gap: 5px;
-  }
-  .login-btn {
-    padding: 11px 0;
-    font-size: 15.2px;
-    border-radius: 8px;
-    margin-top: 0;
-  }
-  .login-footer {
-    font-size: 13.5px;
-    margin-top: 13px;
-  }
-  .login-social-box {
-    margin-top: 0;
-  }
-  .social-label {
-    font-size: 13px;
-    margin-bottom: 10px;
-  }
-  .login-bottom-bar {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100vw;
-    background: #fff;
-    padding: 14px 7vw 18px 7vw;
-    box-shadow: 0 -3px 18px 0 rgba(48,100,220,0.08);
-    z-index: 100;
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  body {
-    overflow: hidden !important;
-  }
-}
-
-      `}</style>
     </div>
   );
 }

@@ -1,18 +1,33 @@
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import { ChevronLeft, UserPlus } from "lucide-react";
 import AgreementModal from "@/components/AgreementModal";
 import RegisterStep1 from "@/components/register/RegisterStep1";
 import RegisterStep2 from "@/components/register/RegisterStep2";
 import useRegisterForm from "@/components/register/useRegisterForm";
 
+
 export default function RegisterPage() {
   const form = useRegisterForm();
+  const router = useRouter();
   const {
-    step, setStep, openModal, setOpenModal,
-    setTermsAgree, setPrivacyAgree, setMarketingAgree
+    step,
+    setStep,
+    openModal,
+    setOpenModal,
+    setTermsAgree,
+    setPrivacyAgree,
+    setMarketingAgree,
   } = form;
+  // 쿼리 파라미터에서 step 읽어와서 반영
+  useEffect(() => {
+    if (!router.isReady) return;
+    const qsStep = Number(router.query.step);
+    if (qsStep === 1 || qsStep === 2) setStep(qsStep);
+  }, [router.isReady, router.query.step, setStep]);
 
   return (
-    <>
+    <div className="login-root">
       {/* 약관 모달 */}
       <AgreementModal
         openKey="terms"
@@ -41,134 +56,93 @@ export default function RegisterPage() {
         setMarketingAgree={setMarketingAgree}
       />
 
-      <div className="register-root">
-        <div className="register-card">
-          <div className="register-title-bar">
-            <button
-              type="button"
-              className="register-back-btn"
-              onClick={() => (form.step === 1 ? history.back() : setStep(1))}
-              aria-label="뒤로가기"
-            >
-              <ChevronLeft size={22} />
-            </button>
-            <div className="register-title-wrap">
-              <UserPlus size={30} color="#3577f1" style={{marginBottom: 2}} />
-              <h1 className="register-title">회원가입</h1>
-              <p className="register-step-txt">
-                {form.step === 1 ? "계정정보" : "개인정보"}
-              </p>
-            </div>
-          </div>
-          <div className="register-contents">
-            {form.step === 1 ? (
-              <RegisterStep1 {...form} />
-            ) : (
-              <RegisterStep2 {...form} />
-            )}
+      <div className="login-card">
+        <div className="title-bar">
+          <button
+            type="button"
+            className="back-btn"
+            onClick={() => (step === 1 ? router.back() : setStep(1))}
+            aria-label="뒤로가기"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="title-wrap">
+            <UserPlus size={32} color="#3577f1" style={{ marginBottom: 4 }} />
+            <h2 className="title">회원가입</h2>
+            <p className="subtitle">
+              {step === 1 ? "계정정보" : "개인정보"}
+            </p>
           </div>
         </div>
-        <style jsx>{`
-          .register-root {
-            min-height: 100vh;
-            background: #f8faff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .register-card {
-            width: 100%;
-            max-width: 410px;
-            background: #fff;
-            border-radius: 26px;
-            box-shadow: 0 8px 40px 0 rgba(48,100,220,0.12);
-            padding: 46px 32px 36px 32px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            animation: fadeup .34s cubic-bezier(.22,.68,.64,1.12);
-          }
-          .register-title-bar {
-            width: 100%;
-            position: relative;
-            margin-bottom: 19px;
-          }
-          .register-back-btn {
-            background: none;
-            border: none;
-            position: absolute;
-            left: -6px;
-            top: 3px;
-            color: #3577f1;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            padding: 3px 7px;
-            border-radius: 7px;
-            transition: background 0.14s;
-          }
-          .register-back-btn:hover {
-            background: #eef5ff;
-          }
-          .register-title-wrap {
-            text-align: center;
-          }
-          .register-title {
-            font-size: 22px;
-            font-weight: 800;
-            color: #27354c;
-            margin: 0 0 0 0;
-            letter-spacing: -1px;
-          }
-          .register-step-txt {
-            font-size: 14.5px;
-            color: #959fb4;
-            margin: 7px 0 0 0;
-            font-weight: 500;
-          }
-          .register-contents {
-            width: 100%;
-            margin-top: 4px;
-          }
-          @keyframes fadeup {
-            from { opacity: 0; transform: translateY(48px);}
-            to { opacity: 1; transform: translateY(0);}
-          }
-          @media (max-width: 500px) {
-  .register-root {
-    padding: 0;
-    min-height: 100vh;
-    background: #f8faff;
-  }
-  .register-card {
-    max-width: 100vw;
-    background: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0 7vw 0 7vw;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  .register-title-bar {
-    margin-bottom: 16px;
-  }
-  .register-title {
-    font-size: 18.5px;
-  }
-  .register-step-txt {
-    font-size: 13px;
-    margin: 5px 0 0 0;
-  }
-  .register-contents {
-    margin-top: 0;
-  }
-}
-
-        `}</style>
+        {step === 1 ? (
+          <RegisterStep1 {...form} />
+        ) : (
+          <RegisterStep2
+            socialMode={false}
+            email={form.email}
+            setEmail={form.setEmail}
+            password={form.password}
+            setPassword={form.setPassword}
+            username={form.username}
+            setUsername={form.setUsername}
+            phone={form.phone}
+            setPhone={form.setPhone}
+            formatPhone={form.formatPhone}
+            checkPhoneDuplicate={form.checkPhoneDuplicate}
+            isVerified={form.isVerified}
+            setIsVerified={form.setIsVerified}
+            verificationCode={form.verificationCode}
+            setVerificationCode={form.setVerificationCode}
+            showVerificationInput={form.showVerificationInput}
+            setShowVerificationInput={form.setShowVerificationInput}
+            hasRequestedCode={form.hasRequestedCode}
+            setHasRequestedCode={form.setHasRequestedCode}
+            timeLeft={form.timeLeft}
+            setTimeLeft={form.setTimeLeft}
+            timerRef={form.timerRef}
+            verificationError={form.verificationError}
+            setVerificationError={form.setVerificationError}
+            company={form.company}
+            setCompany={form.setCompany}
+            department={form.department}
+            setDepartment={form.setDepartment}
+            position={form.position}
+            setPosition={form.setPosition}
+            termsAgree={form.termsAgree}
+            setTermsAgree={form.setTermsAgree}
+            privacyAgree={form.privacyAgree}
+            setPrivacyAgree={form.setPrivacyAgree}
+            marketingAgree={form.marketingAgree}
+            setMarketingAgree={form.setMarketingAgree}
+            setOpenModal={form.setOpenModal}
+            handleRegister={form.handleRegister}
+            canRegister={form.canRegister}
+            error={form.error}
+            phoneExists={form.phoneExists}
+            handleErrorClear={form.handleErrorClear}
+          />
+        )}
+        {/* 소셜 회원가입이 있다면 아래처럼 추가 */}
+        {/* <div className="login-social-box desktop-only">
+          <div className="social-label">소셜 계정으로 회원가입</div>
+          <SocialLoginButtons />
+        </div> */}
       </div>
-    </>
+
+      {/* 모바일 하단 소셜/버튼은 Step1/Step2 내부에서 구현하거나 필요시 아래처럼 추가 */}
+      {/* <div className="login-bottom-bar mobile-only">
+        <div className="login-social-box">
+          <div className="social-label">소셜 계정으로 회원가입</div>
+          <SocialLoginButtons />
+        </div>
+        <button
+          type="submit"
+          className="login-btn"
+          form="register-step1-form" // 또는 "register-step2-form"
+        >
+          {step === 1 ? "다음" : "가입하기"}
+        </button>
+      </div> */}
+    </div>
   );
 }
