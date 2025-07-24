@@ -92,10 +92,15 @@ export default function LoginPage() {
     <div className="login-root">
       <div className="login-card">
         <div className="login-title-wrap">
-          <LogIn size={32} color="#3577f1" style={{marginBottom: 4}} />
+          <LogIn size={32} color="#3577f1" style={{ marginBottom: 4 }} />
           <h2 className="login-title">로그인</h2>
         </div>
-        <form onSubmit={handleLogin} autoComplete="off" className="login-form">
+        <form
+  id="login-form"
+  onSubmit={handleLogin}
+  autoComplete="off"
+  className="login-form"
+>
           <input
             type="email"
             placeholder="이메일"
@@ -132,22 +137,38 @@ export default function LoginPage() {
               <a href="/find-password">비밀번호 찾기</a>
             </div>
           </div>
-          <button
-            type="submit"
-            className="login-btn"
-          >
-            로그인
-          </button>
+                <button
+    type="submit"
+    className="login-btn desktop-only"
+  >
+          로그인
+        </button>
         </form>
         <p className="login-footer">
           아직 회원이 아니신가요?{" "}
           <a href="/register">회원가입</a>
         </p>
-        <div className="login-social-box">
+        <div className="login-social-box desktop-only">
           <div className="social-label">소셜 계정으로 로그인</div>
           <SocialLoginButtons />
         </div>
       </div>
+
+      <div className="login-bottom-bar mobile-only">
+  <div className="login-social-box">
+    <div className="social-label">소셜 계정으로 로그인</div>
+    <SocialLoginButtons />
+  </div>
+  <button
+    type="submit"
+    className="login-btn"
+    form="login-form"
+  >
+    로그인
+  </button>
+</div>
+
+
       {showPasswordResetModal && (
         <ChangePasswordModal
           userId={userId}
@@ -262,6 +283,9 @@ export default function LoginPage() {
           box-shadow: 0 2px 14px 0 rgba(60,120,250,0.08);
           transition: background 0.19s, box-shadow 0.19s;
         }
+        .desktop-only.login-btn {
+  margin-top: 6px; /* 데스크탑 버튼만 위 여백 */
+}
         .login-btn:active {
           background: linear-gradient(90deg, #296fff 80%, #3577f1 100%);
           box-shadow: 0 2px 12px 0 rgba(48,100,220,0.12);
@@ -292,19 +316,30 @@ export default function LoginPage() {
           margin-bottom: 14px;
           color: #9399ad;
         }
+        .desktop-only { display: block; }
+        .mobile-only { display: none; }
         @keyframes fadeup {
           from { opacity: 0; transform: translateY(38px);}
           to { opacity: 1; transform: translateY(0);}
         }
         @media (max-width: 500px) {
+          .desktop-only { display: none !important; }
+          .mobile-only { display: flex !important; }
           .login-root {
-            padding: 28px 0 28px 0;
+            padding: 0;
+            min-height: 100vh;
+            background: #f8faff;
           }
           .login-card {
-            max-width: 320px;
-            padding: 18px 4vw 20px 4vw;
-            border-radius: 14px;
-            box-shadow: 0 3px 18px 0 rgba(48,100,220,0.08);
+            max-width: 100vw;
+            background: none;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0 7vw 0 7vw;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
           }
           .login-title {
             font-size: 18.5px;
@@ -318,7 +353,7 @@ export default function LoginPage() {
             border-radius: 8px;
           }
           .login-extra-bar {
-            flex-direction: column;
+            flex-direction: row;
             align-items: flex-start;
             gap: 7px;
             margin-bottom: 4px;
@@ -331,18 +366,31 @@ export default function LoginPage() {
             padding: 11px 0;
             font-size: 15.2px;
             border-radius: 8px;
-            margin-top: 4px;
+            margin-top: 0;
           }
           .login-footer {
             font-size: 13.5px;
             margin-top: 13px;
           }
           .login-social-box {
-            margin-top: 23px;
+            margin-top: 0;
           }
           .social-label {
             font-size: 13px;
             margin-bottom: 10px;
+          }
+          .login-bottom-bar {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100vw;
+            background: #fff;
+            padding: 14px 7vw 18px 7vw;
+            box-shadow: 0 -3px 18px 0 rgba(48,100,220,0.08);
+            z-index: 100;
+            flex-direction: column;
+            gap: 16px;
+            align-items: stretch;
           }
         }
       `}</style>

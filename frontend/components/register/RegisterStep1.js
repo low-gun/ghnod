@@ -229,7 +229,7 @@ function PasswordHint({ valid, label }) {
   return (
     <span style={{
       color: valid ? "#24a340" : "#e51b1b",
-      fontWeight: 600,
+      fontWeight: 400,
       fontSize: "13.2px"
     }}>
       {valid ? "✔️" : "❌"} {label}

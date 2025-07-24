@@ -135,13 +135,38 @@ export default function RegisterPage() {
             from { opacity: 0; transform: translateY(48px);}
             to { opacity: 1; transform: translateY(0);}
           }
-          @media (max-width: 600px) {
-            .register-card {
-              padding: 24px 6vw 26px 6vw;
-              border-radius: 17px;
-              min-width: unset;
-            }
-          }
+          @media (max-width: 500px) {
+  .register-root {
+    padding: 0;
+    min-height: 100vh;
+    background: #f8faff;
+  }
+  .register-card {
+    max-width: 100vw;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 7vw 0 7vw;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .register-title-bar {
+    margin-bottom: 16px;
+  }
+  .register-title {
+    font-size: 18.5px;
+  }
+  .register-step-txt {
+    font-size: 13px;
+    margin: 5px 0 0 0;
+  }
+  .register-contents {
+    margin-top: 0;
+  }
+}
+
         `}</style>
       </div>
     </>
