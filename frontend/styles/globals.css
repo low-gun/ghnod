@@ -16,13 +16,6 @@ body {
   overflow-x: hidden;
   overflow-y: scroll; /* ✅ 수직 스크롤 항상 확보 */
 }
-html, body, #__next {
-  width: 100vw;
-  min-width: 0 !important;
-  max-width: 100vw;
-  overflow-x: hidden !important;
-  /* 기존 코드와 중복이어도 !important 추가가 효과적 */
-}
 /* Next.js에서는 #__next도 100%로 */
 #__next {
   position: relative;
@@ -92,4 +85,11 @@ textarea {
 }
 input, select, textarea {
   font-family: "Noto Sans KR", sans-serif !important;
+}
+html, body, #__next {
+  width: 100vw;
+  min-width: 0 !important;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  /* 기존 코드와 중복이어도 !important 추가가 효과적 */
 }

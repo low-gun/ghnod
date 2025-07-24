@@ -38,9 +38,7 @@ export default function MainLayout({ children }) {
         minHeight: "100vh",
       }}
     >
-      {!hideHeader && (
-        <Header showProfile={showProfile} setShowProfile={setShowProfile} />
-      )}
+      <Header showProfile={showProfile} setShowProfile={setShowProfile} />
       <main
         style={{
           flex: 1,

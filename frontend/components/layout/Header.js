@@ -67,11 +67,15 @@ export default function Header({ showProfile, setShowProfile }) {
           if (item.isLogo) {
             return (
               <Link key="logo" href={item.link || "/"} legacyBehavior>
-                <img
-                  src="/logo_blue.png"
-                  alt="Logo"
-                  style={{ width: "150px", height: "auto", cursor: "pointer" }}
-                />
+              <img
+  src="/logo_blue.png"
+  alt="Logo"
+  style={{
+    width: isMobile ? "85px" : "150px",     // ← 모바일일 때 로고만 작게
+    height: "auto",
+    cursor: "pointer"
+  }}
+/>
               </Link>
             );
           }
