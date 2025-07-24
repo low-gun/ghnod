@@ -90,12 +90,22 @@ export default function LoginPage() {
 
   return (
     <div className="login-root">
-      <div className="login-card">
-        <div className="login-title-wrap">
-          <LogIn size={32} color="#3577f1" style={{ marginBottom: 4 }} />
-          <h2 className="login-title">로그인</h2>
-        </div>
-        <form
+<div className="login-card">
+<div className="title-bar">
+  <button
+    type="button"
+    className="back-btn"
+    onClick={() => history.back()}
+    aria-label="뒤로가기"
+  >
+    <ChevronLeft size={22} />
+  </button>
+  <div className="title-wrap">
+    <LogIn size={32} color="#3577f1" style={{ marginBottom: 4 }} />
+    <h2 className="title">로그인</h2>
+  </div>
+</div>
+ <form
   id="login-form"
   onSubmit={handleLogin}
   autoComplete="off"
@@ -177,6 +187,70 @@ export default function LoginPage() {
         />
       )}
       <style jsx>{`
+      .title-bar {
+  width: 100%;
+  /* display: flex;               ← 삭제 */
+  /* align-items: center;         ← 삭제 */
+  margin-bottom: 18px;
+  position: relative;           /* ★ 유지 */
+}
+.back-btn {
+  background: none;
+  border: none;
+  color: #3577f1;
+  font-weight: bold;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 8px 2px 0;
+  border-radius: 7px;
+  transition: background 0.14s;
+  /* margin-right: 6px;           ← 삭제 */
+  position: absolute;           /* ★ static → absolute */
+  left: 0;                      /* ★ 추가 */
+  top: 50%;                     /* ★ 추가 */
+  transform: translateY(-50%);  /* ★ 추가 */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+.back-btn:hover {
+  background: #eef5ff;
+}
+.title-wrap {
+  width: 100%;                  /* ★ 추가 (flex: 1 1 0% → width: 100%) */
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-bottom: 0;
+}
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #27354c;
+  margin: 0;
+}
+@media (max-width: 500px) {
+  .title-bar {
+    margin-bottom: 10px;
+  }
+  .title {
+    font-size: 18.5px;
+  }
+  .back-btn {
+    padding: 2px 7px 2px 0;
+    margin-right: 2px;
+    font-size: 18px;
+  }
+}
+      .login-title-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+  position: relative;
+}
         .login-root {
           min-height: 100vh;
           background: #f8faff;
@@ -198,15 +272,32 @@ export default function LoginPage() {
           animation: fadeup .33s cubic-bezier(.22,.68,.64,1.12);
         }
         .login-title-wrap {
-          text-align: center;
-          margin-bottom: 25px;
-        }
-        .login-title {
-          font-size: 22px;
-          font-weight: 800;
-          color: #27354c;
-          margin: 0 0 0 0;
-        }
+  flex: 1 1 0%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-bottom: 0; /* margin-bottom 제거 */
+}
+.login-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #27354c;
+  margin: 0;
+}
+@media (max-width: 500px) {
+  .login-title-bar {
+    margin-bottom: 10px;
+  }
+  .login-title {
+    font-size: 18.5px;
+  }
+  .login-back-btn {
+    padding: 2px 7px 2px 0;
+    margin-right: 2px;
+  }
+}
         .login-form {
           width: 100%;
           display: flex;
@@ -323,76 +414,92 @@ export default function LoginPage() {
           to { opacity: 1; transform: translateY(0);}
         }
         @media (max-width: 500px) {
-          .desktop-only { display: none !important; }
-          .mobile-only { display: flex !important; }
-          .login-root {
-            padding: 0;
-            min-height: 100vh;
-            background: #f8faff;
-          }
-          .login-card {
-            max-width: 100vw;
-            background: none;
-            border-radius: 0;
-            box-shadow: none;
-            padding: 0 7vw 0 7vw;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-          }
-          .login-title {
-            font-size: 18.5px;
-          }
-          .login-form {
-            gap: 12px;
-          }
-          .login-input {
-            font-size: 15px;
-            padding: 11px 12px;
-            border-radius: 8px;
-          }
-          .login-extra-bar {
-            flex-direction: row;
-            align-items: flex-start;
-            gap: 7px;
-            margin-bottom: 4px;
-          }
-          .find-links {
-            font-size: 13.2px;
-            gap: 5px;
-          }
-          .login-btn {
-            padding: 11px 0;
-            font-size: 15.2px;
-            border-radius: 8px;
-            margin-top: 0;
-          }
-          .login-footer {
-            font-size: 13.5px;
-            margin-top: 13px;
-          }
-          .login-social-box {
-            margin-top: 0;
-          }
-          .social-label {
-            font-size: 13px;
-            margin-bottom: 10px;
-          }
-          .login-bottom-bar {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            width: 100vw;
-            background: #fff;
-            padding: 14px 7vw 18px 7vw;
-            box-shadow: 0 -3px 18px 0 rgba(48,100,220,0.08);
-            z-index: 100;
-            flex-direction: column;
-            gap: 16px;
-            align-items: stretch;
-          }
-        }
+  .desktop-only { display: none !important; }
+  .mobile-only { display: flex !important; }
+  .login-root {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    background: #f8faff;
+    box-sizing: border-box;
+    overflow: hidden !important;
+  }
+  .login-card {
+    max-width: 100vw;
+    min-width: 0;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 7vw !important;
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden !important;
+  }
+  .login-title {
+    font-size: 18.5px;
+  }
+  .login-form {
+    gap: 12px;
+  }
+  .login-input {
+    font-size: 15px;
+    padding: 11px 12px;
+    border-radius: 8px;
+  }
+  .login-extra-bar {
+    flex-direction: row;
+    align-items: center;      /* ← center로 맞춤 */
+    justify-content: space-between;
+    gap: 0;
+    margin-bottom: 4px;
+    margin-top: 2px;
+  }
+  .find-links {
+    font-size: 13.2px;
+    gap: 5px;
+  }
+  .login-btn {
+    padding: 11px 0;
+    font-size: 15.2px;
+    border-radius: 8px;
+    margin-top: 0;
+  }
+  .login-footer {
+    font-size: 13.5px;
+    margin-top: 13px;
+  }
+  .login-social-box {
+    margin-top: 0;
+  }
+  .social-label {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .login-bottom-bar {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    background: #fff;
+    padding: 14px 7vw 18px 7vw;
+    box-shadow: 0 -3px 18px 0 rgba(48,100,220,0.08);
+    z-index: 100;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  body {
+    overflow: hidden !important;
+  }
+}
+
       `}</style>
     </div>
   );
