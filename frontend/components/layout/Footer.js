@@ -32,7 +32,7 @@ export default function Footer({ showProfile }) {
   const openBizInfoPopup = () => {
     if (isNarrow) return; // 모바일/태블릿에서는 새 창 차단 방지
     window.open(
-      "http://www.ftc.go.kr/bizCommPop.do?wrkr_no=1148626813",
+      "http://www.ftc.go.kr/bizCommPop.do?wrkr_no=6948800292",
       "bizCommPop",
       "width=750,height=700"
     );
@@ -76,7 +76,7 @@ export default function Footer({ showProfile }) {
           </div>
           <div style={{ marginBottom: "16px" }}>
             <a
-              href="http://www.ftc.go.kr/bizCommPop.do?wrkr_no=1148626813"
+              href="http://www.ftc.go.kr/bizCommPop.do?wrkr_no=6948800292"
               target="_blank"
               rel="noopener noreferrer"
               style={smallBorderButtonStyle}
@@ -134,12 +134,12 @@ export default function Footer({ showProfile }) {
             {/* 회사 정보 */}
             <div style={{ flex: 1, lineHeight: "1.6" }}>
               <div>
-                <strong>주식회사 오알피연구소 (대표: 이영석)</strong>
+                <strong>(주)오알피연구소 (대표: 유희재)</strong>
               </div>
               <div>
                 서울특별시 서초구 효령로 29길 6 (방배동, 오알피연구소 빌딩)
               </div>
-              <div>사업자등록번호: 114-86-26813 / 대표번호: 02-3473-2206</div>
+              <div>사업자등록번호: 694-88-00292 / 대표번호: 02-3473-2206</div>
               <div
                 style={{
                   display: "flex",
@@ -148,7 +148,7 @@ export default function Footer({ showProfile }) {
                   marginTop: "4px",
                 }}
               >
-                <span>통신판매업: 2015-서울서초-0262</span>
+                <span>통신판매업: 2018-서울서초-1944</span>
                 <button
                   onClick={openBizInfoPopup}
                   style={smallBorderButtonStyle}

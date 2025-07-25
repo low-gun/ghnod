@@ -1,4 +1,5 @@
 import { Eye, EyeOff } from "lucide-react";
+import { useEffect } from "react";         // ★ 이 줄 추가
 
 export default function RegisterStep1({
   email,
@@ -17,7 +18,20 @@ export default function RegisterStep1({
   setPassword,
   setPasswordConfirm,
   canGoNext,
+  setPasswordConfirmError, // ← props로 받을 것
 }) {
+    // 비밀번호 확인 에러 자동 세팅
+    useEffect(() => {
+      if (!passwordConfirm) {
+        setPasswordConfirmError("");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        setPasswordConfirmError("비밀번호가 일치하지 않습니다.");
+      } else {
+        setPasswordConfirmError("");
+      }
+    }, [password, passwordConfirm, setPasswordConfirmError]);
   return (
     <>
       <form
