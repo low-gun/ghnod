@@ -21,38 +21,49 @@ export default function SocialRegisterPage() {
 
   useEffect(() => {
     window.onerror = function (message, source, lineno, colno, error) {
-      // 예기치 못한 런타임 에러도 확인
       console.log("[window.onerror] 메시지:", message);
       console.log("[window.onerror] error 객체:", error);
       alert(`[window.onerror]\n${message}\n${error}`);
     };
-
+  
     console.log("[social] token 값:", token);
-    // ✅ typeof 체크로 빌드/번들 문제 즉시 확인
-      console.log("[social] typeof jwtDecode:", typeof jwtDecode, jwtDecode);
-      if (!jwtDecode || typeof jwtDecode !== "function") {
-        alert("jwtDecode 함수 import 실패! 번들/빌드 환경 오류, 관리자 문의 필요");
-        console.error("[social] jwtDecode import 실패: ", jwtDecode);
-        return;
-      }
-
-    if (!token) {
-      console.log("[social] token이 undefined/null/빈값");
+  
+    // jwtDecode import 및 타입 체크
+    console.log("[social] typeof jwtDecode:", typeof jwtDecode, jwtDecode);
+    if (!jwtDecode || typeof jwtDecode !== "function") {
+      alert("jwtDecode 함수 import 실패! 번들/빌드 환경 오류, 관리자 문의 필요");
+      console.error("[social] jwtDecode import 실패: ", jwtDecode);
       return;
     }
-
-    console.log("[social] jwtDecode 호출 try 블록 진입");
+  
+    if (!token) {
+      alert("소셜 인증 정보가 없습니다. 다시 시도해 주세요.");
+      console.log("[social] token이 undefined/null/빈값");
+      router.replace("/login");
+      return;
+    }
+  
     try {
       console.log("[social] jwtDecode 호출 직전");
       const payload = jwtDecode(token);
       console.log("[social] jwtDecode 호출 직후");
       console.log("[social] jwt payload:", payload);
-
+  
+      // 필수 정보(이름/이메일/전화번호) 없으면 안내 후 이동
+      if (!payload.email || !payload.name || !payload.phone) {
+        alert(
+          "소셜 계정에서 필요한 정보를 모두 받아오지 못했습니다.\n" +
+          "각 플랫폼(구글/카카오/네이버)에서 이름, 이메일, 전화번호 제공에 동의했는지 확인해 주세요."
+        );
+        router.replace("/login");
+        return;
+      }
+  
       setForm(prev => ({
         ...prev,
-        username: payload.name || prev.username,
-        phone: payload.phone || prev.phone,
-        email: payload.email || prev.email,
+        username: payload.name,
+        phone: payload.phone,
+        email: payload.email,
       }));
     } catch (e) {
       console.log("[social] jwtDecode catch 진입. e:", e);
@@ -72,6 +83,7 @@ export default function SocialRegisterPage() {
       router.replace("/login");
     }
   }, [token, router]);
+  
 
   // 입력 핸들러
   const handleChange = (e) => {
