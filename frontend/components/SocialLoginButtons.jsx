@@ -75,10 +75,10 @@ const SocialLoginButtons = () => {
       </button>
       {/* Kakao (공식 이미지, width만 지정) */}
       <img
-        src="/kakao_login_small.png"
+        src="/kakao_login_large.png"
         alt="카카오 로그인"
         style={{
-          width: "140px",
+          width: "80px",
           height: "auto",
           cursor: "pointer",
           display: "block",
@@ -91,7 +91,7 @@ const SocialLoginButtons = () => {
         src="/naver_login_small.png"
         alt="네이버 로그인"
         style={{
-          width: "140px",
+          width: "80px",
           height: "auto",
           cursor: "pointer",
           display: "block",
