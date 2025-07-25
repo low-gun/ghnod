@@ -134,7 +134,7 @@ export default function Footer({ showProfile }) {
             {/* 회사 정보 */}
             <div style={{ flex: 1, lineHeight: "1.6" }}>
               <div>
-                <strong>(주)오알피연구소 (대표: 유희재)</strong>
+                <strong>(주)오알피컨설팅 (대표: 유희재)</strong>
               </div>
               <div>
                 서울특별시 서초구 효령로 29길 6 (방배동, 오알피연구소 빌딩)
