@@ -18,11 +18,12 @@ export default function MainLayout({ children }) {
   }, []);
 
   const isAuthPage =
-    router.pathname === "/login" ||
-    router.pathname.startsWith("/register");
+  router.pathname === "/login" ||
+  router.pathname.startsWith("/register");
 
-  const hideHeader = isMobile && isAuthPage;
-  const hideFooter = isAuthPage;
+const hideHeader = isMobile && isAuthPage;
+// 모바일+로그인/회원가입에서만 푸터 숨김
+const hideFooter = isMobile && isAuthPage;
 
   // ★ 헤더 높이를 상태에 따라 지정
   const headerHeight = isMobile ? 48 : 80;
