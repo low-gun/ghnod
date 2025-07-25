@@ -124,14 +124,14 @@ export default function RegisterPage() {
           />
         )}
         {/* 소셜 회원가입이 있다면 아래처럼 추가 */}
-        <div className="login-social-box desktop-only">
+        {/* <div className="login-social-box desktop-only">
           <div className="social-label">소셜 계정으로 회원가입</div>
           <SocialLoginButtons />
-        </div>
+        </div> */}
       </div>
 
       {/* 모바일 하단 소셜/버튼은 Step1/Step2 내부에서 구현하거나 필요시 아래처럼 추가 */}
-       <div className="login-bottom-bar mobile-only">
+       {/* <div className="login-bottom-bar mobile-only">
         <div className="login-social-box">
           <div className="social-label">소셜 계정으로 회원가입</div>
           <SocialLoginButtons />
@@ -143,7 +143,7 @@ export default function RegisterPage() {
         >
           {step === 1 ? "다음" : "가입하기"}
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }
