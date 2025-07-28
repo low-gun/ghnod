@@ -2,36 +2,41 @@ import { useContext } from "react";
 import { useRouter } from "next/router";
 import { UserContext } from "@/context/UserContext";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; // ✅ 잊지 말고 import
+import "react-toastify/dist/ReactToastify.css";
 
 export default function LogoutButton({ collapsed = false }) {
-  const { logout } = useContext(UserContext);
+  const { logout, user } = useContext(UserContext);
   const router = useRouter();
 
+  const KAKAO_LOGOUT_URL = `https://kauth.kakao.com/oauth/logout?client_id=${process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY}&logout_redirect_uri=https://YOUR_DOMAIN/logout/callback`;
+  const NAVER_LOGOUT_URL = `https://nid.naver.com/nidlogin.logout?returl=https://ghnod.vercel.app//logout/callback`;
+
   const handleLogout = async () => {
+    // 소셜로그인 분기
+    if (user?.socialProvider === "kakao") {
+      window.location.href = KAKAO_LOGOUT_URL;
+      return;
+    }
+    if (user?.socialProvider === "naver") {
+      window.location.href = NAVER_LOGOUT_URL;
+      return;
+    }
+
+    // 일반 로그아웃 처리
     try {
       await fetch("/api/user/logout", {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clientSessionId: sessionStorage.getItem("clientSessionId"),
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientSessionId: sessionStorage.getItem("clientSessionId") }),
       });
 
-      // ✅ 상태 초기화
-      logout(); // context 초기화
+      logout();
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("clientSessionId");
-      localStorage.removeItem("autoLogin");       // ← 이 한 줄 추가하면 끝
+      localStorage.removeItem("autoLogin");
 
-
-      // ✅ 사용자에게 피드백
       toast.success("로그아웃 되었습니다.");
-
-      // ✅ 리디렉션 (뒤로가기 방지)
       setTimeout(() => {
         window.location.href = "/login";
       }, 1000);

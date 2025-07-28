@@ -8,9 +8,8 @@ export default function SocialRegisterPage() {
   const { token } = router.query;
   const [socialProvider, setSocialProvider] = useState("");
   const [nameEditable, setNameEditable] = useState(true);
-  
+
   const [form, setForm] = useState({
-    
     username: "",
     phone: "",
     email: "",
@@ -23,7 +22,6 @@ export default function SocialRegisterPage() {
   });
   const [isVerified, setIsVerified] = useState(false);
 
-  // ✅ 함수 바깥(컴포넌트 안, useEffect 바깥)에 선언!
   function normalizePhone(phone) {
     if (!phone) return "";
     let num = phone.replace(/\D/g, "");
@@ -34,99 +32,31 @@ export default function SocialRegisterPage() {
   }
 
   useEffect(() => {
-    window.onerror = function (message, source, lineno, colno, error) {
-      console.log("[window.onerror] 메시지:", message);
-      console.log("[window.onerror] error 객체:", error);
-      alert(`[window.onerror]\n${message}\n${error}`);
-    };
-  
-    console.log("[social] token 값:", token);
-  
-    // jwtDecode import 및 타입 체크
-    console.log("[social] typeof jwtDecode:", typeof jwtDecode, jwtDecode);
-    if (!jwtDecode || typeof jwtDecode !== "function") {
-      alert("jwtDecode 함수 import 실패! 번들/빌드 환경 오류, 관리자 문의 필요");
-      console.error("[social] jwtDecode import 실패: ", jwtDecode);
-      return;
-    }
-  
-    if (!token) {
-      alert("소셜 인증 정보가 없습니다. 다시 시도해 주세요.");
-      console.log("[social] token이 undefined/null/빈값");
-      router.replace("/login");
-      return;
-    }
-  
+    if (!token) return;
     try {
-      console.log("[social] jwtDecode 호출 직전");
       const payload = jwtDecode(token);
-      console.log("[social] jwtDecode 호출 직후");
-      console.log("[social] jwt payload:", payload);
-  
-      // 필수 정보(이름/이메일/전화번호) 없으면 안내 후 이동
       if (!payload.email || !payload.name) {
-        console.log("[social] 소셜 필수정보 누락!", {
-          email: payload.email,
-          name: payload.name,
-          phone: payload.phone,
-          fullPayload: payload,
-        });
-        alert(
-          "소셜 계정에서 필요한 정보를 모두 받아오지 못했습니다.\n" +
-          "각 플랫폼(구글/카카오/네이버)에서 이름, 이메일 제공에 동의했는지 확인해 주세요."
-        );
-        // 이동 없이 얼랏만!
+        alert("소셜 계정에서 필요한 정보를 모두 받아오지 못했습니다.\n플랫폼에서 이름, 이메일 제공에 동의해 주세요.");
         return;
       }
-      
       setSocialProvider(payload.socialProvider || "");
-
-      // ✅ 여기서 phone 값을 정규화해서 setForm
-      setForm(prev => {
-        const updated = {
-          ...prev,
-          username: payload.name,
-          phone: normalizePhone(payload.phone),
-          email: payload.email,
-        };
-        console.log("[social] setForm 적용값:", updated);
-        return updated;
-      });
-    // ✅ name이 빈 문자열이면 이름 인풋 활성화
-    setNameEditable(!payload.name || payload.name.trim() === "");
-
+      setForm(prev => ({
+        ...prev,
+        username: payload.name,
+        phone: normalizePhone(payload.phone),
+        email: payload.email,
+      }));
+      setNameEditable(!payload.name || payload.name.trim() === "");
     } catch (e) {
-      console.log("[social] jwtDecode catch 진입. e:", e);
-      if (e) {
-        console.log("[social] jwtDecode 실패. name:", e.name);
-        console.log("[social] jwtDecode 실패. message:", e.message);
-        console.log("[social] jwtDecode 실패. stack:", e.stack);
-        alert(
-          "[social] jwtDecode 실패\n" +
-          "name: " + e.name + "\n" +
-          "message: " + e.message + "\n" +
-          "stack: " + (e.stack ? e.stack.split("\n")[0] : "")
-        );
-      } else {
-        alert("[social] jwtDecode catch문에서 e가 undefined 또는 null");
-      }
+      alert("[social] 인증정보 해석 실패: " + e.message);
     }
   }, [token, router]);
-  
-
-  // 입력 핸들러
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
 
   // 소셜 추가정보 최종 제출
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -138,7 +68,40 @@ export default function SocialRegisterPage() {
         body: JSON.stringify({ token, ...form }),
       });
       const data = await res.json();
+  
+      if (res.status === 409) {
+        let msg = "";
+        // provider: "local" | "kakao" | "naver" | "google"
+        let providerText = "";
+        if (data.provider === "kakao") providerText = "카카오";
+        else if (data.provider === "naver") providerText = "네이버";
+        else if (data.provider === "google") providerText = "구글";
+        else providerText = ""; // 일반
+      
+        if (data.errorType === "email") {
+          if (providerText) {
+            msg = `이미 ${providerText} 계정으로 가입된 이메일입니다.\n${providerText} 로그인을 이용해 주세요.`;
+          } else {
+            msg = "이미 일반 회원으로 가입된 이메일입니다.\n일반 로그인을 이용해 주세요.";
+          }
+        } else if (data.errorType === "phone") {
+          if (providerText) {
+            msg = `이미 ${providerText} 계정으로 가입된 휴대폰번호입니다.\n${providerText} 로그인을 이용해 주세요.`;
+          } else {
+            msg = "이미 일반 회원으로 가입된 휴대폰번호입니다.\n일반 로그인을 이용해 주세요.";
+          }
+        } else {
+          msg = "이미 가입된 정보입니다. 로그인 또는 다른 소셜 로그인을 이용해 주세요.";
+        }
+        alert(msg);
+        router.replace("/login");
+        setSubmitting(false);
+        return;
+      }
+      
+  
       if (!res.ok) throw new Error(data.error || "서버 오류");
+  
       setSuccess(true);
       router.replace("/login?success=social");
     } catch (err) {
@@ -146,12 +109,14 @@ export default function SocialRegisterPage() {
     }
     setSubmitting(false);
   };
+  
   const canRegister =
-  !!form.username.trim() &&
-  !!form.phone.trim() &&
-  isVerified &&
-  form.terms_agree &&
-  form.privacy_agree;
+    !!form.username.trim() &&
+    !!form.phone.trim() &&
+    isVerified &&
+    form.terms_agree &&
+    form.privacy_agree;
+
   return (
     <div
       style={{
@@ -214,11 +179,10 @@ export default function SocialRegisterPage() {
             </p>
           </div>
         </div>
-  
+
         <RegisterStep2
           socialMode={true}
-          socialProvider={socialProvider} 
-
+          socialProvider={socialProvider}
           email={form.email}
           setEmail={val => setForm(f => ({ ...f, email: val }))}
           username={form.username}
@@ -230,11 +194,8 @@ export default function SocialRegisterPage() {
               return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
             })
           }
-          checkPhoneDuplicate={() => {}}
           isVerified={isVerified}
-
           setIsVerified={setIsVerified}
-
           verificationCode={form.verificationCode}
           setVerificationCode={val => setForm(f => ({ ...f, verificationCode: val }))}
           showVerificationInput={form.showVerificationInput}
@@ -262,10 +223,9 @@ export default function SocialRegisterPage() {
           handleRegister={handleSubmit}
           canRegister={canRegister}
           error={error}
-          phoneExists={false}
-          handleErrorClear={() => {}}
+          nameEditable={nameEditable}
         />
       </div>
     </div>
   );
-  }
+}

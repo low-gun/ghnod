@@ -8,7 +8,7 @@ export default function RegisterStep2({
   socialProvider,
   email, setEmail,
   username, setUsername,
-  phone, setPhone, formatPhone, checkPhoneDuplicate,
+  phone, setPhone, formatPhone,
   isVerified, setIsVerified, verificationCode, setVerificationCode,
   showVerificationInput, setShowVerificationInput,
   hasRequestedCode, setHasRequestedCode,
@@ -21,7 +21,7 @@ export default function RegisterStep2({
   privacyAgree, setPrivacyAgree,
   marketingAgree, setMarketingAgree,
   handleRegister, canRegister,
-  error, phoneExists, handleErrorClear,
+  error, handleErrorClear,
   nameEditable = true,
 }) {
   const [openModal, setOpenModal] = useState(null);
@@ -43,13 +43,19 @@ export default function RegisterStep2({
     }
   }, []);
 
+  useEffect(() => {
+    if (socialMode && phone && (socialProvider === "kakao" || socialProvider === "naver")) {
+      setIsVerified(true);
+    }
+  }, [socialMode, phone, socialProvider, setIsVerified]);
+
   const isSocialPhoneVerified =
     socialMode &&
     !!phone &&
     (socialProvider === "kakao" || socialProvider === "naver");
 
   const isDisabled =
-    (phone || "").length < 10 || phoneExists || (hasRequestedCode && timeLeft > 0);
+    (phone || "").length < 10 || (hasRequestedCode && timeLeft > 0);
   const isPhoneReadonly = socialMode && (socialProvider === "kakao" || socialProvider === "naver");
 
   return (
@@ -82,7 +88,7 @@ export default function RegisterStep2({
         />
         {nameEditable && (
           <div style={{ color: "#fa5252", fontSize: "12px", marginTop: "4px" }}>
-            이름(실명)을 입력해 주세요.
+            성함을 입력해 주세요.
           </div>
         )}
 
@@ -103,18 +109,11 @@ export default function RegisterStep2({
             className={`login-input${(isPhoneReadonly || isSocialPhoneVerified) ? " input-disabled" : ""}`}
             style={{ paddingRight: 100 }}
           />
-          {phoneExists && (
-            <div style={{ color: "#FA5252", fontSize: "12px", margin: "4px 0 2px 2px" }}>
-              이미 사용중인 휴대폰번호입니다.
-            </div>
-          )}
           {!isSocialPhoneVerified && (
             <button
               type="button"
               className="verify-btn"
-              onClick={async () => {
-                const exists = await checkPhoneDuplicate(phone);
-                if (exists) return;
+              onClick={() => {
                 setShowVerificationInput(true);
                 setHasRequestedCode(true);
                 setTimeLeft(180);
@@ -137,8 +136,8 @@ export default function RegisterStep2({
           )}
         </div>
 
-        {/* 인증번호 입력/확인, 인증성공/에러/타이머는 phoneExists가 false일 때만 렌더링 */}
-        {!isSocialPhoneVerified && !phoneExists && showVerificationInput && (
+        {/* 인증번호 입력/확인, 인증성공/에러/타이머 */}
+        {!isSocialPhoneVerified && showVerificationInput && (
           <div className="input-wrap" style={{ marginBottom: 6 }}>
             <input
               type="text"
@@ -166,13 +165,14 @@ export default function RegisterStep2({
             </button>
           </div>
         )}
+
         {/* 인증 완료 메시지도 일반회원가입에서만 노출 (소셜은 숨김) */}
         {!socialMode && isVerified && (
           <div className="verified-message" style={{ marginTop: 8 }}>
             ✅ 인증이 완료되었습니다.
           </div>
         )}
-        {!isSocialPhoneVerified && !phoneExists && showVerificationInput && (
+        {!isSocialPhoneVerified && showVerificationInput && (
           isVerified
             ? <div className="verified-message">✅ 인증이 완료되었습니다.</div>
             : verificationError
@@ -255,7 +255,6 @@ export default function RegisterStep2({
             marketingAgree={marketingAgree}
           />
         </div>
-        {error && <div className="register-error">{error}</div>}
         <button
           type="submit"
           className="login-btn desktop-only"

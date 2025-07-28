@@ -85,8 +85,11 @@ export default function RegisterPage() {
             handleRegister={form.handleRegister}
             canRegister={form.canRegister}
             error={form.error}
+            emailExists={form.emailExists}         // ★★★ 추가
+            setEmailExists={form.setEmailExists}   // ★★★ 추가
             phoneExists={form.phoneExists}
             handleErrorClear={form.handleErrorClear}
+            handleEmailCheck={form.handleEmailCheck} // ★이 라인 추가
           />
         )}
         {/* 소셜 회원가입 등 기타 주석은 그대로 두셔도 됩니다 */}

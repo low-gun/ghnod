@@ -13,6 +13,7 @@ export default function useRegisterForm() {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneExists, setPhoneExists] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);  // ★추가
   const [company, setCompany] = useState("");
   const [department, setDepartment] = useState("");
   const [position, setPosition] = useState("");
@@ -93,17 +94,16 @@ export default function useRegisterForm() {
     if (!email) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      setEmailExists(false);           // ★추가: 잘못된 형식은 중복 아님
       setError("올바른 이메일 형식을 입력해주세요.");
       return;
     }
     try {
       const res = await api.post("/auth/check-email", { email });
-      if (res.data.exists) {
-        setError("이미 가입된 이메일입니다.");
-      } else {
-        setError("");
-      }
+      setEmailExists(res.data.exists); // ★이 줄 추가
+      setError("");                   // ★에러 직접 표시 안함
     } catch {
+      setEmailExists(false);
       setError("이메일 확인 실패");
     }
   };
@@ -140,15 +140,18 @@ export default function useRegisterForm() {
     e.preventDefault();
     setError("");
     if (!username || !phone) {
-      setError("이름과 휴대폰번호는 필수 입력 항목입니다.");
+      toast.error("이름과 휴대폰번호는 필수 입력 항목입니다.");
+      setError("");
       return;
     }
     if (phoneExists) {
-      setError("이미 사용 중인 휴대폰번호입니다.");
+      toast.error("이미 가입된 휴대폰번호입니다.");
+      setError("");
       return;
     }
     if (!termsAgree || !privacyAgree) {
-      setError("필수 약관에 모두 동의해야 합니다.");
+      toast.error("필수 약관에 모두 동의해야 합니다.");
+      setError("");
       return;
     }
     try {
@@ -189,15 +192,19 @@ export default function useRegisterForm() {
         } else {
           router.back();
         }
-      } else {
-        toast.error("로그인은 실패했지만 회원가입은 완료되었습니다.");
       }
+      // else 블록(로그인 실패)은 삭제
     } catch (err) {
-      const msg = err.response?.data?.error || "회원가입 또는 로그인 실패";
+      // 409 등 백엔드 메시지 그대로 사용
+      let msg = "회원가입 또는 로그인 실패";
+      if (err.response && err.response.data && err.response.data.error) {
+        msg = err.response.data.error;
+      }
       toast.error(msg);
-      setError(msg);
+      setError("");
     }
   };
+  
 
   const canGoNext =
     email &&
@@ -205,13 +212,15 @@ export default function useRegisterForm() {
     password.length >= 6 &&
     password === passwordConfirm;
 
-  const canRegister =
-    username &&
-    phone.length >= 10 &&
-    isVerified &&
-    termsAgree &&
-    privacyAgree &&
-    !phoneExists;
+    const canRegister =
+  username &&
+  phone.length >= 10 &&
+  isVerified &&
+  termsAgree &&
+  privacyAgree &&
+  !emailExists &&          // ★이메일 중복 추가
+  !phoneExists;
+
 
   const handleErrorClear = () => {
     if (error && error.includes("휴대폰")) setError("");
@@ -231,6 +240,9 @@ export default function useRegisterForm() {
     phone,
     setPhone,
     phoneExists,
+    setPhoneExists,
+    emailExists,       // ★추가
+    setEmailExists,    // ★추가
     company,
     setCompany,
     department,
