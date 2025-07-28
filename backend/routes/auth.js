@@ -412,11 +412,27 @@ router.post("/register-social", async (req, res) => {
     }
 
     // 3. 이메일/전화번호 중복 체크
-    const [exists] = await db.query(
-      "SELECT id FROM users WHERE email = ? OR phone = ?",
-      [email, phone]
-    );
-    if (exists.length > 0) return res.status(409).json({ error: "이미 가입된 이메일/전화번호입니다." });
+    // 3. 이메일/전화번호 중복 체크 + 소셜 정보 분기
+const [userByEmail] = await db.query("SELECT id, social_provider FROM users WHERE email = ?", [email]);
+const [userByPhone] = await db.query("SELECT id, social_provider FROM users WHERE phone = ?", [phone]);
+
+if (userByEmail.length > 0) {
+  const provider = userByEmail[0].social_provider || "local";
+  return res.status(409).json({
+    error: "이미 사용 중인 이메일입니다.",
+    errorType: "email",
+    provider, // "kakao", "naver", "google", "local"
+  });
+}
+if (userByPhone.length > 0) {
+  const provider = userByPhone[0].social_provider || "local";
+  return res.status(409).json({
+    error: "이미 사용 중인 휴대폰번호입니다.",
+    errorType: "phone",
+    provider, // "kakao", "naver", "google", "local"
+  });
+}
+
 
     // 4. 더미 비밀번호 생성
     const hashedPassword = await bcrypt.hash("social_oauth_dummy", 10);

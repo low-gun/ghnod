@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useContext } from "react";
 import { UserContext } from "@/context/UserContext";
-import { useGlobalLoading } from "@/stores/globalLoading"; // ← 전역 로딩 훅 import
 
 export default function LogoutCallback() {
   const router = useRouter();
