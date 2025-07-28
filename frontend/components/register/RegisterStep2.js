@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
-import { useEffect } from "react";
+import AgreementModal from "@/components/AgreementModal";
 
 export default function RegisterStep2({
   socialMode = false,
+  socialProvider,
   email, setEmail, password, setPassword,
   username, setUsername,
   phone, setPhone, formatPhone, checkPhoneDuplicate,
@@ -18,12 +20,13 @@ export default function RegisterStep2({
   termsAgree, setTermsAgree,
   privacyAgree, setPrivacyAgree,
   marketingAgree, setMarketingAgree,
-  setOpenModal,
   handleRegister, canRegister,
   error, phoneExists, handleErrorClear,
 }) {
+  // 모달 상태를 RegisterStep2 내부에서 직접 관리
+  const [openModal, setOpenModal] = useState(null);
+
   useEffect(() => {
-    // step2로 돌아올 때 localStorage 값 있으면 복원
     const saved = localStorage.getItem("registerStep2Form");
     if (saved) {
       try {
@@ -36,12 +39,16 @@ export default function RegisterStep2({
         setTermsAgree(!!data.termsAgree);
         setPrivacyAgree(!!data.privacyAgree);
         setMarketingAgree(!!data.marketingAgree);
-        // 필요시 기타 값도 복구
       } catch {}
     }
   }, []);
+  const isSocialPhoneVerified =
+    socialMode &&
+    !!phone &&
+    (socialProvider === "kakao" || socialProvider === "naver");
   const isDisabled =
-    phone.length < 10 || phoneExists || (hasRequestedCode && timeLeft > 0);
+    (phone || "").length < 10 || phoneExists || (hasRequestedCode && timeLeft > 0);
+  const isPhoneReadonly = socialMode && (socialProvider === "kakao" || socialProvider === "naver");
 
   return (
     <>
@@ -80,53 +87,55 @@ export default function RegisterStep2({
           onChange={e => setUsername(e.target.value)}
           readOnly={socialMode}
           required
-          className="login-input"
+          className={`login-input${socialMode ? " input-disabled" : ""}`}
         />
         <div className="input-wrap">
           <input
             type="tel"
             placeholder="휴대폰번호"
-            value={formatPhone(phone)}
+            value={formatPhone(phone || "")}
             onChange={e => {
+              if (isSocialPhoneVerified) return;
               const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
               setPhone(raw);
               checkPhoneDuplicate(raw);
               handleErrorClear();
             }}
             required
-            disabled={isVerified}
-            className="login-input"
+            readOnly={isPhoneReadonly || isSocialPhoneVerified}
+            disabled={isVerified || isPhoneReadonly || isSocialPhoneVerified}
+            className={`login-input${(isPhoneReadonly || isSocialPhoneVerified) ? " input-disabled" : ""}`}
             style={{ paddingRight: 100 }}
           />
-          <button
-            type="button"
-            className="verify-btn"
-            onClick={() => {
-              setShowVerificationInput(true);
-              setHasRequestedCode(true);
-              setTimeLeft(180);
-              if (timerRef.current) clearInterval(timerRef.current);
-              timerRef.current = setInterval(() => {
-                setTimeLeft(prev => {
-                  if (prev <= 1) {
-                    clearInterval(timerRef.current);
-                    return 0;
-                  }
-                  return prev - 1;
-                });
-              }, 1000);
-              window.toast && toast.info("인증번호가 전송되었습니다.");
-            }}
-            disabled={isDisabled}
-          >
-            {!hasRequestedCode
-              ? "인증하기"
-              : timeLeft > 0
-                ? "전송완료"
-                : "재전송"}
-          </button>
+
+          {!isSocialPhoneVerified && (
+            <button
+              type="button"
+              className="verify-btn"
+              onClick={() => {
+                setShowVerificationInput(true);
+                setHasRequestedCode(true);
+                setTimeLeft(180);
+                if (timerRef.current) clearInterval(timerRef.current);
+                timerRef.current = setInterval(() => {
+                  setTimeLeft(prev => {
+                    if (prev <= 1) {
+                      clearInterval(timerRef.current);
+                      return 0;
+                    }
+                    return prev - 1;
+                  });
+                }, 1000);
+                window.toast && toast.info("인증번호가 전송되었습니다.");
+              }}
+              disabled={isDisabled}
+            >
+              {!hasRequestedCode ? "인증하기" : timeLeft > 0 ? "전송완료" : "재전송"}
+            </button>
+          )}
         </div>
-        {showVerificationInput && (
+
+        {!isSocialPhoneVerified && showVerificationInput && (
           <div className="input-wrap" style={{ marginBottom: 6 }}>
             <input
               type="text"
@@ -154,19 +163,23 @@ export default function RegisterStep2({
             </button>
           </div>
         )}
-        {showVerificationInput && (
-          isVerified ? (
-            <div className="verified-message">✅ 인증이 완료되었습니다.</div>
-          ) : verificationError ? (
-            <div className="register-error">{verificationError}</div>
-          ) : (
-            <div className="timer-message">
-              {timeLeft > 0
-                ? `남은 시간: ${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`
-                : "인증 시간이 만료되었습니다."}
-            </div>
-          )
+        {isSocialPhoneVerified && (
+          <div className="verified-message" style={{ marginTop: 8 }}>
+            ✅ 인증이 완료되었습니다.
+          </div>
         )}
+        {!isSocialPhoneVerified && showVerificationInput && (
+          isVerified
+            ? <div className="verified-message">✅ 인증이 완료되었습니다.</div>
+            : verificationError
+              ? <div className="register-error">{verificationError}</div>
+              : <div className="timer-message">
+                  {timeLeft > 0
+                    ? `남은 시간: ${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`
+                    : "인증 시간이 만료되었습니다."}
+                </div>
+        )}
+
         <input
           type="text"
           placeholder="(선택) 회사명"
@@ -188,54 +201,56 @@ export default function RegisterStep2({
           onChange={e => setPosition(e.target.value)}
           className="login-input"
         />
-<div className="agreement-section">
-  <AgreementItem
-    checked={termsAgree}
-    setAgree={setTermsAgree}
-    setOpenModal={setOpenModal}
-    openKey="terms"
-    label="(필수) 이용약관 동의"
-    username={username}
-    phone={phone}
-    company={company}
-    department={department}
-    position={position}
-    termsAgree={termsAgree}
-    privacyAgree={privacyAgree}
-    marketingAgree={marketingAgree}
-  />
-  <AgreementItem
-    checked={privacyAgree}
-    setAgree={setPrivacyAgree}
-    setOpenModal={setOpenModal}
-    openKey="privacy"
-    label="(필수) 개인정보 수집 및 이용 동의"
-    username={username}
-    phone={phone}
-    company={company}
-    department={department}
-    position={position}
-    termsAgree={termsAgree}
-    privacyAgree={privacyAgree}
-    marketingAgree={marketingAgree}
-  />
-  <AgreementItem
-    checked={marketingAgree}
-    setAgree={setMarketingAgree}
-    setOpenModal={setOpenModal}
-    openKey="marketing"
-    label="(선택) 마케팅 정보 수신 동의"
-    isOptional
-    username={username}
-    phone={phone}
-    company={company}
-    department={department}
-    position={position}
-    termsAgree={termsAgree}
-    privacyAgree={privacyAgree}
-    marketingAgree={marketingAgree}
-  />
-</div>
+
+        {/* 약관 동의 */}
+        <div className="agreement-section">
+          <AgreementItem
+            checked={termsAgree}
+            setAgree={setTermsAgree}
+            setOpenModal={setOpenModal}
+            openKey="terms"
+            label="(필수) 이용약관 동의"
+            username={username}
+            phone={phone}
+            company={company}
+            department={department}
+            position={position}
+            termsAgree={termsAgree}
+            privacyAgree={privacyAgree}
+            marketingAgree={marketingAgree}
+          />
+          <AgreementItem
+            checked={privacyAgree}
+            setAgree={setPrivacyAgree}
+            setOpenModal={setOpenModal}
+            openKey="privacy"
+            label="(필수) 개인정보 수집 및 이용 동의"
+            username={username}
+            phone={phone}
+            company={company}
+            department={department}
+            position={position}
+            termsAgree={termsAgree}
+            privacyAgree={privacyAgree}
+            marketingAgree={marketingAgree}
+          />
+          <AgreementItem
+            checked={marketingAgree}
+            setAgree={setMarketingAgree}
+            setOpenModal={setOpenModal}
+            openKey="marketing"
+            label="(선택) 마케팅 정보 수신 동의"
+            isOptional
+            username={username}
+            phone={phone}
+            company={company}
+            department={department}
+            position={position}
+            termsAgree={termsAgree}
+            privacyAgree={privacyAgree}
+            marketingAgree={marketingAgree}
+          />
+        </div>
         {error && <div className="register-error">{error}</div>}
         <button
           type="submit"
@@ -411,10 +426,37 @@ export default function RegisterStep2({
           가입하기
         </button>
       </div>
+
+      {/* 모달: RegisterStep2 내부에서 직접 관리 */}
+      {openModal === "terms" && (
+        <AgreementModal
+          openKey="terms"
+          openModal={openModal}
+          setOpenModal={setOpenModal}
+          setTermsAgree={setTermsAgree}
+        />
+      )}
+      {openModal === "privacy" && (
+        <AgreementModal
+          openKey="privacy"
+          openModal={openModal}
+          setOpenModal={setOpenModal}
+          setPrivacyAgree={setPrivacyAgree}
+        />
+      )}
+      {openModal === "marketing" && (
+        <AgreementModal
+          openKey="marketing"
+          openModal={openModal}
+          setOpenModal={setOpenModal}
+          setMarketingAgree={setMarketingAgree}
+        />
+      )}
     </>
   );
 }
 
+// AgreementItem
 function AgreementItem({
   checked, setAgree, setOpenModal, openKey, label,
   username, phone, company, department, position,
@@ -423,18 +465,13 @@ function AgreementItem({
   const isMobile = useIsMobile();
   const router = useRouter();
 
-  // agreements로 이동 전 값 저장
   const goToAgreements = () => {
     if (isMobile) {
       localStorage.setItem("registerStep2Form", JSON.stringify({
-        username,
-        phone,
-        company,
-        department,
-        position,
-        termsAgree,
-        privacyAgree,
-        marketingAgree,
+        username, phone, company, department, position,
+        termsAgree: !!termsAgree,
+        privacyAgree: !!privacyAgree,
+        marketingAgree: !!marketingAgree,
       }));
       router.push("/register/agreements");
     } else {
@@ -451,13 +488,27 @@ function AgreementItem({
           if (checked) {
             setAgree(false);
           } else {
+            setAgree(true);
             goToAgreements();
           }
         }}
+        style={{ width: 16, height: 16, accentColor: "#3577f1" }}
       />
       <button
         type="button"
         onClick={goToAgreements}
+        style={{
+          cursor: "pointer",
+          color: "#3577f1",
+          fontWeight: 400,
+          fontSize: 14,
+          marginLeft: 8,
+          background: "none",
+          border: "none",
+          padding: 0,
+          display: "flex",
+          alignItems: "center"
+        }}
       >
         {label}
         <span
@@ -465,7 +516,7 @@ function AgreementItem({
             marginLeft: 8,
             fontSize: 13,
             color: "#3577f1",
-            textDecoration: "underline",
+            textDecoration: "underline"
           }}
         >
           보기
@@ -479,20 +530,6 @@ function AgreementItem({
           font-size: 14.2px;
           font-weight: 500;
           color: #273c54;
-        }
-        .agreement-item input[type="checkbox"] {
-          accent-color: #3577f1;
-          width: 16px;
-          height: 16px;
-        }
-        .agreement-item button {
-          all: unset;
-          cursor: pointer;
-          color: #3577f1;
-          font-weight: 400;
-          font-size: 14px;
-          margin-left: 5px;
-          text-decoration: none;
         }
       `}</style>
     </div>

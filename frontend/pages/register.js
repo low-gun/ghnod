@@ -1,12 +1,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { ChevronLeft, UserPlus } from "lucide-react";
-import AgreementModal from "@/components/AgreementModal";
 import RegisterStep1 from "@/components/register/RegisterStep1";
 import RegisterStep2 from "@/components/register/RegisterStep2";
 import useRegisterForm from "@/components/register/useRegisterForm";
-import SocialLoginButtons from "@/components/SocialLoginButtons.dynamic";
-
 
 export default function RegisterPage() {
   const form = useRegisterForm();
@@ -14,12 +11,9 @@ export default function RegisterPage() {
   const {
     step,
     setStep,
-    openModal,
-    setOpenModal,
-    setTermsAgree,
-    setPrivacyAgree,
-    setMarketingAgree,
+    // 모달 관련 state는 더이상 꺼내지 않음
   } = form;
+
   // 쿼리 파라미터에서 step 읽어와서 반영
   useEffect(() => {
     if (!router.isReady) return;
@@ -29,34 +23,6 @@ export default function RegisterPage() {
 
   return (
     <div className="login-root">
-      {/* 약관 모달 */}
-      <AgreementModal
-        openKey="terms"
-        title="이용약관 동의"
-        content={<p>이용약관 내용</p>}
-        openModal={openModal}
-        setOpenModal={setOpenModal}
-        setTermsAgree={setTermsAgree}
-        setPrivacyAgree={setPrivacyAgree}
-        setMarketingAgree={setMarketingAgree}
-      />
-      <AgreementModal
-        openKey="privacy"
-        title="개인정보 수집 및 이용 동의"
-        content={<p>개인정보 수집 및 이용 내용이 여기에 들어갑니다.</p>}
-        openModal={openModal}
-        setOpenModal={setOpenModal}
-        setPrivacyAgree={setPrivacyAgree}
-      />
-      <AgreementModal
-        openKey="marketing"
-        title="마케팅 정보 수신 동의"
-        content={<p>마케팅 정보 수신에 대한 내용이 여기에 들어갑니다.</p>}
-        openModal={openModal}
-        setOpenModal={setOpenModal}
-        setMarketingAgree={setMarketingAgree}
-      />
-
       <div className="login-card">
         <div className="title-bar">
           <button
@@ -115,7 +81,7 @@ export default function RegisterPage() {
             setPrivacyAgree={form.setPrivacyAgree}
             marketingAgree={form.marketingAgree}
             setMarketingAgree={form.setMarketingAgree}
-            setOpenModal={form.setOpenModal}
+            // setOpenModal 제거
             handleRegister={form.handleRegister}
             canRegister={form.canRegister}
             error={form.error}
@@ -123,27 +89,9 @@ export default function RegisterPage() {
             handleErrorClear={form.handleErrorClear}
           />
         )}
-        {/* 소셜 회원가입이 있다면 아래처럼 추가 */}
-        {/* <div className="login-social-box desktop-only">
-          <div className="social-label">소셜 계정으로 회원가입</div>
-          <SocialLoginButtons />
-        </div> */}
+        {/* 소셜 회원가입 등 기타 주석은 그대로 두셔도 됩니다 */}
       </div>
-
-      {/* 모바일 하단 소셜/버튼은 Step1/Step2 내부에서 구현하거나 필요시 아래처럼 추가 */}
-       {/* <div className="login-bottom-bar mobile-only">
-        <div className="login-social-box">
-          <div className="social-label">소셜 계정으로 회원가입</div>
-          <SocialLoginButtons />
-        </div>
-        <button
-          type="submit"
-          className="login-btn"
-          form="register-step1-form" // 또는 "register-step2-form"
-        >
-          {step === 1 ? "다음" : "가입하기"}
-        </button>
-      </div> */}
+      {/* 모바일 하단 소셜/버튼 등 기타 주석도 필요하면 남기세요 */}
     </div>
   );
 }

@@ -15,6 +15,9 @@ export default function AgreementModal({
   setPrivacyAgree,
   setMarketingAgree,
 }) {
+  // ★★★ 여기에서 값 확인 가능 ★★★
+  console.log('[AgreementModal] 렌더', { openModal, openKey, isOpen: openModal === openKey });
+
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
   const scrollRef = useRef(null);
   useEffect(() => {

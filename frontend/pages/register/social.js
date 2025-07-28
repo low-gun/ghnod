@@ -6,6 +6,7 @@ import { jwtDecode } from "jwt-decode";
 export default function SocialRegisterPage() {
   const router = useRouter();
   const { token } = router.query;
+  const [socialProvider, setSocialProvider] = useState("");
 
   const [form, setForm] = useState({
     username: "",
@@ -18,6 +19,16 @@ export default function SocialRegisterPage() {
     privacy_agree: false,
     marketing_agree: false,
   });
+
+  // ✅ 함수 바깥(컴포넌트 안, useEffect 바깥)에 선언!
+  function normalizePhone(phone) {
+    if (!phone) return "";
+    let num = phone.replace(/\D/g, "");
+    if (phone.startsWith("+82")) {
+      if (num.startsWith("82")) num = "0" + num.slice(2);
+    }
+    return num.slice(0, 11);
+  }
 
   useEffect(() => {
     window.onerror = function (message, source, lineno, colno, error) {
@@ -50,21 +61,35 @@ export default function SocialRegisterPage() {
       console.log("[social] jwt payload:", payload);
   
       // 필수 정보(이름/이메일/전화번호) 없으면 안내 후 이동
-      if (!payload.email || !payload.name || !payload.phone) {
+      if (!payload.email || !payload.name) {
+        console.log("[social] 소셜 필수정보 누락!", {
+          email: payload.email,
+          name: payload.name,
+          phone: payload.phone,
+          fullPayload: payload,
+        });
         alert(
           "소셜 계정에서 필요한 정보를 모두 받아오지 못했습니다.\n" +
-          "각 플랫폼(구글/카카오/네이버)에서 이름, 이메일, 전화번호 제공에 동의했는지 확인해 주세요."
+          "각 플랫폼(구글/카카오/네이버)에서 이름, 이메일 제공에 동의했는지 확인해 주세요."
         );
-        router.replace("/login");
+        // 이동 없이 얼랏만!
         return;
       }
-  
-      setForm(prev => ({
-        ...prev,
-        username: payload.name,
-        phone: payload.phone,
-        email: payload.email,
-      }));
+      
+      setSocialProvider(payload.socialProvider || "");
+
+      // ✅ 여기서 phone 값을 정규화해서 setForm
+      setForm(prev => {
+        const updated = {
+          ...prev,
+          username: payload.name,
+          phone: normalizePhone(payload.phone),
+          email: payload.email,
+        };
+        console.log("[social] setForm 적용값:", updated);
+        return updated;
+      });
+
     } catch (e) {
       console.log("[social] jwtDecode catch 진입. e:", e);
       if (e) {
@@ -80,7 +105,6 @@ export default function SocialRegisterPage() {
       } else {
         alert("[social] jwtDecode catch문에서 e가 undefined 또는 null");
       }
-      router.replace("/login");
     }
   }, [token, router]);
   
@@ -183,6 +207,8 @@ export default function SocialRegisterPage() {
   
         <RegisterStep2
           socialMode={true}
+          socialProvider={socialProvider} 
+
           email={form.email}
           setEmail={val => setForm(f => ({ ...f, email: val }))}
           username={form.username}
@@ -190,7 +216,7 @@ export default function SocialRegisterPage() {
           phone={form.phone}
           setPhone={val => setForm(f => ({ ...f, phone: val }))}
           formatPhone={v =>
-            v.replace(/(\d{3})(\d{3,4})?(\d{4})?/, function (_, a, b, c) {
+            (v || "").replace(/(\d{3})(\d{3,4})?(\d{4})?/, function (_, a, b, c) {
               return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
             })
           }

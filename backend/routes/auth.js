@@ -145,6 +145,7 @@ router.post("/kakao/callback", async (req, res) => {
     const profileRes = await axios.get("https://kapi.kakao.com/v2/user/me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
+    console.log("[kakao/callback] profileRes.data:", profileRes.data);
     const kakao = profileRes.data;
     const email = kakao.kakao_account?.email;
     const username = kakao.properties?.nickname || (email ? email.split("@")[0] : "");
@@ -186,14 +187,16 @@ router.post("/kakao/callback", async (req, res) => {
     } else {
       // 신규 유저: 임시 토큰 발급
       const kakaoAccount = kakao.kakao_account || {};
-      const tempPayload = {
-        socialProvider: "kakao",
-        kakaoId: kakao.id,
-        email: kakaoAccount.email || "",
-        name: kakaoAccount.profile?.nickname || username,
-        phone: kakaoAccount.phone_number || "",
-        photo: kakaoAccount.profile?.profile_image_url || "",
-      };
+const tempPayload = {
+  socialProvider: "kakao",
+  kakaoId: kakao.id,
+  email: kakaoAccount.email || "",
+  // 이름(본명) → 닉네임 → username 순서로 채움
+  name: kakaoAccount.name || kakaoAccount.profile?.nickname || username,
+  phone: kakaoAccount.phone_number || "",
+  photo: kakaoAccount.profile?.profile_image_url || "",
+};
+
       const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
       return res.json({ tempToken });
     }
@@ -230,7 +233,9 @@ router.post("/naver/callback", async (req, res) => {
     const profileRes = await axios.get("https://openapi.naver.com/v1/nid/me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
+    console.log("[naver/callback] profileRes.data:", profileRes.data);
     const naver = profileRes.data.response;
+    
     const email = naver.email;
     const username = naver.nickname || (email ? email.split("@")[0] : "");
 
