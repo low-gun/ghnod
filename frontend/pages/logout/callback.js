@@ -7,7 +7,7 @@ import { UserContext } from "@/context/UserContext";
 export default function LogoutCallback() {
   const router = useRouter();
   const { logout } = useContext(UserContext);
-  const setLoading = useGlobalLoading(state => state.setLoading);
+
 
   useEffect(() => {
     setLoading(true); // 로딩 시작
