@@ -6,7 +6,7 @@ import AgreementModal from "@/components/AgreementModal";
 export default function RegisterStep2({
   socialMode = false,
   socialProvider,
-  email, setEmail, password, setPassword,
+  email, setEmail,
   username, setUsername,
   phone, setPhone, formatPhone, checkPhoneDuplicate,
   isVerified, setIsVerified, verificationCode, setVerificationCode,
@@ -22,8 +22,8 @@ export default function RegisterStep2({
   marketingAgree, setMarketingAgree,
   handleRegister, canRegister,
   error, phoneExists, handleErrorClear,
+  nameEditable = true,
 }) {
-  // 모달 상태를 RegisterStep2 내부에서 직접 관리
   const [openModal, setOpenModal] = useState(null);
 
   useEffect(() => {
@@ -42,10 +42,12 @@ export default function RegisterStep2({
       } catch {}
     }
   }, []);
+
   const isSocialPhoneVerified =
     socialMode &&
     !!phone &&
     (socialProvider === "kakao" || socialProvider === "naver");
+
   const isDisabled =
     (phone || "").length < 10 || phoneExists || (hasRequestedCode && timeLeft > 0);
   const isPhoneReadonly = socialMode && (socialProvider === "kakao" || socialProvider === "naver");
@@ -58,37 +60,32 @@ export default function RegisterStep2({
         id="register-step2-form"
         autoComplete="off"
       >
-        {!socialMode && (
-          <>
-            <input
-              type="email"
-              placeholder="이메일"
-              value={email}
-              disabled
-              required
-              className="login-input input-disabled"
-              style={{ marginBottom: 0 }}
-            />
-            <input
-              type="password"
-              placeholder="비밀번호"
-              value={password}
-              disabled
-              required
-              className="login-input input-disabled"
-              style={{ marginBottom: 0 }}
-            />
-          </>
-        )}
+        {/* 이메일(아이디) input은 항상 readOnly로 표시 */}
+        <input
+          type="email"
+          placeholder="이메일"
+          value={email}
+          readOnly
+          required
+          className="login-input input-disabled"
+          style={{ marginBottom: 0, background: "#f4f6fa" }}
+        />
+
         <input
           type="text"
           placeholder="이름"
           value={username}
           onChange={e => setUsername(e.target.value)}
-          readOnly={socialMode}
+          readOnly={!nameEditable}
           required
-          className={`login-input${socialMode ? " input-disabled" : ""}`}
+          className={`login-input${!nameEditable ? " input-disabled" : ""}`}
         />
+        {nameEditable && (
+          <div style={{ color: "#fa5252", fontSize: "12px", marginTop: "4px" }}>
+            이름(실명)을 입력해 주세요.
+          </div>
+        )}
+
         <div className="input-wrap">
           <input
             type="tel"
@@ -98,7 +95,6 @@ export default function RegisterStep2({
               if (isSocialPhoneVerified) return;
               const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
               setPhone(raw);
-              checkPhoneDuplicate(raw);
               handleErrorClear();
             }}
             required
@@ -107,12 +103,18 @@ export default function RegisterStep2({
             className={`login-input${(isPhoneReadonly || isSocialPhoneVerified) ? " input-disabled" : ""}`}
             style={{ paddingRight: 100 }}
           />
-
+          {phoneExists && (
+            <div style={{ color: "#FA5252", fontSize: "12px", margin: "4px 0 2px 2px" }}>
+              이미 사용중인 휴대폰번호입니다.
+            </div>
+          )}
           {!isSocialPhoneVerified && (
             <button
               type="button"
               className="verify-btn"
-              onClick={() => {
+              onClick={async () => {
+                const exists = await checkPhoneDuplicate(phone);
+                if (exists) return;
                 setShowVerificationInput(true);
                 setHasRequestedCode(true);
                 setTimeLeft(180);
@@ -135,7 +137,8 @@ export default function RegisterStep2({
           )}
         </div>
 
-        {!isSocialPhoneVerified && showVerificationInput && (
+        {/* 인증번호 입력/확인, 인증성공/에러/타이머는 phoneExists가 false일 때만 렌더링 */}
+        {!isSocialPhoneVerified && !phoneExists && showVerificationInput && (
           <div className="input-wrap" style={{ marginBottom: 6 }}>
             <input
               type="text"
@@ -163,12 +166,13 @@ export default function RegisterStep2({
             </button>
           </div>
         )}
-        {isSocialPhoneVerified && (
+        {/* 인증 완료 메시지도 일반회원가입에서만 노출 (소셜은 숨김) */}
+        {!socialMode && isVerified && (
           <div className="verified-message" style={{ marginTop: 8 }}>
             ✅ 인증이 완료되었습니다.
           </div>
         )}
-        {!isSocialPhoneVerified && showVerificationInput && (
+        {!isSocialPhoneVerified && !phoneExists && showVerificationInput && (
           isVerified
             ? <div className="verified-message">✅ 인증이 완료되었습니다.</div>
             : verificationError
@@ -456,7 +460,7 @@ export default function RegisterStep2({
   );
 }
 
-// AgreementItem
+// AgreementItem 컴포넌트
 function AgreementItem({
   checked, setAgree, setOpenModal, openKey, label,
   username, phone, company, department, position,

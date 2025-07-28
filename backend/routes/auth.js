@@ -279,10 +279,11 @@ router.post("/naver/callback", async (req, res) => {
         socialProvider: "naver",
         naverId: naver.id,
         email: naver.email || "",
-        name: naver.nickname || username,
+        name: naver.name || naver.nickname || username, // 여기! name 우선
         phone: naver.mobile || naver.phone || "",
         photo: naver.profile_image || "",
       };
+      
       const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
       return res.json({ tempToken });
     }

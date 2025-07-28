@@ -7,8 +7,10 @@ export default function SocialRegisterPage() {
   const router = useRouter();
   const { token } = router.query;
   const [socialProvider, setSocialProvider] = useState("");
-
+  const [nameEditable, setNameEditable] = useState(true);
+  
   const [form, setForm] = useState({
+    
     username: "",
     phone: "",
     email: "",
@@ -19,6 +21,7 @@ export default function SocialRegisterPage() {
     privacy_agree: false,
     marketing_agree: false,
   });
+  const [isVerified, setIsVerified] = useState(false);
 
   // ✅ 함수 바깥(컴포넌트 안, useEffect 바깥)에 선언!
   function normalizePhone(phone) {
@@ -89,6 +92,8 @@ export default function SocialRegisterPage() {
         console.log("[social] setForm 적용값:", updated);
         return updated;
       });
+    // ✅ name이 빈 문자열이면 이름 인풋 활성화
+    setNameEditable(!payload.name || payload.name.trim() === "");
 
     } catch (e) {
       console.log("[social] jwtDecode catch 진입. e:", e);
@@ -141,7 +146,12 @@ export default function SocialRegisterPage() {
     }
     setSubmitting(false);
   };
-
+  const canRegister =
+  !!form.username.trim() &&
+  !!form.phone.trim() &&
+  isVerified &&
+  form.terms_agree &&
+  form.privacy_agree;
   return (
     <div
       style={{
@@ -221,8 +231,10 @@ export default function SocialRegisterPage() {
             })
           }
           checkPhoneDuplicate={() => {}}
-          isVerified={false}
-          setIsVerified={() => {}}
+          isVerified={isVerified}
+
+          setIsVerified={setIsVerified}
+
           verificationCode={form.verificationCode}
           setVerificationCode={val => setForm(f => ({ ...f, verificationCode: val }))}
           showVerificationInput={form.showVerificationInput}
@@ -248,7 +260,7 @@ export default function SocialRegisterPage() {
           setMarketingAgree={val => setForm(f => ({ ...f, marketing_agree: val }))}
           setOpenModal={() => {}}
           handleRegister={handleSubmit}
-          canRegister={true}
+          canRegister={canRegister}
           error={error}
           phoneExists={false}
           handleErrorClear={() => {}}

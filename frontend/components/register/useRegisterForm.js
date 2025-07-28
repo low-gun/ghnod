@@ -55,7 +55,14 @@ export default function useRegisterForm() {
       setShowVerificationInput(false);
     }
   }, [timeLeft, isVerified]);
-
+  useEffect(() => {
+    if (phone.length === 10 || phone.length === 11) {
+      checkPhoneDuplicate(phone);
+    } else {
+      setPhoneExists(false); // 자리수 미달시 중복 상태 초기화
+    }
+    // eslint-disable-next-line
+  }, [phone]);
   const formatPhone = (num) => {
     if (!num) return "";
     const cleaned = num.replace(/\D/g, "");
@@ -75,13 +82,10 @@ export default function useRegisterForm() {
     try {
       const res = await api.post("/auth/check-phone", { phone: value });
       setPhoneExists(res.data.exists);
-      if (res.data.exists) {
-        setError("이미 사용중인 휴대폰번호입니다.");
-      } else {
-        setError(""); // ✅ 중복이 아닌 경우 에러 제거
-      }
+      // 여기서는 setError 사용하지 않음
     } catch {
-      setError("휴대폰 확인 실패");
+      // 필요하면 네트워크 에러만 toast 등으로 처리, setError는 생략
+      // toast.error("휴대폰 확인 실패");
     }
   };
 

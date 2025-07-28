@@ -31,12 +31,13 @@ passport.use(
           console.log("✅ 기존 Google 사용자 로그인:", email);
           return done(null, users[0]);
         }
+
         // 신규: 임시토큰 발급 → 추가정보 입력 리디렉션
         const tempPayload = {
           socialProvider: "google",
           googleId: profile.id,
           email: email,
-          name: username || profile.name?.givenName || "",
+          name: naver.name || "",   // 실명만, 없으면 빈 문자열 ("")
           phone: profile.phoneNumber || "",
           photo: profile.photos?.[0]?.value || "",
         };
@@ -63,6 +64,7 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("[Kakao profile 전체]", JSON.stringify(profile, null, 2));
         const email = profile._json.kakao_account.email;
         const username = profile.displayName || `kakao_${profile.id}`;
         const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
@@ -74,11 +76,12 @@ passport.use(
         const kakaoAccount = profile._json.kakao_account || {};
         const tempPayload = {
           socialProvider: "kakao",
-          kakaoId: profile.id,
+          kakaoId: kakao.id,
           email: kakaoAccount.email || "",
-          name: kakaoAccount.profile?.nickname || profile.displayName || "",
-          phone: kakaoAccount.phone_number || "", // 국제포맷(+82...)일 수 있음
+          name: "", // 무조건 빈 문자열(실명 직접 입력)
+          phone: kakaoAccount.phone_number || "",
           photo: kakaoAccount.profile?.profile_image_url || "",
+          // 닉네임이 필요하면 별도 nickname 필드에 저장
         };
         const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
         return done(null, false, { message: "NEED_ADDITIONAL_INFO", tempToken });
@@ -100,6 +103,11 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+ // 여기에 로그 추가!
+ console.log("==== [Naver 콜백 profile 전체] ====");
+ console.dir(profile, { depth: 5 });
+ console.log("profile._json?.response:", profile._json?.response);
+ console.log("profile.displayName:", profile.displayName);
         const email = profile.email;
         const username = profile.displayName || `naver_${profile.id}`;
         const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
@@ -107,15 +115,20 @@ passport.use(
           console.log("✅ 기존 Naver 사용자 로그인:", email);
           return done(null, users[0]);
         }
-        // 신규: 임시토큰 발급 → 추가정보 입력 리디렉션
+        // === 여기 추가 ===
+        const rawName = profile._json?.response?.name || "";
+
         const tempPayload = {
           socialProvider: "naver",
-          naverId: profile.id,
-          email: profile.email || "",
-          name: profile.displayName || profile.name || "",
-          phone: profile.mobile || profile.phone || "", // 네이버는 profile.mobile에 국제/국내포맷
-          photo: profile.profileImage || "",
+          naverId: naver.id,
+          email: naver.email || "",
+          name: naver.name || "",  // 실명만, 없으면 빈값
+          phone: naver.mobile || naver.phone || "",
+          photo: naver.profile_image || "",
         };
+        console.log("[Naver tempToken payload]", tempPayload);
+        // === 여기까지 ===
+
         const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
         return done(null, false, { message: "NEED_ADDITIONAL_INFO", tempToken });
       } catch (error) {
@@ -125,6 +138,7 @@ passport.use(
     }
   )
 );
+
 
 passport.serializeUser((user, done) => {
   done(null, user.id);
