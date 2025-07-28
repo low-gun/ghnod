@@ -101,7 +101,10 @@ export default function SocialRegisterPage() {
       
   
       if (!res.ok) throw new Error(data.error || "서버 오류");
-  
+      alert(
+        `안녕하세요, ${form.username}님.\n회원가입이 완료되었습니다.\n\n감사합니다.`
+      );
+
       setSuccess(true);
       router.replace("/login?success=social");
     } catch (err) {
