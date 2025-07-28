@@ -66,7 +66,38 @@ const SocialLoginButtons = () => {
         marginRight: "auto",
       }}
     >
-      {/* Google (공식 Material Button) */}
+      {/* Naver */}
+      <button
+        style={{
+          width: "100%",
+          height: "44px",
+          padding: 0,
+          border: "none",
+          background: "none",
+          marginBottom: 0,
+          borderRadius: "6px",
+          cursor: "pointer",
+          display: "block",
+        }}
+        onClick={handleNaverLogin}
+        aria-label="네이버 로그인"
+        type="button"
+      >
+        <img
+          src="/btnG_official.png"
+          alt="네이버로 로그인"
+          style={{
+            width: "100%",
+            height: "44px",
+            objectFit: "contain",
+            display: "block",
+            borderRadius: "6px",
+          }}
+          draggable={false}
+        />
+      </button>
+
+      {/* Google */}
       <button
         className="gsi-material-button"
         style={{
@@ -129,37 +160,6 @@ const SocialLoginButtons = () => {
         <img
           src="/kakao_login_large_wide.png"
           alt="카카오로 로그인"
-          style={{
-            width: "100%",
-            height: "44px",
-            objectFit: "contain",
-            display: "block",
-            borderRadius: "6px",
-          }}
-          draggable={false}
-        />
-      </button>
-
-      {/* Naver */}
-      <button
-        style={{
-          width: "100%",
-          height: "44px",
-          padding: 0,
-          border: "none",
-          background: "none",
-          marginBottom: 0,
-          borderRadius: "6px",
-          cursor: "pointer",
-          display: "block",
-        }}
-        onClick={handleNaverLogin}
-        aria-label="네이버 로그인"
-        type="button"
-      >
-        <img
-          src="/btnG_official.png"   // ← 여기만 네이버 png로!
-          alt="네이버로 로그인"
           style={{
             width: "100%",
             height: "44px",
