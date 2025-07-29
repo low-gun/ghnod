@@ -471,26 +471,29 @@ export default function PaymentHistory({ data }) {
       )}
 
       {/* 페이지네이션 */}
-      <div style={{ marginTop: "20px", textAlign: "center" }}>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <button
-            key={page}
-            onClick={() => setCurrentPage(page)}
-            style={{
-              padding: "6px 10px",
-              fontSize: "14px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              margin: "0 4px",
-              cursor: "pointer",
-              fontWeight: currentPage === page ? "bold" : "normal",
-              backgroundColor: currentPage === page ? "#eee" : "#fff",
-            }}
-          >
-            {page}
-          </button>
-        ))}
-      </div>
+      {/* 페이지네이션 */}
+{!isCardLayout && (
+  <div style={{ marginTop: "20px", textAlign: "center" }}>
+    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+      <button
+        key={page}
+        onClick={() => setCurrentPage(page)}
+        style={{
+          padding: "6px 10px",
+          fontSize: "14px",
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+          margin: "0 4px",
+          cursor: "pointer",
+          fontWeight: currentPage === page ? "bold" : "normal",
+          backgroundColor: currentPage === page ? "#eee" : "#fff",
+        }}
+      >
+        {page}
+      </button>
+    ))}
+  </div>
+)}
     </div>
   );
 }

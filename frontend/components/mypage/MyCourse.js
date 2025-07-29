@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import api from "@/lib/api";
 import "react-datepicker/dist/react-datepicker.css";
 import SearchFilter from "@/components/common/SearchFilter";
-import ReviewModal from "@/components/mypage/ReviewModal"; // 상단 import 추가
+import ReviewModal from "@/components/mypage/ReviewModal";
 import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize";
+
 function formatKoreanDate(dateString) {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -28,6 +29,8 @@ export default function MyCourse() {
   const isCardLayout = useIsCardLayout();
   const [isMediumScreen, setIsMediumScreen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(null);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -37,39 +40,23 @@ export default function MyCourse() {
   }, []);
 
   const isMobile = windowWidth && windowWidth <= 480;
+
   useEffect(() => {
     const check = () => {
       const width = window.innerWidth;
       setIsMediumScreen(isCardLayout && width > 500 && width < 1024);
     };
-    check(); // mount 시점 실행
+    check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, [isCardLayout]);
-
-  const containerStyle = {
-    padding: isCardLayout ? 0 : 20,
-    marginTop: isMediumScreen ? "16px" : 0, // ✅ 중간 사이즈에서만 여백
-  };
-  const [reviewModalVisible, setReviewModalVisible] = useState(false);
-  const [reviewTarget, setReviewTarget] = useState(null);
-
-  const handleOpenReviewModal = (item) => {
-    setReviewTarget(item);
-    setReviewModalVisible(true);
-  };
-
-  const handleCloseReviewModal = () => {
-    setReviewModalVisible(false);
-    setReviewTarget(null);
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
         const res = await api.get("/mypage/courses", {
-          params: { all: true }, // ✅ 전체 수강 데이터 요청
+          params: { all: true },
         });
         if (res.data.success) {
           setCourses(res.data.courses);
@@ -80,38 +67,27 @@ export default function MyCourse() {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
   const filteredCourses = useMemo(() => {
     const query = searchValue.toLowerCase();
-
-    const result = courses.filter((item) => {
-      // 🔍 검색 필드 필터
+    return courses.filter((item) => {
       const value = item[searchType];
       if (value && typeof value === "string") {
         if (!value.toLowerCase().includes(query)) return false;
       }
-
-      // 📆 날짜 필터
       if (searchType === "date" && (dateRange[0] || dateRange[1])) {
         const start = new Date(item.start_date);
         if (dateRange[0] && start < dateRange[0]) return false;
         if (dateRange[1] && start > dateRange[1]) return false;
       }
-
       return true;
     });
-
-    console.log("✅ filteredCourses.length:", result.length); // 🔍 이 위치가 핵심
-
-    return result;
   }, [courses, searchType, searchValue, dateRange]);
 
   const sortedCourses = useMemo(() => {
     let result = [...filteredCourses];
-
     if (sortConfig.key) {
       result.sort((a, b) => {
         const aVal = a[sortConfig.key];
@@ -129,21 +105,58 @@ export default function MyCourse() {
         return 0;
       });
     }
-
     return result;
-  }, [courses, sortConfig]);
+  }, [filteredCourses, sortConfig]);
 
-  const handleSort = (key) => {
-    const direction =
-      sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
-    setSortConfig({ key, direction });
-    // router.push 안 함
-  };
   const pagedCourses = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return sortedCourses.slice(startIndex, endIndex);
   }, [sortedCourses, currentPage, pageSize]);
+
+  const cardsToShow = useMemo(() => {
+    return isCardLayout
+      ? sortedCourses.slice(0, currentPage * pageSize)
+      : pagedCourses;
+  }, [isCardLayout, sortedCourses, currentPage, pageSize, pagedCourses]);
+
+  // 무한스크롤(카드형) 처리
+  useEffect(() => {
+    if (!isCardLayout) return;
+    const handleScroll = () => {
+      if (
+        window.innerHeight + document.documentElement.scrollTop + 100 >=
+          document.documentElement.offsetHeight &&
+        !isLoading &&
+        cardsToShow.length < sortedCourses.length
+      ) {
+        setCurrentPage((prev) => prev + 1);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isCardLayout, cardsToShow.length, sortedCourses.length, isLoading]);
+
+  const containerStyle = {
+    padding: isCardLayout ? 0 : 20,
+    marginTop: isMediumScreen ? "16px" : 0,
+  };
+
+  const handleOpenReviewModal = (item) => {
+    setReviewTarget(item);
+    setReviewModalVisible(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setReviewModalVisible(false);
+    setReviewTarget(null);
+  };
+
+  const handleSort = (key) => {
+    const direction =
+      sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
+    setSortConfig({ key, direction });
+  };
 
   const resetFilters = () => {
     setSearchType("title");
@@ -175,7 +188,6 @@ export default function MyCourse() {
       </span>
     );
   };
-
   return (
     <div style={containerStyle}>
       {!isMobile && <h2 style={titleStyle}>수강정보</h2>}
@@ -236,7 +248,7 @@ export default function MyCourse() {
             gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", // ✅ 핵심
           }}
         >
-          {pagedCourses.map((item) => (
+          {cardsToShow.map((item) => (
             <div key={item.order_item_id} style={mobileCardStyle}>
               <div style={mobileRow}>
                 <strong>강의명</strong> {item.title}
@@ -410,25 +422,29 @@ export default function MyCourse() {
       )}
 
       {/* ⏩ 페이지네이션 */}
-      <div style={{ marginTop: "20px", textAlign: "center" }}>
-        {totalPages > 0 ? (
-          Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              style={{
-                ...pageButtonStyle,
-                fontWeight: currentPage === page ? "bold" : "normal",
-                backgroundColor: currentPage === page ? "#eee" : "#fff",
-              }}
-            >
-              {page}
-            </button>
-          ))
-        ) : (
-          <span style={{ color: "#888", fontSize: "14px" }}>1페이지</span>
-        )}
-      </div>
+      {/* ⏩ 페이지네이션 */}
+{!isCardLayout && (
+  <div style={{ marginTop: "20px", textAlign: "center" }}>
+    {totalPages > 0 ? (
+      Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        <button
+          key={page}
+          onClick={() => setCurrentPage(page)}
+          style={{
+            ...pageButtonStyle,
+            fontWeight: currentPage === page ? "bold" : "normal",
+            backgroundColor: currentPage === page ? "#eee" : "#fff",
+          }}
+        >
+          {page}
+        </button>
+      ))
+    ) : (
+      <span style={{ color: "#888", fontSize: "14px" }}>1페이지</span>
+    )}
+  </div>
+)}
+
 
       <ReviewModal
         visible={reviewModalVisible}
