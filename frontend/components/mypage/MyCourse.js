@@ -5,6 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import SearchFilter from "@/components/common/SearchFilter";
 import ReviewModal from "@/components/mypage/ReviewModal";
 import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize";
+import InfiniteCardList from "@/components/common/InfiniteCardList";
 
 function formatKoreanDate(dateString) {
   if (!dateString) return "";
@@ -12,6 +13,98 @@ function formatKoreanDate(dateString) {
   if (isNaN(d.getTime())) return dateString;
   return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`;
 }
+
+const columnMap = {
+  No: "No",
+  title: "강의",
+  date: "일정",
+  location: "장소",
+  instructor: "강사",
+  status: "상태",
+  review: "후기",
+};
+
+const buttonStyle = (bg, color) => ({
+  padding: "8px 14px",
+  backgroundColor: bg,
+  color: color,
+  border: "none",
+  borderRadius: "6px",
+  fontWeight: "bold",
+  cursor: "pointer",
+});
+
+const thCenter = {
+  padding: "10px",
+  textAlign: "center",
+  fontWeight: "bold",
+  cursor: "pointer",
+  height: "60px",
+  verticalAlign: "middle",
+};
+
+const tdCenter = {
+  padding: "12px",
+  textAlign: "center",
+  height: "60px",
+  verticalAlign: "middle",
+};
+
+const sortArrowStyle = {
+  fontSize: "11px",
+  marginLeft: "4px",
+  verticalAlign: "middle",
+};
+
+const certButtonStyle = {
+  padding: "4px 8px",
+  fontSize: "12px",
+  borderRadius: "4px",
+  border: "1px solid #aaa",
+  backgroundColor: "#eee",
+  color: "#666",
+  cursor: "not-allowed",
+};
+
+const pageButtonStyle = {
+  padding: "6px 10px",
+  fontSize: "14px",
+  border: "1px solid #ccc",
+  borderRadius: "4px",
+  margin: "0 4px",
+  cursor: "pointer",
+};
+const reviewButtonStyle = {
+  padding: "6px 12px",
+  fontSize: "13px",
+  borderRadius: "6px",
+  border: "none",
+  backgroundColor: "#0070f3",
+  color: "#fff",
+  fontWeight: "bold",
+  cursor: "pointer",
+  transition: "all 0.2s",
+};
+const titleStyle = {
+  fontSize: "1.4rem",
+  fontWeight: "bold",
+  marginBottom: "20px",
+};
+const mobileCardStyle = {
+  padding: "16px",
+  border: "1px solid #ddd",
+  borderRadius: "8px",
+  background: "#fff",
+  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+};
+
+const mobileRow = {
+  marginBottom: "8px",
+  fontSize: "14px",
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "8px",
+};
 
 export default function MyCourse() {
   const router = useRouter();
@@ -70,6 +163,7 @@ export default function MyCourse() {
     fetchData();
   }, []);
 
+  // 모든 필터, 정렬
   const filteredCourses = useMemo(() => {
     const query = searchValue.toLowerCase();
     return courses.filter((item) => {
@@ -108,34 +202,30 @@ export default function MyCourse() {
     return result;
   }, [filteredCourses, sortConfig]);
 
-  const pagedCourses = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return sortedCourses.slice(startIndex, endIndex);
+  // 카드형: 누적 데이터, 테이블형: 1페이지 데이터
+  const cardsToShow = useMemo(() => {
+    return sortedCourses.slice(0, currentPage * pageSize);
   }, [sortedCourses, currentPage, pageSize]);
 
-  const cardsToShow = useMemo(() => {
-    return isCardLayout
-      ? sortedCourses.slice(0, currentPage * pageSize)
-      : pagedCourses;
-  }, [isCardLayout, sortedCourses, currentPage, pageSize, pagedCourses]);
+  const pagedCourses = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedCourses.slice(start, start + pageSize);
+  }, [sortedCourses, currentPage, pageSize]);
 
-  // 무한스크롤(카드형) 처리
+  // 카드형 무한스크롤, 테이블형은 무관
   useEffect(() => {
     if (!isCardLayout) return;
     const handleScroll = () => {
-      if (
-        window.innerHeight + document.documentElement.scrollTop + 100 >=
-          document.documentElement.offsetHeight &&
-        !isLoading &&
-        cardsToShow.length < sortedCourses.length
-      ) {
-        setCurrentPage((prev) => prev + 1);
-      }
+      setCurrentPage((prev) => prev + 1);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isCardLayout, cardsToShow.length, sortedCourses.length, isLoading]);
+  }, [isCardLayout]);
+
+  // 카드형↔테이블형 전환, 필터/정렬 바뀔 때 currentPage 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [isCardLayout, searchType, searchValue, dateRange, sortConfig]);
 
   const containerStyle = {
     padding: isCardLayout ? 0 : 20,
@@ -166,7 +256,7 @@ export default function MyCourse() {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.ceil(filteredCourses.length / pageSize);
+  const totalPages = Math.ceil(sortedCourses.length / pageSize);
 
   const renderStatusBadge = (status) => {
     const colors = {
@@ -188,6 +278,9 @@ export default function MyCourse() {
       </span>
     );
   };
+  console.log("전체 데이터 개수:", sortedCourses.length);
+  console.log("cardsToShow 개수:", cardsToShow.length);
+  console.log("currentPage:", currentPage);
   return (
     <div style={containerStyle}>
       {!isMobile && <h2 style={titleStyle}>수강정보</h2>}
@@ -239,212 +332,201 @@ export default function MyCourse() {
         </div>
       )}
 
-      {/* 📱 모바일 카드형 / 💻 테이블 분기 */}
+      {/* 📱 모바일 카드형 / 💻 테이블 분기 완전 분리 */}
       {isCardLayout ? (
-        <div
-          style={{
-            display: "grid",
-            gap: "16px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", // ✅ 핵심
-          }}
-        >
-          {cardsToShow.map((item) => (
-            <div key={item.order_item_id} style={mobileCardStyle}>
-              <div style={mobileRow}>
-                <strong>강의명</strong> {item.title}
-              </div>
-              <div style={mobileRow}>
-                <strong>일정</strong>{" "}
-                {new Date(item.start_date).toISOString().slice(0, 10) ===
-                new Date(item.end_date).toISOString().slice(0, 10)
-                  ? formatKoreanDate(item.start_date)
-                  : `${formatKoreanDate(item.start_date)} ~ ${formatKoreanDate(item.end_date)}`}
-              </div>
-              <div style={mobileRow}>
-                <strong>장소</strong> {item.location}
-              </div>
-              <div style={mobileRow}>
-                <strong>강사</strong> {item.instructor}
-              </div>
-              <div style={mobileRow}>
-                <strong>상태</strong> {renderStatusBadge(item.status)}
-              </div>
-              <div style={mobileRow}>
-                <strong>후기</strong>{" "}
-                {item.status === "완료" ? (
-                  <button
-                    style={reviewButtonStyle}
-                    onClick={() => handleOpenReviewModal({ ...item })}
-                  >
-                    {item.is_reviewed ? "수정" : "작성"}
-                  </button>
-                ) : (
-                  "-"
-                )}
-              </div>
-            </div>
-          ))}
+  <InfiniteCardList
+    data={sortedCourses}
+    pageSize={10}
+    renderCard={(item) => (
+      <div key={item.order_item_id} style={mobileCardStyle}>
+        <div style={mobileRow}>
+          <strong>강의명</strong> {item.title}
         </div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              fontSize: "15px",
-              borderCollapse: "collapse",
-            }}
-          >
-            <thead style={{ background: "#f9f9f9" }}>
-              <tr>
-                {[
-                  "No",
-                  "title",
-                  "date",
-                  "location",
-                  "instructor",
-                  "status",
-                  "review",
-                ].map((key) => {
-                  const sortKey =
-                    key === "No" ? null : key === "date" ? "start_date" : key;
-                  const isSortable = !["No", "certificate"].includes(key);
-                  const isActive = sortConfig.key === sortKey;
-                  return (
-                    <th
-                      key={key}
-                      onClick={() => {
-                        if (isSortable) handleSort(sortKey);
-                      }}
-                      style={thCenter}
-                    >
-                      {columnMap[key]}{" "}
-                      {isSortable && (
-                        <span
-                          style={{
-                            ...sortArrowStyle,
-                            color: isActive ? "#000" : "#ccc",
-                          }}
-                        >
-                          {isActive
-                            ? sortConfig.direction === "asc"
-                              ? "▲"
-                              : "▼"
-                            : "↕"}
-                        </span>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCourses.length === 0 ? (
+        <div style={mobileRow}>
+          <strong>일정</strong>{" "}
+          {new Date(item.start_date).toISOString().slice(0, 10) ===
+          new Date(item.end_date).toISOString().slice(0, 10)
+            ? formatKoreanDate(item.start_date)
+            : `${formatKoreanDate(item.start_date)} ~ ${formatKoreanDate(item.end_date)}`}
+        </div>
+        <div style={mobileRow}>
+          <strong>장소</strong> {item.location}
+        </div>
+        <div style={mobileRow}>
+          <strong>강사</strong> {item.instructor}
+        </div>
+        <div style={mobileRow}>
+          <strong>상태</strong> {renderStatusBadge(item.status)}
+        </div>
+        <div style={mobileRow}>
+          <strong>후기</strong>{" "}
+          {item.status === "완료" ? (
+            <button
+              style={reviewButtonStyle}
+              onClick={() => handleOpenReviewModal({ ...item })}
+            >
+              {item.is_reviewed ? "수정" : "작성"}
+            </button>
+          ) : (
+            "-"
+          )}
+        </div>
+      </div>
+    )}
+  />
+) : (
+        <>
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                fontSize: "15px",
+                borderCollapse: "collapse",
+              }}
+            >
+              <thead style={{ background: "#f9f9f9" }}>
                 <tr>
-                  <td colSpan={8} style={tdCenter}>
-                    수강 내역이 없습니다.
-                  </td>
+                  {[
+                    "No",
+                    "title",
+                    "date",
+                    "location",
+                    "instructor",
+                    "status",
+                    "review",
+                  ].map((key) => {
+                    const sortKey =
+                      key === "No" ? null : key === "date" ? "start_date" : key;
+                    const isSortable = !["No", "certificate"].includes(key);
+                    const isActive = sortConfig.key === sortKey;
+                    return (
+                      <th
+                        key={key}
+                        onClick={() => {
+                          if (isSortable) handleSort(sortKey);
+                        }}
+                        style={thCenter}
+                      >
+                        {columnMap[key]}{" "}
+                        {isSortable && (
+                          <span
+                            style={{
+                              ...sortArrowStyle,
+                              color: isActive ? "#000" : "#ccc",
+                            }}
+                          >
+                            {isActive
+                              ? sortConfig.direction === "asc"
+                                ? "▲"
+                                : "▼"
+                              : "↕"}
+                          </span>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
-              ) : (
-                pagedCourses.map((item, idx) => (
-                  <tr
-                    key={item.order_item_id}
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                    }}
-                  >
-                    <td style={tdCenter}>
-                      {(currentPage - 1) * pageSize + idx + 1}
-                    </td>
-                    <td
-                      style={{
-                        ...tdCenter,
-                        cursor: "pointer",
-                        color: "#0070f3",
-                      }}
-                      onClick={() =>
-                        router.push(
-                          `/education/${item.type}/${item.schedule_id}`
-                        )
-                      }
-                    >
-                      {item.title}
-                      {item.category ? ` (${item.category})` : ""}
-                    </td>
-                    <td style={tdCenter}>
-                      {new Date(item.start_date).toISOString().slice(0, 10) ===
-                      new Date(item.end_date).toISOString().slice(0, 10) ? (
-                        formatKoreanDate(item.start_date)
-                      ) : (
-                        <>
-                          {formatKoreanDate(item.start_date)} <br />~{" "}
-                          {formatKoreanDate(item.end_date)}
-                        </>
-                      )}
-                    </td>
-                    <td style={tdCenter}>{item.location}</td>
-                    <td style={tdCenter}>{item.instructor}</td>
-                    <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
-                    <td style={tdCenter}>
-                      {item.status === "완료" ? (
-                        <button
-                          style={{
-                            ...reviewButtonStyle,
-                            backgroundColor: item.is_reviewed
-                              ? "#999"
-                              : "#0070f3",
-                          }}
-                          onClick={() =>
-                            handleOpenReviewModal({
-                              ...item,
-                              reviewId: item.review_id,
-                              initialData: {
-                                rating: item.review_rating,
-                                comment: item.review_comment,
-                                title: item.title,
-                                created_at: item.review_created_at,
-                                updated_at: item.review_updated_at,
-                              },
-                            })
-                          }
-                        >
-                          {item.is_reviewed ? "수정" : "작성"}
-                        </button>
-                      ) : (
-                        "-"
-                      )}
+              </thead>
+              <tbody>
+                {pagedCourses.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={tdCenter}>
+                      수강 내역이 없습니다.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  pagedCourses.map((item, idx) => (
+                    <tr
+                      key={item.order_item_id}
+                      style={{
+                        backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                      }}
+                    >
+                      <td style={tdCenter}>
+                        {(currentPage - 1) * pageSize + idx + 1}
+                      </td>
+                      <td
+                        style={{
+                          ...tdCenter,
+                          cursor: "pointer",
+                          color: "#0070f3",
+                        }}
+                        onClick={() =>
+                          router.push(
+                            `/education/${item.type}/${item.schedule_id}`
+                          )
+                        }
+                      >
+                        {item.title}
+                        {item.category ? ` (${item.category})` : ""}
+                      </td>
+                      <td style={tdCenter}>
+                        {new Date(item.start_date).toISOString().slice(0, 10) ===
+                        new Date(item.end_date).toISOString().slice(0, 10) ? (
+                          formatKoreanDate(item.start_date)
+                        ) : (
+                          <>
+                            {formatKoreanDate(item.start_date)} <br />~{" "}
+                            {formatKoreanDate(item.end_date)}
+                          </>
+                        )}
+                      </td>
+                      <td style={tdCenter}>{item.location}</td>
+                      <td style={tdCenter}>{item.instructor}</td>
+                      <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
+                      <td style={tdCenter}>
+                        {item.status === "완료" ? (
+                          <button
+                            style={{
+                              ...reviewButtonStyle,
+                              backgroundColor: item.is_reviewed
+                                ? "#999"
+                                : "#0070f3",
+                            }}
+                            onClick={() =>
+                              handleOpenReviewModal({
+                                ...item,
+                                reviewId: item.review_id,
+                                initialData: {
+                                  rating: item.review_rating,
+                                  comment: item.review_comment,
+                                  title: item.title,
+                                  created_at: item.review_created_at,
+                                  updated_at: item.review_updated_at,
+                                },
+                              })
+                            }
+                          >
+                            {item.is_reviewed ? "수정" : "작성"}
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {/* ⏩ 페이지네이션 */}
+          <div style={{ marginTop: "20px", textAlign: "center" }}>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  ...pageButtonStyle,
+                  fontWeight: currentPage === page ? "bold" : "normal",
+                  backgroundColor: currentPage === page ? "#eee" : "#fff",
+                }}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+        </>
       )}
-
-      {/* ⏩ 페이지네이션 */}
-      {/* ⏩ 페이지네이션 */}
-{!isCardLayout && (
-  <div style={{ marginTop: "20px", textAlign: "center" }}>
-    {totalPages > 0 ? (
-      Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-        <button
-          key={page}
-          onClick={() => setCurrentPage(page)}
-          style={{
-            ...pageButtonStyle,
-            fontWeight: currentPage === page ? "bold" : "normal",
-            backgroundColor: currentPage === page ? "#eee" : "#fff",
-          }}
-        >
-          {page}
-        </button>
-      ))
-    ) : (
-      <span style={{ color: "#888", fontSize: "14px" }}>1페이지</span>
-    )}
-  </div>
-)}
-
 
       <ReviewModal
         visible={reviewModalVisible}
@@ -458,95 +540,3 @@ export default function MyCourse() {
     </div>
   );
 }
-
-const columnMap = {
-  No: "No",
-  title: "강의",
-  date: "일정",
-  location: "장소",
-  instructor: "강사",
-  status: "상태",
-  review: "후기", // ✅ 추가
-};
-
-const buttonStyle = (bg, color) => ({
-  padding: "8px 14px",
-  backgroundColor: bg,
-  color: color,
-  border: "none",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  cursor: "pointer",
-});
-
-const thCenter = {
-  padding: "10px",
-  textAlign: "center",
-  fontWeight: "bold",
-  cursor: "pointer",
-  height: "60px", // ✅ 추가
-  verticalAlign: "middle", // ✅ 추가
-};
-
-const tdCenter = {
-  padding: "12px",
-  textAlign: "center",
-  height: "60px", // ✅ 추가
-  verticalAlign: "middle", // ✅ 추가 (텍스트 중앙 정렬)
-};
-
-const sortArrowStyle = {
-  fontSize: "11px",
-  marginLeft: "4px",
-  verticalAlign: "middle",
-};
-
-const certButtonStyle = {
-  padding: "4px 8px",
-  fontSize: "12px",
-  borderRadius: "4px",
-  border: "1px solid #aaa",
-  backgroundColor: "#eee",
-  color: "#666",
-  cursor: "not-allowed",
-};
-
-const pageButtonStyle = {
-  padding: "6px 10px",
-  fontSize: "14px",
-  border: "1px solid #ccc",
-  borderRadius: "4px",
-  margin: "0 4px",
-  cursor: "pointer",
-};
-const reviewButtonStyle = {
-  padding: "6px 12px",
-  fontSize: "13px",
-  borderRadius: "6px",
-  border: "none",
-  backgroundColor: "#0070f3",
-  color: "#fff",
-  fontWeight: "bold",
-  cursor: "pointer",
-  transition: "all 0.2s",
-};
-const titleStyle = {
-  fontSize: "1.4rem",
-  fontWeight: "bold",
-  marginBottom: "20px",
-};
-const mobileCardStyle = {
-  padding: "16px",
-  border: "1px solid #ddd",
-  borderRadius: "8px",
-  background: "#fff",
-  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-};
-
-const mobileRow = {
-  marginBottom: "8px",
-  fontSize: "14px",
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "8px",
-};

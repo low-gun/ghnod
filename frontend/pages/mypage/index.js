@@ -27,10 +27,21 @@ export default function MyPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-
+  
     const menu = router.query.menu || "내 정보";
     setActiveMenu(menu);
-    fetchData(menu);
+    if (
+      menu === "내 정보" ||
+      menu === "쿠폰" ||
+      menu === "포인트" ||
+      menu === "1:1문의"
+    ) {
+      fetchData(menu);
+    } else {
+      setMyData([]);
+      setLoading(false);
+      setErrorMessage("");
+    }
   }, [router.query.menu]);
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -51,8 +62,8 @@ export default function MyPage() {
     try {
       let endpoint = "";
       if (menu === "내 정보") endpoint = "/mypage/info";
-      else if (menu === "수강정보") endpoint = "/mypage/courses";
-      else if (menu === "결제내역") endpoint = "/mypage/payments";
+      else if (menu === "수강정보") endpoint = "";
+else if (menu === "결제내역") endpoint = "";
       else if (menu === "쿠폰") endpoint = "/mypage/coupons";
       else if (menu === "포인트") endpoint = "/mypage/points";
       else if (menu === "1:1문의") endpoint = "/mypage/inquiries";
@@ -85,16 +96,16 @@ export default function MyPage() {
         </div>
       );
     }
-
+  
     const commonProps = { data: myData };
-
+  
     switch (activeMenu) {
       case "내 정보":
         return <MyInfo {...commonProps} />;
       case "수강정보":
-        return <MyCourse {...commonProps} />;
+        return <MyCourse />;
       case "결제내역":
-        return <PaymentHistory {...commonProps} />;
+        return <PaymentHistory />;
       case "쿠폰":
         return <Coupons {...commonProps} />;
       case "포인트":
@@ -102,9 +113,10 @@ export default function MyPage() {
       case "1:1문의":
         return <Inquiries {...commonProps} />;
       default:
-        return <MyCourse {...commonProps} />;
+        return <MyCourse />;
     }
   };
+  
 
   return (
     <div style={{ background: "#fefefe", minHeight: "100vh" }}>
