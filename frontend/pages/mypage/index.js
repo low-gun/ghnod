@@ -120,17 +120,17 @@ else if (menu === "결제내역") endpoint = "";
 
   return (
     <div style={{ background: "#fefefe", minHeight: "100vh" }}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          alignItems: "stretch", // ✅ 핵심 수정
-          minHeight: "100vh",
-          width: "100%",
-          overflow: "visible",
-          position: "relative", // ✅ 추가 (sticky 기준 anchor 역할)
-        }}
-      >
+<div style={{
+  display: "flex",
+  flexDirection: isMobile ? "column" : "row",
+  alignItems: "stretch",
+  minHeight: "100vh",
+  width: "100vw", // 또는 "100%"
+  maxWidth: "100vw",
+  overflowX: "hidden",   // 가로 스크롤 확실히 제거!
+  overflowY: "auto",     // 세로 스크롤만 자동
+  position: "relative",
+}}>
         {isMobile ? (
           <div
             ref={dropdownRef}
@@ -206,7 +206,13 @@ else if (menu === "결제내역") endpoint = "";
           />
         )}
 
-        <div style={{ flex: 1, padding: isMobile ? "0 12px" : "0 20px" }}>
+<div style={{
+  flex: 1,
+  padding: isMobile ? "0 12px" : "0 20px",
+  boxSizing: "border-box",
+  width: "100%",
+  maxWidth: "100vw",
+}}>
           {renderContent()}
         </div>
       </div>

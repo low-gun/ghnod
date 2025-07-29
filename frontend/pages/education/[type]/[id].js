@@ -377,7 +377,7 @@ export default function EducationScheduleDetailPage() {
       <div id="refund" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabRefundPolicy />
       </div>
-      <ScrollTopButton />
+      {/* <ScrollTopButton /> */}
     </div>
   );
 }

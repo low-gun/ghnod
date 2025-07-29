@@ -103,7 +103,7 @@ const hideLoading = useGlobalLoading((state) => state.hideLoading);
       <LayoutWrapper>
         <Component {...pageProps} />
       </LayoutWrapper>
-      <ScrollTopButton />
+      {/* <ScrollTopButton /> */}
       <ToastContainer position="top-right" autoClose={2000} />
     </UserProvider>
   </CartProvider>

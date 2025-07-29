@@ -15,7 +15,8 @@ html, body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 main { flex: 1; }
 .rbc-event { cursor: pointer !important; }
@@ -356,9 +357,6 @@ html, body, #__next {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
-  }
-  body {
-    overflow: hidden !important;
   }
 }
 input:focus,
