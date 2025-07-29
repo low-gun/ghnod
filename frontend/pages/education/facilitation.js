@@ -95,6 +95,7 @@ export default function FacilitationPage() {
     fontSize: "clamp(12px, 2.8vw, 14px)",
     color: "#555",
   };
+  console.log("filteredSchedules 기본값:", filteredSchedules);
 
   return (
     <div style={{ padding: 32 }}>
