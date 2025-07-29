@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import SearchFilterBox from "@/components/common/SearchFilterBox";
 import ScheduleSubTabs from "@/components/education/ScheduleSubTabs";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-import MobileSearchFilterBox from "@/components/education/MobileSearchFilterBox";
 import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
 import { useQuery } from "@tanstack/react-query";
 
@@ -115,39 +114,25 @@ export default function FollowupPage() {
       </div>
 
       {/* SearchFilterBox */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-        {isMobileOrTablet ? (
-          <MobileSearchFilterBox
-            searchType={searchType}
-            setSearchType={setSearchType}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            sort={sort}
-            setSort={setSort}
-            order={order}
-            setOrder={setOrder}
-            showPast={showPast}
-            setShowPast={setShowPast}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-          />
-        ) : (
-          <SearchFilterBox
-            searchType={searchType}
-            setSearchType={setSearchType}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            sort={sort}
-            setSort={setSort}
-            order={order}
-            setOrder={setOrder}
-            showPast={showPast}
-            setShowPast={setShowPast}
-          />
-        )}
-      </div>
+      {!isMobileOrTablet && (
+  <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
+    <SearchFilterBox
+      searchType={searchType}
+      setSearchType={setSearchType}
+      searchKeyword={searchKeyword}
+      setSearchKeyword={setSearchKeyword}
+      dateRange={dateRange}
+      setDateRange={setDateRange}
+      sort={sort}
+      setSort={setSort}
+      order={order}
+      setOrder={setOrder}
+      showPast={showPast}
+      setShowPast={setShowPast}
+    />
+  </div>
+)}
+
 
       {/* 일정 카드 리스트 */}
       {isLoading ? (

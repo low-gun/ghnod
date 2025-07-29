@@ -1,9 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
+import api from "@/lib/api"; // ← 이 한 줄 추가!
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { formatPrice } from "@/lib/format";
 import { useRouter } from "next/router";
 import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize"; // 상단 import 추가
+import InfiniteCardList from "@/components/common/InfiniteCardList";
+
 function formatKoreanDateTime(isoString) {
   if (!isoString) return "";
   const date = new Date(isoString);
@@ -21,9 +24,11 @@ function getStatusLabel(status) {
   return status || "미확인";
 }
 
-export default function PaymentHistory({ data }) {
-  console.log("🧾 PaymentHistory data:", data); // ✅ 콘솔 찍기
+export default function PaymentHistory() {
   const router = useRouter();
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [filterType, setFilterType] = useState("order_id");
   const [searchValue, setSearchValue] = useState("");
   const [dateRange, setDateRange] = useState([null, null]);
@@ -34,6 +39,19 @@ export default function PaymentHistory({ data }) {
   const [isMediumScreen, setIsMediumScreen] = useState(false);
   const statusOptions = ["paid", "failed", "refunded"];
   const [windowWidth, setWindowWidth] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get("/mypage/payments");
+        if (res.data.success) setData(res.data.payments || []);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -56,7 +74,7 @@ export default function PaymentHistory({ data }) {
 
   const containerStyle = {
     padding: isCardLayout ? 0 : 20,
-    marginTop: isMediumScreen ? "16px" : 0, // ✅ 중간 사이즈일 때만 상단 여백
+    marginTop: isMediumScreen ? "16px" : 0,
   };
 
   useEffect(() => {
@@ -71,9 +89,9 @@ export default function PaymentHistory({ data }) {
 
   const renderStatusBadge = (label) => {
     const colors = {
-      완료: "#3b82f6", // 파랑
-      실패: "#ef4444", // 빨강
-      환불: "#6b7280", // 회색
+      완료: "#3b82f6",
+      실패: "#ef4444",
+      환불: "#6b7280",
     };
     return (
       <span
@@ -104,11 +122,10 @@ export default function PaymentHistory({ data }) {
     }
     if (filterType === "status" && searchValue) {
       result = result.filter((d) => {
-        const label = getStatusLabel(d.status); // paid → 완료
+        const label = getStatusLabel(d.status);
         return label === searchValue;
       });
     }
-
     if (filterType === "payment_method" && searchValue) {
       result = result.filter((d) => d.payment_method === searchValue);
     }
@@ -123,9 +140,7 @@ export default function PaymentHistory({ data }) {
           return dt >= start && dt <= end;
         });
       }
-      // 둘 다 null이면 전체 보기 유지
     }
-
     if (sortConfig.key) {
       result.sort((a, b) => {
         if (sortConfig.key === "discount_total") {
@@ -133,24 +148,19 @@ export default function PaymentHistory({ data }) {
           const bVal = (b.used_point || 0) + (b.coupon_discount || 0);
           return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
         }
-
         const aVal = a[sortConfig.key];
         const bVal = b[sortConfig.key];
-
         if (sortConfig.key === "created_at") {
           return sortConfig.direction === "asc"
             ? new Date(aVal) - new Date(bVal)
             : new Date(bVal) - new Date(aVal);
         }
-
         if (typeof aVal === "number") {
           return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
         }
-
         return 0;
       });
     }
-
     return result;
   }, [data, filterType, searchValue, dateRange, sortConfig]);
 
@@ -259,52 +269,48 @@ export default function PaymentHistory({ data }) {
       {/* 테이블 */}
       {/* 카드형 또는 테이블형 분기 */}
       {isCardLayout ? (
-        <div
-          style={{
-            display: "grid",
-            gap: "16px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          }}
-        >
-          {pagedData.map((item, idx) => (
-            <div key={item.order_id + "-" + idx} style={mobileCardStyle}>
-              <div style={mobileRow}>
-                <strong>주문번호</strong>
-                <span
-                  style={{ color: "#0070f3", cursor: "pointer" }}
-                  onClick={() => router.push(`/orders/${item.order_id}`)}
-                >
-                  {item.order_id}
-                </span>
-              </div>
-              <div style={mobileRow}>
-                <strong>결제일</strong>
-                {formatKoreanDateTime(item.created_at)}
-              </div>
-              <div style={mobileRow}>
-                <strong>금액</strong> {formatPrice(item.amount)}원
-              </div>
-              <div style={mobileRow}>
-                <strong>수강인원</strong> {item.quantity || 0}명
-              </div>
-              <div style={mobileRow}>
-                <strong>할인적용</strong>{" "}
-                {formatPrice(
-                  (item.used_point || 0) + (item.coupon_discount || 0)
-                )}
-                원
-              </div>
-              <div style={mobileRow}>
-                <strong>결제수단</strong> {item.payment_method || "-"}
-              </div>
-              <div style={mobileRow}>
-                <strong>상태</strong>{" "}
-                {renderStatusBadge(getStatusLabel(item.status))}
-              </div>
-            </div>
-          ))}
+  <InfiniteCardList
+    data={filteredData}
+    pageSize={10}
+    renderCard={(item, idx) => (
+      <div key={item.order_id + "-" + idx} style={mobileCardStyle}>
+        <div style={mobileRow}>
+          <strong>주문번호</strong>
+          <span
+            style={{ color: "#0070f3", cursor: "pointer" }}
+            onClick={() => router.push(`/orders/${item.order_id}`)}
+          >
+            {item.order_id}
+          </span>
         </div>
-      ) : (
+        <div style={mobileRow}>
+          <strong>결제일</strong>
+          {formatKoreanDateTime(item.created_at)}
+        </div>
+        <div style={mobileRow}>
+          <strong>금액</strong> {formatPrice(item.amount)}원
+        </div>
+        <div style={mobileRow}>
+          <strong>수강인원</strong> {item.quantity || 0}명
+        </div>
+        <div style={mobileRow}>
+          <strong>할인적용</strong>{" "}
+          {formatPrice(
+            (item.used_point || 0) + (item.coupon_discount || 0)
+          )}
+          원
+        </div>
+        <div style={mobileRow}>
+          <strong>결제수단</strong> {item.payment_method || "-"}
+        </div>
+        <div style={mobileRow}>
+          <strong>상태</strong>{" "}
+          {renderStatusBadge(getStatusLabel(item.status))}
+        </div>
+      </div>
+    )}
+  />
+) : (
         <div style={{ overflowX: "auto" }}>
           <table style={tableStyle}>
             <thead style={{ background: "#f9f9f9" }}>

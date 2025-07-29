@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import SearchFilterBox from "@/components/common/SearchFilterBox";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import ScheduleSubTabs from "@/components/education/ScheduleSubTabs";
-import MobileSearchFilterBox from "@/components/education/MobileSearchFilterBox";
 import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
 import { useQuery } from "@tanstack/react-query";
 
@@ -14,6 +13,7 @@ export default function FacilitationPage() {
   const [searchType, setSearchType] = useState("전체");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const router = useRouter();
   const type = "facilitation";
   const isMobileOrTablet = useIsTabletOrBelow();
 
@@ -113,39 +113,24 @@ export default function FacilitationPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-        {isMobileOrTablet ? (
-          <MobileSearchFilterBox
-            searchType={searchType}
-            setSearchType={setSearchType}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            sort={sort}
-            setSort={setSort}
-            order={order}
-            setOrder={setOrder}
-            showPast={showPast}
-            setShowPast={setShowPast}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-          />
-        ) : (
-          <SearchFilterBox
-            searchType={searchType}
-            setSearchType={setSearchType}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            sort={sort}
-            setSort={setSort}
-            order={order}
-            setOrder={setOrder}
-            showPast={showPast}
-            setShowPast={setShowPast}
-          />
-        )}
-      </div>
+      {!isMobileOrTablet && (
+  <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
+    <SearchFilterBox
+      searchType={searchType}
+      setSearchType={setSearchType}
+      searchKeyword={searchKeyword}
+      setSearchKeyword={setSearchKeyword}
+      dateRange={dateRange}
+      setDateRange={setDateRange}
+      sort={sort}
+      setSort={setSort}
+      order={order}
+      setOrder={setOrder}
+      showPast={showPast}
+      setShowPast={setShowPast}
+    />
+  </div>
+)}
 
       {isLoading ? (
         <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
