@@ -227,16 +227,15 @@ SELECT
   EXISTS (
     SELECT 1 FROM reviews r
     WHERE r.user_id = o.user_id AND r.product_id = s.product_id
-  ) AS is_reviewed,
-
+  ) AS is_reviewed
   -- ✅ 새로 추가할 부분
-  
+
 FROM order_items oi
 JOIN orders o ON oi.order_id = o.id
 JOIN schedules s ON oi.schedule_id = s.id
 ${whereClause}
 LIMIT ${limit} OFFSET ${offset}
-    `;
+`;
 
     console.log("🧪 Final Query:", query);
     console.log("🧪 values:", values);
