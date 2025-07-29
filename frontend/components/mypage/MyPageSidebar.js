@@ -18,7 +18,7 @@ export default function MyPageSidebar({ activeMenu, setActiveMenu }) {
     <aside
       style={{
         position: "sticky",
-        top: 72,
+        top: 0,
         alignSelf: "flex-start",
         background: "#f6f9fd",
         borderRight: "1px solid #e3e9f7",
