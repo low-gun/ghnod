@@ -5,6 +5,7 @@ import UserTabs from "@/components/admin/UserTabs";
 import UserDetailPageComponent from "@/components/admin/UserDetailPageComponent";
 import api from "@/lib/api";
 import { UserContext } from "@/context/UserContext";
+import { User } from "lucide-react";
 
 export default function AdminUserDetailPage() {
   const router = useRouter();
@@ -40,8 +41,14 @@ export default function AdminUserDetailPage() {
   if (currentUser.role !== "admin") return null;
 
   return (
-    <AdminLayout pageTitle="👤 사용자 상세정보">
-      {loading ? null : user ? (
+    <AdminLayout
+  pageTitle={
+    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <User size={20} style={{ verticalAlign: "middle" }} />
+      사용자 상세정보
+    </span>
+  }
+>      {loading ? null : user ? (
         <>
           <UserDetailPageComponent user={user} />
           <div style={{ marginTop: "40px" }}>

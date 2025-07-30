@@ -11,7 +11,6 @@ import "react-toastify/dist/ReactToastify.css";
 import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import useGlobalLoading from "@/stores/globalLoading";
-import ScrollTopButton from "@/components/common/ScrollTopButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function CartInitializer() {
@@ -103,7 +102,6 @@ const hideLoading = useGlobalLoading((state) => state.hideLoading);
       <LayoutWrapper>
         <Component {...pageProps} />
       </LayoutWrapper>
-      {/* <ScrollTopButton /> */}
       <ToastContainer position="top-right" autoClose={2000} />
     </UserProvider>
   </CartProvider>

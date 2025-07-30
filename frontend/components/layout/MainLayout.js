@@ -31,7 +31,7 @@ export default function MainLayout({ children }) {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: `calc(100vh - ${hideHeader ? 0 : headerHeight}px)`,
+        // minHeight: `calc(100vh - ${hideHeader ? 0 : headerHeight}px)`,
       }}
     >
       {!hideHeader && (

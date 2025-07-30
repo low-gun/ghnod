@@ -29,26 +29,65 @@ export default function MyInfo({ data }) {
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
 
+  // 감성 개선: padding/gap/card/버튼
   const containerStyle = {
-    padding: isMobile ? 0 : 20,
+    padding: isMobile ? "0 4px" : "0 20px",
+    maxWidth: 900,
+    margin: "0 auto",
   };
-  const buttonRow = {
-    marginTop: "24px",
+  const cardStyle = {
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    padding: isMobile ? "12px 8px 24px 8px" : "28px 32px 36px 32px",
+    boxShadow: isMobile ? "none" : "0 2px 10px rgba(0,0,0,0.06)",
+    maxWidth: "900px",
+    marginBottom: isMobile ? "10px" : "20px",
+    marginTop: isMobile ? "10px" : "28px",
+    position: "relative",
     display: "flex",
+    flexDirection: "column",
+    gap: isMobile ? "10px" : "22px",
+  };
+
+  const cardTitleStyle = {
+    fontSize: isMobile ? "1.08rem" : "1.13rem",
+    fontWeight: 600,
+    marginBottom: isMobile ? "8px" : "16px",
+    color: "#232323",
+    letterSpacing: "0.02em"
+  };
+
+  const infoGrid = {
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    rowGap: isMobile ? "10px" : "18px",
+    columnGap: isMobile ? "0px" : "32px",
+    width: "100%",
+  };
+
+  const buttonRow = {
+    marginTop: isMobile ? "18px" : "28px",
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    gap: isMobile ? "8px" : "12px",
     justifyContent: "center",
-    gap: "12px",
+    alignItems: "center",
+    width: "100%",
   };
 
   const editButton = {
     flex: 1,
-    padding: "12px 0",
+    width: isMobile ? "100%" : "180px",
+    minWidth: isMobile ? "unset" : "140px",
+    padding: isMobile ? "14px 0" : "12px 0",
     fontSize: "1rem",
     backgroundColor: "#0070f3",
     color: "#fff",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "7px",
     cursor: "pointer",
-    maxWidth: "160px",
+    fontWeight: 600,
+    transition: "background 0.14s",
   };
 
   const saveButton = {
@@ -58,25 +97,24 @@ export default function MyInfo({ data }) {
 
   const cancelButton = {
     ...editButton,
-    backgroundColor: "#ccc",
+    backgroundColor: "#f3f4f6",
     color: "#333",
   };
 
-  const cardStyle = {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: isMobile ? "16px" : "24px",
-    boxShadow: isMobile ? "none" : "0 2px 10px rgba(0,0,0,0.06)",
-    maxWidth: "900px",
-    position: "relative",
-    marginBottom: isMobile ? "16px" : "24px",
-  };
-
-  const infoGrid = {
-    display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-    rowGap: "16px",
-    columnGap: isMobile ? "0px" : "32px",
+  const withdrawButton = {
+    width: "100%",
+    padding: isMobile ? "11px 0" : "13px 0",
+    background: "none",
+    border: "none",
+    fontSize: isMobile ? "1rem" : "1.03rem",
+    color: "#d92d20",
+    cursor: "pointer",
+    borderTop: "1px solid #f1f1f1",
+    marginTop: isMobile ? "18px" : "22px",
+    fontWeight: "bold",
+    letterSpacing: "0.02em",
+    borderRadius: "0 0 12px 12px",
+    transition: "background 0.13s",
   };
 
   const handleSave = async () => {
@@ -119,16 +157,25 @@ export default function MyInfo({ data }) {
     }
   };
 
+  // ───────────── render ─────────────
   return (
     <div style={containerStyle}>
-      {!isMobile && <h2 style={titleStyle}>내 정보</h2>}
+      
+        <h2 style={{
+          fontSize: "1.32rem",
+          fontWeight: 700,
+          marginTop: "20px",
+          marginBottom: "8px",
+          color: "#2c2c2c",
+          letterSpacing: "0.02em"
+        }}>
+          내 정보
+        </h2>
+      
 
-      {/* ✅ 기본정보 카드 */}
+      {/* 기본정보 카드 */}
       <div style={cardStyle}>
-        {!isMobile && <h3 style={subTitleStyle}>기본정보</h3>}
-        <button onClick={handleWithdraw} style={withdrawButton}>
-          ✖
-        </button>
+        <div style={cardTitleStyle}>기본정보</div>
 
         <div style={infoGrid}>
           <InfoField
@@ -149,7 +196,7 @@ export default function MyInfo({ data }) {
           </div>
           <div style={infoItem}>
             <span style={infoLabel}>비밀번호</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
               <span style={infoValue}>********</span>
               <button style={miniButton} onClick={handlePasswordChange}>
                 변경
@@ -159,9 +206,9 @@ export default function MyInfo({ data }) {
         </div>
       </div>
 
-      {/* ✅ 추가정보 카드 */}
-      <div style={{ ...cardStyle, marginTop: isMobile ? "16px" : "24px" }}>
-        {!isMobile && <h3 style={subTitleStyle}>추가정보</h3>}
+      {/* 추가정보 카드 */}
+      <div style={{ ...cardStyle, marginTop: isMobile ? "10px" : "24px" }}>
+        <div style={cardTitleStyle}>추가정보</div>
 
         <div style={{ ...infoGrid, marginTop: isMobile ? "0" : "8px" }}>
           <InfoField
@@ -230,6 +277,10 @@ export default function MyInfo({ data }) {
           </button>
         )}
       </div>
+      {/* 탈퇴 버튼은 항상 하단에 */}
+      <button onClick={handleWithdraw} style={withdrawButton}>
+        <span style={{ fontSize: 18, marginRight: 4, verticalAlign: "-2px" }}>✖</span> 회원 탈퇴
+      </button>
 
       {showPasswordModal && (
         <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
@@ -259,31 +310,6 @@ function InfoField({ label, value, editing, onChange }) {
 
 // ─────────────────────────────────────────────
 // 스타일
-const titleStyle = {
-  fontSize: "1.4rem",
-  fontWeight: "bold",
-  marginBottom: "20px",
-};
-
-const subTitleStyle = {
-  fontSize: "1.1rem",
-  fontWeight: "bold",
-  marginBottom: "16px",
-};
-
-const withdrawButton = {
-  position: "absolute",
-  top: "16px",
-  right: "16px",
-  background: "transparent",
-  border: "none",
-  fontSize: "1rem",
-  color: "#888",
-  cursor: "pointer",
-};
-
-const infoGrid = {}; // 조건부 스타일은 컴포넌트 내부에서 분기
-
 const infoItem = {
   display: "flex",
   flexDirection: "column",
@@ -302,22 +328,20 @@ const infoValue = {
 };
 
 const inputStyle = {
-  padding: "6px",
-  fontSize: "0.95rem",
-  borderRadius: "4px",
+  padding: "7px",
+  fontSize: "0.98rem",
+  borderRadius: "5px",
   border: "1px solid #ccc",
+  background: "#f9f9f9",
 };
 
 const miniButton = {
-  fontSize: "0.75rem",
-  padding: "4px 8px",
+  fontSize: "0.78rem",
+  padding: "4px 10px",
   borderRadius: "4px",
-  backgroundColor: "#ddd",
+  backgroundColor: "#f1f1f1",
   border: "none",
   cursor: "pointer",
-};
-
-const buttonRow = {
-  marginTop: "24px",
-  textAlign: "center",
+  color: "#333",
+  fontWeight: 500,
 };

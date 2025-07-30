@@ -8,6 +8,8 @@ import LogoutButton from "@/components/common/LogoutButton";
 import { useCartContext } from "@/context/CartContext";
 import MyPageMenuDrawer from "@/components/mypage/MyPageMenuDrawer";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import MobileMenuDrawer from "@/components/common/MobileMenuDrawer";
+import { User, ShoppingCart } from "lucide-react";
 
 const HEADER_HEIGHT_DESKTOP = 80;
 const HEADER_HEIGHT_MOBILE = 48;
@@ -17,8 +19,8 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
   const router = useRouter();
   const { cartItems, cartReady } = useCartContext();
   const [myDrawerOpen, setMyDrawerOpen] = useState(false);
-  const [hoverIndex, setHoverIndex] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState(null);
 
   const isTabletOrBelow = useIsTabletOrBelow();
   const headerHeight = isTabletOrBelow ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT_DESKTOP;
@@ -47,7 +49,7 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           gap: "20px",
         }}
       >
-        {leftGroup.map((item) => {
+        {leftGroup.map((item, idx) => {
           if (item.isLogo) {
             return (
               <Link key="logo" href={item.link || "/"} legacyBehavior>
@@ -64,7 +66,7 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
             );
           }
           return item.link ? (
-            <Link key={item.label} href={item.link}>
+            <Link key={item.label || idx} href={item.link}>
               <a
                 style={{
                   textDecoration: "none",
@@ -77,7 +79,7 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
               </a>
             </Link>
           ) : (
-            <span key={item.label}>{item.label}</span>
+            <span key={item.label || idx}>{item.label}</span>
           );
         })}
       </div>
@@ -107,7 +109,7 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
         >
           {centerGroup.map((item, idx) => (
             <div
-              key={item.label}
+              key={item.label || idx}
               style={{
                 position: "relative",
                 minWidth: 0,
@@ -178,24 +180,23 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
                     minWidth: "200px",
                   }}
                 >
-                  {item.sub.map(
-                    (subItem) =>
-                      item.link &&
-                      subItem.slug && (
-                        <Link
-                          key={subItem.slug}
-                          href={`${item.link}/${subItem.slug}`}
-                          style={{
-                            display: "block",
-                            padding: "6px 12px",
-                            textDecoration: "none",
-                            color: "#333",
-                            fontSize: "14px",
-                          }}
-                        >
-                          {subItem.label}
-                        </Link>
-                      )
+                  {item.sub.map((subItem, subIdx) =>
+                    item.link &&
+                    subItem.slug && (
+                      <Link
+                        key={`${item.label || idx}-${subItem.slug || subIdx}`}
+                        href={`${item.link}/${subItem.slug}`}
+                        style={{
+                          display: "block",
+                          padding: "6px 12px",
+                          textDecoration: "none",
+                          color: "#333",
+                          fontSize: "14px",
+                        }}
+                      >
+                        {subItem.label}
+                      </Link>
+                    )
                   )}
                 </div>
               )}
@@ -219,50 +220,77 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
         }}
       >
         <div
-          style={{ position: "relative", marginRight: "16px", minWidth: 30 }}
+          style={{
+            position: "relative",
+            marginRight: "16px",
+            minWidth: 30,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "40px",
+            height: "40px",
+          }}
         >
           <Link
             href="/cart"
             style={{
-              fontSize: "24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "40px",
+              height: "40px",
               cursor: "pointer",
               textDecoration: "none",
+              background: "none",
+              border: "none",
+              padding: 0,
+              position: "relative",
             }}
           >
-            🛒
+            <ShoppingCart size={26} />
+            {cartReady && cartItems.length > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  right: 3,
+                  backgroundColor: "#ef4444",
+                  color: "#fff",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                  width: 16,
+                  height: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  boxShadow: "0 0 0 1px #fff",
+                }}
+              >
+                {cartItems.length}
+              </span>
+            )}
           </Link>
-          {cartReady && cartItems.length > 0 && (
-            <span
-              style={{
-                position: "absolute",
-                top: -6,
-                right: -6,
-                backgroundColor: "#ef4444",
-                color: "#fff",
-                fontSize: "10px",
-                fontWeight: "bold",
-                width: 18,
-                height: 18,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                boxShadow: "0 0 0 2px #fff",
-              }}
-            >
-              {cartItems.length}
-            </span>
-          )}
         </div>
-        {group.map((item) => {
+
+        {group.map((item, idx) => {
           if (item.isProfile) {
             return (
               <div
                 key="FaUser"
-                style={{ position: "relative", marginLeft: "20px" }}
+                style={{
+                  position: "relative",
+                  marginLeft: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "40px",
+                  width: "40px",
+                  cursor: "pointer",
+                }}
                 onClick={() => setShowProfile((v) => !v)}
               >
-                <span style={{ fontSize: "22px", cursor: "pointer" }}>👤</span>
+                <User size={26} style={{ display: "block", position: "relative", top: "1px" }} />
                 <ProfileDropdown
                   user={user}
                   showProfile={showProfile}
@@ -274,7 +302,7 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           }
           return (
             <Link
-              key={item.label}
+              key={item.label || idx}
               href={item.link}
               style={{
                 textDecoration: "none",
@@ -288,85 +316,6 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
             </Link>
           );
         })}
-      </div>
-    );
-  }
-
-  function renderMobileMenuButton() {
-    return (
-      <button
-        onClick={() => setShowMobileMenu(!showMobileMenu)}
-        style={{
-          marginLeft: "auto",
-          fontSize: "28px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        ☰
-      </button>
-    );
-  }
-
-  function renderMobileMenu() {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "rgba(0, 0, 0, 0.6)",
-          zIndex: 9999,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "5vh 20px",
-          gap: "3vh",
-        }}
-      >
-        {/* 닫기 버튼 */}
-        <button
-          onClick={() => setShowMobileMenu(false)}
-          style={{
-            position: "absolute",
-            top: 20,
-            right: 20,
-            fontSize: "28px",
-            background: "none",
-            border: "none",
-            color: "#fff",
-            cursor: "pointer",
-          }}
-          aria-label="메뉴 닫기"
-        >
-          ×
-        </button>
-        {/* 메뉴 항목 */}
-        {centerGroup.map(
-          (item) =>
-            item.link && (
-              <Link
-                key={item.label}
-                href={item.sub ? `${item.link}/${item.sub[0].slug}` : item.link}
-                style={{
-                  textDecoration: "none",
-                  color: "#fff",
-                  fontSize: "1rem",
-                  fontWeight: "normal",
-                  transition: "color 0.2s",
-                }}
-                onClick={() => setShowMobileMenu(false)}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#e0e0e0")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
-              >
-                {item.label}
-              </Link>
-            )
-        )}
       </div>
     );
   }
@@ -400,71 +349,15 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           {!isTabletOrBelow && renderCenterGroup()}
           {!isTabletOrBelow && renderRightGroup()}
           {isTabletOrBelow && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginLeft: "auto",
-                gap: "12px",
-              }}
-            >
-              {!user && (
-                <Link
-                  href="/login"
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                    color: "#333333",
-                    textDecoration: "none",
-                  }}
-                >
-                  로그인
-                </Link>
-              )}
+            <div style={{ display: "flex", alignItems: "center", marginLeft: "auto", gap: "10px" }}>
               {user && (
                 <>
-                  <Link
-                    href="/cart"
-                    style={{
-                      fontSize: "22px",
-                      color: "#333",
-                      textDecoration: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      position: "relative",
-                    }}
-                  >
-                    <span role="img" aria-label="장바구니">🛒</span>
-                    {cartReady && cartItems.length > 0 && (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -8,
-                          right: -9,
-                          backgroundColor: "#ef4444",
-                          color: "#fff",
-                          fontSize: "10px",
-                          fontWeight: "bold",
-                          width: 16,
-                          height: 16,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: "50%",
-                          boxShadow: "0 0 0 1px #fff",
-                        }}
-                      >
-                        {cartItems.length}
-                      </span>
-                    )}
-                  </Link>
                   <button
                     onClick={() => setMyDrawerOpen(true)}
                     style={{
                       fontWeight: "bold",
                       fontSize: "16px",
                       color: "#333",
-                      textDecoration: "none",
                       background: "none",
                       border: "none",
                       cursor: "pointer",
@@ -481,12 +374,29 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
                   />
                 </>
               )}
-              {renderMobileMenuButton()}
+              {/* 햄버거 버튼이 마지막(우측) */}
+              <button
+                onClick={() => setShowMobileMenu(true)}
+                style={{
+                  fontSize: "28px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+                aria-label="전체 메뉴"
+              >
+                ☰
+              </button>
+              <MobileMenuDrawer open={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
             </div>
           )}
         </div>
       </header>
-      {isTabletOrBelow && showMobileMenu && renderMobileMenu()}
+      {/* 모바일 Drawer(메인 메뉴) */}
+      {isTabletOrBelow && (
+        <MobileMenuDrawer open={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
+      )}
     </>
   );
 }

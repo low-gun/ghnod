@@ -1,43 +1,68 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function InfiniteCardList({ data, pageSize = 10, renderCard }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const containerRef = useRef();
 
   useEffect(() => {
     setCurrentPage(1);
+    // 콘솔로 데이터 길이, currentPage 로그 찍기
+    console.log("[InfiniteCardList] data.length:", data.length);
   }, [data]);
 
   useEffect(() => {
     const handleScroll = () => {
+      // 스크롤 이벤트가 호출되는지 로그
+      console.log(
+        "[InfiniteCardList] scroll fired | scrollY:",
+        window.scrollY,
+        "| body.offsetHeight:",
+        document.body.offsetHeight,
+        "| innerHeight:",
+        window.innerHeight
+      );
       if (
-        containerRef.current &&
-        containerRef.current.scrollTop + containerRef.current.clientHeight >=
-          containerRef.current.scrollHeight - 100
+        window.innerHeight + window.scrollY >=
+        document.body.offsetHeight - 100
       ) {
-        setCurrentPage((prev) =>
-          prev * pageSize < data.length ? prev + 1 : prev
-        );
+        setCurrentPage((prev) => {
+          if (prev * pageSize < data.length) {
+            console.log(
+              "[InfiniteCardList] currentPage UP | prev:",
+              prev,
+              "| next:",
+              prev + 1
+            );
+            return prev + 1;
+          }
+          return prev;
+        });
       }
     };
-    const refCurrent = containerRef.current;
-    if (refCurrent) refCurrent.addEventListener("scroll", handleScroll);
-    return () => {
-      if (refCurrent) refCurrent.removeEventListener("scroll", handleScroll);
-    };
-  }, [data.length, pageSize]);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [data.length, pageSize]); // 절대로 currentPage는 의존성에 넣지 마세요!
 
   const cardsToShow = data.slice(0, currentPage * pageSize);
 
+  useEffect(() => {
+    // 카드 개수 로그로 확인
+    console.log(
+      "[InfiniteCardList] RENDER | currentPage:",
+      currentPage,
+      "| cardsToShow:",
+      cardsToShow.length,
+      "| total:",
+      data.length
+    );
+  }, [currentPage, cardsToShow.length, data.length]);
+
   return (
     <div
-      ref={containerRef}
       style={{
-        height: "calc(100vh - 150px)",
-        overflowY: "auto",
-        display: "grid",
+        display: "flex",
+        flexDirection: "column",
         gap: "16px",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+        width: "100%",
       }}
     >
       {cardsToShow.map(renderCard)}

@@ -12,11 +12,11 @@ html, body {
 }
 #__next {
   position: relative;
-  min-height: 100vh;
+  /* min-height: 100vh; */
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* overflow-x: hidden;
+  overflow-y: auto; */
 }
 main { flex: 1; }
 .rbc-event { cursor: pointer !important; }

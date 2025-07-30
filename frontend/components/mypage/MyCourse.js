@@ -2,10 +2,9 @@ import { useRouter } from "next/router";
 import React, { useState, useEffect, useMemo } from "react";
 import api from "@/lib/api";
 import "react-datepicker/dist/react-datepicker.css";
-import SearchFilter from "@/components/common/SearchFilter";
 import ReviewModal from "@/components/mypage/ReviewModal";
 import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize";
-import InfiniteCardList from "@/components/common/InfiniteCardList";
+import SearchFilter from "@/components/common/SearchFilter";
 
 function formatKoreanDate(dateString) {
   if (!dateString) return "";
@@ -23,16 +22,6 @@ const columnMap = {
   status: "상태",
   review: "후기",
 };
-
-const buttonStyle = (bg, color) => ({
-  padding: "8px 14px",
-  backgroundColor: bg,
-  color: color,
-  border: "none",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  cursor: "pointer",
-});
 
 const thCenter = {
   padding: "10px",
@@ -54,16 +43,6 @@ const sortArrowStyle = {
   fontSize: "11px",
   marginLeft: "4px",
   verticalAlign: "middle",
-};
-
-const certButtonStyle = {
-  padding: "4px 8px",
-  fontSize: "12px",
-  borderRadius: "4px",
-  border: "1px solid #aaa",
-  backgroundColor: "#eee",
-  color: "#666",
-  cursor: "not-allowed",
 };
 
 const pageButtonStyle = {
@@ -96,14 +75,6 @@ const mobileCardStyle = {
   borderRadius: "8px",
   background: "#fff",
   boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-};
-
-const mobileRow = {
-  marginBottom: "8px",
-  fontSize: "14px",
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "8px",
 };
 
 export default function MyCourse() {
@@ -202,34 +173,15 @@ export default function MyCourse() {
     return result;
   }, [filteredCourses, sortConfig]);
 
-  // 카드형: 누적 데이터, 테이블형: 1페이지 데이터
-  const cardsToShow = useMemo(() => {
-    return sortedCourses.slice(0, currentPage * pageSize);
-  }, [sortedCourses, currentPage, pageSize]);
-
   const pagedCourses = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return sortedCourses.slice(start, start + pageSize);
   }, [sortedCourses, currentPage, pageSize]);
 
-  // 카드형 무한스크롤, 테이블형은 무관
-  useEffect(() => {
-    if (!isCardLayout) return;
-    const handleScroll = () => {
-      setCurrentPage((prev) => prev + 1);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [isCardLayout]);
-
-  // 카드형↔테이블형 전환, 필터/정렬 바뀔 때 currentPage 리셋
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [isCardLayout, searchType, searchValue, dateRange, sortConfig]);
-
   const containerStyle = {
     padding: isCardLayout ? 0 : 20,
     marginTop: isMediumScreen ? "16px" : 0,
+    minHeight: 440,
   };
 
   const handleOpenReviewModal = (item) => {
@@ -278,110 +230,132 @@ export default function MyCourse() {
       </span>
     );
   };
-  console.log("전체 데이터 개수:", sortedCourses.length);
-  console.log("cardsToShow 개수:", cardsToShow.length);
-  console.log("currentPage:", currentPage);
+
+  // 수강내역 없음 안내
+  const renderEmpty = () => (
+    <div
+      style={{
+        padding: isMobile ? "56px 0 40px 0" : "70px 0 60px 0",
+        textAlign: "center",
+        color: "#bbb",
+        fontSize: isMobile ? "1rem" : "1.1rem",
+        minHeight: 200,
+        fontWeight: 400,
+      }}
+    >
+      <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>📚</span>
+      아직 수강내역이 없습니다
+      <div style={{ fontSize: "0.97rem", color: "#ccc", marginTop: 4 }}>
+        첫 강의를 신청해보세요!
+      </div>
+    </div>
+  );
+
+  // 실제 화면 렌더
   return (
     <div style={containerStyle}>
-      {!isMobile && <h2 style={titleStyle}>수강정보</h2>}
-
-      {/* 🔍 필터 영역 - 카드형일 때 숨김 */}
-      {!isCardLayout && (
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
+      <h2 style={titleStyle}>수강정보</h2>
+      {!isCardLayout && courses.length > 0 && (
+        <SearchFilter
+          searchType={searchType}
+          setSearchType={setSearchType}
+          searchQuery={searchValue}
+          setSearchQuery={setSearchValue}
+          startDate={dateRange[0]}
+          endDate={dateRange[1]}
+          setStartDate={date => setDateRange([date, dateRange[1]])}
+          setEndDate={date => setDateRange([dateRange[0], date])}
+          searchOptions={[
+            { value: "title", label: "강의명", type: "text" },
+            { value: "location", label: "장소", type: "text" },
+            { value: "instructor", label: "강사", type: "text" },
+            {
+              value: "status",
+              label: "상태",
+              type: "select",
+              options: [
+                { value: "예정", label: "예정" },
+                { value: "진행중", label: "진행중" },
+                { value: "완료", label: "완료" },
+              ],
+            },
+            { value: "date", label: "일정", type: "date" },
+          ]}
+          onSearchUpdate={(type, query) => {
+            setSearchType(type);
+            setSearchValue(query);
+            setCurrentPage(1);
           }}
-        >
-          <SearchFilter
-            searchType={searchType}
-            setSearchType={setSearchType}
-            searchQuery={searchValue}
-            setSearchQuery={setSearchValue}
-            startDate={dateRange[0]}
-            endDate={dateRange[1]}
-            setStartDate={(date) => setDateRange([date, dateRange[1]])}
-            setEndDate={(date) => setDateRange([dateRange[0], date])}
-            searchOptions={[
-              { value: "title", label: "강의명", type: "text" },
-              { value: "location", label: "장소", type: "text" },
-              { value: "instructor", label: "강사", type: "text" },
-              {
-                value: "status",
-                label: "상태",
-                type: "select",
-                options: [
-                  { value: "예정", label: "예정" },
-                  { value: "진행중", label: "진행중" },
-                  { value: "완료", label: "완료" },
-                ],
-              },
-              { value: "date", label: "일정", type: "date" },
-            ]}
-            onSearchUpdate={(type, query) => {
-              setSearchType(type);
-              setSearchValue(query);
-              setCurrentPage(1);
-            }}
-          />
-          <button onClick={resetFilters} style={buttonStyle("#ccc", "#333")}>
-            초기화
-          </button>
-        </div>
+          isMobile={false}
+        />
       )}
 
-      {/* 📱 모바일 카드형 / 💻 테이블 분기 완전 분리 */}
-      {isCardLayout ? (
-  <InfiniteCardList
-    data={sortedCourses}
-    pageSize={10}
-    renderCard={(item) => (
-      <div key={item.order_item_id} style={mobileCardStyle}>
-        <div style={mobileRow}>
-          <strong>강의명</strong> {item.title}
-        </div>
-        <div style={mobileRow}>
-          <strong>일정</strong>{" "}
-          {new Date(item.start_date).toISOString().slice(0, 10) ===
-          new Date(item.end_date).toISOString().slice(0, 10)
-            ? formatKoreanDate(item.start_date)
-            : `${formatKoreanDate(item.start_date)} ~ ${formatKoreanDate(item.end_date)}`}
-        </div>
-        <div style={mobileRow}>
-          <strong>장소</strong> {item.location}
-        </div>
-        <div style={mobileRow}>
-          <strong>강사</strong> {item.instructor}
-        </div>
-        <div style={mobileRow}>
-          <strong>상태</strong> {renderStatusBadge(item.status)}
-        </div>
-        <div style={mobileRow}>
-          <strong>후기</strong>{" "}
-          {item.status === "완료" ? (
-            <button
-              style={reviewButtonStyle}
-              onClick={() => handleOpenReviewModal({ ...item })}
+      {sortedCourses.length === 0 ? (
+        renderEmpty()
+      ) : isCardLayout ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+          {sortedCourses.map((item) => (
+            <div
+              key={item.order_item_id}
+              style={{
+                marginBottom: "14px",
+                borderRadius: "11px",
+                background: "#fff",
+                boxShadow: "0 2px 10px 0 rgba(0,0,0,0.06)",
+                padding: "18px 14px 16px 14px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                minHeight: 120,
+              }}
             >
-              {item.is_reviewed ? "수정" : "작성"}
-            </button>
-          ) : (
-            "-"
-          )}
+              {/* 카드 상단: 강의명, 상태 */}
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 5 }}>
+                <span style={{ fontWeight: 600, fontSize: "1.08rem", flex: 1 }}>{item.title}</span>
+                {renderStatusBadge(item.status)}
+              </div>
+              {/* 일정 */}
+              <div style={{ color: "#455", fontSize: "0.98rem", marginBottom: 2 }}>
+                <span style={{ marginRight: 7, fontWeight: 500 }}>일정</span>
+                {new Date(item.start_date).toISOString().slice(0, 10) === new Date(item.end_date).toISOString().slice(0, 10)
+                  ? formatKoreanDate(item.start_date)
+                  : `${formatKoreanDate(item.start_date)} ~ ${formatKoreanDate(item.end_date)}`}
+              </div>
+              {/* 장소/강사 */}
+              <div style={{ color: "#5a5a5a", fontSize: "0.98rem", display: "flex", gap: 14 }}>
+                <span>📍 {item.location}</span>
+                <span>👤 {item.instructor}</span>
+              </div>
+              {/* 후기 버튼(오른쪽 하단) */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+                {item.status === "완료" ? (
+                  <button
+                    style={{
+                      ...reviewButtonStyle,
+                      backgroundColor: item.is_reviewed ? "#bbb" : "#0070f3",
+                      fontSize: "0.96rem",
+                      padding: "6px 16px",
+                      minWidth: 70,
+                    }}
+                    onClick={() => handleOpenReviewModal({ ...item })}
+                  >
+                       {item.is_reviewed ? "후기수정" : "후기작성"}
+  </button>
+) : null}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-    )}
-  />
-) : (
-        <>
+      ) : (
+        // PC(테이블형)
+        <div style={{ minHeight: 340 }}>
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
                 fontSize: "15px",
                 borderCollapse: "collapse",
+                marginBottom: 0,
               }}
             >
               <thead style={{ background: "#f9f9f9" }}>
@@ -428,10 +402,16 @@ export default function MyCourse() {
                 </tr>
               </thead>
               <tbody>
-                {pagedCourses.length === 0 ? (
+                {courses.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={tdCenter}>
-                      수강 내역이 없습니다.
+                      {renderEmpty("아직 수강내역이 없습니다")}
+                    </td>
+                  </tr>
+                ) : sortedCourses.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={tdCenter}>
+                      {renderEmpty("해당되는 내용이 없습니다")}
                     </td>
                   </tr>
                 ) : (
@@ -510,22 +490,24 @@ export default function MyCourse() {
             </table>
           </div>
           {/* ⏩ 페이지네이션 */}
-          <div style={{ marginTop: "20px", textAlign: "center" }}>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                style={{
-                  ...pageButtonStyle,
-                  fontWeight: currentPage === page ? "bold" : "normal",
-                  backgroundColor: currentPage === page ? "#eee" : "#fff",
-                }}
-              >
-                {page}
-              </button>
-            ))}
-          </div>
-        </>
+          {pagedCourses.length !== 0 && (
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    ...pageButtonStyle,
+                    fontWeight: currentPage === page ? "bold" : "normal",
+                    backgroundColor: currentPage === page ? "#eee" : "#fff",
+                  }}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <ReviewModal

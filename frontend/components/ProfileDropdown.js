@@ -3,6 +3,7 @@ import { UserContext } from "../context/UserContext";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format"; // ✅
+import { User } from "lucide-react";
 
 export default function ProfileDropdown({ showProfile, setShowProfile }) {
   const dropdownRef = useRef(null);
@@ -79,8 +80,7 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
         }}
         onClick={goToMyPage}
       >
-        <span style={{ fontSize: "30px", marginRight: "10px" }}>👤</span>
-        <div>
+        <User size={36} style={{ marginRight: "10px" }} />        <div>
           <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
             {userName}
           </div>

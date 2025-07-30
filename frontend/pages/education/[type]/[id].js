@@ -8,7 +8,7 @@ import TabProductDetail from "@/components/product/TabProductDetail";
 import TabProductReviews from "@/components/product/TabProductReviews";
 import TabProductInquiry from "@/components/product/TabProductInquiry";
 import TabRefundPolicy from "@/components/product/TabRefundPolicy";
-import ScrollTopButton from "@/components/common/ScrollTopButton";
+import { ShoppingCart } from "lucide-react";
 import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 
 export default function EducationScheduleDetailPage() {
@@ -324,9 +324,10 @@ export default function EducationScheduleDetailPage() {
                 zIndex: 999,
               }}
             >
-              <button onClick={handleAddToCart} style={actionBtnStyle(false)}>
-                장바구니
-              </button>
+<button onClick={handleAddToCart} style={actionBtnStyle(false)}>
+  <ShoppingCart size={18} style={{ marginRight: 6, verticalAlign: "middle" }} />
+  장바구니
+</button>
               <button onClick={handleBuyNow} style={actionBtnStyle(true)}>
                 바로 구매
               </button>
@@ -377,7 +378,6 @@ export default function EducationScheduleDetailPage() {
       <div id="refund" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabRefundPolicy />
       </div>
-      {/* <ScrollTopButton /> */}
     </div>
   );
 }
