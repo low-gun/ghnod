@@ -1,4 +1,5 @@
 // frontend/data/menuData.js
+import { LogIn } from "lucide-react"; // 루시드 아이콘 중 로그인
 
 // 왼쪽 그룹 (로고 등)
 export const leftGroup = [
@@ -66,9 +67,10 @@ export function getRightGroup(user) {
           label: "FaUser", // 프로필 아이콘
           isProfile: true,
         }
-      : {
+        : {
           label: "로그인",
           link: "/login",
+          icon: <LogIn size={25} />,
         },
   ];
 }

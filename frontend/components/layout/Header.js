@@ -9,7 +9,7 @@ import { useCartContext } from "@/context/CartContext";
 import MyPageMenuDrawer from "@/components/mypage/MyPageMenuDrawer";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import MobileMenuDrawer from "@/components/common/MobileMenuDrawer";
-import { User, ShoppingCart } from "lucide-react";
+import { LogIn, User, ShoppingCart } from "lucide-react";
 
 const HEADER_HEIGHT_DESKTOP = 80;
 const HEADER_HEIGHT_MOBILE = 48;
@@ -302,18 +302,29 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           }
           return (
             <Link
-              key={item.label || idx}
-              href={item.link}
-              style={{
-                textDecoration: "none",
-                color: "#333",
-                marginLeft: "20px",
-                fontWeight: "bold",
-                fontSize: "16px",
-              }}
-            >
-              {item.label}
-            </Link>
+            key={item.label || idx}
+            href={item.link}
+            style={{
+              display: "flex",             // flex로
+              alignItems: "center",        // 수직 중앙정렬
+              justifyContent: "center",    // 필요하면 수평 중앙도
+              height: "40px",              // header 아이콘들과 높이 맞추기
+              width: "40px",               // (원형 등 맞추고 싶을 때)
+              marginLeft: "20px",
+              color: "#333",
+              fontWeight: "bold",
+              fontSize: "16px",
+              textDecoration: "none",
+              gap: "0",                    // 텍스트 없으면 gap 0
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+            aria-label="로그인"
+          >
+            {item.icon}
+          </Link>
           );
         })}
       </div>
@@ -350,6 +361,28 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           {!isTabletOrBelow && renderRightGroup()}
           {isTabletOrBelow && (
             <div style={{ display: "flex", alignItems: "center", marginLeft: "auto", gap: "10px" }}>
+               {!user && (
+  <Link
+    href="/login"
+    style={{
+      display: "flex",
+      alignItems: "center",        // 수직 정렬
+      justifyContent: "center",    // 수평 정렬
+      width: "40px",
+      height: "40px",
+      color: "#333",
+      background: "none",
+      border: "none",
+      padding: 0,
+      marginLeft: "6px",           // 필요시 여백 조절
+      fontSize: "18px",
+      cursor: "pointer",
+    }}
+    aria-label="로그인"
+  >
+    <LogIn size={24} />
+  </Link>
+)}
               {user && (
                 <>
                   <button
