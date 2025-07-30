@@ -1,32 +1,29 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import Header from "./Header";
 import Footer from "./Footer";
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+
+const HEADER_HEIGHT_DESKTOP = 80;
+const HEADER_HEIGHT_MOBILE = 48;
+
 export default function MainLayout({ children }) {
   const [showProfile, setShowProfile] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [activeMenu, setActiveMenu] = useState("내 정보");
+  const isTabletOrBelow = useIsTabletOrBelow();
   const router = useRouter();
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 500);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
+  // 헤더/푸터 숨김 처리 (로그인, 회원가입 페이지)
   const isAuthPage =
-  router.pathname === "/login" ||
-  router.pathname.startsWith("/register");
+    router.pathname === "/login" ||
+    router.pathname.startsWith("/register");
 
-const hideHeader = isMobile && isAuthPage;
-// 모바일+로그인/회원가입에서만 푸터 숨김
-const hideFooter = isMobile && isAuthPage;
+  // 헤더, 푸터 숨김은 모바일·태블릿 구간에서만 적용
+  const hideHeader = isTabletOrBelow && isAuthPage;
+  const hideFooter = isTabletOrBelow && isAuthPage;
 
-  // ★ 헤더 높이를 상태에 따라 지정
-  const headerHeight = isMobile ? 48 : 80;
+  // 헤더 높이 변수 통일
+  const headerHeight = isTabletOrBelow ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT_DESKTOP;
 
   return (
     <div
@@ -34,14 +31,21 @@ const hideFooter = isMobile && isAuthPage;
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: `calc(100vh - ${headerHeight}px)`,
+        minHeight: `calc(100vh - ${hideHeader ? 0 : headerHeight}px)`,
       }}
     >
-      <Header showProfile={showProfile} setShowProfile={setShowProfile} />
+      {!hideHeader && (
+        <Header
+          showProfile={showProfile}
+          setShowProfile={setShowProfile}
+          activeMenu={activeMenu}
+          setActiveMenu={setActiveMenu}
+        />
+      )}
       <main
         style={{
           flex: 1,
-          marginTop: hideHeader ? "0px" : `${headerHeight}px`,
+          marginTop: hideHeader ? 0 : headerHeight,
           maxWidth: "1200px",
           marginLeft: "auto",
           marginRight: "auto",

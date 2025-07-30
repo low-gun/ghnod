@@ -16,27 +16,22 @@ export default function MyPageSidebar({ activeMenu, setActiveMenu }) {
 
   return (
     <aside
-      style={{
-        position: "sticky",
-        top: 0,
-        alignSelf: "flex-start",
-        background: "#f6f9fd",
-        borderRight: "1px solid #e3e9f7",
-        padding: "32px 0",
-        width: 220,
-        minWidth: 180,
-        maxWidth: 260,
-        flex: "0 0 220px",
-        height: "calc(100vh - 72px)",
-        boxSizing: "border-box",
-        zIndex: 10,
-        borderRadius: "0 18px 18px 0",
-        boxShadow: "2px 0 8px 0 rgba(64,108,204,0.06)",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-start",
-      }}
-    >
+  style={{
+    width: 220,
+    minWidth: 180,
+    maxWidth: 260,
+    height: "100vh",
+    background: "#f6f9fd",
+    borderRight: "1px solid #e3e9f7",
+    padding: "32px 24px",   // ← 좌우 여백, 원하는 값으로 조절
+    zIndex: 100,
+    borderRadius: "0 18px 18px 0",
+    boxShadow: "2px 0 8px 0 rgba(64,108,204,0.06)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-start",
+  }}
+>
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {MENUS.map((menu) => {
           const isActive = menu.label === activeMenu;

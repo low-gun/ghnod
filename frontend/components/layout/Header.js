@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useContext } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { UserContext } from "../../context/UserContext";
@@ -6,13 +6,23 @@ import { leftGroup, centerGroup, getRightGroup } from "../../data/menuData";
 import ProfileDropdown from "../ProfileDropdown";
 import LogoutButton from "@/components/common/LogoutButton";
 import { useCartContext } from "@/context/CartContext";
+import MyPageMenuDrawer from "@/components/mypage/MyPageMenuDrawer";
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 
-export default function Header({ showProfile, setShowProfile }) {
+const HEADER_HEIGHT_DESKTOP = 80;
+const HEADER_HEIGHT_MOBILE = 48;
+
+export default function Header({ showProfile, setShowProfile, activeMenu, setActiveMenu }) {
   const { user } = useContext(UserContext);
   const router = useRouter();
   const { cartItems, cartReady } = useCartContext();
-
+  const [myDrawerOpen, setMyDrawerOpen] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  const isTabletOrBelow = useIsTabletOrBelow();
+  const headerHeight = isTabletOrBelow ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT_DESKTOP;
+
   let closeTimer = null;
   function handleMouseEnter(idx) {
     if (closeTimer) {
@@ -27,32 +37,6 @@ export default function Header({ showProfile, setShowProfile }) {
     }, 300);
   }
 
-    // ✅ 반응형 상태
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-
-  useEffect(() => {
-    const updateSize = () => {
-      const width = window.innerWidth;
-      setIsMobile(width <= 950);
-      setIsTablet(width > 768 && width <= 1235);
-    };
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") setShowMobileMenu(false);
-    };
-    if (showMobileMenu) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showMobileMenu]);
   function renderLeftGroup() {
     return (
       <div
@@ -67,20 +51,18 @@ export default function Header({ showProfile, setShowProfile }) {
           if (item.isLogo) {
             return (
               <Link key="logo" href={item.link || "/"} legacyBehavior>
-              <img
-  src="/logo_blue.png"
-  alt="Logo"
-  style={{
-    width: isMobile ? "85px" : "150px",     // ← 모바일일 때 로고만 작게
-    height: "auto",
-    cursor: "pointer"
-  }}
-/>
+                <img
+                  src="/logo_blue.png"
+                  alt="Logo"
+                  style={{
+                    width: isTabletOrBelow ? "85px" : "150px",
+                    height: "auto",
+                    cursor: "pointer",
+                  }}
+                />
               </Link>
             );
           }
-
-          // ✅ 일반 메뉴는 링크로 렌더링
           return item.link ? (
             <Link key={item.label} href={item.link}>
               <a
@@ -103,7 +85,7 @@ export default function Header({ showProfile, setShowProfile }) {
   }
 
   function renderCenterGroup() {
-    if (isMobile) return null;
+    if (isTabletOrBelow) return null;
     return (
       <>
         <style>{`
@@ -115,7 +97,7 @@ export default function Header({ showProfile, setShowProfile }) {
             flex: 1,
             display: "flex",
             justifyContent: "center",
-            gap: isTablet ? "16px" : "32px",
+            gap: "32px",
             minWidth: 0,
             flexWrap: "nowrap",
             overflowX: "auto",
@@ -182,7 +164,7 @@ export default function Header({ showProfile, setShowProfile }) {
                       {item.label}
                     </Link>
                   )}
-  
+
               {item.link && item.sub && hoverIndex === idx && (
                 <div
                   style={{
@@ -223,8 +205,6 @@ export default function Header({ showProfile, setShowProfile }) {
       </>
     );
   }
-  
-  
 
   function renderRightGroup() {
     const group = getRightGroup(user);
@@ -281,7 +261,6 @@ export default function Header({ showProfile, setShowProfile }) {
                 key="FaUser"
                 style={{ position: "relative", marginLeft: "20px" }}
                 onClick={() => setShowProfile((v) => !v)}
-
               >
                 <span style={{ fontSize: "22px", cursor: "pointer" }}>👤</span>
                 <ProfileDropdown
@@ -293,7 +272,6 @@ export default function Header({ showProfile, setShowProfile }) {
               </div>
             );
           }
-
           return (
             <Link
               key={item.label}
@@ -340,14 +318,14 @@ export default function Header({ showProfile, setShowProfile }) {
           left: 0,
           width: "100vw",
           height: "100vh",
-          backgroundColor: "rgba(0, 0, 0, 0.6)", // ✅ 블랙 반투명 배경
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
           zIndex: 9999,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center", // ✅ 수직 중앙 정렬
+          justifyContent: "center",
           alignItems: "center",
-          padding: "5vh 20px", // ✅ 화면 크기에 따라 여백
-          gap: "3vh", // ✅ 메뉴 간격도 vh로
+          padding: "5vh 20px",
+          gap: "3vh",
         }}
       >
         {/* 닫기 버튼 */}
@@ -367,7 +345,6 @@ export default function Header({ showProfile, setShowProfile }) {
         >
           ×
         </button>
-
         {/* 메뉴 항목 */}
         {centerGroup.map(
           (item) =>
@@ -380,11 +357,11 @@ export default function Header({ showProfile, setShowProfile }) {
                   color: "#fff",
                   fontSize: "1rem",
                   fontWeight: "normal",
-                  transition: "color 0.2s", // ✅ 부드러운 색 전환
+                  transition: "color 0.2s",
                 }}
                 onClick={() => setShowMobileMenu(false)}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#e0e0e0")} // ✅ hover in
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")} // ✅ hover out
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#e0e0e0")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#fff")}
               >
                 {item.label}
               </Link>
@@ -401,10 +378,11 @@ export default function Header({ showProfile, setShowProfile }) {
           position: "fixed",
           top: 0,
           width: "100%",
-          height: isMobile ? "48px" : "80px",
+          height: `${headerHeight}px`,
           backgroundColor: "#fff",
           zIndex: 999,
-          boxShadow: isMobile ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
+          boxShadow: isTabletOrBelow ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
+          transition: "height 0.2s",
         }}
       >
         <div
@@ -415,95 +393,100 @@ export default function Header({ showProfile, setShowProfile }) {
             display: "flex",
             alignItems: "center",
             height: "100%",
-            padding: "0 20px", // ✅ 좌우 여백 추가
+            padding: "0 20px",
           }}
         >
           {renderLeftGroup()}
-          {!isMobile && renderCenterGroup()}
-          {!isMobile && renderRightGroup()}
-          {isMobile && (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      marginLeft: "auto",
-      gap: "12px",
-    }}
-  >
-    {/* 로그인 안 했을 때 */}
-    {!user && (
-      <Link
-        href="/login"
-        style={{
-          fontWeight: "bold",
-          fontSize: "16px",
-          color: "#333333",
-          textDecoration: "none",
-        }}
-      >
-        로그인
-      </Link>
-    )}
-    {/* 로그인 했을 때: 장바구니(🛒) + MY(👤) */}
-    {user && (
-      <>
-        {/* 🛒 장바구니 아이콘 */}
-        <Link
-          href="/cart"
-          style={{
-            fontSize: "22px",
-            color: "#333",
-            textDecoration: "none",
-            display: "flex",
-            alignItems: "center",
-            position: "relative",
-          }}
-        >
-          <span role="img" aria-label="장바구니">🛒</span>
-          {cartReady && cartItems.length > 0 && (
-            <span
+          {!isTabletOrBelow && renderCenterGroup()}
+          {!isTabletOrBelow && renderRightGroup()}
+          {isTabletOrBelow && (
+            <div
               style={{
-                position: "absolute",
-                top: -8,
-                right: -9,
-                backgroundColor: "#ef4444",
-                color: "#fff",
-                fontSize: "10px",
-                fontWeight: "bold",
-                width: 16,
-                height: 16,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                boxShadow: "0 0 0 1px #fff",
+                marginLeft: "auto",
+                gap: "12px",
               }}
             >
-              {cartItems.length}
-            </span>
+              {!user && (
+                <Link
+                  href="/login"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    color: "#333333",
+                    textDecoration: "none",
+                  }}
+                >
+                  로그인
+                </Link>
+              )}
+              {user && (
+                <>
+                  <Link
+                    href="/cart"
+                    style={{
+                      fontSize: "22px",
+                      color: "#333",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      position: "relative",
+                    }}
+                  >
+                    <span role="img" aria-label="장바구니">🛒</span>
+                    {cartReady && cartItems.length > 0 && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: -8,
+                          right: -9,
+                          backgroundColor: "#ef4444",
+                          color: "#fff",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          width: 16,
+                          height: 16,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "50%",
+                          boxShadow: "0 0 0 1px #fff",
+                        }}
+                      >
+                        {cartItems.length}
+                      </span>
+                    )}
+                  </Link>
+                  <button
+                    onClick={() => setMyDrawerOpen(true)}
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "16px",
+                      color: "#333",
+                      textDecoration: "none",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    MY
+                  </button>
+                  <MyPageMenuDrawer
+                    open={myDrawerOpen}
+                    setOpen={setMyDrawerOpen}
+                    activeMenu={activeMenu}
+                    setActiveMenu={setActiveMenu}
+                  />
+                </>
+              )}
+              {renderMobileMenuButton()}
+            </div>
           )}
-        </Link>
-        {/* 👤 MY 아이콘 */}
-        <Link
-          href="/mypage"
-          style={{
-            fontWeight: "bold",
-            fontSize: "16px",
-            color: "#333",
-            textDecoration: "none",
-          }}
-        >
-          MY
-        </Link>
-      </>
-    )}
-    {renderMobileMenuButton()}
-  </div>
-)}
-
         </div>
       </header>
-      {isMobile && showMobileMenu && renderMobileMenu()}
+      {isTabletOrBelow && showMobileMenu && renderMobileMenu()}
     </>
   );
 }

@@ -10,7 +10,8 @@ import PaymentHistory from "../../components/mypage/PaymentHistory";
 import Coupons from "../../components/mypage/Coupons";
 import Points from "../../components/mypage/Points";
 import Inquiries from "../../components/mypage/Inquiries";
-
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import MyPageMenuDrawer from "../../components/mypage/MyPageMenuDrawer"; // 추가
 axios.defaults.withCredentials = true;
 
 export default function MyPage() {
@@ -19,7 +20,8 @@ export default function MyPage() {
   const [myData, setMyData] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
-
+  const isTabletOrBelow = useIsTabletOrBelow();
+  const [drawerOpen, setDrawerOpen] = useState(false); // 추가
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -98,28 +100,51 @@ export default function MyPage() {
           flexDirection: "row",
           alignItems: "stretch",
           minHeight: "100vh",
+          maxWidth: "1200px",
+          margin: "0 auto",
           width: "100%",
-          maxWidth: "100vw",
           boxSizing: "border-box",
-          overflow: "hidden",
         }}
       >
-        <MyPageSidebar
-          activeMenu={activeMenu}
-          setActiveMenu={setActiveMenu}
-        />
-        <div
-          style={{
-            flex: 1,
-            padding: "0 20px",
-            boxSizing: "border-box",
-            width: "100%",
-            minWidth: 0,
-            overflow: "visible",
-          }}
-        >
-          {renderContent()}
-        </div>
+        {!isTabletOrBelow ? (
+          <>
+            <MyPageSidebar
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+            />
+            <div
+              style={{
+                marginLeft: 0,
+                padding: "0 20px",
+                boxSizing: "border-box",
+                width: "100%",
+                minWidth: 0,
+                overflow: "visible",
+              }}
+            >
+              {renderContent()}
+            </div>
+          </>
+        ) : (
+          <>
+            <MyPageMenuDrawer
+              open={drawerOpen}
+              setOpen={setDrawerOpen}
+              activeMenu={activeMenu}
+              setActiveMenu={setActiveMenu}
+            />
+            <div
+              style={{
+                padding: "0 8px",
+                width: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+              }}
+            >
+              {renderContent()}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
