@@ -97,7 +97,8 @@ export default function OpenCoursePage() {
   };
 
   return (
-    <div style={{ padding: 32 }}>
+    <div style={{ padding: isMobileOrTablet ? "0" : "32px" }}>
+
       <ScheduleSubTabs tabs={subTabs} />
 
       {/* 이미지 + 타이틀 */}

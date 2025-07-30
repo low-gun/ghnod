@@ -97,13 +97,13 @@ export default function FollowupPage() {
   };
 
   return (
-    <div style={{ padding: 32 }}>
+    <div style={{ padding: isMobileOrTablet ? "0" : "32px" }}>
       <ScheduleSubTabs tabs={subTabs} />
 
       {/* 이미지 + 타이틀 */}
       <div style={imgTitleBoxStyle}>
         <img
-          src="/images/opencourse.webp"
+          src="/images/followup.webp"
           alt="followup 페이지에서는 팔로우업 교육 프로그램을 소개합니다."
           style={imgStyle}
         />

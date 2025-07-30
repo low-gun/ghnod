@@ -260,39 +260,8 @@ exports.getPaymentHistory = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "로그인 필요" });
 
-    const [payments] = await pool.query(
-      `SELECT 
-         o.id AS order_id,
-         o.total_amount AS amount,
-         o.used_point,
-         (
-           SELECT 
-             CASE 
-               WHEN ct.discount_type = 'fixed' THEN ct.discount_amount
-               WHEN ct.discount_type = 'percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
-               ELSE 0
-             END
-           FROM coupons c
-           JOIN coupon_templates ct ON c.template_id = ct.id
-           WHERE c.id = o.coupon_id
-           LIMIT 1
-         ) AS coupon_discount,
-           oi.quantity,
-         s.title AS schedule_title,
-         s.image_url,
-         p.type AS product_type,
-         o.order_status AS status,
-         o.payment_method,
-         o.created_at
-       FROM orders o
-       LEFT JOIN order_items oi ON oi.order_id = o.id
-       LEFT JOIN schedules s ON oi.schedule_id = s.id
-       LEFT JOIN products p ON s.product_id = p.id
-       WHERE o.user_id = ?
-         AND o.order_status IN ('paid', 'refunded')
-       ORDER BY o.created_at DESC`,
-      [userId]
-    );
+    // payment.model.js의 getPaymentHistoryByUser 사용
+    const payments = await paymentModel.getPaymentHistoryByUser(userId);
 
     return res.status(200).json({ success: true, payments });
   } catch (error) {

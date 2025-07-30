@@ -307,7 +307,11 @@ export default function MyCourse() {
                 flexDirection: "column",
                 gap: "12px",
                 minHeight: 120,
-              }}
+                cursor: "pointer",                   // 손가락 커서
+                transition: "box-shadow 0.15s",
+              }}  onClick={() =>
+                router.push(`/education/${item.type}/${item.schedule_id}`)
+              }
             >
               {/* 카드 상단: 강의명, 상태 */}
               <div style={{ display: "flex", alignItems: "center", marginBottom: 5 }}>

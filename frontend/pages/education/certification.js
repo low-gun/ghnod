@@ -69,14 +69,16 @@ export default function CertificationPage() {
     position: "relative",
     textAlign: "left",
     marginBottom: 16,
+    width: "100%",              // ← maxWidth 대신 width 100%
+    maxWidth: "100%",           // ← 모바일/PC 모두 동일
+    margin: 0,                  // ← auto 중앙정렬 해제
   };
   const imgStyle = {
     width: "100%",
-    maxWidth: 1200,
     height: "auto",
     borderRadius: 8,
     display: "block",
-    margin: "0 auto",
+    margin: 0,
   };
   const imgTextStyle = {
     position: "absolute",
@@ -96,7 +98,8 @@ export default function CertificationPage() {
   };
 
   return (
-    <div style={{ padding: 32 }}>
+    <div style={{ padding: isMobileOrTablet ? "0" : "32px" }}>
+
       <ScheduleSubTabs tabs={subTabs} />
 
       {/* 이미지 + 타이틀 */}
