@@ -9,7 +9,7 @@ import { useCartContext } from "@/context/CartContext";
 import MyPageMenuDrawer from "@/components/mypage/MyPageMenuDrawer";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import MobileMenuDrawer from "@/components/common/MobileMenuDrawer";
-import { LogIn, User, ShoppingCart } from "lucide-react";
+import { Menu, LogIn, User, ShoppingCart } from "lucide-react";
 
 const HEADER_HEIGHT_DESKTOP = 80;
 const HEADER_HEIGHT_MOBILE = 48;
@@ -445,19 +445,21 @@ export default function Header({
               <button
                 onClick={() => setShowMobileMenu(true)}
                 style={{
-                  fontSize: "28px",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
                   padding: 0,
-                  color: "#222", // ← 원하는 색상으로 고정
-                  verticalAlign: "middle", // 추가\
-                  top: "8px", // 위로 2px 올리기(직접 조정)
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 40,
+                  height: 40,
                 }}
                 aria-label="전체 메뉴"
               >
-                ☰
+                <Menu size={28} color="#222" /> {/* ← SVG 아이콘으로 교체 */}
               </button>
+
               <MobileMenuDrawer
                 open={showMobileMenu}
                 onClose={() => setShowMobileMenu(false)}
