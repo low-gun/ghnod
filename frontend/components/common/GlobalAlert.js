@@ -85,7 +85,7 @@ export default function GlobalAlert() {
             borderTopLeftRadius: 22,
             borderTopRightRadius: 22,
             padding: "18px 22px 30px 22px",
-            margin: "0 8px 24px 8px",
+            margin: "0 8px 0 8px", // margin-bottom 0!
             width: "100%",
             maxWidth: 440,
             minHeight: 64,
@@ -94,11 +94,12 @@ export default function GlobalAlert() {
             fontSize: 16,
             position: "relative",
             animation: "slideUp 0.22s cubic-bezier(.42,0,.29,1.54)",
+            paddingBottom: "calc(30px + env(safe-area-inset-bottom))", // safe area 보정
           }}
-          onClick={(e) => e.stopPropagation()} // 바텀시트 클릭 시 닫힘 방지
+          onClick={(e) => e.stopPropagation()}
         >
           {/* 상단 bar */}
-          <div
+          {/* <div
             style={{
               width: 38,
               height: 5,
@@ -111,7 +112,7 @@ export default function GlobalAlert() {
               marginBottom: 8,
               pointerEvents: "none",
             }}
-          />
+          /> */}
           {/* 닫기(X) 버튼 */}
           <button
             onClick={hideAlert}

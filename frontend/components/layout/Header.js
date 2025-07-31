@@ -14,7 +14,12 @@ import { LogIn, User, ShoppingCart } from "lucide-react";
 const HEADER_HEIGHT_DESKTOP = 80;
 const HEADER_HEIGHT_MOBILE = 48;
 
-export default function Header({ showProfile, setShowProfile, activeMenu, setActiveMenu }) {
+export default function Header({
+  showProfile,
+  setShowProfile,
+  activeMenu,
+  setActiveMenu,
+}) {
   const { user } = useContext(UserContext);
   const router = useRouter();
   const { cartItems, cartReady } = useCartContext();
@@ -23,7 +28,9 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
   const [hoverIndex, setHoverIndex] = useState(null);
 
   const isTabletOrBelow = useIsTabletOrBelow();
-  const headerHeight = isTabletOrBelow ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT_DESKTOP;
+  const headerHeight = isTabletOrBelow
+    ? HEADER_HEIGHT_MOBILE
+    : HEADER_HEIGHT_DESKTOP;
 
   let closeTimer = null;
   function handleMouseEnter(idx) {
@@ -180,23 +187,24 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
                     minWidth: "200px",
                   }}
                 >
-                  {item.sub.map((subItem, subIdx) =>
-                    item.link &&
-                    subItem.slug && (
-                      <Link
-                        key={`${item.label || idx}-${subItem.slug || subIdx}`}
-                        href={`${item.link}/${subItem.slug}`}
-                        style={{
-                          display: "block",
-                          padding: "6px 12px",
-                          textDecoration: "none",
-                          color: "#333",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {subItem.label}
-                      </Link>
-                    )
+                  {item.sub.map(
+                    (subItem, subIdx) =>
+                      item.link &&
+                      subItem.slug && (
+                        <Link
+                          key={`${item.label || idx}-${subItem.slug || subIdx}`}
+                          href={`${item.link}/${subItem.slug}`}
+                          style={{
+                            display: "block",
+                            padding: "6px 12px",
+                            textDecoration: "none",
+                            color: "#333",
+                            fontSize: "14px",
+                          }}
+                        >
+                          {subItem.label}
+                        </Link>
+                      )
                   )}
                 </div>
               )}
@@ -290,7 +298,10 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
                 }}
                 onClick={() => setShowProfile((v) => !v)}
               >
-                <User size={26} style={{ display: "block", position: "relative", top: "1px" }} />
+                <User
+                  size={26}
+                  style={{ display: "block", position: "relative", top: "1px" }}
+                />
                 <ProfileDropdown
                   user={user}
                   showProfile={showProfile}
@@ -302,29 +313,29 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           }
           return (
             <Link
-            key={item.label || idx}
-            href={item.link}
-            style={{
-              display: "flex",             // flex로
-              alignItems: "center",        // 수직 중앙정렬
-              justifyContent: "center",    // 필요하면 수평 중앙도
-              height: "40px",              // header 아이콘들과 높이 맞추기
-              width: "40px",               // (원형 등 맞추고 싶을 때)
-              marginLeft: "20px",
-              color: "#333",
-              fontWeight: "bold",
-              fontSize: "16px",
-              textDecoration: "none",
-              gap: "0",                    // 텍스트 없으면 gap 0
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-            aria-label="로그인"
-          >
-            {item.icon}
-          </Link>
+              key={item.label || idx}
+              href={item.link}
+              style={{
+                display: "flex", // flex로
+                alignItems: "center", // 수직 중앙정렬
+                justifyContent: "center", // 필요하면 수평 중앙도
+                height: "40px", // header 아이콘들과 높이 맞추기
+                width: "40px", // (원형 등 맞추고 싶을 때)
+                marginLeft: "20px",
+                color: "#333",
+                fontWeight: "bold",
+                fontSize: "16px",
+                textDecoration: "none",
+                gap: "0", // 텍스트 없으면 gap 0
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+              aria-label="로그인"
+            >
+              {item.icon}
+            </Link>
           );
         })}
       </div>
@@ -360,60 +371,77 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
           {!isTabletOrBelow && renderCenterGroup()}
           {!isTabletOrBelow && renderRightGroup()}
           {isTabletOrBelow && (
-            <div style={{ display: "flex", alignItems: "center", marginLeft: "auto", gap: "10px" }}>
-               {!user && (
-  <Link
-    href="/login"
-    style={{
-      display: "flex",
-      alignItems: "center",        // 수직 정렬
-      justifyContent: "center",    // 수평 정렬
-      width: "40px",
-      height: "40px",
-      color: "#333",
-      background: "none",
-      border: "none",
-      padding: 0,
-      marginLeft: "6px",           // 필요시 여백 조절
-      fontSize: "18px",
-      cursor: "pointer",
-    }}
-    aria-label="로그인"
-  >
-    <LogIn size={24} />
-  </Link>
-)}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginLeft: "auto",
+                gap: "10px",
+              }}
+            >
+              {!user && (
+                <Link
+                  href="/login"
+                  style={{
+                    display: "flex",
+                    alignItems: "center", // 수직 정렬
+                    justifyContent: "center", // 수평 정렬
+                    width: "40px",
+                    height: "40px",
+                    color: "#333",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    marginLeft: "6px", // 필요시 여백 조절
+                    fontSize: "18px",
+                    cursor: "pointer",
+                  }}
+                  aria-label="로그인"
+                >
+                  <LogIn size={24} />
+                </Link>
+              )}
               {user && (
-  <>
-    <button
-      onClick={() => setMyDrawerOpen(true)}
-      style={{
-        width: 40,
-        height: 40,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        padding: 0,
-      }}
-      aria-label="마이페이지"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", position: "relative", top: 1 }}>
-        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>
-    </button>
-    <MyPageMenuDrawer
-      open={myDrawerOpen}
-      setOpen={setMyDrawerOpen}
-      activeMenu={activeMenu}
-      setActiveMenu={setActiveMenu}
-    />
-  </>
-)}
-              {/* 햄버거 버튼이 마지막(우측) */}
+                <>
+                  <button
+                    onClick={() => setMyDrawerOpen(true)}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                    aria-label="마이페이지"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="26"
+                      height="26"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ display: "block", position: "relative", top: 1 }}
+                    >
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </button>
+                  <MyPageMenuDrawer
+                    open={myDrawerOpen}
+                    setOpen={setMyDrawerOpen}
+                    activeMenu={activeMenu}
+                    setActiveMenu={setActiveMenu}
+                  />
+                </>
+              )}
               <button
                 onClick={() => setShowMobileMenu(true)}
                 style={{
@@ -422,19 +450,28 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
                   border: "none",
                   cursor: "pointer",
                   padding: 0,
+                  color: "#222", // ← 원하는 색상으로 고정
+                  verticalAlign: "middle", // 추가\
+                  top: "-2px", // 위로 2px 올리기(직접 조정)
                 }}
                 aria-label="전체 메뉴"
               >
                 ☰
               </button>
-              <MobileMenuDrawer open={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
+              <MobileMenuDrawer
+                open={showMobileMenu}
+                onClose={() => setShowMobileMenu(false)}
+              />
             </div>
           )}
         </div>
       </header>
       {/* 모바일 Drawer(메인 메뉴) */}
       {isTabletOrBelow && (
-        <MobileMenuDrawer open={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
+        <MobileMenuDrawer
+          open={showMobileMenu}
+          onClose={() => setShowMobileMenu(false)}
+        />
       )}
     </>
   );
