@@ -452,7 +452,7 @@ export default function Header({
                   padding: 0,
                   color: "#222", // ← 원하는 색상으로 고정
                   verticalAlign: "middle", // 추가\
-                  top: "-2px", // 위로 2px 올리기(직접 조정)
+                  top: "8px", // 위로 2px 올리기(직접 조정)
                 }}
                 aria-label="전체 메뉴"
               >
