@@ -144,7 +144,7 @@ export default function MyInfo({ data }) {
 
   const handleWithdraw = async () => {
     const ok = await showConfirm(
-      "정말 탈퇴하시겠습니까? 탈퇴 후에는 복구할 수 없습니다."
+      "정말 탈퇴하시겠습니까?\n탈퇴 후에는 복구할 수 없습니다."
     );
     if (!ok) return;
     try {

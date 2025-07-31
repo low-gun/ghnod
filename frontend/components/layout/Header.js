@@ -379,20 +379,21 @@ export default function Header({
                 gap: "10px",
               }}
             >
+              {/* 비회원: 로그인 버튼 */}
               {!user && (
                 <Link
                   href="/login"
                   style={{
                     display: "flex",
-                    alignItems: "center", // 수직 정렬
-                    justifyContent: "center", // 수평 정렬
+                    alignItems: "center",
+                    justifyContent: "center",
                     width: "40px",
                     height: "40px",
                     color: "#333",
                     background: "none",
                     border: "none",
                     padding: 0,
-                    marginLeft: "6px", // 필요시 여백 조절
+                    marginLeft: "6px",
                     fontSize: "18px",
                     cursor: "pointer",
                   }}
@@ -401,8 +402,52 @@ export default function Header({
                   <LogIn size={24} />
                 </Link>
               )}
+              {/* 회원: 장바구니, 마이페이지 */}
               {user && (
                 <>
+                  {/* 장바구니 */}
+                  <Link
+                    href="/cart"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "40px",
+                      height: "40px",
+                      cursor: "pointer",
+                      textDecoration: "none",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      position: "relative",
+                    }}
+                    aria-label="장바구니"
+                  >
+                    <ShoppingCart size={26} />
+                    {cartReady && cartItems.length > 0 && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 3,
+                          right: 3,
+                          backgroundColor: "#ef4444",
+                          color: "#fff",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          width: 16,
+                          height: 16,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "50%",
+                          boxShadow: "0 0 0 1px #fff",
+                        }}
+                      >
+                        {cartItems.length}
+                      </span>
+                    )}
+                  </Link>
+                  {/* 마이페이지 */}
                   <button
                     onClick={() => setMyDrawerOpen(true)}
                     style={{
@@ -442,6 +487,7 @@ export default function Header({
                   />
                 </>
               )}
+              {/* 햄버거 메뉴: 항상 */}
               <button
                 onClick={() => setShowMobileMenu(true)}
                 style={{
@@ -457,9 +503,8 @@ export default function Header({
                 }}
                 aria-label="전체 메뉴"
               >
-                <Menu size={28} color="#222" /> {/* ← SVG 아이콘으로 교체 */}
+                <Menu size={28} color="#222" />
               </button>
-
               <MobileMenuDrawer
                 open={showMobileMenu}
                 onClose={() => setShowMobileMenu(false)}

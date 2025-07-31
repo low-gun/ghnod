@@ -111,11 +111,11 @@ export default function ChangePasswordModal({
         {error && <p style={errorStyle}>{error}</p>}
 
         <div style={{ marginTop: "20px", textAlign: "right" }}>
-          <button onClick={handleChangePassword} style={primaryButton}>
-            변경하기
-          </button>
           <button onClick={onClose} style={cancelButton}>
             취소
+          </button>
+          <button onClick={handleChangePassword} style={primaryButton}>
+            변경하기
           </button>
         </div>
       </div>

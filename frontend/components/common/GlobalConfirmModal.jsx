@@ -29,7 +29,15 @@ export default function GlobalConfirmModal() {
           boxShadow: "0 4px 20px #0001",
         }}
       >
-        <div style={{ marginBottom: 20, fontSize: 16 }}>{message}</div>
+        <div
+          style={{
+            marginBottom: 20,
+            fontSize: 16,
+            whiteSpace: "pre-line", // 줄바꿈 적용!
+          }}
+        >
+          {message}
+        </div>{" "}
         <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
           <button
             onClick={cancel}
