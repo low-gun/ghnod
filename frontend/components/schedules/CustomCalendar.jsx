@@ -4,6 +4,9 @@ import moment from "moment";
 import ScheduleListModal from "./ScheduleListModal";
 import ScheduleDetailModal from "./ScheduleDetailModal"; // ✅ 추가
 import api from "@/lib/api"; // ✅ 맨 위 import 필요
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // 추가
+
 export default function CustomCalendar({
   schedules,
   currentMonth,
@@ -16,6 +19,8 @@ export default function CustomCalendar({
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // 추가
 
   // ✅ 여기!
   const handleEdit = (schedule) => {
@@ -23,16 +28,17 @@ export default function CustomCalendar({
   };
 
   const handleDelete = async (schedule) => {
-    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    const ok = await showConfirm("정말 삭제하시겠습니까?");
+    if (!ok) return;
 
     try {
       await api.delete(`admin/schedules/${schedule.id}`);
-      alert("삭제되었습니다.");
+      showAlert("삭제되었습니다.");
       setSelectedSchedule(null);
       window.location.reload();
     } catch (err) {
       console.error("삭제 실패:", err);
-      alert("삭제 실패");
+      showAlert("삭제 실패");
     }
   };
 

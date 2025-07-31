@@ -2,18 +2,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import axios from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 const ProductSchedulesModal = ({ productId, onClose }) => {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const fetchSchedules = async () => {
     try {
       const res = await axios.get(`admin/products/${productId}/schedules`);
       setSchedules(res.data.schedules);
     } catch (err) {
-      toast.error("일정 조회 실패");
+      showAlert("일정 조회 실패");
     } finally {
       setLoading(false);
     }

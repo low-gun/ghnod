@@ -20,10 +20,13 @@ import BulletList from "@tiptap/extension-bullet-list";
 import OrderedList from "@tiptap/extension-ordered-list";
 import ListItem from "@tiptap/extension-list-item";
 import api from "@/lib/api"; // 반드시 상단에 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+
 export default function TiptapEditor({ value, onChange, height = 280 }) {
   const [sourceMode, setSourceMode] = useState(false);
   const [mounted, setMounted] = useState(false); // ✅ 추가
   const fileInputRef = useRef(null);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     setMounted(true); // 🔹 클라이언트에서만 editor 생성되도록
@@ -77,26 +80,30 @@ export default function TiptapEditor({ value, onChange, height = 280 }) {
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length || !editor) return;
-  
+
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
-  
+
     try {
       const res = await api.post("/upload/image", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-  
+
       const urls = res.data.urls || [];
-  
+
       // 여러 장 한 번에 삽입!
-      const html = urls.map(item => `<img src="${item.detail}" alt="image" loading="lazy" />`).join("");
+      const html = urls
+        .map(
+          (item) => `<img src="${item.detail}" alt="image" loading="lazy" />`
+        )
+        .join("");
       editor.commands.insertContent(html);
       onChange(editor.getHTML());
     } catch (err) {
-      alert("이미지 업로드 실패");
+      showAlert("이미지 업로드 실패");
     }
   };
-  
+
   if (!mounted || !editor) return null;
   return (
     <div>

@@ -7,6 +7,8 @@ import UserTable from "../../components/admin/UserTable";
 import UserSummaryTable from "../../components/admin/UserSummaryTable";
 import axios from "axios";
 import { UserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -16,24 +18,9 @@ export default function AdminUsersPage() {
   const defaultTab = query.tab || "list";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [error, setError] = useState("");
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
-  // ✅ URL query.tab이 변할 때 activeTab 업데이트
-  // useEffect(() => {
-  //   if (!query.tab) {
-  //     router.replace({
-  //       pathname: router.pathname,
-  //       query: { ...query, tab: defaultTab },
-  //     });
-  //   }
-  // }, [query.tab]);
-
-  // useEffect(() => {
-  //   if (query.tab) {
-  //     setActiveTab(query.tab);
-  //   }
-  // }, [query.tab]);
-
-  // ✅ 비관리자 접근 제한
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/");
@@ -41,21 +28,21 @@ export default function AdminUsersPage() {
   }, [user, router]);
 
   const handleResetPassword = async (user) => {
-    const confirm = window.confirm(
+    const ok = await showConfirm(
       `사용자 [${user.username} / ${user.email}]의 비밀번호를 [1234]로 초기화하시겠습니까?`
     );
-    if (!confirm) return;
+    if (!ok) return;
 
     try {
       const res = await axios.put(`/api/admin/users/${user.id}/reset-password`);
       if (res.data.success) {
-        alert("비밀번호가 [1234]로 초기화되었습니다.");
+        showAlert("비밀번호가 [1234]로 초기화되었습니다.");
       } else {
-        alert("초기화에 실패했습니다.");
+        showAlert("초기화에 실패했습니다.");
       }
     } catch (error) {
       console.error("❌ 초기화 오류:", error);
-      alert("초기화 중 오류가 발생했습니다.");
+      showAlert("초기화 중 오류가 발생했습니다.");
     }
   };
 

@@ -6,6 +6,8 @@ import { CartProvider, useCartContext } from "../context/CartContext";
 import UserProvider from "../context/UserContext";
 import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
+import GlobalConfirmModal from "@/components/common/GlobalConfirmModal"; // 추가
+
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // ✅ 추가
@@ -100,6 +102,7 @@ function MyApp({ Component, pageProps }) {
         <UserProvider>
           <GlobalLoadingBar />
           <GlobalAlert />
+          <GlobalConfirmModal /> {/* 👈 여기에 추가 */}
           <LayoutWrapper>
             <Component {...pageProps} />
           </LayoutWrapper>

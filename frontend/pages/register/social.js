@@ -2,13 +2,14 @@ import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import RegisterStep2 from "components/register/RegisterStep2";
 import { jwtDecode } from "jwt-decode";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function SocialRegisterPage() {
   const router = useRouter();
   const { token } = router.query;
   const [socialProvider, setSocialProvider] = useState("");
   const [nameEditable, setNameEditable] = useState(true);
-
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
   const [form, setForm] = useState({
     username: "",
     phone: "",
@@ -36,11 +37,13 @@ export default function SocialRegisterPage() {
     try {
       const payload = jwtDecode(token);
       if (!payload.email || !payload.name) {
-        alert("소셜 계정에서 필요한 정보를 모두 받아오지 못했습니다.\n플랫폼에서 이름, 이메일 제공에 동의해 주세요.");
+        showAlert(
+          "소셜 계정에서 필요한 정보를 모두 받아오지 못했습니다.\n플랫폼에서 이름, 이메일 제공에 동의해 주세요."
+        );
         return;
       }
       setSocialProvider(payload.socialProvider || "");
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
         username: payload.name,
         phone: normalizePhone(payload.phone),
@@ -48,7 +51,7 @@ export default function SocialRegisterPage() {
       }));
       setNameEditable(!payload.name || payload.name.trim() === "");
     } catch (e) {
-      alert("[social] 인증정보 해석 실패: " + e.message);
+      showAlert("[social] 인증정보 해석 실패: " + e.message);
     }
   }, [token, router]);
 
@@ -68,7 +71,7 @@ export default function SocialRegisterPage() {
         body: JSON.stringify({ token, ...form }),
       });
       const data = await res.json();
-  
+
       if (res.status === 409) {
         let msg = "";
         // provider: "local" | "kakao" | "naver" | "google"
@@ -77,32 +80,34 @@ export default function SocialRegisterPage() {
         else if (data.provider === "naver") providerText = "네이버";
         else if (data.provider === "google") providerText = "구글";
         else providerText = ""; // 일반
-      
+
         if (data.errorType === "email") {
           if (providerText) {
             msg = `이미 ${providerText} 계정으로 가입된 이메일입니다.\n${providerText} 로그인을 이용해 주세요.`;
           } else {
-            msg = "이미 일반 회원으로 가입된 이메일입니다.\n일반 로그인을 이용해 주세요.";
+            msg =
+              "이미 일반 회원으로 가입된 이메일입니다.\n일반 로그인을 이용해 주세요.";
           }
         } else if (data.errorType === "phone") {
           if (providerText) {
             msg = `이미 ${providerText} 계정으로 가입된 휴대폰번호입니다.\n${providerText} 로그인을 이용해 주세요.`;
           } else {
-            msg = "이미 일반 회원으로 가입된 휴대폰번호입니다.\n일반 로그인을 이용해 주세요.";
+            msg =
+              "이미 일반 회원으로 가입된 휴대폰번호입니다.\n일반 로그인을 이용해 주세요.";
           }
         } else {
-          msg = "이미 가입된 정보입니다. 로그인 또는 다른 소셜 로그인을 이용해 주세요.";
+          msg =
+            "이미 가입된 정보입니다. 로그인 또는 다른 소셜 로그인을 이용해 주세요.";
         }
-        alert(msg);
+        showAlert(msg);
         router.replace("/login");
         setSubmitting(false);
         return;
       }
-      
-  
+
       if (!res.ok) throw new Error(data.error || "서버 오류");
-      alert(
-        `안녕하세요, ${form.username}님.\n회원가입이 완료되었습니다.\n\n감사합니다.`
+      showAlert(
+        `안녕하세요, ${form.username}님.\n회원가입이 완료되었습니다.\n감사합니다.`
       );
 
       setSuccess(true);
@@ -112,7 +117,7 @@ export default function SocialRegisterPage() {
     }
     setSubmitting(false);
   };
-  
+
   const canRegister =
     !!form.username.trim() &&
     !!form.phone.trim() &&
@@ -157,7 +162,13 @@ export default function SocialRegisterPage() {
             aria-label="뒤로가기"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M15 18l-6-6 6-6" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M15 18l-6-6 6-6"
+                stroke="#666"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
           <div style={{ textAlign: "center" }}>
@@ -187,41 +198,56 @@ export default function SocialRegisterPage() {
           socialMode={true}
           socialProvider={socialProvider}
           email={form.email}
-          setEmail={val => setForm(f => ({ ...f, email: val }))}
+          setEmail={(val) => setForm((f) => ({ ...f, email: val }))}
           username={form.username}
-          setUsername={val => setForm(f => ({ ...f, username: val }))}
+          setUsername={(val) => setForm((f) => ({ ...f, username: val }))}
           phone={form.phone}
-          setPhone={val => setForm(f => ({ ...f, phone: val }))}
-          formatPhone={v =>
-            (v || "").replace(/(\d{3})(\d{3,4})?(\d{4})?/, function (_, a, b, c) {
-              return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
-            })
+          setPhone={(val) => setForm((f) => ({ ...f, phone: val }))}
+          formatPhone={(v) =>
+            (v || "").replace(
+              /(\d{3})(\d{3,4})?(\d{4})?/,
+              function (_, a, b, c) {
+                return b && c ? `${a}-${b}-${c}` : b ? `${a}-${b}` : a;
+              }
+            )
           }
           isVerified={isVerified}
           setIsVerified={setIsVerified}
           verificationCode={form.verificationCode}
-          setVerificationCode={val => setForm(f => ({ ...f, verificationCode: val }))}
+          setVerificationCode={(val) =>
+            setForm((f) => ({ ...f, verificationCode: val }))
+          }
           showVerificationInput={form.showVerificationInput}
-          setShowVerificationInput={val => setForm(f => ({ ...f, showVerificationInput: val }))}
+          setShowVerificationInput={(val) =>
+            setForm((f) => ({ ...f, showVerificationInput: val }))
+          }
           hasRequestedCode={form.hasRequestedCode}
-          setHasRequestedCode={val => setForm(f => ({ ...f, hasRequestedCode: val }))}
+          setHasRequestedCode={(val) =>
+            setForm((f) => ({ ...f, hasRequestedCode: val }))
+          }
           timeLeft={form.timeLeft}
-          setTimeLeft={val => setForm(f => ({ ...f, timeLeft: val }))}
+          setTimeLeft={(val) => setForm((f) => ({ ...f, timeLeft: val }))}
           timerRef={{ current: null }}
           verificationError={form.verificationError}
-          setVerificationError={val => setForm(f => ({ ...f, verificationError: val }))}
+          setVerificationError={(val) =>
+            setForm((f) => ({ ...f, verificationError: val }))
+          }
           company={form.company}
-          setCompany={val => setForm(f => ({ ...f, company: val }))}
+          setCompany={(val) => setForm((f) => ({ ...f, company: val }))}
           department={form.department}
-          setDepartment={val => setForm(f => ({ ...f, department: val }))}
+          setDepartment={(val) => setForm((f) => ({ ...f, department: val }))}
           position={form.position}
-          setPosition={val => setForm(f => ({ ...f, position: val }))}
+          setPosition={(val) => setForm((f) => ({ ...f, position: val }))}
           termsAgree={form.terms_agree}
-          setTermsAgree={val => setForm(f => ({ ...f, terms_agree: val }))}
+          setTermsAgree={(val) => setForm((f) => ({ ...f, terms_agree: val }))}
           privacyAgree={form.privacy_agree}
-          setPrivacyAgree={val => setForm(f => ({ ...f, privacy_agree: val }))}
+          setPrivacyAgree={(val) =>
+            setForm((f) => ({ ...f, privacy_agree: val }))
+          }
           marketingAgree={form.marketing_agree}
-          setMarketingAgree={val => setForm(f => ({ ...f, marketing_agree: val }))}
+          setMarketingAgree={(val) =>
+            setForm((f) => ({ ...f, marketing_agree: val }))
+          }
           setOpenModal={() => {}}
           handleRegister={handleSubmit}
           canRegister={canRegister}

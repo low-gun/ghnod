@@ -87,15 +87,12 @@
 ./frontend/components/cart/CouponSelector.jsx
 ./frontend/components/cart/PointInputModal.jsx
 ./frontend/components/common
-./frontend/components/common/AlertModal.js
 ./frontend/components/common/AuthBottomBarButton.jsx
 ./frontend/components/common/AuthCardLayout.jsx
-./frontend/components/common/ConfirmModal.js
 ./frontend/components/common/DateRangeSelector.jsx
 ./frontend/components/common/ExcelDownloadButton.js
 ./frontend/components/common/GlobalAlert.js
 ./frontend/components/common/GlobalLoadingBar.js
-./frontend/components/common/GlobalSessionAlert.js
 ./frontend/components/common/InfiniteCardList.jsx
 ./frontend/components/common/LogoutButton.js
 ./frontend/components/common/MobileMenuDrawer.js

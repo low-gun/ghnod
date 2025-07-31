@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function ReviewModal({
   visible,
@@ -12,6 +14,8 @@ export default function ReviewModal({
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
   useEffect(() => {
     if (visible) {
@@ -31,7 +35,7 @@ export default function ReviewModal({
   if (!visible) return null;
 
   const handleSubmit = async () => {
-    if (!comment.trim()) return alert("내용을 입력해주세요.");
+    if (!comment.trim()) return showAlert("내용을 입력해주세요.");
     try {
       setLoading(true);
       if (reviewId) {
@@ -42,12 +46,12 @@ export default function ReviewModal({
       } else {
         await api.post(`/products/${productId}/reviews`, { rating, comment });
       }
-      alert(`후기가 ${reviewId ? "수정" : "등록"}되었습니다!`);
+      showAlert(`후기가 ${reviewId ? "수정" : "등록"}되었습니다!`);
       onSuccess?.();
       onClose();
     } catch (err) {
       console.error("후기 작성 실패:", err);
-      alert("후기 작성에 실패했습니다.");
+      showAlert("후기 작성에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -55,17 +59,18 @@ export default function ReviewModal({
 
   const handleDelete = async () => {
     if (!reviewId) return;
-    if (!window.confirm("후기를 삭제하시겠습니까?")) return;
+    const ok = await showConfirm("정말 후기를 삭제하시겠습니까?");
+    if (!ok) return;
 
     try {
       setLoading(true);
       await api.delete(`/products/${productId}/reviews/${reviewId}`);
-      alert("후기가 삭제되었습니다.");
+      showAlert("후기가 삭제되었습니다.");
       onSuccess?.();
       onClose();
     } catch (err) {
       console.error("❌ 후기 삭제 실패:", err);
-      alert("후기 삭제에 실패했습니다.");
+      showAlert("후기 삭제에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -79,18 +84,19 @@ export default function ReviewModal({
         </button>
 
         {/* 리뷰 이미지 썸네일 여러 장 지원 */}
-{Array.isArray(initialData?.images) && initialData.images.length > 0 && (
-  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-    {initialData.images.map((img, idx) => (
-      <img
-        key={idx}
-        src={img.thumbnail}
-        alt={`리뷰 이미지 썸네일 ${idx + 1}`}
-        style={thumbnailStyle}
-      />
-    ))}
-  </div>
-)}
+        {Array.isArray(initialData?.images) &&
+          initialData.images.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              {initialData.images.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img.thumbnail}
+                  alt={`리뷰 이미지 썸네일 ${idx + 1}`}
+                  style={thumbnailStyle}
+                />
+              ))}
+            </div>
+          )}
 
         {/* 강의명 */}
         {initialData?.title && (

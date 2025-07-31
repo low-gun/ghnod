@@ -12,19 +12,14 @@ function formatDate(dateString) {
 export default function Coupons({ data }) {
   const isMobile = useIsMobile();
 
-  // 쿠폰 코드 복사
-  const copyToClipboard = (code) => {
-    navigator.clipboard.writeText(code);
-    alert("쿠폰코드가 복사되었습니다.");
-  };
-
   if (!data) return null;
 
   // 사용가능/임박/만료 구분
   const now = new Date();
   const getCouponState = (coupon) => {
     if (coupon.is_used) return "used";
-    if (coupon.expiry_date && new Date(coupon.expiry_date) < now) return "expired";
+    if (coupon.expiry_date && new Date(coupon.expiry_date) < now)
+      return "expired";
     if (
       coupon.expiry_date &&
       new Date(coupon.expiry_date) - now < 1000 * 60 * 60 * 24 * 3 // 3일 이내
@@ -58,13 +53,15 @@ export default function Coupons({ data }) {
         >
           {filtered.map((coupon, i) => {
             const state = getCouponState(coupon);
-            const expiry = coupon.expiry_date ? formatDate(coupon.expiry_date) : null;
+            const expiry = coupon.expiry_date
+              ? formatDate(coupon.expiry_date)
+              : null;
             let badgeColor =
               state === "expiring"
                 ? "#faad14"
                 : state === "expired"
-                ? "#bbb"
-                : "#297cff";
+                  ? "#bbb"
+                  : "#297cff";
 
             return (
               <div
@@ -77,8 +74,8 @@ export default function Coupons({ data }) {
                     state === "expired"
                       ? "#fafafb"
                       : state === "used"
-                      ? "#fafbfa"
-                      : "#fff",
+                        ? "#fafbfa"
+                        : "#fff",
                   opacity: state === "expired" || state === "used" ? 0.55 : 1,
                 }}
               >
@@ -108,45 +105,48 @@ export default function Coupons({ data }) {
                     {state === "expiring"
                       ? "만료임박"
                       : state === "expired"
-                      ? "만료됨"
-                      : coupon.is_used
-                      ? "사용됨"
-                      : "사용가능"}
+                        ? "만료됨"
+                        : coupon.is_used
+                          ? "사용됨"
+                          : "사용가능"}
                   </span>
                 </div>
                 <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 15 }}>
-                  {coupon.discount_type === "percent"
-                    ? (
-                        <>
-                          <span style={{ color: "#1a8f37", fontWeight: 800 }}>
-                            {coupon.discount_value}%
-                          </span>
-                          &nbsp;할인쿠폰
-                        </>
-                      )
-                    : coupon.discount_amount
-                    ? (
-                        <>
-                          <span style={{ color: "#1a8f37", fontWeight: 800 }}>
-                            {formatPrice(coupon.discount_amount)}
-                          </span>
-                          원 할인쿠폰
-                        </>
-                      )
-                    : "할인정보 없음"}
+                  {coupon.discount_type === "percent" ? (
+                    <>
+                      <span style={{ color: "#1a8f37", fontWeight: 800 }}>
+                        {coupon.discount_value}%
+                      </span>
+                      &nbsp;할인쿠폰
+                    </>
+                  ) : coupon.discount_amount ? (
+                    <>
+                      <span style={{ color: "#1a8f37", fontWeight: 800 }}>
+                        {formatPrice(coupon.discount_amount)}
+                      </span>
+                      원 할인쿠폰
+                    </>
+                  ) : (
+                    "할인정보 없음"
+                  )}
                 </div>
 
                 <div style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
                   {expiry ? (
                     <>
-                      유효기한: <b style={{ color: state === "expiring" ? "#d97706" : undefined }}>{expiry}</b>
+                      유효기한:{" "}
+                      <b
+                        style={{
+                          color: state === "expiring" ? "#d97706" : undefined,
+                        }}
+                      >
+                        {expiry}
+                      </b>
                     </>
                   ) : (
                     <>유효기한: 제한없음</>
                   )}
                 </div>
-
-
               </div>
             );
           })}

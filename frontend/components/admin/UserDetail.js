@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import AlertModal from "../common/AlertModal";
-import ConfirmModal from "../common/ConfirmModal";
-import api from "@/lib/api"; // ✅ axios 인스턴스 추가
+import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function UserDetail({ user, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
@@ -11,12 +11,12 @@ export default function UserDetail({ user, onClose, onUpdate }) {
     role: "user",
   });
 
-  const [alertMessage, setAlertMessage] = useState("");
-  const [confirmMessage, setConfirmMessage] = useState("");
   const [history, setHistory] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [totalPages, setTotalPages] = useState(1);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
   useEffect(() => {
     if (user) {
@@ -46,7 +46,7 @@ export default function UserDetail({ user, onClose, onUpdate }) {
             "❌ [프론트엔드 오류] 이력을 불러오지 못했습니다.",
             error
           );
-          setAlertMessage("이력을 불러오지 못했습니다.");
+          showAlert("이력을 불러오지 못했습니다."); // <-- 이렇게!
         });
     }
   }, [user, currentPage]);
@@ -62,17 +62,17 @@ export default function UserDetail({ user, onClose, onUpdate }) {
       .then((res) => {
         const data = res.data;
         if (data.success) {
-          setAlertMessage("수정이 완료되었습니다.");
+          showAlert("수정이 완료되었습니다.");
           setTimeout(() => {
             onUpdate({ ...user, ...formData });
             onClose();
             window.location.reload();
           }, 2000);
         } else {
-          setAlertMessage("수정에 실패했습니다.");
+          showAlert("수정에 실패했습니다.");
         }
       })
-      .catch(() => setAlertMessage("서버와 연결할 수 없습니다."));
+      .catch(() => showAlert("서버와 연결할 수 없습니다."));
   };
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -259,7 +259,10 @@ export default function UserDetail({ user, onClose, onUpdate }) {
           </div>
           <div>
             <button
-              onClick={() => setConfirmMessage("정말 수정하시겠습니까?")}
+              onClick={async () => {
+                const ok = await showConfirm("정말 수정하시겠습니까?");
+                if (ok) handleActualSubmit();
+              }}
               style={{
                 padding: "6px 12px",
                 backgroundColor: "#4f46e5",
@@ -270,6 +273,7 @@ export default function UserDetail({ user, onClose, onUpdate }) {
             >
               저장
             </button>
+
             <button
               onClick={onClose}
               style={{ padding: "6px 12px", marginLeft: "5px" }}
@@ -278,22 +282,6 @@ export default function UserDetail({ user, onClose, onUpdate }) {
             </button>
           </div>
         </div>
-        {alertMessage && (
-          <AlertModal
-            message={alertMessage}
-            onClose={() => setAlertMessage("")}
-          />
-        )}
-        {confirmMessage && (
-          <ConfirmModal
-            message={confirmMessage}
-            onConfirm={() => {
-              handleActualSubmit();
-              setConfirmMessage("");
-            }}
-            onCancel={() => setConfirmMessage("")}
-          />
-        )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function InquiryModal({ onClose, onSubmitted }) {
   if (typeof onSubmitted !== "function") {
@@ -9,6 +10,7 @@ export default function InquiryModal({ onClose, onSubmitted }) {
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const handleFileChange = (e) => {
     setAttachment(e.target.files[0]);
@@ -30,7 +32,7 @@ export default function InquiryModal({ onClose, onSubmitted }) {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("문의가 제출되었습니다.");
+      showAlert("문의가 제출되었습니다.");
 
       if (typeof onSubmitted === "function") {
         onSubmitted(); // ✅ 안전하게 호출
@@ -39,7 +41,7 @@ export default function InquiryModal({ onClose, onSubmitted }) {
       onClose();
     } catch (err) {
       console.error("문의 제출 실패", err);
-      alert("제출에 실패했습니다.");
+      showAlert("제출에 실패했습니다.");
     } finally {
       setLoading(false);
     }

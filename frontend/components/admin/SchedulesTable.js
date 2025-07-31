@@ -7,6 +7,8 @@ import { useRouter } from "next/router";
 import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector"; // ✅ 추가
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton"; // 상단 import 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function SchedulesTable() {
   const router = useRouter();
@@ -25,6 +27,8 @@ export default function SchedulesTable() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [total, setTotal] = useState(0);
+  const { showAlert } = useGlobalAlert(); // 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
@@ -53,11 +57,10 @@ export default function SchedulesTable() {
       },
     });
     if (res.data.success) {
-      setSchedules(res.data.schedules);    // 한 페이지 데이터만
-      setTotal(res.data.total);            // 총 갯수(페이징 계산용)
+      setSchedules(res.data.schedules); // 한 페이지 데이터만
+      setTotal(res.data.total); // 총 갯수(페이징 계산용)
     }
   };
-  
 
   useEffect(() => {
     fetchSchedules();
@@ -70,7 +73,6 @@ export default function SchedulesTable() {
     sortConfig.key,
     sortConfig.direction,
   ]);
-  
 
   const handleSort = (key) => {
     setPage(1);
@@ -81,19 +83,19 @@ export default function SchedulesTable() {
       return { key, direction: nextDirection };
     });
   };
-  
 
   const handleDeleteSelected = async () => {
-    if (!window.confirm("정말로 선택한 일정을 삭제하시겠습니까?")) return;
+    const ok = await showConfirm("정말로 선택한 일정을 삭제하시겠습니까?");
+    if (!ok) return;
     try {
       await api.delete("admin/schedules", {
         data: { ids: selectedIds },
       });
-      alert("삭제되었습니다.");
+      showAlert("삭제되었습니다.");
       setSelectedIds([]);
       fetchSchedules();
     } catch {
-      alert("삭제 실패");
+      showAlert("삭제 실패");
     }
   };
 
@@ -118,7 +120,7 @@ export default function SchedulesTable() {
       });
       fetchSchedules();
     } catch (err) {
-      alert("상태 변경 실패");
+      showAlert("상태 변경 실패");
     }
   };
   const handleReset = () => {
@@ -154,12 +156,11 @@ export default function SchedulesTable() {
       }
     });
   }, []);
-  
-  
+
   const totalPages = useMemo(() => {
     return Math.ceil(schedules.length / pageSize);
   }, [schedules, pageSize]);
-  
+
   const pagedSchedules = schedules;
   return (
     <div>
@@ -365,16 +366,16 @@ export default function SchedulesTable() {
                 가격 {renderArrow("price", sortConfig)}
               </th>
               <th
-  onClick={() => handleSort("is_active")}
-  style={{
-    ...thCenter,
-    width: "60px",
-    cursor: "pointer",
-    textAlign: "center",
-  }}
->
-  {renderArrow("is_active", sortConfig)}
-</th>
+                onClick={() => handleSort("is_active")}
+                style={{
+                  ...thCenter,
+                  width: "60px",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                {renderArrow("is_active", sortConfig)}
+              </th>
 
               <th
                 style={{ ...thCenter, width: "140px" }}
@@ -427,21 +428,21 @@ export default function SchedulesTable() {
                   </span>
                 </td>
                 <td style={{ ...tdCenter, width: "80px" }}>
-  {s.thumbnail ? (
-    <img
-      src={s.thumbnail}
-      alt="일정 썸네일"
-      style={{ width: 60, height: 60, objectFit: "cover" }}
-      loading="lazy"
-    />
-  ) : s.image_url ? (
-    <img
-      src={s.image_url}
-      alt="일정 썸네일"
-      style={{ width: 60, height: 60, objectFit: "cover" }}
-      loading="lazy"
-    />
-  ) : s.product_image ? (
+                  {s.thumbnail ? (
+                    <img
+                      src={s.thumbnail}
+                      alt="일정 썸네일"
+                      style={{ width: 60, height: 60, objectFit: "cover" }}
+                      loading="lazy"
+                    />
+                  ) : s.image_url ? (
+                    <img
+                      src={s.image_url}
+                      alt="일정 썸네일"
+                      style={{ width: 60, height: 60, objectFit: "cover" }}
+                      loading="lazy"
+                    />
+                  ) : s.product_image ? (
                     <img
                       src={s.product_image}
                       alt="상품 썸네일"
@@ -483,48 +484,54 @@ export default function SchedulesTable() {
                     : "-"}
                 </td>
                 <td style={{ ...tdCenter, width: "60px" }}>
-  <label style={{
-    display: "inline-block",
-    position: "relative",
-    width: 38,
-    height: 22,
-    cursor: "pointer",
-    verticalAlign: "middle",
-  }}>
-    <input
-      type="checkbox"
-      checked={s.is_active}
-      onChange={() => handleToggleActive(s.id, s.is_active)}
-      style={{
-        opacity: 0,
-        width: 0,
-        height: 0,
-      }}
-    />
-    <span style={{
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: s.is_active ? "#28a745" : "#ccc",
-      borderRadius: 22,
-      transition: "0.3s",
-      boxShadow: "0 0 3px rgba(0,0,0,0.05)",
-    }} />
-    <span style={{
-      position: "absolute",
-      top: 3,
-      left: s.is_active ? 18 : 3,
-      width: 16,
-      height: 16,
-      backgroundColor: "#fff",
-      borderRadius: "50%",
-      transition: "0.3s",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-    }} />
-  </label>
-</td>
+                  <label
+                    style={{
+                      display: "inline-block",
+                      position: "relative",
+                      width: 38,
+                      height: 22,
+                      cursor: "pointer",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={s.is_active}
+                      onChange={() => handleToggleActive(s.id, s.is_active)}
+                      style={{
+                        opacity: 0,
+                        width: 0,
+                        height: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: s.is_active ? "#28a745" : "#ccc",
+                        borderRadius: 22,
+                        transition: "0.3s",
+                        boxShadow: "0 0 3px rgba(0,0,0,0.05)",
+                      }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 3,
+                        left: s.is_active ? 18 : 3,
+                        width: 16,
+                        height: 16,
+                        backgroundColor: "#fff",
+                        borderRadius: "50%",
+                        transition: "0.3s",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      }}
+                    />
+                  </label>
+                </td>
 
                 <td style={{ ...tdCenter, width: "140px" }}>
                   {formatDateTime(s.created_at)}
@@ -556,7 +563,6 @@ const tdCenter = {
   height: "60px",
   verticalAlign: "middle",
 };
-
 
 const thCenter = {
   ...tdCenter,

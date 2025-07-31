@@ -5,6 +5,8 @@ import api from "@/lib/api";
 import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function ProductTable({ onEdit }) {
   const [products, setProducts] = useState([]);
@@ -21,13 +23,15 @@ export default function ProductTable({ onEdit }) {
     key: "updated_at",
     direction: "desc",
   });
-  
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const [currentPage, setCurrentPage] = useState(1);
 
   // 상품 데이터 1회만 패치
   useEffect(() => {
     setLoading(true);
-    api.get("admin/products", { params: { all: true } })
+    api
+      .get("admin/products", { params: { all: true } })
       .then((res) => {
         if (res.data.success) {
           setProducts(res.data.products);
@@ -35,10 +39,10 @@ export default function ProductTable({ onEdit }) {
             ...new Set(res.data.products.map((p) => p.type).filter(Boolean)),
           ]);
         } else {
-          toast.error("상품 데이터를 불러오지 못했습니다.");
+          showAlert("상품 데이터를 불러오지 못했습니다.");
         }
       })
-      .catch(() => toast.error("상품 데이터를 불러오지 못했습니다."))
+      .catch(() => showAlert("상품 데이터를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -47,8 +51,10 @@ export default function ProductTable({ onEdit }) {
     const query = searchQuery.toLowerCase();
     return products.filter((product) => {
       if (searchField === "id") return String(product.id).includes(query);
-      if (searchField === "title") return product.title?.toLowerCase().includes(query);
-      if (searchField === "type") return product.type?.toLowerCase().includes(query);
+      if (searchField === "title")
+        return product.title?.toLowerCase().includes(query);
+      if (searchField === "type")
+        return product.type?.toLowerCase().includes(query);
       if (searchField === "price") return String(product.price).includes(query);
       if (searchField === "is_active") {
         if (!query) return true;
@@ -68,7 +74,8 @@ export default function ProductTable({ onEdit }) {
     if (!sortConfig) return filteredProducts;
     const { key, direction } = sortConfig;
     return [...filteredProducts].sort((a, b) => {
-      let aValue = a[key], bValue = b[key];
+      let aValue = a[key],
+        bValue = b[key];
       if (typeof aValue === "number" && typeof bValue === "number") {
         return direction === "asc" ? aValue - bValue : bValue - aValue;
       }
@@ -78,17 +85,25 @@ export default function ProductTable({ onEdit }) {
     });
   }, [filteredProducts, sortConfig]);
 
-  const totalPages = useMemo(() => Math.ceil(sortedProducts.length / pageSize), [sortedProducts, pageSize]);
+  const totalPages = useMemo(
+    () => Math.ceil(sortedProducts.length / pageSize),
+    [sortedProducts, pageSize]
+  );
   const pagedProducts = useMemo(() => {
     const startIdx = (currentPage - 1) * pageSize;
     return sortedProducts.slice(startIdx, startIdx + pageSize);
   }, [sortedProducts, currentPage, pageSize]);
 
   // 전체선택/단일선택 체크박스
-  const isAllChecked = pagedProducts.length > 0 && pagedProducts.every((p) => selectedIds.includes(p.id));
-  const toggleAll = (checked) => setSelectedIds(checked ? pagedProducts.map((p) => p.id) : []);
+  const isAllChecked =
+    pagedProducts.length > 0 &&
+    pagedProducts.every((p) => selectedIds.includes(p.id));
+  const toggleAll = (checked) =>
+    setSelectedIds(checked ? pagedProducts.map((p) => p.id) : []);
   const toggleOne = (id, checked) =>
-    setSelectedIds((prev) => checked ? [...prev, id] : prev.filter((i) => i !== id));
+    setSelectedIds((prev) =>
+      checked ? [...prev, id] : prev.filter((i) => i !== id)
+    );
 
   // 정렬 변경
   const handleSort = (key) => {
@@ -111,16 +126,17 @@ export default function ProductTable({ onEdit }) {
 
   // 선택 삭제
   const handleDeleteSelected = async () => {
-    if (!window.confirm("정말로 선택한 상품을 삭제하시겠습니까?")) return;
+    const ok = await showConfirm("정말로 선택한 상품을 삭제하시겠습니까?");
+    if (!ok) return;
     try {
       await api.delete("admin/products", { data: { ids: selectedIds } });
-      toast.success("삭제되었습니다.");
+      showAlert("삭제되었습니다.");
       setSelectedIds([]);
       // 삭제 후 전체 데이터 다시 로드
       const res = await api.get("admin/products", { params: { all: true } });
       setProducts(res.data.products);
     } catch {
-      toast.error("삭제 실패");
+      showAlert("삭제 실패");
     }
   };
 
@@ -132,9 +148,9 @@ export default function ProductTable({ onEdit }) {
     setProducts(updated);
     try {
       await api.patch(`admin/products/${id}/active`);
-      toast.success("상태가 변경되었습니다.");
+      showAlert("상태가 변경되었습니다.");
     } catch {
-      toast.error("상태 변경 실패");
+      showAlert("상태 변경 실패");
       // 실패 시 데이터 새로고침
       const res = await api.get("admin/products", { params: { all: true } });
       setProducts(res.data.products);
@@ -155,10 +171,15 @@ export default function ProductTable({ onEdit }) {
   return (
     <div>
       {/* 검색/컨트롤 영역 */}
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        marginBottom: 16, gap: 10, flexWrap: "wrap"
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 16,
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
         <div style={{ display: "flex", gap: 10, flex: 1 }}>
           <SearchFilter
             searchType={searchField}
@@ -203,10 +224,14 @@ export default function ProductTable({ onEdit }) {
           <button
             onClick={handleReset}
             style={{
-              padding: "8px 14px", backgroundColor: "#ccc",
-              border: "none", borderRadius: "6px"
+              padding: "8px 14px",
+              backgroundColor: "#ccc",
+              border: "none",
+              borderRadius: "6px",
             }}
-          >초기화</button>
+          >
+            초기화
+          </button>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button
@@ -221,7 +246,9 @@ export default function ProductTable({ onEdit }) {
               fontWeight: "bold",
               cursor: selectedIds.length === 0 ? "not-allowed" : "pointer",
             }}
-          >삭제</button>
+          >
+            삭제
+          </button>
           <PageSizeSelector
             value={pageSize}
             onChange={(size) => {
@@ -248,10 +275,14 @@ export default function ProductTable({ onEdit }) {
                 fetch: async () => {
                   const allRows = [];
                   for (const product of sortedProducts) {
-                    const res = await api.get(`admin/products/${product.id}/schedules`);
+                    const res = await api.get(
+                      `admin/products/${product.id}/schedules`
+                    );
                     const schedules = res.data.schedules || [];
                     for (const s of schedules) {
-                      const r = await api.get(`admin/schedules/${s.id}/students`);
+                      const r = await api.get(
+                        `admin/schedules/${s.id}/students`
+                      );
                       const students = r.data.students || [];
                       const mapped = students.map((stu) => ({
                         상품명: product.title,
@@ -274,9 +305,13 @@ export default function ProductTable({ onEdit }) {
       </div>
 
       {/* 테이블 */}
-      <table style={{
-        width: "100%", borderCollapse: "collapse", fontSize: "14px"
-      }}>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontSize: "14px",
+        }}
+      >
         <thead style={{ background: "#f9f9f9" }}>
           <tr>
             <th style={thStyle}>
@@ -299,12 +334,9 @@ export default function ProductTable({ onEdit }) {
             <th style={thStyle} onClick={() => handleSort("price")}>
               가격 {renderArrow("price")}
             </th>
-            <th
-  style={thStyle}
-  onClick={() => handleSort("is_active")}
->
-  {renderArrow("is_active")}
-</th>
+            <th style={thStyle} onClick={() => handleSort("is_active")}>
+              {renderArrow("is_active")}
+            </th>
 
             <th style={thStyle} onClick={() => handleSort("created_at")}>
               등록일시 {renderArrow("created_at")}
@@ -341,12 +373,18 @@ export default function ProductTable({ onEdit }) {
                     style={{ width: 60, height: 60, objectFit: "cover" }}
                   />
                 ) : (
-                  <div style={{
-                    height: 60, border: "1px dashed #ccc",
-                    display: "flex", justifyContent: "center",
-                    alignItems: "center", color: "#aaa",
-                    fontSize: 12, width: "100%",
-                  }}>
+                  <div
+                    style={{
+                      height: 60,
+                      border: "1px dashed #ccc",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      color: "#aaa",
+                      fontSize: 12,
+                      width: "100%",
+                    }}
+                  >
                     썸네일 없음
                   </div>
                 )}
@@ -366,27 +404,45 @@ export default function ProductTable({ onEdit }) {
                   : "-"}
               </td>
               <td style={tdStyle}>
-                <label style={{
-                  position: "relative", display: "inline-block",
-                  width: "42px", height: "24px", verticalAlign: "middle",
-                }}>
+                <label
+                  style={{
+                    position: "relative",
+                    display: "inline-block",
+                    width: "42px",
+                    height: "24px",
+                    verticalAlign: "middle",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={product.is_active}
                     onChange={() => handleToggleActive(product.id)}
                     style={{ opacity: 0, width: 0, height: 0 }}
                   />
-                  <span style={{
-                    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: product.is_active ? "#28a745" : "#ccc",
-                    borderRadius: "24px", transition: "0.4s",
-                  }}>
-                    <span style={{
-                      position: "absolute", width: 18, height: 18,
-                      left: product.is_active ? 21 : 3, bottom: 3,
-                      backgroundColor: "white", borderRadius: "50%",
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: product.is_active ? "#28a745" : "#ccc",
+                      borderRadius: "24px",
                       transition: "0.4s",
-                    }} />
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        width: 18,
+                        height: 18,
+                        left: product.is_active ? 21 : 3,
+                        bottom: 3,
+                        backgroundColor: "white",
+                        borderRadius: "50%",
+                        transition: "0.4s",
+                      }}
+                    />
                   </span>
                 </label>
               </td>

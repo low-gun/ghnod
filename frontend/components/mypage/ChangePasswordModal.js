@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import api from "@/lib/api";
 import { useRouter } from "next/router";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai"; // 👁️ 아이콘 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function ChangePasswordModal({
   onClose,
@@ -13,12 +15,10 @@ export default function ChangePasswordModal({
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-
-  // 👁️ 보기 상태 추가
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
+  const { showConfirm } = useGlobalConfirm(); // ✅ 전역 confirm 함수 import
   const handleChangePassword = async () => {
     if (
       !newPassword ||
@@ -33,6 +33,10 @@ export default function ChangePasswordModal({
       return;
     }
 
+    // ✅ 여기 showConfirm 추가
+    const ok = await showConfirm("비밀번호를 변경하시겠습니까?");
+    if (!ok) return;
+
     try {
       const payload = isForcedReset
         ? { newPassword, userId }
@@ -40,7 +44,7 @@ export default function ChangePasswordModal({
 
       await api.post("/mypage/change-password", payload);
 
-      alert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
+      showAlert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
       onClose();
       router.replace("/login");
     } catch (err) {
@@ -101,9 +105,7 @@ export default function ChangePasswordModal({
         {renderPasswordInput(
           "새 비밀번호 확인",
           confirmPassword,
-          setConfirmPassword,
-          showConfirm,
-          setShowConfirm
+          setConfirmPassword
         )}
 
         {error && <p style={errorStyle}>{error}</p>}

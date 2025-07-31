@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
   const [form, setForm] = useState({
@@ -18,6 +20,8 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const isEdit = Boolean(scheduleId);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
   useEffect(() => {
     api.get("admin/products").then((res) => {
@@ -46,7 +50,7 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
           });
         }
       })
-      .catch(() => alert("일정 정보를 불러오지 못했습니다."))
+      .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [scheduleId]);
   useEffect(() => {
@@ -71,34 +75,36 @@ export default function ScheduleModal({ scheduleId, onClose, onRefresh }) {
 
       const res = await api[method](url, payload);
       if (res.data.success) {
-        alert(isEdit ? "수정 완료!" : "등록 완료!");
+        showAlert(isEdit ? "수정 완료!" : "등록 완료!");
         onRefresh?.();
         onClose();
       } else {
-        alert("저장 실패: " + res.data.message);
+        showAlert("저장 실패: " + res.data.message);
       }
     } catch (err) {
       console.error("저장 오류:", err);
-      alert("저장 중 오류 발생");
+      showAlert("저장 중 오류 발생");
     }
   };
 
   const handleDelete = async () => {
     if (!isEdit || !scheduleId) return;
-    if (confirm("정말로 이 일정을 삭제(숨김처리)하시겠습니까?")) {
-      try {
-        const res = await api.delete(`admin/schedules/${scheduleId}`);
-        if (res.data.success) {
-          alert("삭제 완료");
-          onRefresh?.();
-          onClose();
-        } else {
-          alert("삭제 실패: " + res.data.message);
-        }
-      } catch (err) {
-        console.error("삭제 오류:", err);
-        alert("삭제 중 오류 발생");
+    const ok = await showConfirm(
+      "정말로 이 일정을 삭제(숨김처리)하시겠습니까?"
+    );
+    if (!ok) return;
+    try {
+      const res = await api.delete(`admin/schedules/${scheduleId}`);
+      if (res.data.success) {
+        showAlert("삭제 완료");
+        onRefresh?.();
+        onClose();
+      } else {
+        showAlert("삭제 실패: " + res.data.message);
       }
+    } catch (err) {
+      console.error("삭제 오류:", err);
+      showAlert("삭제 중 오류 발생");
     }
   };
 

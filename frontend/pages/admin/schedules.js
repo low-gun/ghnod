@@ -7,13 +7,14 @@ import moment from "moment";
 import CustomCalendar from "@/components/schedules/CustomCalendar";
 import api from "@/lib/api";
 import { UserContext } from "@/context/UserContext"; // 🔥 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function AdminSchedulesPage() {
   const router = useRouter();
   const [tab, setTab] = useState("list");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
   const [calendarSchedules, setCalendarSchedules] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(moment());
   const { user } = useContext(UserContext); // 🔥 추가
@@ -29,7 +30,10 @@ export default function AdminSchedulesPage() {
     if (tab !== "calendar") return;
     if (!user || user.role !== "admin") return; // 🔥 권한 있을 때만 호출
 
-    const startOfMonth = currentMonth.clone().startOf("month").format("YYYY-MM-DD");
+    const startOfMonth = currentMonth
+      .clone()
+      .startOf("month")
+      .format("YYYY-MM-DD");
     const endOfMonth = currentMonth.clone().endOf("month").format("YYYY-MM-DD");
 
     api
@@ -55,7 +59,7 @@ export default function AdminSchedulesPage() {
         }
       })
       .catch(() => {
-        alert("일정 불러오기 실패");
+        showAlert("일정 불러오기 실패");
       });
   }, [tab, user, currentMonth]);
 

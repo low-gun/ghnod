@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function UserPointGrantModal({
   selectedIds = [],
@@ -7,6 +8,7 @@ export default function UserPointGrantModal({
   onSuccess,
 }) {
   const [amount, setAmount] = useState(0);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -18,11 +20,11 @@ export default function UserPointGrantModal({
 
   const handleSubmit = async () => {
     if (selectedIds.length === 0) {
-      alert("포인트 지급 대상을 선택해주세요.");
+      showAlert("포인트 지급 대상을 선택해주세요.");
       return;
     }
     if (!amount || amount <= 0) {
-      toast.error("올바른 포인트 금액을 입력해주세요.");
+      showAlert("올바른 포인트 금액을 입력해주세요.");
       return;
     }
     try {
@@ -30,11 +32,11 @@ export default function UserPointGrantModal({
         userIds: selectedIds,
         amount: Number(amount),
       });
-      toast.success("포인트 지급이 완료되었습니다.");
+      showAlert("포인트 지급이 완료되었습니다.");
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error("포인트 지급 중 오류 발생");
+      showAlert("포인트 지급 중 오류 발생");
     }
   };
 

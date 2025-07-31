@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, MailSearch } from "lucide-react";
 import { useRouter } from "next/router";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function FindEmailPage() {
   const [name, setName] = useState("");
@@ -8,11 +9,12 @@ export default function FindEmailPage() {
   const [foundEmail, setFoundEmail] = useState(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) {
-      toast.error("이름과 휴대폰번호를 모두 입력하세요.");
+      showAlert("이름과 휴대폰번호를 모두 입력하세요.");
       return;
     }
     setLoading(true);
@@ -31,7 +33,7 @@ export default function FindEmailPage() {
     } catch (err) {
       setFoundEmail("");
       setLoading(false);
-      toast.error("조회 중 오류가 발생했습니다.");
+      showAlert("조회 중 오류가 발생했습니다.");
     }
   };
 
@@ -42,19 +44,24 @@ export default function FindEmailPage() {
           <ChevronLeft size={24} /> <span>로그인으로</span>
         </button>
         <div className="find-email-title-wrap">
-          <MailSearch size={36} color="#3577f1" style={{marginBottom: 4}} />
+          <MailSearch size={36} color="#3577f1" style={{ marginBottom: 4 }} />
           <h2 className="find-email-title">이메일(아이디) 찾기</h2>
           <div className="find-email-desc">
-            이름과 휴대폰번호로<br />
+            이름과 휴대폰번호로
+            <br />
             가입된 이메일을 확인할 수 있습니다.
           </div>
         </div>
-        <form onSubmit={handleSubmit} autoComplete="off" className="find-email-form">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          className="find-email-form"
+        >
           <input
             type="text"
             placeholder="이름"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             className="find-email-input"
             autoFocus
             required
@@ -63,40 +70,37 @@ export default function FindEmailPage() {
             type="tel"
             placeholder="휴대폰번호(- 없이 숫자만)"
             value={phone}
-            onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
+            onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
             className="find-email-input"
             required
             maxLength={20}
           />
-          <button
-            type="submit"
-            className="find-email-btn"
-            disabled={loading}
-          >
+          <button type="submit" className="find-email-btn" disabled={loading}>
             {loading ? <span className="loader"></span> : "이메일 찾기"}
           </button>
         </form>
         {/* 결과 카드 */}
         {foundEmail !== null && (
           <div className="find-email-result">
-            {foundEmail
-              ? (
-                <>
-                  <div className="result-icon success">
-                    <MailSearch size={29} />
-                  </div>
-                  <div className="result-title">가입 이메일</div>
-                  <div className="result-email">{foundEmail}</div>
-                  <button className="go-login-btn" onClick={() => router.push("/login")}>
-                    로그인 바로가기
-                  </button>
-                </>
-              )
-              : (
-                <div className="result-none">
-                  <span>일치하는 회원 정보가 없습니다.</span>
+            {foundEmail ? (
+              <>
+                <div className="result-icon success">
+                  <MailSearch size={29} />
                 </div>
-              )}
+                <div className="result-title">가입 이메일</div>
+                <div className="result-email">{foundEmail}</div>
+                <button
+                  className="go-login-btn"
+                  onClick={() => router.push("/login")}
+                >
+                  로그인 바로가기
+                </button>
+              </>
+            ) : (
+              <div className="result-none">
+                <span>일치하는 회원 정보가 없습니다.</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -107,20 +111,21 @@ export default function FindEmailPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Segoe UI', 'sans-serif';
+          font-family:
+            "Pretendard", "Apple SD Gothic Neo", "Segoe UI", "sans-serif";
         }
         .find-email-panel {
           width: 100%;
           max-width: 370px;
-          background: rgba(255,255,255,0.95);
+          background: rgba(255, 255, 255, 0.95);
           border-radius: 26px;
-          box-shadow: 0 8px 40px 0 rgba(48,100,220,0.13);
+          box-shadow: 0 8px 40px 0 rgba(48, 100, 220, 0.13);
           padding: 48px 30px 36px 30px;
           display: flex;
           flex-direction: column;
           align-items: center;
           position: relative;
-          animation: fadeup .4s cubic-bezier(.22,.68,.64,1.12);
+          animation: fadeup 0.4s cubic-bezier(0.22, 0.68, 0.64, 1.12);
         }
         .back-btn {
           background: none;
@@ -173,13 +178,15 @@ export default function FindEmailPage() {
           padding: 13px 16px;
           width: 100%;
           background: #fafdff;
-          transition: border 0.2s, box-shadow 0.2s;
-          box-shadow: 0 2px 8px 0 rgba(60,100,220,0.03);
+          transition:
+            border 0.2s,
+            box-shadow 0.2s;
+          box-shadow: 0 2px 8px 0 rgba(60, 100, 220, 0.03);
         }
         .find-email-input:focus {
           outline: none;
           border: 1.8px solid #3577f1;
-          box-shadow: 0 4px 16px 0 rgba(48,100,220,0.06);
+          box-shadow: 0 4px 16px 0 rgba(48, 100, 220, 0.06);
         }
         .find-email-btn {
           margin-top: 6px;
@@ -192,12 +199,14 @@ export default function FindEmailPage() {
           font-weight: 700;
           letter-spacing: -1px;
           cursor: pointer;
-          box-shadow: 0 2px 14px 0 rgba(60,120,250,0.08);
-          transition: background 0.19s, box-shadow 0.19s;
+          box-shadow: 0 2px 14px 0 rgba(60, 120, 250, 0.08);
+          transition:
+            background 0.19s,
+            box-shadow 0.19s;
         }
         .find-email-btn:active {
           background: linear-gradient(90deg, #296fff 80%, #3577f1 100%);
-          box-shadow: 0 2px 12px 0 rgba(48,100,220,0.12);
+          box-shadow: 0 2px 12px 0 rgba(48, 100, 220, 0.12);
         }
         .find-email-btn:disabled {
           background: #b7c6e4;
@@ -214,7 +223,9 @@ export default function FindEmailPage() {
           animation: spin 0.9s linear infinite;
         }
         @keyframes spin {
-          100% { transform: rotate(360deg); }
+          100% {
+            transform: rotate(360deg);
+          }
         }
         .find-email-result {
           margin-top: 34px;
@@ -223,7 +234,7 @@ export default function FindEmailPage() {
           border-radius: 15px;
           padding: 23px 14px 18px 14px;
           text-align: center;
-          box-shadow: 0 3px 12px 0 rgba(80,130,255,0.08);
+          box-shadow: 0 3px 12px 0 rgba(80, 130, 255, 0.08);
           animation: fadein 0.25s;
         }
         .result-icon.success {
@@ -261,19 +272,31 @@ export default function FindEmailPage() {
           font-weight: 800;
           margin-top: 2px;
           cursor: pointer;
-          box-shadow: 0 2px 8px 0 rgba(60,120,250,0.09);
+          box-shadow: 0 2px 8px 0 rgba(60, 120, 250, 0.09);
           transition: background 0.17s;
         }
         .go-login-btn:active {
           background: linear-gradient(90deg, #296fff 80%, #3577f1 100%);
         }
         @keyframes fadein {
-          from { opacity: 0; transform: translateY(22px);}
-          to { opacity: 1; transform: translateY(0);}
+          from {
+            opacity: 0;
+            transform: translateY(22px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes fadeup {
-          from { opacity: 0; transform: translateY(48px);}
-          to { opacity: 1; transform: translateY(0);}
+          from {
+            opacity: 0;
+            transform: translateY(48px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @media (max-width: 500px) {
           .find-email-panel {

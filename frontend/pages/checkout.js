@@ -4,11 +4,13 @@ import api from "@/lib/api";
 import CartItemCard from "@/components/cart/CartItemCard";
 import CartSummary from "@/components/cart/CartSummary";
 import { useRef } from "react"; // 이미 있으면 생략
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function CheckoutPage() {
   const buyNowTriggeredRef = useRef(false); // ✅ 추가
   const router = useRouter();
   const { itemIds, point, couponId } = router.query;
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -324,7 +326,7 @@ export default function CheckoutPage() {
                 }
 
                 if (cartItems.length === 0) {
-                  alert(
+                  showAlert(
                     "상품 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요."
                   );
                   return;

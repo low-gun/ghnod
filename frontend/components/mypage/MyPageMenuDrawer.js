@@ -1,9 +1,25 @@
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Divider } from "@mui/material";
-import { User, BookOpen, CreditCard, Tag, Star, MessageCircle, LogOut } from "lucide-react";
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+} from "@mui/material";
+import {
+  User,
+  BookOpen,
+  CreditCard,
+  Tag,
+  Star,
+  MessageCircle,
+  LogOut,
+} from "lucide-react";
 import { useRouter } from "next/router";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import { useContext } from "react";
 import { UserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 const MENUS = [
   { label: "내 정보", icon: <User size={18} /> },
@@ -14,10 +30,16 @@ const MENUS = [
   { label: "1:1문의", icon: <MessageCircle size={18} /> },
 ];
 
-export default function MyPageMenuDrawer({ open, setOpen, activeMenu, setActiveMenu }) {
+export default function MyPageMenuDrawer({
+  open,
+  setOpen,
+  activeMenu,
+  setActiveMenu,
+}) {
   const isTabletOrBelow = useIsTabletOrBelow();
   const router = useRouter();
   const { logout, user } = useContext(UserContext);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   if (!isTabletOrBelow) return null;
 
@@ -36,27 +58,29 @@ export default function MyPageMenuDrawer({ open, setOpen, activeMenu, setActiveM
     }
 
     try {
-      await logout(); // UserContext 내장 함수
-      toast.success("로그아웃 되었습니다.");
+      await logout();
+      showAlert("로그아웃 되었습니다.");
       setTimeout(() => {
         router.push("/login");
       }, 1000);
     } catch (error) {
-      toast.error("로그아웃에 실패했습니다.");
+      showAlert("로그아웃에 실패했습니다.");
     }
   };
 
   return (
     <Drawer anchor="left" open={open} onClose={() => setOpen(false)}>
-      <div style={{
-        width: 230,
-        padding: "24px 0",
-        position: "relative",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between"
-      }}>
+      <div
+        style={{
+          width: 230,
+          padding: "24px 0",
+          position: "relative",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
         <List>
           {MENUS.map((menu) => (
             <ListItem
@@ -65,14 +89,17 @@ export default function MyPageMenuDrawer({ open, setOpen, activeMenu, setActiveM
               onClick={() => {
                 setActiveMenu(menu.label);
                 setOpen(false);
-                router.push({ pathname: "/mypage", query: { menu: menu.label } });
+                router.push({
+                  pathname: "/mypage",
+                  query: { menu: menu.label },
+                });
               }}
               sx={{
                 borderRadius: "6px",
                 transition: "background 0.12s, color 0.11s",
                 cursor: "pointer",
                 mb: "2px",
-                '&:hover': {
+                "&:hover": {
                   background: "#e5eefe",
                   color: "#1e3a6e",
                   fontWeight: 700,
@@ -101,7 +128,7 @@ export default function MyPageMenuDrawer({ open, setOpen, activeMenu, setActiveM
               alignItems: "center",
               justifyContent: "center",
               gap: "6px",
-              letterSpacing: "0.5px"
+              letterSpacing: "0.5px",
             }}
           >
             <LogOut size={18} style={{ marginRight: 4 }} />

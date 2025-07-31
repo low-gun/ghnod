@@ -2,29 +2,51 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import AgreementModal from "@/components/AgreementModal";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function RegisterStep2({
   socialMode = false,
   socialProvider,
-  email, setEmail,
-  username, setUsername,
-  phone, setPhone, formatPhone,
-  isVerified, setIsVerified, verificationCode, setVerificationCode,
-  showVerificationInput, setShowVerificationInput,
-  hasRequestedCode, setHasRequestedCode,
-  timeLeft, setTimeLeft, timerRef,
-  verificationError, setVerificationError,
-  company, setCompany,
-  department, setDepartment,
-  position, setPosition,
-  termsAgree, setTermsAgree,
-  privacyAgree, setPrivacyAgree,
-  marketingAgree, setMarketingAgree,
-  handleRegister, canRegister,
-  error, handleErrorClear,
+  email,
+  setEmail,
+  username,
+  setUsername,
+  phone,
+  setPhone,
+  formatPhone,
+  isVerified,
+  setIsVerified,
+  verificationCode,
+  setVerificationCode,
+  showVerificationInput,
+  setShowVerificationInput,
+  hasRequestedCode,
+  setHasRequestedCode,
+  timeLeft,
+  setTimeLeft,
+  timerRef,
+  verificationError,
+  setVerificationError,
+  company,
+  setCompany,
+  department,
+  setDepartment,
+  position,
+  setPosition,
+  termsAgree,
+  setTermsAgree,
+  privacyAgree,
+  setPrivacyAgree,
+  marketingAgree,
+  setMarketingAgree,
+  handleRegister,
+  canRegister,
+  error,
+  handleErrorClear,
   nameEditable = true,
 }) {
   const [openModal, setOpenModal] = useState(null);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     const saved = localStorage.getItem("registerStep2Form");
@@ -44,7 +66,11 @@ export default function RegisterStep2({
   }, []);
 
   useEffect(() => {
-    if (socialMode && phone && (socialProvider === "kakao" || socialProvider === "naver")) {
+    if (
+      socialMode &&
+      phone &&
+      (socialProvider === "kakao" || socialProvider === "naver")
+    ) {
       setIsVerified(true);
     }
   }, [socialMode, phone, socialProvider, setIsVerified]);
@@ -56,7 +82,8 @@ export default function RegisterStep2({
 
   const isDisabled =
     (phone || "").length < 10 || (hasRequestedCode && timeLeft > 0);
-  const isPhoneReadonly = socialMode && (socialProvider === "kakao" || socialProvider === "naver");
+  const isPhoneReadonly =
+    socialMode && (socialProvider === "kakao" || socialProvider === "naver");
 
   return (
     <>
@@ -81,7 +108,7 @@ export default function RegisterStep2({
           type="text"
           placeholder="이름"
           value={username}
-          onChange={e => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value)}
           readOnly={!nameEditable}
           required
           className={`login-input${!nameEditable ? " input-disabled" : ""}`}
@@ -97,7 +124,7 @@ export default function RegisterStep2({
             type="tel"
             placeholder="휴대폰번호"
             value={formatPhone(phone || "")}
-            onChange={e => {
+            onChange={(e) => {
               if (isSocialPhoneVerified) return;
               const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
               setPhone(raw);
@@ -106,7 +133,7 @@ export default function RegisterStep2({
             required
             readOnly={isPhoneReadonly || isSocialPhoneVerified}
             disabled={isVerified || isPhoneReadonly || isSocialPhoneVerified}
-            className={`login-input${(isPhoneReadonly || isSocialPhoneVerified) ? " input-disabled" : ""}`}
+            className={`login-input${isPhoneReadonly || isSocialPhoneVerified ? " input-disabled" : ""}`}
             style={{ paddingRight: 100 }}
           />
           {!isSocialPhoneVerified && (
@@ -119,7 +146,7 @@ export default function RegisterStep2({
                 setTimeLeft(180);
                 if (timerRef.current) clearInterval(timerRef.current);
                 timerRef.current = setInterval(() => {
-                  setTimeLeft(prev => {
+                  setTimeLeft((prev) => {
                     if (prev <= 1) {
                       clearInterval(timerRef.current);
                       return 0;
@@ -127,11 +154,15 @@ export default function RegisterStep2({
                     return prev - 1;
                   });
                 }, 1000);
-                window.toast && toast.info("인증번호가 전송되었습니다.");
+                showAlert("인증번호가 전송되었습니다.");
               }}
               disabled={isDisabled}
             >
-              {!hasRequestedCode ? "인증하기" : timeLeft > 0 ? "전송완료" : "재전송"}
+              {!hasRequestedCode
+                ? "인증하기"
+                : timeLeft > 0
+                  ? "전송완료"
+                  : "재전송"}
             </button>
           )}
         </div>
@@ -143,7 +174,7 @@ export default function RegisterStep2({
               type="text"
               placeholder="인증번호 입력"
               value={verificationCode}
-              onChange={e => setVerificationCode(e.target.value)}
+              onChange={(e) => setVerificationCode(e.target.value)}
               className="login-input"
               style={{ paddingRight: 80 }}
             />
@@ -154,7 +185,7 @@ export default function RegisterStep2({
                 if (verificationCode === "123456") {
                   setIsVerified(true);
                   setVerificationError("");
-                  window.toast && toast.success("인증 성공");
+                  showAlert("인증 성공");
                 } else {
                   setVerificationError("인증번호가 일치하지 않습니다.");
                 }
@@ -172,37 +203,39 @@ export default function RegisterStep2({
             ✅ 인증이 완료되었습니다.
           </div>
         )}
-        {!isSocialPhoneVerified && showVerificationInput && (
-          isVerified
-            ? <div className="verified-message">✅ 인증이 완료되었습니다.</div>
-            : verificationError
-              ? <div className="register-error">{verificationError}</div>
-              : <div className="timer-message">
-                  {timeLeft > 0
-                    ? `남은 시간: ${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`
-                    : "인증 시간이 만료되었습니다."}
-                </div>
-        )}
+        {!isSocialPhoneVerified &&
+          showVerificationInput &&
+          (isVerified ? (
+            <div className="verified-message">✅ 인증이 완료되었습니다.</div>
+          ) : verificationError ? (
+            <div className="register-error">{verificationError}</div>
+          ) : (
+            <div className="timer-message">
+              {timeLeft > 0
+                ? `남은 시간: ${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`
+                : "인증 시간이 만료되었습니다."}
+            </div>
+          ))}
 
         <input
           type="text"
           placeholder="(선택) 회사명"
           value={company}
-          onChange={e => setCompany(e.target.value)}
+          onChange={(e) => setCompany(e.target.value)}
           className="login-input"
         />
         <input
           type="text"
           placeholder="(선택) 부서명"
           value={department}
-          onChange={e => setDepartment(e.target.value)}
+          onChange={(e) => setDepartment(e.target.value)}
           className="login-input"
         />
         <input
           type="text"
           placeholder="(선택) 직책"
           value={position}
-          onChange={e => setPosition(e.target.value)}
+          onChange={(e) => setPosition(e.target.value)}
           className="login-input"
         />
 
@@ -281,11 +314,13 @@ export default function RegisterStep2({
             border: 1.5px solid #e3e9fa;
             font-size: 16.2px;
             background: #fafdff;
-            transition: border 0.18s, box-shadow 0.17s;
+            transition:
+              border 0.18s,
+              box-shadow 0.17s;
           }
           .login-input:focus {
             border: 1.8px solid #3577f1;
-            box-shadow: 0 2px 10px 0 rgba(60,100,220,0.05);
+            box-shadow: 0 2px 10px 0 rgba(60, 100, 220, 0.05);
           }
           .input-disabled {
             background: #f4f6fa !important;
@@ -300,7 +335,8 @@ export default function RegisterStep2({
             min-width: 0;
             margin-bottom: 0;
           }
-          .verify-btn, .confirm-btn {
+          .verify-btn,
+          .confirm-btn {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
@@ -313,9 +349,13 @@ export default function RegisterStep2({
             background: #fff;
             color: #3577f1;
             cursor: pointer;
-            transition: background 0.14s, color 0.14s, border 0.14s;
+            transition:
+              background 0.14s,
+              color 0.14s,
+              border 0.14s;
           }
-          .verify-btn:disabled, .confirm-btn:disabled {
+          .verify-btn:disabled,
+          .confirm-btn:disabled {
             border: 1.2px solid #ccc;
             background: #f5f5f5;
             color: #aaa;
@@ -380,7 +420,8 @@ export default function RegisterStep2({
             .input-wrap {
               margin-bottom: 6px;
             }
-            .verify-btn, .confirm-btn {
+            .verify-btn,
+            .confirm-btn {
               font-size: 12px;
               padding: 5px 9px;
               border-radius: 3px;
@@ -408,7 +449,8 @@ export default function RegisterStep2({
               font-size: 12.5px;
             }
             .agreement-item input[type="checkbox"] {
-              width: 14px; height: 14px;
+              width: 14px;
+              height: 14px;
             }
             .login-btn {
               padding: 10px 0;
@@ -461,21 +503,38 @@ export default function RegisterStep2({
 
 // AgreementItem 컴포넌트
 function AgreementItem({
-  checked, setAgree, setOpenModal, openKey, label,
-  username, phone, company, department, position,
-  termsAgree, privacyAgree, marketingAgree
+  checked,
+  setAgree,
+  setOpenModal,
+  openKey,
+  label,
+  username,
+  phone,
+  company,
+  department,
+  position,
+  termsAgree,
+  privacyAgree,
+  marketingAgree,
 }) {
   const isMobile = useIsMobile();
   const router = useRouter();
 
   const goToAgreements = () => {
     if (isMobile) {
-      localStorage.setItem("registerStep2Form", JSON.stringify({
-        username, phone, company, department, position,
-        termsAgree: !!termsAgree,
-        privacyAgree: !!privacyAgree,
-        marketingAgree: !!marketingAgree,
-      }));
+      localStorage.setItem(
+        "registerStep2Form",
+        JSON.stringify({
+          username,
+          phone,
+          company,
+          department,
+          position,
+          termsAgree: !!termsAgree,
+          privacyAgree: !!privacyAgree,
+          marketingAgree: !!marketingAgree,
+        })
+      );
       router.push("/register/agreements");
     } else {
       setOpenModal(openKey);
@@ -510,7 +569,7 @@ function AgreementItem({
           border: "none",
           padding: 0,
           display: "flex",
-          alignItems: "center"
+          alignItems: "center",
         }}
       >
         {label}
@@ -519,7 +578,7 @@ function AgreementItem({
             marginLeft: 8,
             fontSize: 13,
             color: "#3577f1",
-            textDecoration: "underline"
+            textDecoration: "underline",
           }}
         >
           보기

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
 import TiptapEditor from "@/components/editor/TiptapEditor";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function ProductFormPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function ProductFormPage() {
     컨설팅: ["워크숍", "숙의토론", "조직개발"],
     진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
   };
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const initialForm = {
     title: "",
@@ -33,12 +35,13 @@ export default function ProductFormPage() {
   useEffect(() => {
     if (!isEdit || !id) return;
     setLoading(true);
-    api.get(`/admin/products/${id}`)
+    api
+      .get(`/admin/products/${id}`)
       .then((res) => {
         if (res.data.success) setForm(res.data.product);
-        else alert("상품 정보를 불러오지 못했습니다.");
+        else showAlert("상품 정보를 불러오지 못했습니다.");
       })
-      .catch(() => alert("상품 정보를 불러오지 못했습니다."))
+      .catch(() => showAlert("상품 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [id, isEdit]);
 
@@ -73,37 +76,38 @@ export default function ProductFormPage() {
   // 저장
   const handleSave = async () => {
     const error = validate();
-    if (error) return alert(error);
+    if (error) return showAlert(error);
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `/admin/products/${id}` : "/admin/products";
       const cleanForm = { ...form, type: String(form.type).trim() };
       const res = await api[method](url, cleanForm);
       if (res.data.success) {
-        alert(isEdit ? "수정 완료!" : "등록 완료!");
+        showAlert(isEdit ? "수정 완료!" : "등록 완료!");
         router.push("/admin/products");
       } else {
-        alert("저장 실패: " + res.data.message);
+        showAlert("저장 실패: " + res.data.message);
       }
     } catch (err) {
-      alert("저장 중 오류 발생");
+      showAlert("저장 중 오류 발생");
     }
   };
 
   // 삭제
   const handleDelete = async () => {
     if (!isEdit || !id) return;
-    if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) return;
+    const ok = await showConfirm("정말로 이 일정을 삭제하시겠습니까?");
+    if (!ok) return;
     try {
-      const res = await api.delete(`/admin/products/${id}`);
+      const res = await api.delete(`admin/schedules/${id}`);
       if (res.data.success) {
-        alert("삭제 완료");
-        router.push("/admin/products");
+        showAlert("삭제완료");
+        router.push("/admin/schedules");
       } else {
-        alert("삭제 실패: " + res.data.message);
+        showAlert("삭제실패: " + res.data.message);
       }
-    } catch {
-      alert("삭제 중 오류 발생");
+    } catch (err) {
+      showAlert("삭제 중 오류 발생");
     }
   };
 
@@ -161,7 +165,9 @@ export default function ProductFormPage() {
                   >
                     <option value="">선택하세요</option>
                     {Object.keys(categoryMap).map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -177,7 +183,9 @@ export default function ProductFormPage() {
                     >
                       <option value="">선택하세요</option>
                       {categoryMap[form.category]?.map((subtype) => (
-                        <option key={subtype} value={subtype}>{subtype}</option>
+                        <option key={subtype} value={subtype}>
+                          {subtype}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -222,7 +230,10 @@ export default function ProductFormPage() {
         </div>
         {/* 하단 버튼 */}
         <div style={buttonBarStyle}>
-          <button onClick={() => router.push("/admin/products")} style={grayButtonStyle}>
+          <button
+            onClick={() => router.push("/admin/products")}
+            style={grayButtonStyle}
+          >
             목록으로
           </button>
           <div style={{ display: "flex", gap: 10 }}>

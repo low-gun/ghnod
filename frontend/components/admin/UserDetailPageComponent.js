@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import AlertModal from "@/components/common/AlertModal";
-import ConfirmModal from "@/components/common/ConfirmModal";
 import HistoryModal from "@/components/admin/HistoryModal";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ showAlert용
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 상단 import 추가
 
 export default function UserDetailPageComponent({ user }) {
   const [formData, setFormData] = useState({
@@ -15,11 +15,11 @@ export default function UserDetailPageComponent({ user }) {
     company: "",
     marketing_agree: false,
   });
-  const [alertMessage, setAlertMessage] = useState("");
-  const [confirmMessage, setConfirmMessage] = useState("");
+
   const [isEditing, setIsEditing] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-
+  const { showAlert } = useGlobalAlert(); // ✅
+  const { showConfirm } = useGlobalConfirm(); // ✅ 함수 내 선언
   useEffect(() => {
     if (!user || !user.username) return;
 
@@ -50,7 +50,7 @@ export default function UserDetailPageComponent({ user }) {
     });
 
     if (Object.keys(changedFields).length === 0) {
-      setAlertMessage("변경된 내용이 없습니다.");
+      showAlert("변경된 내용이 없습니다.");
       return;
     }
 
@@ -58,13 +58,13 @@ export default function UserDetailPageComponent({ user }) {
       .put(`/admin/users/${user.id}`, formData)
       .then(async (res) => {
         if (res.data.success) {
-          setAlertMessage("수정이 완료되었습니다.");
+          showAlert("수정이 완료되었습니다.");
           setIsEditing(false);
         } else {
-          setAlertMessage("수정에 실패했습니다.");
+          showAlert("수정에 실패했습니다.");
         }
       })
-      .catch(() => setAlertMessage("서버 오류가 발생했습니다."));
+      .catch(() => showAlert("서버 오류가 발생했습니다."));
   };
 
   const renderField = (label, name, value) => (
@@ -114,23 +114,23 @@ export default function UserDetailPageComponent({ user }) {
             }}
             onClick={async () => {
               if (!isEditing) return;
-              const confirm = window.confirm(
+              const ok = await showConfirm(
                 "이 사용자의 비밀번호를 [1234]로 초기화하시겠습니까?"
               );
-              if (!confirm) return;
+              if (!ok) return;
 
               try {
                 const res = await api.put(
                   `/admin/users/${user.id}/reset-password`
                 );
                 if (res.data.success) {
-                  setAlertMessage("비밀번호가 [1234]로 초기화되었습니다.");
+                  showAlert("비밀번호가 [1234]로 초기화되었습니다.");
                 } else {
-                  setAlertMessage("초기화에 실패했습니다.");
+                  showAlert("초기화에 실패했습니다.");
                 }
               } catch (error) {
                 console.error("❌ 비밀번호 초기화 오류:", error);
-                setAlertMessage("비밀번호 초기화 중 오류가 발생했습니다.");
+                showAlert("비밀번호 초기화 중 오류가 발생했습니다.");
               }
             }}
           >
@@ -158,7 +158,10 @@ export default function UserDetailPageComponent({ user }) {
       >
         {isEditing ? (
           <button
-            onClick={() => setConfirmMessage("정말 수정하시겠습니까?")}
+            onClick={async () => {
+              const ok = await showConfirm("정말 수정하시겠습니까?");
+              if (ok) handleSubmit();
+            }}
             style={submitButtonStyle}
           >
             저장
@@ -168,6 +171,7 @@ export default function UserDetailPageComponent({ user }) {
             수정
           </button>
         )}
+
         <button
           onClick={() => setShowHistoryModal(true)}
           style={historyButtonStyle}
@@ -176,22 +180,6 @@ export default function UserDetailPageComponent({ user }) {
         </button>
       </div>
 
-      {alertMessage && (
-        <AlertModal
-          message={alertMessage}
-          onClose={() => setAlertMessage("")}
-        />
-      )}
-      {confirmMessage && (
-        <ConfirmModal
-          message={confirmMessage}
-          onConfirm={() => {
-            handleSubmit();
-            setConfirmMessage("");
-          }}
-          onCancel={() => setConfirmMessage("")}
-        />
-      )}
       {showHistoryModal && (
         <HistoryModal
           userId={user.id}

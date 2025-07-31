@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import TextContent from "../layout/contents/TextContent";
 import FilterControls from "./FilterControls";
 import CardList from "./CardList";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function PageLayout({
   type,
@@ -16,6 +17,7 @@ export default function PageLayout({
   const [sort, setSort] = useState("start_date");
   const [order, setOrder] = useState("asc");
   const [showPast, setShowPast] = useState(false);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     fetch(
@@ -26,7 +28,7 @@ export default function PageLayout({
       .then((data) => {
         if (data.success) setItems(data.schedules);
       })
-      .catch(() => alert("일정을 불러오지 못했습니다."))
+      .catch(() => showAlert("일정을 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [type, sort, order]);
 

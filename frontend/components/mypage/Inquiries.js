@@ -2,12 +2,16 @@ import React, { useState, useEffect } from "react";
 import api from "@/lib/api";
 import InquiryModal from "./InquiryModal";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function Inquiries({ data }) {
   const [inquiries, setInquiries] = useState(data || []);
   const [showModal, setShowModal] = useState(false);
   const [openIndex, setOpenIndex] = useState(null);
   const isMobile = useIsMobile();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
   // 목록 새로고침
   const fetchData = async () => {
@@ -53,7 +57,9 @@ export default function Inquiries({ data }) {
       </div>
 
       {inquiries.length === 0 ? (
-        <p style={{ marginTop: 22, fontSize: isMobile ? 15 : 16, color: "#888" }}>
+        <p
+          style={{ marginTop: 22, fontSize: isMobile ? 15 : 16, color: "#888" }}
+        >
           1:1 문의 내역이 없습니다.
         </p>
       ) : (
@@ -76,49 +82,70 @@ export default function Inquiries({ data }) {
                 onClick={() => setOpenIndex(isOpen ? null : index)}
               >
                 {/* 제목, 상태 */}
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between"
-                }}>
-                  <span style={{ fontWeight: 600, fontSize: isMobile ? 15.5 : 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span
+                    style={{ fontWeight: 600, fontSize: isMobile ? 15.5 : 16 }}
+                  >
                     {inquiry.title}
                   </span>
-                  <span style={{
-                    ...badgeStyle[inquiry.status],
-                    fontWeight: 600,
-                    minWidth: 66,
-                    textAlign: "center",
-                  }}>
+                  <span
+                    style={{
+                      ...badgeStyle[inquiry.status],
+                      fontWeight: 600,
+                      minWidth: 66,
+                      textAlign: "center",
+                    }}
+                  >
                     {inquiry.status}
                   </span>
                 </div>
                 {/* 메타 */}
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 7,
-                  fontSize: "13.2px",
-                  color: "#7a849a",
-                  fontWeight: 400,
-                  gap: 8,
-                }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 7,
+                    fontSize: "13.2px",
+                    color: "#7a849a",
+                    fontWeight: 400,
+                    gap: 8,
+                  }}
+                >
                   <span>작성일: {formatDate(inquiry.created_at)}</span>
                   <span>
-                    답변일: {inquiry.answered_at ? formatDate(inquiry.answered_at) : "미답변"}
+                    답변일:{" "}
+                    {inquiry.answered_at
+                      ? formatDate(inquiry.answered_at)
+                      : "미답변"}
                   </span>
                 </div>
 
                 {/* 펼침 본문 */}
                 {isOpen && (
-                  <div style={{ marginTop: 13, borderTop: "1px solid #f3f4fa", paddingTop: 13 }}>
+                  <div
+                    style={{
+                      marginTop: 13,
+                      borderTop: "1px solid #f3f4fa",
+                      paddingTop: 13,
+                    }}
+                  >
                     <div style={sectionTitle}>📩 문의 내용</div>
-                    <p style={{
-                      ...messageText,
-                      background: "#f9fafd",
-                      borderRadius: 7,
-                      padding: "10px 12px",
-                      color: "#40485c",
-                      border: "1px solid #f2f2f2",
-                    }}>
+                    <p
+                      style={{
+                        ...messageText,
+                        background: "#f9fafd",
+                        borderRadius: 7,
+                        padding: "10px 12px",
+                        color: "#40485c",
+                        border: "1px solid #f2f2f2",
+                      }}
+                    >
                       {inquiry.message}
                     </p>
 
@@ -145,14 +172,16 @@ export default function Inquiries({ data }) {
                     )}
 
                     <div style={sectionTitle}>✅ 관리자 답변</div>
-                    <p style={{
-                      ...messageText,
-                      background: "#f9fafd",
-                      borderRadius: 7,
-                      padding: "10px 12px",
-                      color: "#40485c",
-                      border: "1px solid #f2f2f2",
-                    }}>
+                    <p
+                      style={{
+                        ...messageText,
+                        background: "#f9fafd",
+                        borderRadius: 7,
+                        padding: "10px 12px",
+                        color: "#40485c",
+                        border: "1px solid #f2f2f2",
+                      }}
+                    >
                       {inquiry.answer || "아직 답변이 등록되지 않았습니다."}
                     </p>
 
@@ -173,14 +202,17 @@ export default function Inquiries({ data }) {
                           }}
                           onClick={async (e) => {
                             e.stopPropagation();
-                            if (confirm("정말 삭제하시겠습니까?")) {
-                              try {
-                                await api.delete(`/mypage/inquiries/${inquiry.id}`);
-                                await fetchData();
-                              } catch (err) {
-                                alert("삭제 실패");
-                                console.error(err);
-                              }
+                            const ok =
+                              await showConfirm("정말 삭제하시겠습니까?");
+                            if (!ok) return;
+                            try {
+                              await api.delete(
+                                `/mypage/inquiries/${inquiry.id}`
+                              );
+                              await fetchData();
+                            } catch (err) {
+                              showAlert("삭제 실패");
+                              console.error(err);
                             }
                           }}
                         >

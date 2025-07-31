@@ -4,6 +4,7 @@ import moment from "moment";
 import CustomCalendar from "../../components/schedules/CustomCalendar";
 import axios from "axios";
 import ScheduleDetailModal from "@/components/schedules/ScheduleDetailModal";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 // 날짜 포맷/파싱 함수
 function formatYYYYMMDD(date) {
@@ -23,15 +24,22 @@ export async function getServerSideProps(context) {
   try {
     const cookie = context.req.headers.cookie || "";
     const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseURL) throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
+    if (!baseURL)
+      throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
     const now = moment();
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
-    const endOfMonth = now.clone().endOf("month").add(1, "month").format("YYYY-MM-DD");
+    const endOfMonth = now
+      .clone()
+      .endOf("month")
+      .add(1, "month")
+      .format("YYYY-MM-DD");
     const res = await axios.get(
       `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
       { headers: { Cookie: cookie } }
     );
     const data = res.data;
+    const { showAlert } = useGlobalAlert(); // ✅ 추가
+
     return {
       props: {
         eventsData: (data?.schedules || []).map((item) => ({
@@ -82,13 +90,16 @@ export default function CalendarPage({ eventsData }) {
   }, [router.query.id, events]);
 
   // 일정 클릭 핸들러
-  const handleSelectEvent = useCallback((event) => {
-    if (!event?.type) {
-      alert("교육 타입 정보가 없습니다.");
-      return;
-    }
-    router.push(`/education/${event.type}/${event.id}`);
-  }, [router]);
+  const handleSelectEvent = useCallback(
+    (event) => {
+      if (!event?.type) {
+        showAlert("교육 타입 정보가 없습니다.");
+        return;
+      }
+      router.push(`/education/${event.type}/${event.id}`);
+    },
+    [router, showAlert]
+  );
 
   // 검색 타입이 바뀌면 날짜 리셋
   useEffect(() => {
@@ -110,7 +121,11 @@ export default function CalendarPage({ eventsData }) {
           )
         )
           return false;
-      } else if (searchType === "교육명" && kw && !evt.title?.toLowerCase().includes(kw)) {
+      } else if (
+        searchType === "교육명" &&
+        kw &&
+        !evt.title?.toLowerCase().includes(kw)
+      ) {
         return false;
       } else if (searchType === "교육기간") {
         if (evt.end < startDate || evt.start > endDate) return false;
@@ -141,7 +156,9 @@ export default function CalendarPage({ eventsData }) {
       <div style={calendarHeaderStyle}>
         <span
           style={{ marginRight: "20px", cursor: "pointer", fontSize: "24px" }}
-          onClick={() => setCalendarDate(calendarDate.clone().subtract(1, "month"))}
+          onClick={() =>
+            setCalendarDate(calendarDate.clone().subtract(1, "month"))
+          }
         >
           ◀
         </span>
@@ -156,7 +173,14 @@ export default function CalendarPage({ eventsData }) {
 
       {/* 검색 영역 */}
       <div style={searchBarStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+          }}
+        >
           <select
             value={searchType}
             onChange={(e) => {
@@ -193,7 +217,14 @@ export default function CalendarPage({ eventsData }) {
           )}
 
           {searchType === "교육기간" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", width: "50%" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                width: "50%",
+              }}
+            >
               <input
                 type="date"
                 value={formatYYYYMMDD(startDate)}
@@ -235,7 +266,9 @@ export default function CalendarPage({ eventsData }) {
       {/* 모달 */}
       <ScheduleDetailModal
         schedule={selectedEvent}
-        onClose={() => router.push(router.pathname, undefined, { shallow: true })}
+        onClose={() =>
+          router.push(router.pathname, undefined, { shallow: true })
+        }
         mode="user"
       />
     </>

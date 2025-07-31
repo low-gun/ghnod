@@ -2,6 +2,8 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
 import { useEffect } from "react";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+
 export default function ProductInquiryModal({
   productId,
   initialData = null,
@@ -9,7 +11,7 @@ export default function ProductInquiryModal({
   onSubmitSuccess,
 }) {
   const { user } = useUserContext();
-
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
   const [title, setTitle] = useState(initialData?.title || "");
   const [message, setMessage] = useState(initialData?.message || "");
   const [isPrivate, setIsPrivate] = useState(
@@ -22,11 +24,10 @@ export default function ProductInquiryModal({
 
   const handleSubmit = async () => {
     if (!title.trim() || !message.trim()) {
-      return alert("제목과 내용을 입력해주세요.");
+      return showAlert("제목과 내용을 입력해주세요.");
     }
-
     if (!user && (!guestName || !guestPhone)) {
-      return alert("이름과 연락처를 입력해주세요.");
+      return showAlert("이름과 연락처를 입력해주세요.");
     }
 
     const payload = {
@@ -53,14 +54,14 @@ export default function ProductInquiryModal({
         res = await api.post(`/products/${productId}/inquiries`, payload);
       }
       if (res.data.success) {
-        alert("문의가 등록되었습니다.");
+        showAlert("문의가 등록되었습니다.");
         onSubmitSuccess();
       } else {
-        alert("문의 등록 실패: " + res.data.message);
+        showAlert("문의등록 실패: " + res.data.message);
       }
     } catch (err) {
       console.error("문의 등록 오류:", err);
-      alert("오류가 발생했습니다. 다시 시도해주세요.");
+      showAlert("오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setLoading(false);
     }

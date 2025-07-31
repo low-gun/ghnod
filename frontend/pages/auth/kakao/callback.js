@@ -2,10 +2,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function KakaoCallbackPage() {
   const router = useRouter();
   const { login } = useUserContext();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -24,8 +26,9 @@ export default function KakaoCallbackPage() {
     window.__kakao_callback_requested = true;
     window.history.replaceState({}, document.title, window.location.pathname);
 
-    api.post("/auth/kakao/callback", { code, autoLogin })
-      .then(res => {
+    api
+      .post("/auth/kakao/callback", { code, autoLogin })
+      .then((res) => {
         const { accessToken, user, tempToken } = res.data;
         if (accessToken && user) {
           login(user, accessToken);
@@ -43,7 +46,7 @@ export default function KakaoCallbackPage() {
       .catch((err) => {
         const serverMsg = err?.response?.data?.error;
         if (serverMsg) {
-          alert(serverMsg);
+          showAlert(serverMsg);
         }
         router.replace("/login?error=kakao-fail");
       });

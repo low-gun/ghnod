@@ -12,6 +12,8 @@ import UserPointGrantModal from "./UserPointGrantModal";
 import UserCouponGrantModal from "./UserCouponGrantModal";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import UserInquiryModal from "./UserInquiryModal"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+
 export default function UserSummaryTable() {
   const router = useRouter();
   const [totalCount, setTotalCount] = useState(0); // ✅ 총 개수
@@ -33,6 +35,7 @@ export default function UserSummaryTable() {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showCouponGrantModal, setShowCouponGrantModal] = useState(false);
   const [showPointGrantModal, setShowPointGrantModal] = useState(false);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   // ✅ 정렬
   const sortedSummaries = useMemo(() => {
@@ -179,7 +182,7 @@ export default function UserSummaryTable() {
           <button
             onClick={() => {
               if (selectedIds.length === 0) {
-                alert("지급 대상을 먼저 선택해주세요.");
+                showAlert("지급 대상을 먼저 선택해주세요.");
                 return;
               }
               setShowCouponGrantModal(true);

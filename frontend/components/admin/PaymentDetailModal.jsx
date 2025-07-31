@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "@/lib/api";
 import { formatPrice } from "@/lib/format";
+import { useGlobalAlert } from "@/stores/globalAlert"; // 상단에 추가
 
 export default function PaymentDetailModal({ paymentId, onClose }) {
   const [payment, setPayment] = useState(null);
@@ -8,7 +9,7 @@ export default function PaymentDetailModal({ paymentId, onClose }) {
   const [items, setItems] = useState([]);
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
-
+  const { showAlert } = useGlobalAlert();
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -46,9 +47,9 @@ export default function PaymentDetailModal({ paymentId, onClose }) {
     setSaving(true);
     try {
       await axios.put(`/admin/payments/${paymentId}/memo`, { memo });
-      alert("메모가 저장되었습니다.");
+      showAlert("메모가 저장되었습니다.");
     } catch (err) {
-      alert("메모 저장에 실패했습니다.");
+      showAlert("메모 저장에 실패했습니다.");
       console.error(err);
     } finally {
       setSaving(false);

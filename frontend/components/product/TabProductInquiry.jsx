@@ -3,6 +3,8 @@ import api from "@/lib/api";
 import ProductInquiryModal from "@/components/product/ProductInquiryModal";
 import { useRouter } from "next/router";
 import { useUserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function TabProductInquiry({ productId }) {
   const [inquiries, setInquiries] = useState([]);
@@ -11,26 +13,28 @@ export default function TabProductInquiry({ productId }) {
   const router = useRouter();
   const { user } = useUserContext();
   const [editTarget, setEditTarget] = useState(null);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const handleDelete = async (inquiryId) => {
-    if (!confirm("정말로 이 문의를 삭제하시겠습니까?")) return;
-
+    const ok = await showConfirm("정말로 이 문의를 삭제하시겠습니까?");
+    if (!ok) return;
     try {
       const res = await api.delete(
         `/products/${productId}/inquiries/${inquiryId}`
       );
       if (res.data.success) {
-        alert("삭제되었습니다.");
+        showAlert("삭제되었습니다.");
         // 목록 새로고침
         const refreshed = await api.get(`/products/${productId}/inquiries`);
         if (refreshed.data.success) {
           setInquiries(refreshed.data.inquiries);
         }
       } else {
-        alert("삭제 실패: " + res.data.message);
+        showAlert("삭제 실패: " + res.data.message);
       }
     } catch (err) {
       console.error("문의 삭제 오류:", err);
-      alert("삭제 중 오류가 발생했습니다.");
+      showAlert("삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -76,7 +80,7 @@ export default function TabProductInquiry({ productId }) {
         <button
           onClick={() => {
             if (!user) {
-              alert("로그인 후 문의를 작성하실 수 있습니다.");
+              showAlert("로그인 후 문의를 작성하실 수 있습니다.");
               return router.push("/login");
             }
             setShowModal(true);

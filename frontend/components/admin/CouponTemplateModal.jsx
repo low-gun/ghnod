@@ -3,10 +3,15 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import { useMemo } from "react"; // 최상단 import 부분에 추가
 import PaginationControls from "@/components/common/PaginationControls"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
+
 export default function CouponTemplateModal({ onClose }) {
   const [templates, setTemplates] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // 한 페이지에 보여줄 항목 수
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const [form, setForm] = useState({
     name: "",
     discount_type: "fixed",
@@ -28,7 +33,7 @@ export default function CouponTemplateModal({ onClose }) {
       }
     } catch (err) {
       console.error("❌ 쿠폰 템플릿 조회 실패:", err);
-      toast.error("쿠폰 템플릿 조회 실패");
+      showAlert("쿠폰 템플릿 조회 실패");
     }
   };
   useEffect(() => {
@@ -47,20 +52,19 @@ export default function CouponTemplateModal({ onClose }) {
   }, []);
   const handleSubmit = async () => {
     if (!form.name || !form.discount_type) {
-      toast.error("쿠폰명과 할인타입은 필수입니다.");
+      showAlert("쿠폰명과 할인타입은 필수입니다.");
       return;
     }
     if (form.discount_type === "fixed" && !form.discount_amount) {
-      toast.error("금액 할인 쿠폰은 할인금액이 필요합니다.");
+      showAlert("금액 할인 쿠폰은 할인금액이 필요합니다.");
       return;
     }
     if (form.discount_type === "percent" && !form.discount_value) {
-      toast.error("퍼센트 할인 쿠폰은 할인율이 필요합니다.");
+      showAlert("퍼센트 할인 쿠폰은 할인율이 필요합니다.");
       return;
     }
-
     if (form.discount_type === "percent" && form.discount_value > 100) {
-      toast.error("할인율은 100%를 초과할 수 없습니다.");
+      showAlert("할인율은 100%를 초과할 수 없습니다.");
       return;
     }
 
@@ -69,12 +73,12 @@ export default function CouponTemplateModal({ onClose }) {
         ...form,
         expired_at: form.expired_at || null,
       });
-      toast.success("쿠폰 템플릿이 등록되었습니다.");
+      showAlert("쿠폰 템플릿이 등록되었습니다.");
       fetchTemplates();
       resetForm();
     } catch (err) {
       console.error("❌ 쿠폰 템플릿 등록 실패:", err);
-      toast.error("등록 실패");
+      showAlert("등록 실패");
     }
   };
 
@@ -86,20 +90,23 @@ export default function CouponTemplateModal({ onClose }) {
       fetchTemplates();
     } catch (err) {
       console.error("❌ 활성화 상태 변경 실패:", err);
-      toast.error("상태 변경 실패");
+      showAlert("상태 변경 실패");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("정말 삭제하시겠습니까? (발급된 쿠폰이 없어야 합니다)"))
-      return;
+    const ok = await showConfirm(
+      "정말 삭제하시겠습니까? (발급된 쿠폰이 없어야 합니다)"
+    );
+    if (!ok) return;
     try {
       await api.delete(`/admin/coupon-templates/${id}`);
-      toast.success("쿠폰 템플릿이 삭제되었습니다.");
+      showAlert("쿠폰 템플릿이 삭제되었습니다.");
+
       fetchTemplates();
     } catch (err) {
       console.error("❌ 쿠폰 템플릿 삭제 실패:", err);
-      toast.error("삭제 실패 (발급된 쿠폰이 있을 수 있음)");
+      showAlert("삭제 실패 (발급된 쿠폰이 있을 수 있음)");
     }
   };
 

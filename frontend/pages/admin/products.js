@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ProductTable from "@/components/admin/ProductTable";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 import { useRouter } from "next/router";
 import { UserContext } from "@/context/UserContext"; // ✅ 추가
 
@@ -11,6 +12,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const { user } = useContext(UserContext); // ✅ 추가
   const router = useRouter(); // ✅ 추가
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   // 🔥 권한 체크용 useEffect
   useEffect(() => {
@@ -26,21 +28,20 @@ export default function AdminProductsPage() {
       });
       if (res.data.success) {
         setProducts(res.data.products);
-
         const allTypes = [
           ...new Set(res.data.products.map((p) => p.type).filter(Boolean)),
         ];
         setProductTypes(allTypes);
       }
     } catch (err) {
-      toast.error("상품 데이터를 불러오지 못했습니다.");
+      showAlert("상품 데이터를 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-    if (user && user.role === "admin") { // 🔥 관리자일 때만 fetch!
+    if (user && user.role === "admin") {
+      // 🔥 관리자일 때만 fetch!
       fetchProducts();
     }
   }, [user]);

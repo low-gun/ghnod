@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { useGlobalAlert } from "@/stores/globalAlert";
 
 /**
  * 범용 엑셀 다운로드 함수 (멀티 시트 지원)
@@ -44,7 +45,7 @@ export const downloadExcel = ({ fileName, sheets = [] }) => {
 
   // ✅ 실제 시트가 하나도 없는 경우 에러 방지
   if (workbook.SheetNames.length === 0) {
-    alert("다운로드할 데이터가 없습니다.");
+    useGlobalAlert.getState().showAlert("다운로드할 데이터가 없습니다.");
     return;
   }
 

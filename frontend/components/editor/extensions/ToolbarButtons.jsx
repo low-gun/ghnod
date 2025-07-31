@@ -1,6 +1,7 @@
 // components/editor/extensions/ToolbarButtons.jsx
 import { useState, useEffect } from "react";
 import { CellSelection, TableMap } from "@tiptap/pm/tables";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function ToolbarButtons({
   editor,
@@ -23,6 +24,7 @@ export default function ToolbarButtons({
     backgroundColor: "#f4f4f4",
     cursor: "pointer",
   };
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     const checkTableSelection = () => {
@@ -54,7 +56,7 @@ export default function ToolbarButtons({
       editor.chain().focus().unsetLink().run();
     } else {
       if (editor.state.selection.empty) {
-        alert("링크를 적용할 텍스트를 먼저 선택하세요.");
+        showAlert("링크를 적용할 텍스트를 먼저 선택하세요.");
         return;
       }
       editor
@@ -76,7 +78,7 @@ export default function ToolbarButtons({
     const cells = [];
 
     if (!(state.selection instanceof CellSelection)) {
-      alert("선택된 셀이 없습니다.");
+      showAlert("선택된 셀이 없습니다.");
       return;
     }
 
@@ -96,7 +98,7 @@ export default function ToolbarButtons({
     });
 
     if (cells.length === 0) {
-      alert("적용할 셀이 없습니다.");
+      showAlert("적용할 셀이 없습니다.");
       return;
     }
 

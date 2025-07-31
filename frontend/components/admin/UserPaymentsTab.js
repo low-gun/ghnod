@@ -7,6 +7,7 @@ import { saveAs } from "file-saver";
 import { useMemo } from "react"; // 상단 import도 추가
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import PaginationControls from "@/components/common/PaginationControls";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function UserPaymentsTab({ userId }) {
   const [payments, setPayments] = useState([]);
@@ -14,7 +15,7 @@ export default function UserPaymentsTab({ userId }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [userInfo, setUserInfo] = useState(null);
-
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(null);
@@ -327,7 +328,7 @@ export default function UserPaymentsTab({ userId }) {
                         color: "#0070f3",
                         textDecoration: "underline",
                       }}
-                      onClick={() => alert(p.product_titles)}
+                      onClick={() => showAlert(p.product_titles)}
                     >
                       {p.product_titles
                         ? p.product_titles.split(", ")[0] +

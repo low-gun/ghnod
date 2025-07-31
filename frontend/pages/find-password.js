@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { ChevronLeft, MailCheck } from "lucide-react";
 import { useRouter } from "next/router";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function FindPasswordPage() {
   const [email, setEmail] = useState("");
   const [result, setResult] = useState(null); // null | "sent" | "notfound" | "error"
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
-      toast.error("이메일을 입력하세요.");
+      showAlert("이메일을 입력하세요.");
       return;
     }
     setLoading(true);
@@ -33,7 +35,7 @@ export default function FindPasswordPage() {
     } catch (err) {
       setResult("error");
       setLoading(false);
-      toast.error("처리 중 오류가 발생했습니다.");
+      showAlert("처리 중 오류가 발생했습니다.");
     }
   };
 
@@ -44,28 +46,29 @@ export default function FindPasswordPage() {
           <ChevronLeft size={24} /> <span>로그인으로</span>
         </button>
         <div className="findpw-title-wrap">
-          <MailCheck size={38} color="#3577f1" style={{marginBottom: 4}} />
+          <MailCheck size={38} color="#3577f1" style={{ marginBottom: 4 }} />
           <h2 className="findpw-title">비밀번호 찾기</h2>
           <div className="findpw-desc">
-            가입하신 이메일을 입력하시면<br/>
+            가입하신 이메일을 입력하시면
+            <br />
             임시 비밀번호를 메일로 발송해 드립니다.
           </div>
         </div>
-        <form onSubmit={handleSubmit} autoComplete="off" className="findpw-form">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          className="findpw-form"
+        >
           <input
             type="email"
             placeholder="이메일을 입력하세요"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             className="findpw-input"
             autoFocus
             required
           />
-          <button
-            type="submit"
-            className="findpw-btn"
-            disabled={loading}
-          >
+          <button type="submit" className="findpw-btn" disabled={loading}>
             {loading ? <span className="loader"></span> : "임시 비밀번호 받기"}
           </button>
         </form>
@@ -77,12 +80,18 @@ export default function FindPasswordPage() {
                 <div className="result-icon success">
                   <MailCheck size={32} />
                 </div>
-                <div className="result-title">임시 비밀번호가 이메일로 발송되었습니다.</div>
+                <div className="result-title">
+                  임시 비밀번호가 이메일로 발송되었습니다.
+                </div>
                 <div className="result-desc">
-                  메일이 도착하지 않으면 스팸함도 확인해 주세요.<br />
+                  메일이 도착하지 않으면 스팸함도 확인해 주세요.
+                  <br />
                   로그인 후 반드시 비밀번호를 변경해 주세요.
                 </div>
-                <button className="go-login-btn" onClick={() => router.push("/login")}>
+                <button
+                  className="go-login-btn"
+                  onClick={() => router.push("/login")}
+                >
                   로그인 바로가기
                 </button>
               </>
@@ -107,20 +116,21 @@ export default function FindPasswordPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Segoe UI', 'sans-serif';
+          font-family:
+            "Pretendard", "Apple SD Gothic Neo", "Segoe UI", "sans-serif";
         }
         .findpw-panel {
           width: 100%;
           max-width: 370px;
-          background: rgba(255,255,255,0.95);
+          background: rgba(255, 255, 255, 0.95);
           border-radius: 26px;
-          box-shadow: 0 8px 40px 0 rgba(48,100,220,0.13);
+          box-shadow: 0 8px 40px 0 rgba(48, 100, 220, 0.13);
           padding: 48px 30px 36px 30px;
           display: flex;
           flex-direction: column;
           align-items: center;
           position: relative;
-          animation: fadeup .4s cubic-bezier(.22,.68,.64,1.12);
+          animation: fadeup 0.4s cubic-bezier(0.22, 0.68, 0.64, 1.12);
         }
         .back-btn {
           background: none;
@@ -173,13 +183,15 @@ export default function FindPasswordPage() {
           padding: 13px 16px;
           width: 100%;
           background: #fafdff;
-          transition: border 0.2s, box-shadow 0.2s;
-          box-shadow: 0 2px 8px 0 rgba(60,100,220,0.03);
+          transition:
+            border 0.2s,
+            box-shadow 0.2s;
+          box-shadow: 0 2px 8px 0 rgba(60, 100, 220, 0.03);
         }
         .findpw-input:focus {
           outline: none;
           border: 1.8px solid #3577f1;
-          box-shadow: 0 4px 16px 0 rgba(48,100,220,0.06);
+          box-shadow: 0 4px 16px 0 rgba(48, 100, 220, 0.06);
         }
         .findpw-btn {
           margin-top: 6px;
@@ -192,12 +204,14 @@ export default function FindPasswordPage() {
           font-weight: 700;
           letter-spacing: -1px;
           cursor: pointer;
-          box-shadow: 0 2px 14px 0 rgba(60,120,250,0.08);
-          transition: background 0.19s, box-shadow 0.19s;
+          box-shadow: 0 2px 14px 0 rgba(60, 120, 250, 0.08);
+          transition:
+            background 0.19s,
+            box-shadow 0.19s;
         }
         .findpw-btn:active {
           background: linear-gradient(90deg, #296fff 80%, #3577f1 100%);
-          box-shadow: 0 2px 12px 0 rgba(48,100,220,0.12);
+          box-shadow: 0 2px 12px 0 rgba(48, 100, 220, 0.12);
         }
         .findpw-btn:disabled {
           background: #b7c6e4;
@@ -214,7 +228,9 @@ export default function FindPasswordPage() {
           animation: spin 0.9s linear infinite;
         }
         @keyframes spin {
-          100% { transform: rotate(360deg); }
+          100% {
+            transform: rotate(360deg);
+          }
         }
         .findpw-result {
           margin-top: 34px;
@@ -223,7 +239,7 @@ export default function FindPasswordPage() {
           border-radius: 15px;
           padding: 25px 14px 20px 14px;
           text-align: center;
-          box-shadow: 0 3px 12px 0 rgba(80,130,255,0.08);
+          box-shadow: 0 3px 12px 0 rgba(80, 130, 255, 0.08);
           animation: fadein 0.25s;
         }
         .result-icon.success {
@@ -260,19 +276,31 @@ export default function FindPasswordPage() {
           font-weight: 800;
           margin-top: 2px;
           cursor: pointer;
-          box-shadow: 0 2px 8px 0 rgba(60,120,250,0.09);
+          box-shadow: 0 2px 8px 0 rgba(60, 120, 250, 0.09);
           transition: background 0.17s;
         }
         .go-login-btn:active {
           background: linear-gradient(90deg, #296fff 80%, #3577f1 100%);
         }
         @keyframes fadein {
-          from { opacity: 0; transform: translateY(22px);}
-          to { opacity: 1; transform: translateY(0);}
+          from {
+            opacity: 0;
+            transform: translateY(22px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes fadeup {
-          from { opacity: 0; transform: translateY(48px);}
-          to { opacity: 1; transform: translateY(0);}
+          from {
+            opacity: 0;
+            transform: translateY(48px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @media (max-width: 500px) {
           .findpw-panel {

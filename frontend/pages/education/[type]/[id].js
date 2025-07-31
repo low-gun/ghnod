@@ -10,6 +10,7 @@ import TabProductInquiry from "@/components/product/TabProductInquiry";
 import TabRefundPolicy from "@/components/product/TabRefundPolicy";
 import { ShoppingCart } from "lucide-react";
 import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function EducationScheduleDetailPage() {
   const router = useRouter();
@@ -21,16 +22,18 @@ export default function EducationScheduleDetailPage() {
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const isTabletOrBelow = useIsTabletOrBelow();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    api.get(`/education/schedules/${id}`)
+    api
+      .get(`/education/schedules/${id}`)
       .then((res) => {
         if (res.data.success) setSchedule(res.data.schedule);
-        else alert("일정 정보를 불러오지 못했습니다.");
+        else showAlert("일정 정보를 불러오지 못했습니다.");
       })
-      .catch(() => alert("일정 정보를 불러오지 못했습니다."))
+      .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -41,11 +44,11 @@ export default function EducationScheduleDetailPage() {
 
   const handleBuyNow = useCallback(async () => {
     if (!user) {
-      alert("로그인 후 결제하실 수 있습니다.");
+      showAlert("로그인 후 결제하실 수 있습니다.");
       router.push("/login");
       return;
     }
-    if (!schedule) return alert("일정 정보를 불러오지 못했습니다.");
+    if (!schedule) return showAlert("일정 정보를 불러오지 못했습니다.");
     try {
       router.push({
         pathname: "/checkout",
@@ -61,7 +64,7 @@ export default function EducationScheduleDetailPage() {
         },
       });
     } catch (err) {
-      alert("바로구매 중 오류가 발생했습니다.");
+      showAlert("바로구매 중 오류가 발생했습니다.");
     }
   }, [user, schedule, quantity, unitPrice, router]);
 
@@ -79,18 +82,17 @@ export default function EducationScheduleDetailPage() {
         headers: { "x-guest-token": guestToken || "" },
       });
       if (res.data.success) {
-        alert("🛒 장바구니에 담았습니다!");
+        showAlert("장바구니에 담았습니다!");
         await refreshCart();
       } else {
-        alert("❌ 장바구니 담기에 실패했습니다.");
+        showAlert("장바구니 담기에 실패했습니다.");
       }
     } catch {
-      alert("오류가 발생했습니다. 다시 시도해주세요.");
+      showAlert("오류가 발생했습니다. 다시 시도해주세요.");
     }
   }, [schedule, quantity, unitPrice, refreshCart]);
 
-  if (loading)
-    return <p style={{ padding: 40 }}>불러오는 중...</p>;
+  if (loading) return null;
   if (!schedule)
     return <p style={{ padding: 40 }}>일정 정보를 찾을 수 없습니다.</p>;
 
@@ -188,8 +190,7 @@ export default function EducationScheduleDetailPage() {
                 value: (() => {
                   const start = new Date(schedule.start_date);
                   const end = new Date(schedule.end_date);
-                  const sameDay =
-                    start.toDateString() === end.toDateString();
+                  const sameDay = start.toDateString() === end.toDateString();
                   return sameDay
                     ? start.toLocaleDateString()
                     : `${start.toLocaleDateString()} ~ ${end.toLocaleDateString()}`;
@@ -324,10 +325,13 @@ export default function EducationScheduleDetailPage() {
                 zIndex: 999,
               }}
             >
-<button onClick={handleAddToCart} style={actionBtnStyle(false)}>
-  <ShoppingCart size={18} style={{ marginRight: 6, verticalAlign: "middle" }} />
-  장바구니
-</button>
+              <button onClick={handleAddToCart} style={actionBtnStyle(false)}>
+                <ShoppingCart
+                  size={18}
+                  style={{ marginRight: 6, verticalAlign: "middle" }}
+                />
+                장바구니
+              </button>
               <button onClick={handleBuyNow} style={actionBtnStyle(true)}>
                 바로 구매
               </button>

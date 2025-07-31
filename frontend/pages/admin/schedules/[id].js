@@ -3,12 +3,15 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
 import TiptapEditor from "@/components/editor/TiptapEditor";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function ScheduleFormPage() {
   const router = useRouter();
   const { id } = router.query;
   const isEdit = id !== "new";
-
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const [form, setForm] = useState({
     product_id: "",
     title: "",
@@ -37,7 +40,8 @@ export default function ScheduleFormPage() {
   useEffect(() => {
     if (!isEdit || !id) return;
     setLoading(true);
-    api.get(`admin/schedules/${id}`)
+    api
+      .get(`admin/schedules/${id}`)
       .then((res) => {
         if (res.data.success) {
           const data = res.data.schedule;
@@ -51,10 +55,11 @@ export default function ScheduleFormPage() {
           });
           setOriginalImageUrl(data.image_url || "");
         } else {
-          alert("일정 정보를 불러오지 못했습니다.");
+          showAlert("일정 정보를 불러오지 못했습니다.");
         }
       })
-      .catch(() => alert("일정 정보를 불러오지 못했습니다."))
+      .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
+
       .finally(() => setLoading(false));
   }, [id, isEdit]);
 
@@ -90,49 +95,52 @@ export default function ScheduleFormPage() {
   const validate = () => {
     if (!form.title) return "일정명을 입력하세요.";
     if (!form.product_id) return "상품을 선택하세요.";
-    if (!form.start_date || !form.end_date) return "시작일과 종료일을 입력하세요.";
-    if (new Date(form.start_date) > new Date(form.end_date)) return "종료일은 시작일보다 늦어야 합니다.";
-    if (form.price === "" || form.price === null || form.price === undefined) return "가격을 입력하세요.";
+    if (!form.start_date || !form.end_date)
+      return "시작일과 종료일을 입력하세요.";
+    if (new Date(form.start_date) > new Date(form.end_date))
+      return "종료일은 시작일보다 늦어야 합니다.";
+    if (form.price === "" || form.price === null || form.price === undefined)
+      return "가격을 입력하세요.";
     return null;
   };
 
   // 저장 처리
   const handleSave = async () => {
     const error = validate();
-    if (error) return alert(error);
+    if (error) return showAlert(error);
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `admin/schedules/${id}` : "admin/schedules";
       const payload = { ...form };
       const res = await api[method](url, payload);
       if (res.data.success) {
-        alert(isEdit ? "수정 완료!" : "등록 완료!");
+        showAlert(isEdit ? "수정 완료!" : "등록 완료!");
         router.push("/admin/schedules");
       } else {
-        alert("저장 실패: " + res.data.message);
+        showAlert("저장 실패: " + res.data.message);
       }
     } catch (err) {
-      alert("저장 중 오류 발생");
+      showAlert("저장 중 오류 발생");
     }
   };
 
   // 삭제 처리
   const handleDelete = async () => {
     if (!isEdit || !id) return;
-    if (!confirm("정말로 이 일정을 삭제하시겠습니까?")) return;
+    const ok = await showConfirm("정말로 이 일정을 삭제하시겠습니까?");
+    if (!ok) return;
     try {
       const res = await api.delete(`admin/schedules/${id}`);
       if (res.data.success) {
-        alert("삭제 완료");
+        showAlert("삭제완료");
         router.push("/admin/schedules");
       } else {
-        alert("삭제 실패: " + res.data.message);
+        showAlert("삭제실패: " + res.data.message);
       }
     } catch (err) {
-      alert("삭제 중 오류 발생");
+      showAlert("삭제 중 오류 발생");
     }
   };
-
   if (!router.isReady) return null;
 
   return (

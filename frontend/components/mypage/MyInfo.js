@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import api from "@/lib/api";
 import ChangePasswordModal from "./ChangePasswordModal";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function MyInfo({ data }) {
   if (!data || data.length === 0) return <></>; // 데이터 없는 경우만
@@ -28,8 +30,8 @@ export default function MyInfo({ data }) {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
-
-  // 감성 개선: padding/gap/card/버튼
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const containerStyle = {
     padding: isMobile ? "0 4px" : "0 20px",
     maxWidth: 900,
@@ -54,7 +56,7 @@ export default function MyInfo({ data }) {
     fontWeight: 600,
     marginBottom: isMobile ? "8px" : "16px",
     color: "#232323",
-    letterSpacing: "0.02em"
+    letterSpacing: "0.02em",
   };
 
   const infoGrid = {
@@ -128,11 +130,11 @@ export default function MyInfo({ data }) {
         position,
         marketing_agree: marketingAgree ? 1 : 0,
       });
-      alert("정보가 수정되었습니다.");
+      showAlert("정보가 수정되었습니다.");
       setEditing(false);
     } catch (err) {
       console.error("❌ 수정 실패", err);
-      alert("정보 수정에 실패했습니다.");
+      showAlert("정보 수정에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -141,37 +143,37 @@ export default function MyInfo({ data }) {
   const handlePasswordChange = () => setShowPasswordModal(true);
 
   const handleWithdraw = async () => {
-    const confirmed = window.confirm(
+    const ok = await showConfirm(
       "정말 탈퇴하시겠습니까? 탈퇴 후에는 복구할 수 없습니다."
     );
-    if (!confirmed) return;
+    if (!ok) return;
     try {
       await api.delete("/mypage/delete-account");
       localStorage.removeItem("token");
       sessionStorage.removeItem("token");
-      alert("탈퇴가 완료되었습니다. 메인 페이지로 이동합니다.");
+      showAlert("탈퇴가 완료되었습니다. 메인 페이지로 이동합니다.");
       window.location.href = "/";
     } catch (err) {
       console.error("❌ 탈퇴 실패:", err);
-      alert("탈퇴 처리 중 오류가 발생했습니다.");
+      showAlert("탈퇴 처리 중 오류가 발생했습니다.");
     }
   };
 
   // ───────────── render ─────────────
   return (
     <div style={containerStyle}>
-      
-        <h2 style={{
+      <h2
+        style={{
           fontSize: "1.32rem",
           fontWeight: 700,
           marginTop: "20px",
           marginBottom: "8px",
           color: "#2c2c2c",
-          letterSpacing: "0.02em"
-        }}>
-          내 정보
-        </h2>
-      
+          letterSpacing: "0.02em",
+        }}
+      >
+        내 정보
+      </h2>
 
       {/* 기본정보 카드 */}
       <div style={cardStyle}>
@@ -279,7 +281,10 @@ export default function MyInfo({ data }) {
       </div>
       {/* 탈퇴 버튼은 항상 하단에 */}
       <button onClick={handleWithdraw} style={withdrawButton}>
-        <span style={{ fontSize: 18, marginRight: 4, verticalAlign: "-2px" }}>✖</span> 회원 탈퇴
+        <span style={{ fontSize: 18, marginRight: 4, verticalAlign: "-2px" }}>
+          ✖
+        </span>{" "}
+        회원 탈퇴
       </button>
 
       {showPasswordModal && (

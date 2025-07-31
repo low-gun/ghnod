@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 export default function UserCouponModal({ user, onClose, onRefresh }) {
   const [couponTemplates, setCouponTemplates] = useState([]);
@@ -8,6 +10,8 @@ export default function UserCouponModal({ user, onClose, onRefresh }) {
   const [issuedCoupons, setIssuedCoupons] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+  const { showAlert } = useGlobalAlert(); // 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
 
   useEffect(() => {
     api
@@ -47,12 +51,13 @@ export default function UserCouponModal({ user, onClose, onRefresh }) {
 
   const handleSubmit = async () => {
     if (!selectedTemplateId) {
-      return alert("발급할 쿠폰을 선택해주세요.");
+      showAlert("발급할 쿠폰을 선택해주세요.");
+      return;
     }
 
     const parsedTemplateId = Number(selectedTemplateId);
     if (!parsedTemplateId) {
-      alert("쿠폰 템플릿이 유효하지 않습니다.");
+      showAlert("쿠폰 템플릿이 유효하지 않습니다.");
       return;
     }
 
@@ -62,7 +67,7 @@ export default function UserCouponModal({ user, onClose, onRefresh }) {
         templateId: parsedTemplateId,
       });
 
-      alert("쿠폰이 발급되었습니다.");
+      showAlert("쿠폰이 발급되었습니다.");
       setSelectedTemplateId("");
       fetchIssuedCoupons();
       onRefresh?.();
@@ -73,7 +78,7 @@ export default function UserCouponModal({ user, onClose, onRefresh }) {
         "쿠폰 발급 중 오류가 발생했습니다.";
 
       console.error("❌ 쿠폰 발급 실패:", msg);
-      alert(msg); // ✅ 서버 메시지를 그대로 사용자에게 표시
+      showAlert(msg);
     }
   };
 
@@ -99,18 +104,19 @@ export default function UserCouponModal({ user, onClose, onRefresh }) {
     return `[${discountText}] ${tpl.name} (${expiredText})`;
   };
   const handleRevokeCoupon = async (couponId) => {
-    const confirmRevoke = confirm("정말 이 쿠폰을 회수하시겠습니까?");
-    if (!confirmRevoke) return;
+    const ok = await showConfirm("정말 이 쿠폰을 회수하시겠습니까?");
+    if (!ok) return;
 
     try {
       await api.delete(`/admin/users/coupons/${couponId}`);
-      alert("쿠폰이 성공적으로 회수되었습니다.");
-      fetchIssuedCoupons(); // ✅ 회수 후 목록 다시 불러오기
+      showAlert("쿠폰이 성공적으로 회수되었습니다.");
+      fetchIssuedCoupons();
     } catch (error) {
       console.error("❌ 쿠폰 회수 실패:", error);
-      alert("쿠폰 회수 중 오류가 발생했습니다.");
+      showAlert("쿠폰 회수 중 오류가 발생했습니다.");
     }
   };
+
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>

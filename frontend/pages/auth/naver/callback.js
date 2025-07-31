@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function NaverCallbackPage() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function NaverCallbackPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__naver_callback_requested) return;
-
+    const { showAlert } = useGlobalAlert(); // ✅ 추가
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
@@ -25,8 +26,9 @@ export default function NaverCallbackPage() {
     window.__naver_callback_requested = true;
     window.history.replaceState({}, document.title, window.location.pathname);
 
-    api.post("/auth/naver/callback", { code, state, autoLogin })
-      .then(res => {
+    api
+      .post("/auth/naver/callback", { code, state, autoLogin })
+      .then((res) => {
         const { accessToken, user, tempToken } = res.data;
         if (accessToken && user) {
           login(user, accessToken);
@@ -44,7 +46,7 @@ export default function NaverCallbackPage() {
       .catch((err) => {
         const serverMsg = err?.response?.data?.error;
         if (serverMsg) {
-          alert(serverMsg);
+          showAlert(serverMsg);
         }
         router.replace("/login?error=naver-fail");
       });

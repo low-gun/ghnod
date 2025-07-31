@@ -7,6 +7,9 @@ import SearchFilter from "@/components/common/SearchFilter";
 import { useMemo } from "react";
 import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector"; // 상단에 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
+
 export default function UserTable({ onResetPassword }) {
   const router = useRouter(); // ✅ 추가
   const [users, setUsers] = useState([]);
@@ -18,42 +21,47 @@ export default function UserTable({ onResetPassword }) {
   const [endDate, setEndDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [resetTargetId, setResetTargetId] = useState(null);
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const [confirming, setConfirming] = useState(false);
   const [togglingId, setTogglingId] = useState(null); // 비활성화 처리 중인 유저 ID
   const [selectedIds, setSelectedIds] = useState([]);
   const [showDeleted, setShowDeleted] = useState(false);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+
   useEffect(() => {
     // list 탭 아닐 때는 호출하지 않음
     if (router.query.tab && router.query.tab !== "list") return;
-  
+
     const delayDebounceFn = setTimeout(() => {
       fetchUsers();
     }, 300);
-  
+
     return () => clearTimeout(delayDebounceFn);
   }, [
     searchQuery,
     searchType,
     showDeleted,
     router.query.tab,
-    currentPage,      // 추가
-    pageSize,         // 추가
-    sortConfig        // 추가
+    currentPage, // 추가
+    pageSize, // 추가
+    sortConfig, // 추가
   ]);
-  
 
   // URL 쿼리 갱신 함수
-  const handleResetPassword = async (userId) => {
+  const handleResetPassword = async (user) => {
+    const ok = await showConfirm(
+      `정말 "${user.username}" 사용자의 비밀번호를 초기화하시겠습니까?`
+    );
+    if (!ok) return;
+
     setConfirming(true);
     try {
-      await onResetPassword(userId);
-      toast.success("비밀번호가 초기화되었습니다.");
+      await onResetPassword(user.id);
+      showAlert("비밀번호가 초기화되었습니다.");
     } catch (err) {
-      toast.error("비밀번호 초기화 실패");
+      showAlert("비밀번호 초기화 실패");
     } finally {
       setConfirming(false);
-      setResetTargetId(null);
     }
   };
 
@@ -151,7 +159,7 @@ export default function UserTable({ onResetPassword }) {
         is_deleted: currentStatus === 0 ? 1 : 0,
       });
 
-      toast.success("계정 상태가 변경되었습니다.");
+      showAlert("계정 상태가 변경되었습니다.");
 
       // 👉 api 호출 후 다시 리스트 불러오기
       const res = await api.get("admin/users", { params: { showDeleted } });
@@ -160,7 +168,7 @@ export default function UserTable({ onResetPassword }) {
         setTotalCount(res.data.totalCount); // ✅ 추가
       }
     } catch (err) {
-      toast.error("계정 상태 변경 실패");
+      showAlert("계정 상태 변경 실패");
     } finally {
       setTogglingId(null);
     }
@@ -183,7 +191,7 @@ export default function UserTable({ onResetPassword }) {
         setTotalCount(res.data.totalCount); // ✅ totalPages 계산용
       }
     } catch (err) {
-      toast.error("사용자 목록 조회 실패");
+      showAlert("사용자 목록 조회 실패");
     }
   };
   return (
@@ -364,12 +372,10 @@ export default function UserTable({ onResetPassword }) {
                   <td style={tdCenter}>
                     <button
                       style={resetButtonStyle}
-                      onClick={() => setResetTargetId(user)}
-                      disabled={confirming && resetTargetId === user.id}
+                      onClick={() => handleResetPassword(user)}
+                      disabled={confirming}
                     >
-                      {confirming && resetTargetId === user.id
-                        ? "처리 중..."
-                        : "초기화"}
+                      {confirming ? "처리 중..." : "초기화"}
                     </button>
                   </td>
                   <td style={tdCenter}>
@@ -380,9 +386,18 @@ export default function UserTable({ onResetPassword }) {
                         backgroundColor:
                           Number(user.is_deleted) === 1 ? "#6c757d" : "#e74c3c",
                       }}
-                      onClick={() =>
-                        handleToggleUserStatus(user.id, Number(user.is_deleted))
-                      }
+                      onClick={async () => {
+                        const nextStatus =
+                          Number(user.is_deleted) === 1 ? "복구" : "비활성화";
+                        const ok = await showConfirm(
+                          `정말 이 계정을 ${nextStatus}하시겠습니까?`
+                        );
+                        if (!ok) return;
+                        handleToggleUserStatus(
+                          user.id,
+                          Number(user.is_deleted)
+                        );
+                      }}
                       disabled={togglingId === user.id}
                     >
                       {togglingId === user.id
@@ -406,31 +421,6 @@ export default function UserTable({ onResetPassword }) {
         />
 
         {/* ✅ 확인 모달 */}
-        {resetTargetId && (
-          <div style={modalOverlayStyle}>
-            <div style={modalStyle}>
-              <p>정말 이 사용자의 비밀번호를 초기화하시겠습니까?</p>
-              <div style={{ marginTop: "16px", textAlign: "right" }}>
-                <button
-                  onClick={() => setResetTargetId(null)}
-                  style={{
-                    ...resetButtonStyle,
-                    backgroundColor: "#ccc",
-                    color: "#000",
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => handleResetPassword(resetTargetId)}
-                  style={{ ...resetButtonStyle, marginLeft: "8px" }}
-                >
-                  확인
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div> // ✅ 이 div가 return 내부 JSX 닫는 태그
   );

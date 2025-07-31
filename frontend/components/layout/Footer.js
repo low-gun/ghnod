@@ -3,6 +3,7 @@ import { useState, useEffect, useContext } from "react";
 import TermsModal from "@/components/modals/TermsModal";
 import PrivacyModal from "@/components/modals/PrivacyModal";
 import { UserContext } from "@/context/UserContext";
+import { LogOut } from "lucide-react"; // 가장 위에 추가 (없으면 직접 svg 코딩해도 됨)
 
 // ✅ 950px 이하에서 showNarrowFooter true
 export default function Footer({ showProfile }) {
@@ -42,7 +43,7 @@ export default function Footer({ showProfile }) {
     <footer
       style={{
         marginTop: isNarrow ? "30px" : "40px", // 950px 이하면 여백 제거
-        padding: isNarrow ? "20px 8px 16px 8px" : "40px 20px",  // ← 모바일일 때 패딩 줄임
+        padding: isNarrow ? "20px 8px 16px 8px" : "40px 20px", // ← 모바일일 때 패딩 줄임
         backgroundColor: "#f8f8f8",
         borderTop: "1px solid #ddd",
         fontSize: "13px",
@@ -92,19 +93,22 @@ export default function Footer({ showProfile }) {
           {user && (
             <button
               onClick={logout}
+              aria-label="로그아웃"
               style={{
-                marginTop: "12px",
-                fontSize: "13px",
-                color: "#fff",
-                background: "#0070d2",
+                marginTop: "14px",
+                background: "#f0f2f5",
                 border: "none",
-                borderRadius: "4px",
-                padding: "8px 16px",
+                borderRadius: "50%",
+                padding: "9px",
                 cursor: "pointer",
-                fontWeight: "normal",
+                boxShadow: "0 1px 4px rgba(80,90,100,0.05)",
+                transition: "background 0.2s",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              로그아웃
+              <LogOut size={22} color="#535c69" />
             </button>
           )}
         </div>

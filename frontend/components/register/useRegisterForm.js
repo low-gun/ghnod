@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import api, { setAccessToken } from "@/lib/api";
 import { getClientSessionId } from "@/lib/session";
 import { UserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function useRegisterForm() {
   const [step, setStep] = useState(1);
@@ -12,7 +13,7 @@ export default function useRegisterForm() {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneExists, setPhoneExists] = useState(false);
-  const [emailExists, setEmailExists] = useState(false);  // ★추가
+  const [emailExists, setEmailExists] = useState(false); // ★추가
   const [company, setCompany] = useState("");
   const [department, setDepartment] = useState("");
   const [position, setPosition] = useState("");
@@ -32,6 +33,7 @@ export default function useRegisterForm() {
   const [isVerified, setIsVerified] = useState(false);
   const [verificationError, setVerificationError] = useState("");
   const [hasRequestedCode, setHasRequestedCode] = useState(false);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const router = useRouter();
   const { login } = useContext(UserContext);
@@ -84,8 +86,7 @@ export default function useRegisterForm() {
       setPhoneExists(res.data.exists);
       // 여기서는 setError 사용하지 않음
     } catch {
-      // 필요하면 네트워크 에러만 toast 등으로 처리, setError는 생략
-      // toast.error("휴대폰 확인 실패");
+      showAlert("휴대폰 확인 실패");
     }
   };
 
@@ -93,14 +94,14 @@ export default function useRegisterForm() {
     if (!email) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setEmailExists(false);           // ★추가: 잘못된 형식은 중복 아님
+      setEmailExists(false); // ★추가: 잘못된 형식은 중복 아님
       setError("올바른 이메일 형식을 입력해주세요.");
       return;
     }
     try {
       const res = await api.post("/auth/check-email", { email });
       setEmailExists(res.data.exists); // ★이 줄 추가
-      setError("");                   // ★에러 직접 표시 안함
+      setError(""); // ★에러 직접 표시 안함
     } catch {
       setEmailExists(false);
       setError("이메일 확인 실패");
@@ -139,17 +140,17 @@ export default function useRegisterForm() {
     e.preventDefault();
     setError("");
     if (!username || !phone) {
-      toast.error("이름과 휴대폰번호는 필수 입력 항목입니다.");
+      showAlert("이름과 휴대폰번호는 필수 입력 항목입니다.");
       setError("");
       return;
     }
     if (phoneExists) {
-      toast.error("이미 가입된 휴대폰번호입니다.");
+      showAlert("이미 가입된 휴대폰번호입니다.");
       setError("");
       return;
     }
     if (!termsAgree || !privacyAgree) {
-      toast.error("필수 약관에 모두 동의해야 합니다.");
+      showAlert("필수 약관에 모두 동의해야 합니다.");
       setError("");
       return;
     }
@@ -166,7 +167,8 @@ export default function useRegisterForm() {
         terms_agree: termsAgree ? 1 : 0,
         privacy_agree: privacyAgree ? 1 : 0,
       });
-      toast.success("회원가입이 완료되었습니다!\n이전 페이지로 이동합니다.");
+      showAlert("회원가입이 완료되었습니다!\n이전 페이지로 이동합니다.");
+
       const clientSessionId = getClientSessionId();
       const loginRes = await api.post("/auth/login", {
         email,
@@ -199,11 +201,10 @@ export default function useRegisterForm() {
       if (err.response && err.response.data && err.response.data.error) {
         msg = err.response.data.error;
       }
-      toast.error(msg);
+      showAlert(msg);
       setError("");
     }
   };
-  
 
   const canGoNext =
     email &&
@@ -211,15 +212,14 @@ export default function useRegisterForm() {
     password.length >= 6 &&
     password === passwordConfirm;
 
-    const canRegister =
-  username &&
-  phone.length >= 10 &&
-  isVerified &&
-  termsAgree &&
-  privacyAgree &&
-  !emailExists &&          // ★이메일 중복 추가
-  !phoneExists;
-
+  const canRegister =
+    username &&
+    phone.length >= 10 &&
+    isVerified &&
+    termsAgree &&
+    privacyAgree &&
+    !emailExists && // ★이메일 중복 추가
+    !phoneExists;
 
   const handleErrorClear = () => {
     if (error && error.includes("휴대폰")) setError("");
@@ -240,8 +240,8 @@ export default function useRegisterForm() {
     setPhone,
     phoneExists,
     setPhoneExists,
-    emailExists,       // ★추가
-    setEmailExists,    // ★추가
+    emailExists, // ★추가
+    setEmailExists, // ★추가
     company,
     setCompany,
     department,

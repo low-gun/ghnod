@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function UserCouponGrantModal({
   selectedIds = [],
@@ -8,6 +9,7 @@ export default function UserCouponGrantModal({
   onSuccess,
 }) {
   const [templateId, setTemplateId] = useState("");
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -21,11 +23,11 @@ export default function UserCouponGrantModal({
     try {
       console.log("🎯 지급 버튼 클릭됨");
       if (selectedIds.length === 0) {
-        alert("쿠폰 지급 대상을 선택해주세요.");
+        showAlert("쿠폰 지급 대상을 선택해주세요.");
         return;
       }
       if (!templateId) {
-        toast.error("지급할 쿠폰을 선택해주세요.");
+        showAlert("지급할 쿠폰을 선택해주세요.");
         return;
       }
 
@@ -37,7 +39,7 @@ export default function UserCouponGrantModal({
         templateId: Number(templateId),
       });
       console.log("✅ 쿠폰 지급 성공 응답:", res.data);
-      toast.success("쿠폰 지급이 완료되었습니다.");
+      showAlert("쿠폰 지급이 완료되었습니다.");
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -45,8 +47,7 @@ export default function UserCouponGrantModal({
       const msg =
         err.response?.data?.message || err.message || "쿠폰 지급 중 오류 발생";
       console.error("❌ 쿠폰 지급 실패:", msg);
-      toast.error(String(msg));
-      alert(msg);
+      showAlert(String(msg));
     }
   };
 

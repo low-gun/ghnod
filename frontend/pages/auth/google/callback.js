@@ -2,28 +2,32 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
   const { login } = useUserContext();
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__google_callback_requested) return;
-  
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-  
+
     if (!code) return;
-  
+
     window.__google_callback_requested = true;
     window.history.replaceState({}, document.title, window.location.pathname);
-  
+
     const autoLogin = localStorage.getItem("autoLogin") === "true"; // 값 읽기
-api.post("/auth/google/callback", { code, autoLogin })      .then(res => {
+    api
+      .post("/auth/google/callback", { code, autoLogin })
+      .then((res) => {
         const { accessToken, user, tempToken } = res.data;
         console.log("[callback] res.data:", res.data);
-  
+
         if (accessToken && user) {
           console.log("[callback] 기존 유저, 홈 이동");
           login(user, accessToken);
@@ -45,20 +49,14 @@ api.post("/auth/google/callback", { code, autoLogin })      .then(res => {
       .catch((err) => {
         const serverMsg = err?.response?.data?.error;
         console.log("[callback] catch 에러:", err, serverMsg);
-        if (serverMsg && serverMsg.includes("관리자는 자동 로그인을")) {
-          alert("관리자 계정은 일반(이메일/비밀번호) 로그인을 이용해 주세요.");
-          router.replace("/login");
-          return;
-        }
         if (serverMsg) {
-          alert(serverMsg);
+          showAlert(serverMsg);
           router.replace("/login");
           return;
         }
         router.replace("/login?error=google-fail");
       });
-  
   }, []);
-  
-    return null; // 
+
+  return null; //
 }

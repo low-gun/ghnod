@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 
 export default function UserPointModal({ user, onClose, onRefresh }) {
   const [pointAmount, setPointAmount] = useState("");
   const [description, setDescription] = useState("");
   const [pointHistory, setPointHistory] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const pageSize = 5;
 
   const handleSubmit = async () => {
     if (!pointAmount) {
-      return alert("포인트 금액을 입력해주세요.");
+      return showAlert("포인트 금액을 입력해주세요.");
     }
 
     try {
@@ -21,7 +23,7 @@ export default function UserPointModal({ user, onClose, onRefresh }) {
         description: description || "관리자 지급",
       });
 
-      alert("포인트가 지급되었습니다.");
+      showAlert("포인트가 지급되었습니다.");
       setPointAmount("");
       setDescription("");
       fetchPointHistory();
@@ -30,7 +32,7 @@ export default function UserPointModal({ user, onClose, onRefresh }) {
       }
     } catch (error) {
       console.error("❌ 포인트 지급 실패:", error);
-      alert("포인트 지급 중 오류가 발생했습니다.");
+      showAlert("포인트 지급 중 오류가 발생했습니다.");
     }
   };
 

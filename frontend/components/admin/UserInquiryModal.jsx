@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert";
+import { useGlobalConfirm } from "@/stores/globalConfirm";
 
 export default function UserInquiryModal({ userId, username, onClose }) {
   const [inquiries, setInquiries] = useState([]);
@@ -8,6 +10,8 @@ export default function UserInquiryModal({ userId, username, onClose }) {
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
+  const { showConfirm } = useGlobalConfirm();
+  const { showAlert } = useGlobalAlert();
 
   useEffect(() => {
     const fetchInquiries = async () => {
@@ -48,7 +52,11 @@ export default function UserInquiryModal({ userId, username, onClose }) {
     return sortNewestFirst ? bTime - aTime : aTime - bTime;
   });
 
+  // 🔵 답변 등록 with confirm
   const handleSubmitAnswer = async (inquiryId) => {
+    const ok = await showConfirm("정말 답변을 등록하시겠습니까?");
+    if (!ok) return;
+
     try {
       await api.put(`/admin/users/inquiries/${inquiryId}/answer`, {
         answer: replyText,
@@ -62,7 +70,7 @@ export default function UserInquiryModal({ userId, username, onClose }) {
       setReplyingTo(null);
       setReplyText("");
     } catch (err) {
-      alert("답변 등록 실패");
+      showAlert("답변 등록 실패");
     }
   };
 
@@ -133,6 +141,7 @@ export default function UserInquiryModal({ userId, username, onClose }) {
                     </>
                   )}
 
+                  {/* 답변 등록 영역 */}
                   {!q.answer && (
                     <div style={{ marginTop: 12 }}>
                       {isReplying ? (

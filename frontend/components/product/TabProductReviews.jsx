@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
 import ProductReviewModal from "./ProductReviewModal";
+import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
 console.log("🔥 ProductReviewModalNew 연결됨");
 
@@ -13,20 +15,22 @@ export default function TabProductReviews({ productId, scheduleId }) {
   const [showModal, setShowModal] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState(null); // 열려 있는 메뉴의 후기 ID
   const [editTarget, setEditTarget] = useState(null);
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const handleDelete = async (reviewId) => {
     try {
       const res = await api.delete(
         `/products/${productId}/reviews/${reviewId}`
       );
       if (res.data.success) {
-        alert("삭제되었습니다.");
+        showAlert("삭제되었습니다.");
         fetchReviews();
       } else {
-        alert("삭제 실패: " + res.data.message);
+        showAlert("삭제 실패: " + res.data.message);
       }
     } catch (err) {
       console.error("후기 삭제 오류:", err);
-      alert("삭제 중 오류가 발생했습니다.");
+      showAlert("삭제 중 오류가 발생했습니다.");
     }
   };
   const fetchReviews = () => {
@@ -56,7 +60,8 @@ export default function TabProductReviews({ productId, scheduleId }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-    };z
+    };
+    z;
   }, []);
   useEffect(() => {
     fetchReviews();
@@ -73,51 +78,50 @@ export default function TabProductReviews({ productId, scheduleId }) {
   }, [user, scheduleId]);
   return (
     <section
-    id="review"
-    style={{ padding: "40px 0", borderBottom: "1px solid #eee" }}
-  >
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 12,
-        marginBottom: 20,
-      }}
+      id="review"
+      style={{ padding: "40px 0", borderBottom: "1px solid #eee" }}
     >
-      <h2
+      <div
         style={{
-          fontSize: 20,
-          fontWeight: "bold",
-          margin: 0,
-          flexShrink: 0,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 20,
         }}
       >
-        상품후기
-      </h2>
-  
-      {user && isPurchaser && (
-        <button
-          onClick={() => setShowModal(true)}
+        <h2
           style={{
-            padding: "8px 16px",
-            backgroundColor: "#0070f3",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            fontWeight: 500,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
+            fontSize: 20,
+            fontWeight: "bold",
+            margin: 0,
+            flexShrink: 0,
           }}
         >
-          후기 작성하기
-        </button>
-      )}
-    </div>
-  
-        
-        {loading ? (
+          상품후기
+        </h2>
+
+        {user && isPurchaser && (
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#0070f3",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              fontWeight: 500,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            후기 작성하기
+          </button>
+        )}
+      </div>
+
+      {loading ? (
         <></>
       ) : reviews.length === 0 ? (
         <div
@@ -238,8 +242,10 @@ export default function TabProductReviews({ productId, scheduleId }) {
                             수정하기
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm("정말 삭제하시겠습니까?")) {
+                            onClick={async () => {
+                              const ok =
+                                await showConfirm("정말 삭제하시겠습니까?");
+                              if (ok) {
                                 handleDelete(r.id);
                               }
                               setMenuOpenId(null);
@@ -264,42 +270,42 @@ export default function TabProductReviews({ productId, scheduleId }) {
               {/* 내용 */}
               <p style={{ marginTop: 8 }}>{r.comment}</p>
               {/* 리뷰 이미지 썸네일 */}
-{Array.isArray(r.images) && r.images.length > 0 && (
-  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-    {r.images.map((img, idx) => (
-      <img
-        key={idx}
-        src={img.thumbnail}
-        alt={`리뷰 이미지 썸네일 ${idx + 1}`}
-        style={{
-          width: 72,
-          height: 72,
-          objectFit: "cover",
-          borderRadius: 4,
-          border: "1px solid #ccc",
-        }}
-      />
-    ))}
-  </div>
-)}
+              {Array.isArray(r.images) && r.images.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  {r.images.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img.thumbnail}
+                      alt={`리뷰 이미지 썸네일 ${idx + 1}`}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                        border: "1px solid #ccc",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </li>
           ))}
         </ul>
       )}
       {showModal && (
         <ProductReviewModal
-        productId={productId}
-        initialData={editTarget}
-        onClose={() => {
-          setShowModal(false);
-          setEditTarget(null);
-        }}
-        onSubmitSuccess={() => {
-          setShowModal(false);
-          setEditTarget(null);
-          fetchReviews();
-        }}
-      />
+          productId={productId}
+          initialData={editTarget}
+          onClose={() => {
+            setShowModal(false);
+            setEditTarget(null);
+          }}
+          onSubmitSuccess={() => {
+            setShowModal(false);
+            setEditTarget(null);
+            fetchReviews();
+          }}
+        />
       )}
     </section>
   );
