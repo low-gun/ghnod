@@ -3,8 +3,6 @@ import { useRouter } from "next/router"; // ✅ 추가
 import "react-datepicker/dist/react-datepicker.css";
 import api from "@/lib/api";
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import SearchFilter from "@/components/common/SearchFilter";
 import { useMemo } from "react";
 import PaginationControls from "@/components/common/PaginationControls";

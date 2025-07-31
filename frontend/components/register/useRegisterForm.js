@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import api, { setAccessToken } from "@/lib/api";
 import { getClientSessionId } from "@/lib/session";
 import { UserContext } from "@/context/UserContext";
-import { toast } from "react-toastify"; // 상단 import 추가
 
 export default function useRegisterForm() {
   const [step, setStep] = useState(1);

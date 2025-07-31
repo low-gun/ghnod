@@ -4,8 +4,6 @@ import { useRouter } from "next/router";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import { useContext } from "react";
 import { UserContext } from "@/context/UserContext";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 const MENUS = [
   { label: "내 정보", icon: <User size={18} /> },

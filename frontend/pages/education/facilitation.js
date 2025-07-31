@@ -98,7 +98,14 @@ export default function FacilitationPage() {
   console.log("filteredSchedules 기본값:", filteredSchedules);
 
   return (
-    <div style={{ padding: isMobileOrTablet ? "0" : "32px" }}>
+    <div
+    style={{
+      paddingTop: isMobileOrTablet ? "32px" : "32px",
+      paddingLeft: isMobileOrTablet ? 0 : 32,
+      paddingRight: isMobileOrTablet ? 0 : 32,
+      paddingBottom: isMobileOrTablet ? 0 : 32,
+    }}
+  >
 
       <ScheduleSubTabs tabs={subTabs} />
 

@@ -1,8 +1,5 @@
 import { useState } from "react";
-import api from "@/lib/api";
-import { toast } from "react-toastify";
 import { ChevronLeft, MailCheck } from "lucide-react";
-import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/router";
 
 export default function FindPasswordPage() {

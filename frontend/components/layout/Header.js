@@ -384,29 +384,35 @@ export default function Header({ showProfile, setShowProfile, activeMenu, setAct
   </Link>
 )}
               {user && (
-                <>
-                  <button
-                    onClick={() => setMyDrawerOpen(true)}
-                    style={{
-                      fontWeight: "bold",
-                      fontSize: "16px",
-                      color: "#333",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  >
-                    MY
-                  </button>
-                  <MyPageMenuDrawer
-                    open={myDrawerOpen}
-                    setOpen={setMyDrawerOpen}
-                    activeMenu={activeMenu}
-                    setActiveMenu={setActiveMenu}
-                  />
-                </>
-              )}
+  <>
+    <button
+      onClick={() => setMyDrawerOpen(true)}
+      style={{
+        width: 40,
+        height: 40,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+      }}
+      aria-label="마이페이지"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", position: "relative", top: 1 }}>
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    </button>
+    <MyPageMenuDrawer
+      open={myDrawerOpen}
+      setOpen={setMyDrawerOpen}
+      activeMenu={activeMenu}
+      setActiveMenu={setActiveMenu}
+    />
+  </>
+)}
               {/* 햄버거 버튼이 마지막(우측) */}
               <button
                 onClick={() => setShowMobileMenu(true)}

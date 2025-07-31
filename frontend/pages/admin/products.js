@@ -2,7 +2,6 @@ import { useEffect, useState, useContext } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ProductTable from "@/components/admin/ProductTable";
 import api from "@/lib/api";
-import { toast } from "react-toastify";
 import { useRouter } from "next/router";
 import { UserContext } from "@/context/UserContext"; // ✅ 추가
 

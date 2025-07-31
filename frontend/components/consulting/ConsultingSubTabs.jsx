@@ -1,12 +1,19 @@
-// components/consulting/ConsultingSubTabs.jsx
 import { useRouter } from "next/router";
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize"; // 추가
 
 export default function ConsultingSubTabs({ tabs }) {
   const router = useRouter();
+  const isMobileOrTablet = useIsTabletOrBelow();
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-      <div style={{ display: "flex", gap: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 24,
+          justifyContent: isMobileOrTablet ? "center" : "flex-start",
+        }}
+      >
         {tabs.map((tab) => (
           <a
             key={tab.href}

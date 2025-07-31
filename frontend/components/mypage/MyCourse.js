@@ -15,7 +15,7 @@ function formatKoreanDate(dateString) {
 
 const columnMap = {
   No: "No",
-  title: "강의",
+  title: "강의명",
   date: "일정",
   location: "장소",
   instructor: "강사",
@@ -26,10 +26,9 @@ const columnMap = {
 const thCenter = {
   padding: "10px",
   textAlign: "center",
-  fontWeight: "bold",
+  fontWeight: "normal",
   cursor: "pointer",
-  height: "60px",
-  verticalAlign: "middle",
+ verticalAlign: "middle",
 };
 
 const tdCenter = {
@@ -386,20 +385,16 @@ export default function MyCourse() {
                         style={thCenter}
                       >
                         {columnMap[key]}{" "}
-                        {isSortable && (
-                          <span
-                            style={{
-                              ...sortArrowStyle,
-                              color: isActive ? "#000" : "#ccc",
-                            }}
-                          >
-                            {isActive
-                              ? sortConfig.direction === "asc"
-                                ? "▲"
-                                : "▼"
-                              : "↕"}
-                          </span>
-                        )}
+                        {isSortable && isActive && (
+  <span
+    style={{
+      ...sortArrowStyle,
+      color: "#000",
+    }}
+  >
+    {sortConfig.direction === "asc" ? "▲" : "▼"}
+  </span>
+)}
                       </th>
                     );
                   })}

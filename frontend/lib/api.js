@@ -1,5 +1,6 @@
 import useGlobalLoading from "@/stores/globalLoading"; // 최상단 import 추가
 import axios from "axios";
+import { handleSessionExpired } from "@/utils/session";
 
 // ✅ 추가: 새로고침 대비 sessionStorage 복구
 let inMemoryAccessToken = null;
@@ -87,68 +88,29 @@ axiosInstance.interceptors.request.use((config) => {
 
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (typeof window !== "undefined") useGlobalLoading.getState().hideLoading();
+    return response;
+  },
   async (error) => {
+    if (typeof window !== "undefined") useGlobalLoading.getState().hideLoading();
     const originalRequest = error.config;
 
+    // [세션 만료/토큰 만료/권한 오류]
     if (
-      (error.response?.status === 401 || error.response?.status === 403) &&
+      error.response &&
+      [401, 403, 419].includes(error.response.status) &&
       !originalRequest._retry &&
       inMemoryAccessToken
     ) {
-      if (
-        typeof window !== "undefined" &&
-        window.location.pathname === "/login"
-      ) {
-        return Promise.reject(error);
-      }
-
       originalRequest._retry = true;
-
       try {
-        // ✅ 수정: /api 붙이고 baseURL 제거 → rewrites() 통해 처리
-        const refreshResponse = await axios.post(
-          "/api/auth/refresh-token",
-          {},
-          {
-            withCredentials: true,
-          }
-        );
-
-        const newAccessToken = refreshResponse.data.accessToken;
-        const newRole = refreshResponse.data.role;
-
-        if (expectedRole && newRole !== expectedRole) {
-          alert("세션이 만료되었습니다. 다시 로그인해주세요.");
-          setAccessToken(null);
-          window.location.href = "/login";
-          return Promise.reject("role mismatch");
-        }
-
-        setAccessToken(newAccessToken);
-
-        axiosInstance.defaults.headers.common["Authorization"] =
-          `Bearer ${newAccessToken}`;
-        originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
+        const { data } = await axios.post("/api/auth/refresh-token", {}, { withCredentials: true });
+        setAccessToken(data.accessToken);
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error("❌ 토큰 재발급 실패:", refreshError);
-        setAccessToken(null);
-
-        if (typeof window !== "undefined") {
-          const skipAlert =
-            originalRequest?.url?.includes("/cart/items") ||
-            originalRequest?.url?.includes("/product") ||
-            originalRequest?.url?.includes("/education");
-
-          if (!skipAlert) {
-            alert("세션이 만료되었습니다. 다시 로그인해주세요.");
-            window.location.href = "/login";
-          }
-        }
-
+        handleSessionExpired("세션이 만료되었습니다. 다시 로그인해주세요.");
         return Promise.reject(refreshError);
       }
     }
@@ -156,7 +118,6 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 axiosInstance.interceptors.request.use(
   (config) => {
     // ✅ [추가] 모든 요청 직전: 전역 로딩 ON

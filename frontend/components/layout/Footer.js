@@ -41,7 +41,7 @@ export default function Footer({ showProfile }) {
   return (
     <footer
       style={{
-        marginTop: isNarrow ? "0px" : "40px", // 950px 이하면 여백 제거
+        marginTop: isNarrow ? "30px" : "40px", // 950px 이하면 여백 제거
         padding: isNarrow ? "20px 8px 16px 8px" : "40px 20px",  // ← 모바일일 때 패딩 줄임
         backgroundColor: "#f8f8f8",
         borderTop: "1px solid #ddd",
@@ -96,12 +96,12 @@ export default function Footer({ showProfile }) {
                 marginTop: "12px",
                 fontSize: "13px",
                 color: "#fff",
-                background: "#0070f3",
+                background: "#0070d2",
                 border: "none",
                 borderRadius: "4px",
                 padding: "8px 16px",
                 cursor: "pointer",
-                fontWeight: "bold",
+                fontWeight: "normal",
               }}
             >
               로그아웃

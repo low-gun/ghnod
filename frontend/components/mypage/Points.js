@@ -1,88 +1,188 @@
 import React, { useState } from "react";
 import { formatPrice } from "@/lib/format";
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize"; // 상단 import 추가
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
+
 export default function Points({ data }) {
-  const [tab, setTab] = useState("전체");
+  const [tab, setTab] = useState("적립");
+  const [detail, setDetail] = useState(null); // 상세 모달 상태
+  const isMobile = useIsMobile();
 
-  // 적립 후 사용된 동일 금액 데이터 병합
-  const merged = [];
-  const usedMap = new Map();
-  data?.forEach((point) => {
-    if (point.change_type === "사용") {
-      usedMap.set(point.amount, point);
-    } else {
-      const used = usedMap.get(point.amount);
-      if (used) {
-        merged.push({
-          ...used,
-          created_at: point.created_at, // 적립일시
-          change_type: "사용", // 구분은 사용
-        });
-        usedMap.delete(point.amount);
-      } else {
-        merged.push(point);
-      }
-    }
-  });
-  usedMap.forEach((v) => merged.push(v));
-  const isMobile = useIsMobile(); // 컴포넌트 내부
-  const containerStyle = {
-    padding: isMobile ? 0 : 20,
-  };
-  const filtered = merged.filter((point) => {
-    if (tab === "전체") return true;
-    return point.change_type === tab;
-  });
-
-  const username = data[0]?.username || "사용자";
+  // 포인트 누적(적립-사용)
   const availablePoints = data.reduce((acc, cur) => {
     if (cur.change_type === "적립") return acc + cur.amount;
     if (cur.change_type === "사용") return acc - cur.amount;
     return acc;
   }, 0);
 
-  const renderBadge = (type) => {
-    const color = type === "적립" ? "#10b981" : "#ef4444";
-    return (
-      <span
-        style={{
-          backgroundColor: color,
-          color: "#fff",
-          padding: "4px 8px",
-          borderRadius: "12px",
-          fontSize: "12px",
-          minWidth: "40px", // ✅ 고정 너비
-          textAlign: "center", // ✅ 가운데 정렬
-          whiteSpace: "nowrap", // ✅ 줄바꿈 방지
-          display: "inline-block", // ✅ width 적용 위해 필요
-        }}
-      >
-        {type}
-      </span>
-    );
-  };
+  // 탭별 필터링
+  const filtered = data.filter((point) => point.change_type === tab);
 
+  // 스타일
+  const containerStyle = { padding: isMobile ? 0 : 20 };
+  const cardStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    padding: isMobile ? "12px" : "18px",
+    borderRadius: "10px",
+    marginBottom: isMobile ? 14 : 22,
+    fontSize: isMobile ? 15 : 18,
+    height: "64px",
+  };
+  const tabRowStyle = {
+    display: "flex",
+    gap: isMobile ? "8px" : "20px",
+    borderBottom: "1px solid #e2e8f0",
+    marginBottom: "8px",
+    marginTop: isMobile ? 10 : 20,
+  };
+  const tabButtonStyle = (active) => ({
+    padding: isMobile ? "8px 14px" : "10px 22px",
+    background: "none",
+    border: "none",
+    fontSize: isMobile ? "1rem" : "1.08rem",
+    cursor: "pointer",
+    borderBottom: active ? "3px solid #0070f3" : "none",
+    fontWeight: active ? 700 : 400,
+    color: active ? "#0070f3" : "#222",
+    outline: "none",
+    borderRadius: 0,
+  });
+  const tableWrapperStyle = { overflowX: "auto" };
+  const tableStyle = {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: isMobile ? 14 : 15,
+    minWidth: 580,
+  };
+  const theadStyle = {
+    backgroundColor: "#f9f9f9",
+    borderBottom: "1px solid #eee",
+  };
+  const thStyle = {
+    padding: isMobile ? "9px" : "12px",
+    textAlign: "center",
+    fontWeight: 500,
+    fontSize: isMobile ? "13px" : "15px",
+    color: "#444",
+    whiteSpace: "nowrap",
+  };
+  const tdStyle = {
+    padding: isMobile ? "8px 5px" : "12px",
+    textAlign: "center",
+    fontSize: isMobile ? "13.5px" : "15px",
+    color: "#222",
+    whiteSpace: "nowrap",
+  };
+  const rowEven = { backgroundColor: "#fff" };
+  const rowOdd = { backgroundColor: "#f7f9fb" };
+  const badgeStyle = (type) => ({
+    backgroundColor: type === "적립" ? "#10b981" : "#ef4444",
+    color: "#fff",
+    padding: "3px 10px",
+    borderRadius: "12px",
+    fontSize: "12px",
+    fontWeight: 600,
+    display: "inline-block",
+    minWidth: 45,
+  });
+
+  // 상세 모달
+  const renderDetailModal = () =>
+    detail && (
+      <div
+        style={{
+          position: "fixed",
+          left: 0,
+          top: 0,
+          zIndex: 99999,
+          width: "100vw",
+          height: "100vh",
+          background: "rgba(20, 28, 49, 0.18)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onClick={() => setDetail(null)}
+      >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 12,
+            boxShadow: "0 6px 32px 0 rgba(0,0,0,0.14)",
+            padding: isMobile ? "20px 14px" : "34px 38px",
+            width: isMobile ? "90vw" : 400,
+            maxWidth: "95vw",
+            fontSize: isMobile ? 15 : 16,
+            position: "relative",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 12 }}>
+            포인트 상세내역
+          </div>
+          <div style={{ marginBottom: 7 }}>
+            <b>구분:</b> <span style={badgeStyle(detail.change_type)}>{detail.change_type}</span>
+          </div>
+          <div style={{ marginBottom: 7 }}>
+            <b>금액:</b> {formatPrice(detail.amount)}P
+          </div>
+          <div style={{ marginBottom: 7 }}>
+            <b>설명:</b> {detail.description || "-"}
+          </div>
+          <div style={{ marginBottom: 7 }}>
+            <b>적립일시:</b> {detail.created_at ? new Date(detail.created_at).toLocaleString("ko-KR") : "-"}
+          </div>
+          {detail.change_type === "사용" && (
+            <div style={{ marginBottom: 7 }}>
+              <b>사용일시:</b> {detail.used_at ? new Date(detail.used_at).toLocaleString("ko-KR") : "-"}
+            </div>
+          )}
+          {/* 필요시 주문번호 등 추가 가능 */}
+          <button
+            onClick={() => setDetail(null)}
+            style={{
+              marginTop: 18,
+              padding: "8px 22px",
+              background: "#0070f3",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: isMobile ? 15 : 16,
+              width: "100%",
+            }}
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    );
+
+  // 본문
   return (
     <div style={containerStyle}>
-      {!isMobile && <h2 style={titleStyle}>포인트</h2>}
+      {!isMobile && <h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>포인트</h2>}
 
-      {/* 상단 카드 */}
+      {/* 상단 요약카드 */}
       <div style={cardStyle}>
-        <div style={cardLeft}>{username}님의 포인트</div>
-        <div style={cardRight}>{formatPrice(availablePoints)}P</div>
+      <div style={{ fontSize: isMobile ? 13 : 15, color: "#444", fontWeight: 500 }}>
+  {data[0]?.username || "회원"}님의 사용가능 포인트
+</div>
+<div style={{ fontSize: isMobile ? 17 : 20, color: "#0070f3", fontWeight: 700 }}>
+  {formatPrice(availablePoints)}P
+</div>
       </div>
 
       {/* 탭 버튼 */}
       <div style={tabRowStyle}>
-        {["전체", "적립", "사용"].map((type) => (
+        {["적립", "사용"].map((type) => (
           <button
             key={type}
             onClick={() => setTab(type)}
-            style={{
-              ...tabButtonStyle,
-              borderBottom: tab === type ? "2px solid #0070f3" : "none",
-              fontWeight: tab === type ? "bold" : "normal",
-            }}
+            style={tabButtonStyle(tab === type)}
           >
             {type}
           </button>
@@ -91,7 +191,9 @@ export default function Points({ data }) {
 
       {/* 테이블 */}
       {filtered.length === 0 ? (
-        <p style={{ marginTop: "16px" }}>포인트 내역이 없습니다.</p>
+        <p style={{ marginTop: "18px", color: "#666", fontSize: isMobile ? 14 : 15 }}>
+          포인트 내역이 없습니다.
+        </p>
       ) : (
         <div style={tableWrapperStyle}>
           <table style={tableStyle}>
@@ -101,9 +203,8 @@ export default function Points({ data }) {
                 <th style={thStyle}>금액</th>
                 <th style={thStyle}>설명</th>
                 <th style={thStyle}>적립일시</th>
-                {(tab === "전체" || tab === "사용") && (
-                  <th style={thStyle}>사용일시</th>
-                )}
+                {tab === "사용" && <th style={thStyle}>사용일시</th>}
+                <th style={thStyle}></th> {/* 상세 버튼 열 */}
               </tr>
             </thead>
             <tbody>
@@ -112,105 +213,43 @@ export default function Points({ data }) {
                   key={point.point_id || idx}
                   style={idx % 2 === 0 ? rowEven : rowOdd}
                 >
-                  <td style={tdStyle}>{renderBadge(point.change_type)}</td>
+                  <td style={tdStyle}>{<span style={badgeStyle(point.change_type)}>{point.change_type}</span>}</td>
                   <td style={tdStyle}>{formatPrice(point.amount)}P</td>
-                  <td style={tdStyle}>{point.description}</td>
+                  <td style={tdStyle}>{point.description || "-"}</td>
                   <td style={tdStyle}>
-                    {new Date(point.created_at).toLocaleDateString("ko-KR")}
+                    {point.created_at ? new Date(point.created_at).toLocaleString("ko-KR") : "-"}
                   </td>
-                  {(tab === "전체" || tab === "사용") && (
+                  {tab === "사용" && (
                     <td style={tdStyle}>
                       {point.used_at
-                        ? new Date(point.used_at).toLocaleDateString("ko-KR")
+                        ? new Date(point.used_at).toLocaleString("ko-KR")
                         : "-"}
                     </td>
                   )}
+                  <td style={tdStyle}>
+                    <button
+                      style={{
+                        background: "#eee",
+                        color: "#0070f3",
+                        border: "none",
+                        borderRadius: 7,
+                        padding: "4px 12px",
+                        fontSize: isMobile ? 13 : 14,
+                        cursor: "pointer",
+                        fontWeight: 500,
+                      }}
+                      onClick={() => setDetail(point)}
+                    >
+                      상세
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {renderDetailModal()}
     </div>
   );
 }
-
-const titleStyle = {
-  fontSize: "1.2rem",
-  marginBottom: "16px",
-};
-
-const cardStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  backgroundColor: "#f0f8ff",
-  padding: "16px",
-  borderRadius: "8px",
-  marginBottom: "20px",
-};
-
-const cardLeft = {
-  fontSize: "1rem",
-  fontWeight: "bold",
-};
-
-const cardRight = {
-  fontSize: "1.2rem",
-  fontWeight: "bold",
-  color: "#0070f3",
-};
-
-const tabRowStyle = {
-  display: "flex",
-  gap: "16px",
-  borderBottom: "1px solid #ccc",
-  marginBottom: "12px",
-};
-
-const tabButtonStyle = {
-  padding: "8px 12px",
-  background: "none",
-  border: "none",
-  fontSize: "1rem",
-  cursor: "pointer",
-};
-
-const tableWrapperStyle = {
-  overflowX: "auto",
-};
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  fontSize: "15px",
-  lineHeight: "1.6",
-};
-
-const theadStyle = {
-  backgroundColor: "#f9f9f9",
-  borderBottom: "1px solid #ddd",
-};
-
-const thStyle = {
-  padding: "10px",
-  textAlign: "center",
-  fontWeight: "bold",
-  fontSize: "14px",
-  color: "#333",
-};
-
-const tdStyle = {
-  padding: "12px",
-  textAlign: "center",
-  fontSize: "14px",
-  color: "#222",
-};
-
-const rowEven = {
-  backgroundColor: "#fff",
-};
-
-const rowOdd = {
-  backgroundColor: "#fafafa",
-};

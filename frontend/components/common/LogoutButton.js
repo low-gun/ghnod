@@ -1,8 +1,6 @@
 import { useContext } from "react";
 import { useRouter } from "next/router";
 import { UserContext } from "@/context/UserContext";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 export default function LogoutButton({ collapsed = false }) {
   const { logout, user } = useContext(UserContext);

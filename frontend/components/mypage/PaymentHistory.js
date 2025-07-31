@@ -5,6 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { formatPrice } from "@/lib/format";
 import { useRouter } from "next/router";
 import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize";
+import SearchFilter from "@/components/common/SearchFilter";  // ← 이 줄 추가
 
 function formatKoreanDateTime(isoString) {
   if (!isoString) return "";
@@ -47,7 +48,15 @@ export default function PaymentHistory() {
   const [isMediumScreen, setIsMediumScreen] = useState(false);
   const statusOptions = ["paid", "failed", "refunded"];
   const [windowWidth, setWindowWidth] = useState(null);
-
+  const columnDefs = [
+    { key: "No", label: "No", sortable: false },
+    { key: "order_id", label: "주문번호", sortable: true },
+    { key: "total_quantity", label: "수강인원", sortable: true },
+    { key: "amount", label: "결제금액", sortable: true },
+    { key: "payment_method", label: "결제수단", sortable: true },
+    { key: "created_at", label: "결제일", sortable: true },
+    { key: "status", label: "상태", sortable: true },
+  ];
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -209,94 +218,36 @@ export default function PaymentHistory() {
       {!isMobile && <h2 style={titleStyle}>결제내역</h2>}
 
       {/* 필터 (카드형일 때는 숨김) */}
-      {!isCardLayout && (
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-          }}
-        >
-          <select
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value);
-              setSearchValue("");
-              setDateRange([null, null]);
-            }}
-            style={inputStyle}
-          >
-            <option value="order_id">주문번호</option>
-            <option value="date">결제일</option>
-            <option value="amount">금액</option>
-            <option value="payment_method">결제수단</option>
-            <option value="status">상태</option>
-          </select>
+      {!isCardLayout && filteredData.length > 0 && (
+  <SearchFilter
+    searchType={filterType}
+    setSearchType={setFilterType}
+    searchQuery={searchValue}
+    setSearchQuery={setSearchValue}
+    startDate={dateRange[0]}
+    endDate={dateRange[1]}
+    setStartDate={(date) => setDateRange([date, dateRange[1]])}
+    setEndDate={(date) => setDateRange([dateRange[0], date])}
+    searchOptions={[
+      { value: "order_id", label: "주문번호", type: "text" },
+      { value: "amount", label: "금액", type: "text" },
+      { value: "payment_method", label: "결제수단", type: "select", options: paymentMethods.map(m => ({ value: m, label: m })) },
+      { value: "status", label: "상태", type: "select", options: [
+        { value: "완료", label: "완료" },
+        { value: "실패", label: "실패" },
+        { value: "환불", label: "환불" },
+      ] },
+      { value: "date", label: "결제일", type: "date" },
+    ]}
+    onSearchUpdate={(type, query) => {
+      setFilterType(type);
+      setSearchValue(query);
+      setCurrentPage(1);
+    }}
+    isMobile={false}
+  />
+)}
 
-          {filterType === "date" && (
-            <>
-              <DatePicker
-                selected={dateRange[0]}
-                onChange={(date) => setDateRange([date, dateRange[1]])}
-                placeholderText="시작일"
-                dateFormat="yyyy-MM-dd"
-                customInput={<input style={inputStyle} />}
-              />
-              <DatePicker
-                selected={dateRange[1]}
-                onChange={(date) => setDateRange([dateRange[0], date])}
-                placeholderText="종료일"
-                dateFormat="yyyy-MM-dd"
-                customInput={<input style={inputStyle} />}
-              />
-            </>
-          )}
-
-          {["amount", "order_id"].includes(filterType) && (
-            <input
-              type="text"
-              placeholder={filterType === "amount" ? "금액 입력" : "주문번호 입력"}
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              style={inputStyle}
-            />
-          )}
-
-          {filterType === "payment_method" && (
-            <select
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">전체</option>
-              {paymentMethods.map((method) => (
-                <option key={method} value={method}>
-                  {getPaymentMethodLabel(method)}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {filterType === "status" && (
-            <select
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">전체</option>
-              {statusOptions.map((status) => {
-                const label = getStatusLabel(status);
-                return (
-                  <option key={status} value={label}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-          )}
-        </div>
-      )}
 
       {/* 카드형 or 테이블 */}
       {isCardLayout ? (
@@ -366,141 +317,108 @@ export default function PaymentHistory() {
         // PC(테이블형)
         <div style={{ overflowX: "auto" }}>
           <table style={tableStyle}>
-            <thead style={{ background: "#f9f9f9" }}>
-              <tr>
-                <th style={thCenter}>No</th>
-                <th style={thCenter} onClick={() => handleSort("order_id")}>
-                  주문번호
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "order_id" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "order_id"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-                <th style={thCenter} onClick={() => handleSort("created_at")}>
-                  결제일
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "created_at" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "created_at"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-                <th style={thCenter} onClick={() => handleSort("amount")}>
-                  금액
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "amount" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "amount"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-                <th style={thCenter} onClick={() => handleSort("total_quantity")}>
-                  수강인원
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "total_quantity" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "total_quantity"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-                <th style={thCenter} onClick={() => handleSort("discount_total")}>
-                  할인적용
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "discount_total" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "discount_total"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-                <th style={thCenter} onClick={() => handleSort("payment_method")}>
-                  결제수단
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "payment_method" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "payment_method"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-                <th style={thCenter} onClick={() => handleSort("status")}>
-                  상태
-                  <span style={{
-                    ...sortArrowStyle,
-                    color: sortConfig.key === "status" ? "#000" : "#ccc",
-                  }}>
-                    {sortConfig.key === "status"
-                      ? sortConfig.direction === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "↕"}
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedData.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={tdCenter}>
-                    {renderEmpty()}
-                  </td>
-                </tr>
-              ) : (
-                pagedData.map((item, idx) => (
-                  <tr
-                    key={item.order_id + "-" + idx}
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => router.push(`/orders/${item.order_id}`)}
-                  >
-                    <td style={tdCenter}>
-                      {(currentPage - 1) * itemsPerPage + idx + 1}
-                    </td>
-                    <td style={{ ...tdCenter, color: "#0070f3" }}>
-                      {item.order_id}
-                    </td>
-                    <td style={tdCenter}>
-                      {formatKoreanDateTime(item.created_at)}
-                    </td>
-                    <td style={tdCenter}>{formatPrice(item.amount)}원</td>
-                    <td style={tdCenter}>{item.quantity || 0}명</td>
-                    <td style={tdCenter}>
-                      {formatPrice((item.used_point || 0) + (item.coupon_discount || 0))}원
-                    </td>
-                    <td style={tdCenter}>{getPaymentMethodLabel(item.payment_method)}</td>
-                    <td style={tdCenter}>
-                      {renderStatusBadge(getStatusLabel(item.status))}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
+          <thead style={{ background: "#f9f9f9" }}>
+  <tr>
+    {columnDefs.map((col) => {
+      const isActive = sortConfig.key === col.key;
+      return (
+        <th
+          key={col.key}
+          style={thCenter}
+          onClick={col.sortable ? () => handleSort(col.key) : undefined}
+        >
+          {col.label}
+          {/* 정렬화살표: ↕ 제거, isActive일 때만 ▲▼ 표시 */}
+          {col.sortable && isActive && (
+            <span style={{ ...sortArrowStyle, color: "#000" }}>
+              {sortConfig.direction === "asc" ? "▲" : "▼"}
+            </span>
+          )}
+        </th>
+      );
+    })}
+  </tr>
+</thead>
+<tbody>
+  {pagedData.length === 0 ? (
+    <tr>
+      <td colSpan={columnDefs.length} style={tdCenter}>
+        {renderEmpty()}
+      </td>
+    </tr>
+  ) : (
+    pagedData.map((item, idx) => (
+      <tr
+        key={item.order_id + "-" + idx}
+        style={{
+          backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+          cursor: "pointer",
+        }}
+        onClick={() => router.push(`/orders/${item.order_id}`)}
+      >
+        {columnDefs.map((col, colIdx) => {
+          if (col.key === "No") {
+            return (
+              <td key={col.key} style={tdCenter}>
+                {(currentPage - 1) * itemsPerPage + idx + 1}
+              </td>
+            );
+          }
+          if (col.key === "order_id") {
+            return (
+              <td key={col.key} style={{ ...tdCenter, color: "#0070f3" }}>
+                {item.order_id}
+              </td>
+            );
+          }
+          if (col.key === "created_at") {
+            return (
+              <td key={col.key} style={tdCenter}>
+                {formatKoreanDateTime(item.created_at)}
+              </td>
+            );
+          }
+          if (col.key === "amount") {
+            const discount = (item.used_point || 0) + (item.coupon_discount || 0);
+            return (
+              <td
+                key={col.key}
+                style={tdCenter}
+                title={discount > 0 ? `할인 적용: ${formatPrice(discount)}원` : ""}
+              >
+                {formatPrice(item.amount)}원
+                {/* 아이콘/표시도 가능: discount > 0 && <span style={{marginLeft:4,color:"#888"}}>ⓘ</span> */}
+              </td>
+            );
+          }
+          if (col.key === "total_quantity") {
+            return (
+              <td key={col.key} style={tdCenter}>
+                {item.quantity || 0}명
+              </td>
+            );
+          }
+          if (col.key === "payment_method") {
+            return (
+              <td key={col.key} style={tdCenter}>
+                {getPaymentMethodLabel(item.payment_method)}
+              </td>
+            );
+          }
+          if (col.key === "status") {
+            return (
+              <td key={col.key} style={tdCenter}>
+                {renderStatusBadge(getStatusLabel(item.status))}
+              </td>
+            );
+          }
+          return <td key={col.key} style={tdCenter}></td>;
+        })}
+      </tr>
+    ))
+  )}
+</tbody>
+
           </table>
           {/* 페이지네이션 */}
           {pagedData.length !== 0 && (
@@ -549,7 +467,7 @@ const tableStyle = {
 const thCenter = {
   padding: "10px",
   textAlign: "center",
-  fontWeight: "bold",
+  fontWeight: "normal",
   cursor: "pointer",
 };
 

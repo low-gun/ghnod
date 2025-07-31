@@ -1,12 +1,19 @@
-// components/diagnosis/DiagnosisSubTabs.jsx
 import { useRouter } from "next/router";
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize"; // 추가
 
 export default function DiagnosisSubTabs({ tabs }) {
   const router = useRouter();
+  const isMobileOrTablet = useIsTabletOrBelow(); // 추가
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-      <div style={{ display: "flex", gap: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 24,
+          justifyContent: isMobileOrTablet ? "center" : "flex-start", // 추가
+        }}
+      >
         {tabs.map((tab) => (
           <a
             key={tab.href}

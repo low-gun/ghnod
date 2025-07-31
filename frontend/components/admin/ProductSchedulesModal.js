@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import axios from "@/lib/api";
-import { toast } from "react-toastify";
 
 const ProductSchedulesModal = ({ productId, onClose }) => {
   const [schedules, setSchedules] = useState([]);

@@ -1,17 +1,15 @@
-// pages/_app.js
-
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
 import { CartProvider, useCartContext } from "../context/CartContext";
 import UserProvider from "../context/UserContext";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// ✅ 추가
+import GlobalAlert from "@/components/common/GlobalAlert";
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
@@ -50,13 +48,15 @@ const queryClient = new QueryClient();
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const showLoading = useGlobalLoading((state) => state.showLoading);
-const hideLoading = useGlobalLoading((state) => state.hideLoading);
+  const hideLoading = useGlobalLoading((state) => state.hideLoading);
   let startTime = 0;
   let maxTimeout = null;
 
-  // ✅ 여기에 console.log 추가
   useEffect(() => {
-    console.log("NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
+    console.log(
+      "NEXT_PUBLIC_API_BASE_URL:",
+      process.env.NEXT_PUBLIC_API_BASE_URL
+    );
   }, []);
 
   useEffect(() => {
@@ -94,18 +94,18 @@ const hideLoading = useGlobalLoading((state) => state.hideLoading);
     : ({ children }) => <MainLayout>{children}</MainLayout>;
 
   return (
-<QueryClientProvider client={queryClient}>
-  <CartProvider>
-    <CartInitializer />    {/* 이 위치!! */}
-    <UserProvider>
-      <GlobalLoadingBar />
-      <LayoutWrapper>
-        <Component {...pageProps} />
-      </LayoutWrapper>
-      <ToastContainer position="top-right" autoClose={2000} />
-    </UserProvider>
-  </CartProvider>
-</QueryClientProvider>
-  );  
+    <QueryClientProvider client={queryClient}>
+      <CartProvider>
+        <CartInitializer />
+        <UserProvider>
+          <GlobalLoadingBar />
+          <GlobalAlert />
+          <LayoutWrapper>
+            <Component {...pageProps} />
+          </LayoutWrapper>
+        </UserProvider>
+      </CartProvider>
+    </QueryClientProvider>
+  );
 }
 export default MyApp;

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
-import { toast } from "react-toastify";
 import { useMemo } from "react"; // 최상단 import 부분에 추가
 import PaginationControls from "@/components/common/PaginationControls"; // ✅ 추가
 export default function CouponTemplateModal({ onClose }) {

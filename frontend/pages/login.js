@@ -5,11 +5,10 @@ import { useCartContext } from "../context/CartContext";
 import api from "@/lib/api";
 import ChangePasswordModal from "@/components/mypage/ChangePasswordModal";
 import { getClientSessionId } from "@/lib/session";
-import { toast } from "react-toastify";
 import { ChevronLeft, LogIn } from "lucide-react";
-import "react-toastify/dist/ReactToastify.css";
 import SocialLoginButtons from "@/components/SocialLoginButtons.dynamic";
 import { setAccessToken } from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,6 +20,7 @@ export default function LoginPage() {
   const { setCartItems, setCartReady } = useCartContext();
   const alreadyRedirected = useRef(false);
   const [autoLogin, setAutoLogin] = useState(false);
+  const { showAlert } = useGlobalAlert();
 
   useEffect(() => {
     if (user?.id && !alreadyRedirected.current) {
@@ -46,7 +46,7 @@ export default function LoginPage() {
       const data = res.data;
 
       if (data.success) {
-        toast.success("로그인 성공! 환영합니다 😊");
+        showAlert("로그인 성공! 환영합니다 😊");
 
         if (data.user?.needsPasswordReset) {
           setUserId(data.user.id);
@@ -77,11 +77,11 @@ export default function LoginPage() {
         localStorage.removeItem("guest_token");
         delete api.defaults.headers.common["x-guest-token"];
       } else {
-        toast.error("로그인 실패: " + data.message);
+        showAlert("로그인 실패: " + data.message);
       }
     } catch (err) {
       const msg = err.response?.data?.message || "로그인 요청 실패";
-      toast.error(msg);
+      showAlert(msg);
     }
   };
 
@@ -115,7 +115,7 @@ export default function LoginPage() {
             type="email"
             placeholder="이메일"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             className="login-input"
             autoFocus
             required
@@ -125,7 +125,7 @@ export default function LoginPage() {
             autoComplete="current-password"
             placeholder="비밀번호"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             className="login-input"
             required
           />
@@ -134,7 +134,7 @@ export default function LoginPage() {
               <input
                 type="checkbox"
                 checked={autoLogin}
-                onChange={e => {
+                onChange={(e) => {
                   setAutoLogin(e.target.checked);
                   localStorage.setItem("autoLogin", e.target.checked);
                 }}
@@ -147,16 +147,12 @@ export default function LoginPage() {
               <a href="/find-password">비밀번호 찾기</a>
             </div>
           </div>
-          <button
-            type="submit"
-            className="login-btn desktop-only"
-          >
+          <button type="submit" className="login-btn desktop-only">
             로그인
           </button>
         </form>
         <p className="login-footer">
-          아직 회원이 아니신가요?{" "}
-          <a href="/register">회원가입</a>
+          아직 회원이 아니신가요? <a href="/register">회원가입</a>
         </p>
         <div className="login-social-box desktop-only">
           <div className="social-label">소셜 계정으로 로그인</div>
@@ -169,11 +165,7 @@ export default function LoginPage() {
           <div className="social-label">소셜 계정으로 로그인</div>
           <SocialLoginButtons />
         </div>
-        <button
-          type="submit"
-          className="login-btn"
-          form="login-form"
-        >
+        <button type="submit" className="login-btn" form="login-form">
           로그인
         </button>
       </div>
