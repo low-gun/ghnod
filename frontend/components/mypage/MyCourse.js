@@ -28,7 +28,7 @@ const thCenter = {
   textAlign: "center",
   fontWeight: "normal",
   cursor: "pointer",
- verticalAlign: "middle",
+  verticalAlign: "middle",
 };
 
 const tdCenter = {
@@ -242,7 +242,9 @@ export default function MyCourse() {
         fontWeight: 400,
       }}
     >
-      <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>📚</span>
+      <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>
+        📚
+      </span>
       아직 수강내역이 없습니다
       <div style={{ fontSize: "0.97rem", color: "#ccc", marginTop: 4 }}>
         첫 강의를 신청해보세요!
@@ -262,8 +264,8 @@ export default function MyCourse() {
           setSearchQuery={setSearchValue}
           startDate={dateRange[0]}
           endDate={dateRange[1]}
-          setStartDate={date => setDateRange([date, dateRange[1]])}
-          setEndDate={date => setDateRange([dateRange[0], date])}
+          setStartDate={(date) => setDateRange([date, dateRange[1]])}
+          setEndDate={(date) => setDateRange([dateRange[0], date])}
           searchOptions={[
             { value: "title", label: "강의명", type: "text" },
             { value: "location", label: "장소", type: "text" },
@@ -292,7 +294,14 @@ export default function MyCourse() {
       {sortedCourses.length === 0 ? (
         renderEmpty()
       ) : isCardLayout ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            width: "100%",
+          }}
+        >
           {sortedCourses.map((item) => (
             <div
               key={item.order_item_id}
@@ -306,31 +315,56 @@ export default function MyCourse() {
                 flexDirection: "column",
                 gap: "12px",
                 minHeight: 120,
-                cursor: "pointer",                   // 손가락 커서
+                cursor: "pointer", // 손가락 커서
                 transition: "box-shadow 0.15s",
-              }}  onClick={() =>
+              }}
+              onClick={() =>
                 router.push(`/education/${item.type}/${item.schedule_id}`)
               }
             >
               {/* 카드 상단: 강의명, 상태 */}
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 5 }}>
-                <span style={{ fontWeight: 600, fontSize: "1.08rem", flex: 1 }}>{item.title}</span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 5,
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: "1.08rem", flex: 1 }}>
+                  {item.title}
+                </span>
                 {renderStatusBadge(item.status)}
               </div>
               {/* 일정 */}
-              <div style={{ color: "#455", fontSize: "0.98rem", marginBottom: 2 }}>
+              <div
+                style={{ color: "#455", fontSize: "0.98rem", marginBottom: 2 }}
+              >
                 <span style={{ marginRight: 7, fontWeight: 500 }}>일정</span>
-                {new Date(item.start_date).toISOString().slice(0, 10) === new Date(item.end_date).toISOString().slice(0, 10)
+                {new Date(item.start_date).toISOString().slice(0, 10) ===
+                new Date(item.end_date).toISOString().slice(0, 10)
                   ? formatKoreanDate(item.start_date)
                   : `${formatKoreanDate(item.start_date)} ~ ${formatKoreanDate(item.end_date)}`}
               </div>
               {/* 장소/강사 */}
-              <div style={{ color: "#5a5a5a", fontSize: "0.98rem", display: "flex", gap: 14 }}>
+              <div
+                style={{
+                  color: "#5a5a5a",
+                  fontSize: "0.98rem",
+                  display: "flex",
+                  gap: 14,
+                }}
+              >
                 <span>📍 {item.location}</span>
                 <span>👤 {item.instructor}</span>
               </div>
               {/* 후기 버튼(오른쪽 하단) */}
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: 6,
+                }}
+              >
                 {item.status === "완료" ? (
                   <button
                     style={{
@@ -342,9 +376,9 @@ export default function MyCourse() {
                     }}
                     onClick={() => handleOpenReviewModal({ ...item })}
                   >
-                       {item.is_reviewed ? "후기수정" : "후기작성"}
-  </button>
-) : null}
+                    {item.is_reviewed ? "후기수정" : "후기작성"}
+                  </button>
+                ) : null}
               </div>
             </div>
           ))}
@@ -386,15 +420,15 @@ export default function MyCourse() {
                       >
                         {columnMap[key]}{" "}
                         {isSortable && isActive && (
-  <span
-    style={{
-      ...sortArrowStyle,
-      color: "#000",
-    }}
-  >
-    {sortConfig.direction === "asc" ? "▲" : "▼"}
-  </span>
-)}
+                          <span
+                            style={{
+                              ...sortArrowStyle,
+                              color: "#000",
+                            }}
+                          >
+                            {sortConfig.direction === "asc" ? "▲" : "▼"}
+                          </span>
+                        )}
                       </th>
                     );
                   })}
@@ -440,7 +474,9 @@ export default function MyCourse() {
                         {item.category ? ` (${item.category})` : ""}
                       </td>
                       <td style={tdCenter}>
-                        {new Date(item.start_date).toISOString().slice(0, 10) ===
+                        {new Date(item.start_date)
+                          .toISOString()
+                          .slice(0, 10) ===
                         new Date(item.end_date).toISOString().slice(0, 10) ? (
                           formatKoreanDate(item.start_date)
                         ) : (
@@ -491,19 +527,21 @@ export default function MyCourse() {
           {/* ⏩ 페이지네이션 */}
           {pagedCourses.length !== 0 && (
             <div style={{ marginTop: "20px", textAlign: "center" }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    ...pageButtonStyle,
-                    fontWeight: currentPage === page ? "bold" : "normal",
-                    backgroundColor: currentPage === page ? "#eee" : "#fff",
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      ...pageButtonStyle,
+                      fontWeight: currentPage === page ? "bold" : "normal",
+                      backgroundColor: currentPage === page ? "#eee" : "#fff",
+                    }}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>

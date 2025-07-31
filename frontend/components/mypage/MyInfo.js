@@ -35,7 +35,7 @@ export default function MyInfo({ data }) {
   const containerStyle = {
     padding: isMobile ? "0 4px" : "0 20px",
     maxWidth: 900,
-    margin: "0 auto",
+    margin: "0 0",
   };
   const cardStyle = {
     backgroundColor: "#fff",

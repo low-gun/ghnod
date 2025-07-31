@@ -4,7 +4,7 @@ import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
 export default function Points({ data }) {
   const [tab, setTab] = useState("적립");
-  const [detail, setDetail] = useState(null); // 상세 모달 상태
+  const [detail, setDetail] = useState(null);
   const isMobile = useIsMobile();
 
   // 포인트 누적(적립-사용)
@@ -123,7 +123,10 @@ export default function Points({ data }) {
             포인트 상세내역
           </div>
           <div style={{ marginBottom: 7 }}>
-            <b>구분:</b> <span style={badgeStyle(detail.change_type)}>{detail.change_type}</span>
+            <b>구분:</b>{" "}
+            <span style={badgeStyle(detail.change_type)}>
+              {detail.change_type}
+            </span>
           </div>
           <div style={{ marginBottom: 7 }}>
             <b>금액:</b> {formatPrice(detail.amount)}P
@@ -132,14 +135,19 @@ export default function Points({ data }) {
             <b>설명:</b> {detail.description || "-"}
           </div>
           <div style={{ marginBottom: 7 }}>
-            <b>적립일시:</b> {detail.created_at ? new Date(detail.created_at).toLocaleString("ko-KR") : "-"}
+            <b>적립일시:</b>{" "}
+            {detail.created_at
+              ? new Date(detail.created_at).toLocaleString("ko-KR")
+              : "-"}
           </div>
           {detail.change_type === "사용" && (
             <div style={{ marginBottom: 7 }}>
-              <b>사용일시:</b> {detail.used_at ? new Date(detail.used_at).toLocaleString("ko-KR") : "-"}
+              <b>사용일시:</b>{" "}
+              {detail.used_at
+                ? new Date(detail.used_at).toLocaleString("ko-KR")
+                : "-"}
             </div>
           )}
-          {/* 필요시 주문번호 등 추가 가능 */}
           <button
             onClick={() => setDetail(null)}
             style={{
@@ -164,16 +172,30 @@ export default function Points({ data }) {
   // 본문
   return (
     <div style={containerStyle}>
-      {!isMobile && <h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>포인트</h2>}
+      {!isMobile && (
+        <h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>포인트</h2>
+      )}
 
       {/* 상단 요약카드 */}
       <div style={cardStyle}>
-      <div style={{ fontSize: isMobile ? 13 : 15, color: "#444", fontWeight: 500 }}>
-  {data[0]?.username || "회원"}님의 사용가능 포인트
-</div>
-<div style={{ fontSize: isMobile ? 17 : 20, color: "#0070f3", fontWeight: 700 }}>
-  {formatPrice(availablePoints)}P
-</div>
+        <div
+          style={{
+            fontSize: isMobile ? 13 : 15,
+            color: "#444",
+            fontWeight: 500,
+          }}
+        >
+          {data[0]?.username || "회원"}님의 사용가능 포인트
+        </div>
+        <div
+          style={{
+            fontSize: isMobile ? 17 : 20,
+            color: "#0070f3",
+            fontWeight: 700,
+          }}
+        >
+          {formatPrice(availablePoints)}P
+        </div>
       </div>
 
       {/* 탭 버튼 */}
@@ -190,34 +212,51 @@ export default function Points({ data }) {
       </div>
 
       {/* 테이블 */}
-      {filtered.length === 0 ? (
-        <p style={{ marginTop: "18px", color: "#666", fontSize: isMobile ? 14 : 15 }}>
-          포인트 내역이 없습니다.
-        </p>
-      ) : (
-        <div style={tableWrapperStyle}>
-          <table style={tableStyle}>
-            <thead style={theadStyle}>
+      <div style={tableWrapperStyle}>
+        <table style={tableStyle}>
+          <thead style={theadStyle}>
+            <tr>
+              <th style={thStyle}>구분</th>
+              <th style={thStyle}>금액</th>
+              <th style={thStyle}>설명</th>
+              <th style={thStyle}>적립일시</th>
+              {tab === "사용" && <th style={thStyle}>사용일시</th>}
+              <th style={thStyle}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
               <tr>
-                <th style={thStyle}>구분</th>
-                <th style={thStyle}>금액</th>
-                <th style={thStyle}>설명</th>
-                <th style={thStyle}>적립일시</th>
-                {tab === "사용" && <th style={thStyle}>사용일시</th>}
-                <th style={thStyle}></th> {/* 상세 버튼 열 */}
+                <td
+                  colSpan={tab === "사용" ? 6 : 5}
+                  style={{
+                    color: "#666",
+                    fontSize: isMobile ? 14 : 15,
+                    textAlign: "center",
+                    background: "#f8f9fa",
+                    height: "68px",
+                  }}
+                >
+                  포인트 내역이 없습니다.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filtered.map((point, idx) => (
+            ) : (
+              filtered.map((point, idx) => (
                 <tr
                   key={point.point_id || idx}
                   style={idx % 2 === 0 ? rowEven : rowOdd}
                 >
-                  <td style={tdStyle}>{<span style={badgeStyle(point.change_type)}>{point.change_type}</span>}</td>
+                  <td style={tdStyle}>
+                    <span style={badgeStyle(point.change_type)}>
+                      {point.change_type}
+                    </span>
+                  </td>
                   <td style={tdStyle}>{formatPrice(point.amount)}P</td>
                   <td style={tdStyle}>{point.description || "-"}</td>
                   <td style={tdStyle}>
-                    {point.created_at ? new Date(point.created_at).toLocaleString("ko-KR") : "-"}
+                    {point.created_at
+                      ? new Date(point.created_at).toLocaleString("ko-KR")
+                      : "-"}
                   </td>
                   {tab === "사용" && (
                     <td style={tdStyle}>
@@ -244,11 +283,11 @@ export default function Points({ data }) {
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
       {renderDetailModal()}
     </div>
   );
