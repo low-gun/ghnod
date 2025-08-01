@@ -284,7 +284,7 @@ export default function MyInfo({ data }) {
         <span style={{ fontSize: 18, marginRight: 4, verticalAlign: "-2px" }}>
           ✖
         </span>{" "}
-        회원 탈퇴
+        탈퇴하기
       </button>
 
       {showPasswordModal && (
