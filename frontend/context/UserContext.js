@@ -3,12 +3,15 @@ import api, { setAccessToken as applyAccessTokenToAxios } from "@/lib/api";
 import { getClientSessionId } from "@/lib/session";
 import { useRouter } from "next/router";
 import { useCartContext } from "./CartContext";
+import { clearSessionAndNotifyAndRedirect } from "@/utils/session";
+
+// ✅ 전역 세션 만료 중복 실행 방지 플래그
+let globalSessionExpiredUserCtx = false;
 
 // 1. UserContext 생성
 export const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
-  console.log("[UserProvider 진입] 최초 실행, pathname:", typeof window !== "undefined" ? window.location.pathname : "SSR");
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +23,7 @@ export function UserProvider({ children }) {
 
   const { setCartItems, setCartReady } = useCartContext();
 
-  const [user, setUser] = useState(undefined); // 최초엔 undefined
+  const [user, setUser] = useState(undefined);
   const [accessToken, setAccessToken] = useState(null);
 
   // ✅ guest 장바구니 → 유저로 이전
@@ -34,7 +37,6 @@ export function UserProvider({ children }) {
           "x-guest-token": guestToken,
         },
       });
-      console.log("✅ 게스트 장바구니 → 유저로 이전 완료");
       localStorage.removeItem("guest_token");
     } catch (err) {
       console.error("❌ 장바구니 이전 실패:", err);
@@ -43,15 +45,10 @@ export function UserProvider({ children }) {
 
   // ✅ accessToken 복구 및 자동 요청
   useEffect(() => {
-    console.log("[UserContext] useEffect 실행, path:", router.pathname);
-
     if (router.pathname === "/login") return;
 
     const storedToken = sessionStorage.getItem("accessToken");
     const cookieToken = getCookie("accessToken");
-
-    console.log("[UserContext] sessionStorage accessToken:", storedToken);
-    console.log("[UserContext] getCookie accessToken:", cookieToken);
 
     if (storedToken) {
       setAccessToken(storedToken);
@@ -67,10 +64,14 @@ export function UserProvider({ children }) {
     } else {
       setUser(null);
       const sessionId = getClientSessionId();
-      api.post("/auth/refresh-token", { clientSessionId: sessionId }, { withCredentials: true })
+      api
+        .post(
+          "/auth/refresh-token",
+          { clientSessionId: sessionId },
+          { withCredentials: true }
+        )
         .then((res) => {
           const newAccessToken = res.data.accessToken;
-          console.log("[UserContext] refresh-token 응답 accessToken:", newAccessToken);
           setAccessToken(newAccessToken);
           applyAccessTokenToAxios(newAccessToken);
           sessionStorage.setItem("accessToken", newAccessToken);
@@ -78,16 +79,23 @@ export function UserProvider({ children }) {
           if (storedUser) setUser(JSON.parse(storedUser));
         })
         .catch((err) => {
-          const protectedRoutes = [
-            "/mypage", "/orders", "/checkout", "/admin"
-          ];
-          const isProtected = protectedRoutes.some((path) =>
-            router.pathname === path || router.pathname.startsWith(path + "/")
+          // 401/403/419 발생 시 강제 로그아웃+알림
+          if (err.response && [401, 403, 419].includes(err.response.status)) {
+            if (!globalSessionExpiredUserCtx) {
+              globalSessionExpiredUserCtx = true;
+              clearSessionAndNotifyAndRedirect(
+                "세션이 만료되었습니다. 다시 로그인해주세요."
+              );
+            }
+            return;
+          }
+          // 그 외 예전 분기(특정 페이지에서만)
+          const protectedRoutes = ["/mypage", "/orders", "/checkout", "/admin"];
+          const isProtected = protectedRoutes.some(
+            (path) =>
+              router.pathname === path || router.pathname.startsWith(path + "/")
           );
-          if (
-            isProtected &&
-            router.pathname !== "/login"
-          ) {
+          if (isProtected && router.pathname !== "/login") {
             logout();
             router.replace("/login");
           }
@@ -97,23 +105,32 @@ export function UserProvider({ children }) {
 
   // ✅ accessToken 변경 시 유저 정보 요청
   useEffect(() => {
-    console.log("[UserContext] accessToken 변경:", accessToken);
     if (!accessToken) return;
     if (user !== undefined) return;
-    api.get("/user")
-      .then(res => {
-        console.log("[UserContext] /user 응답:", res.data);
+    api
+      .get("/user")
+      .then((res) => {
         if (res.data.success && res.data.user) {
           setUser(res.data.user);
           localStorage.setItem("user", JSON.stringify(res.data.user));
         }
       })
-      .catch(err => {
-        const protectedRoutes = [
-          "/mypage", "/orders", "/checkout", "/admin"
-        ];
-        const isProtected = protectedRoutes.some(path =>
-          router.pathname === path || router.pathname.startsWith(path + "/")
+      .catch((err) => {
+        // 401/403/419 발생 시 강제 로그아웃+알림
+        if (err.response && [401, 403, 419].includes(err.response.status)) {
+          if (!globalSessionExpiredUserCtx) {
+            globalSessionExpiredUserCtx = true;
+            clearSessionAndNotifyAndRedirect(
+              "세션이 만료되었습니다. 다시 로그인해주세요."
+            );
+          }
+          return;
+        }
+        // 그 외 예전 분기(특정 페이지에서만)
+        const protectedRoutes = ["/mypage", "/orders", "/checkout", "/admin"];
+        const isProtected = protectedRoutes.some(
+          (path) =>
+            router.pathname === path || router.pathname.startsWith(path + "/")
         );
         if (isProtected) {
           logout();
@@ -122,19 +139,16 @@ export function UserProvider({ children }) {
       });
   }, [accessToken]);
 
-  // ✅ user 값 변경 콘솔
+  // user 값 변경 콘솔
   useEffect(() => {
     console.log("[UserContext] user 변경:", user);
   }, [user]);
 
-  // 3️⃣ 로그인 시 호출
+  // 로그인 시 호출
   const login = (userData, token, cartItems = []) => {
-    console.log("[UserContext.login] 호출됨 userData:", userData);
-    console.log("[UserContext.login] 받은 token:", token);
     setUser(userData);
     setAccessToken(token);
     applyAccessTokenToAxios(token);
-    console.log("[UserContext.login] setAccessToken 후 api.defaults.headers.common['Authorization']:", api.defaults.headers.common["Authorization"]);
     migrateGuestCart(token);
 
     localStorage.setItem("user", JSON.stringify(userData));
@@ -144,11 +158,9 @@ export function UserProvider({ children }) {
     setCartReady(true);
   };
 
-  // 4️⃣ 로그아웃 시 호출
+  // 로그아웃 시 호출
   const logout = async () => {
-    console.log("[UserContext] 로그아웃 함수 진입");
     const clientSessionId = getClientSessionId();
-
     if (!clientSessionId) {
       console.warn("❗ 로그아웃 중단: clientSessionId 없음");
       return;

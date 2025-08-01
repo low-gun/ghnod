@@ -92,6 +92,7 @@
 ./frontend/components/common/DateRangeSelector.jsx
 ./frontend/components/common/ExcelDownloadButton.js
 ./frontend/components/common/GlobalAlert.js
+./frontend/components/common/GlobalConfirmModal.jsx
 ./frontend/components/common/GlobalLoadingBar.js
 ./frontend/components/common/InfiniteCardList.jsx
 ./frontend/components/common/LogoutButton.js
@@ -250,6 +251,7 @@
 ./frontend/public/images
 ./frontend/stores
 ./frontend/stores/globalAlert.js
+./frontend/stores/globalConfirm.js
 ./frontend/stores/globalLoading.js
 ./frontend/styles
 ./frontend/utils
