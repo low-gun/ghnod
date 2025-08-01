@@ -64,7 +64,7 @@ export default function SearchFilter({
   };
 
   return (
-    <div style={wrapStyle}>
+    <div className="search-filter-root" style={wrapStyle}>
       {/* 검색 대상 타입 선택 */}
       <select
         value={searchType}
@@ -84,10 +84,16 @@ export default function SearchFilter({
           </option>
         ))}
       </select>
-  
+
       {/* 검색 조건 입력 */}
       {currentOption?.type === "date" ? (
-        <div style={{ display: "flex", gap: "8px", width: isMobile ? "100%" : undefined }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            width: isMobile ? "100%" : undefined,
+          }}
+        >
           <DatePicker
             selected={startDate}
             onChange={(date) => setStartDate(date)}
@@ -150,7 +156,7 @@ export default function SearchFilter({
           onChange={handleQueryChange}
           style={{
             ...commonStyle,
-            width: isMobile ? "100%" : "340px",      // 넉넉하게
+            width: isMobile ? "100%" : "340px", // 넉넉하게
             minWidth: isMobile ? undefined : "220px", // 줄여도 220px 이하 안 내려감
             maxWidth: isMobile ? "100%" : "450px",
             padding: isMobile ? "10px 12px" : "10px 18px",
@@ -166,5 +172,4 @@ export default function SearchFilter({
       )}
     </div>
   );
-  
 }

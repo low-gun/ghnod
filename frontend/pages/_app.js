@@ -7,11 +7,10 @@ import UserProvider from "../context/UserContext";
 import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import GlobalConfirmModal from "@/components/common/GlobalConfirmModal"; // 추가
-
+import GlobalAlert from "@/components/common/GlobalAlert";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-// ✅ 추가
-import GlobalAlert from "@/components/common/GlobalAlert";
+import "../styles/customCalendar.css";
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
