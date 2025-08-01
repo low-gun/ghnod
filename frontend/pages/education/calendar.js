@@ -38,7 +38,6 @@ export async function getServerSideProps(context) {
       { headers: { Cookie: cookie } }
     );
     const data = res.data;
-    const { showAlert } = useGlobalAlert(); // ✅ 추가
 
     return {
       props: {
@@ -62,7 +61,7 @@ export async function getServerSideProps(context) {
 
 export default function CalendarPage({ eventsData }) {
   const router = useRouter();
-
+  const { showAlert } = useGlobalAlert(); // ✅ 추가
   // 상태
   const [events] = useState(() =>
     eventsData.map((item) => ({
