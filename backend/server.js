@@ -35,7 +35,6 @@ console.log("✅ PORT:", PORT);
 const allowedOrigins = ["https://ghnod.vercel.app", "http://localhost:3000"];
 
 // ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 추가
-// ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 (동일 옵션) 추가
 const corsOptions = {
   origin: (origin, callback) => {
     console.log("📌 CORS 요청 origin:", origin);
@@ -51,8 +50,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// ✅ 프리플라이트도 동일 옵션으로 응답 (중요)
-app.options("*", cors(corsOptions));
+app.options("*", cors(corsOptions)); // ✅ 동일 옵션으로 응답
 
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);

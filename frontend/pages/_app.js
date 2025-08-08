@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useRef, useEffect } from "react";
+import { useEffect } from "react";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
 import { CartProvider, useCartContext } from "../context/CartContext";
@@ -10,16 +10,12 @@ import GlobalConfirmModal from "@/components/common/GlobalConfirmModal"; // 추�
 import GlobalAlert from "@/components/common/GlobalAlert";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@/styles/customCalendar.css";
+import "../styles/customCalendar.css";
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
-  const didInitRef = useRef(false); // ⬅ 개발모드 이펙트 2회 실행 가드
 
   useEffect(() => {
-    if (didInitRef.current) return; // ⬅ 두 번째 실행 차단
-    didInitRef.current = true;
-
     const fetchCart = async () => {
       let guestToken = localStorage.getItem("guest_token");
 
@@ -30,17 +26,16 @@ function CartInitializer() {
 
       try {
         const res = await api.get("/cart/items", {
-          headers: { "x-guest-token": guestToken },
+          headers: {
+            "x-guest-token": guestToken,
+          },
         });
-
-        if (res.data?.success && Array.isArray(res.data.items)) {
+        if (res.data.success) {
           setCartItems(res.data.items);
         }
-        // 성공/실패와 무관하게 최소 준비 완료는 1회만 표시
         setCartReady(true);
       } catch (err) {
         console.warn("🛒 장바구니 초기화 실패:", err.message);
-        setCartReady(true); // 실패해도 중복 렌더 방지 위해 1회만 ready
       }
     };
 
@@ -86,7 +81,6 @@ function MyApp({ Component, pageProps }) {
     router.events.on("routeChangeStart", handleStart);
     router.events.on("routeChangeComplete", handleEnd);
     router.events.on("routeChangeError", handleEnd);
-    hideLoading();
 
     return () => {
       clearTimeout(maxTimeout);

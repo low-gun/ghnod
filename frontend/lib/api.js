@@ -117,6 +117,7 @@ axiosInstance.interceptors.response.use(
           { withCredentials: true }
         );
         setAccessToken(data.accessToken);
+        originalRequest.headers = originalRequest.headers || {}; // ✅ 보강
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
