@@ -35,7 +35,8 @@ export default function CalendarPage() {
 
   // ✅ CSR: 빈 배열로 시작
   const [eventsDataState, setEventsDataState] = useState([]);
-
+  const initializedRef = React.useRef(false);
+  const [initialized, setInitialized] = useState(false); // ⬅ 추가
   // ✅ 검색/필터 상태
   const [searchType, setSearchType] = useState("전체");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -113,6 +114,11 @@ export default function CalendarPage() {
         if (cacheRef.current.has(key)) {
           setEventsDataState(cacheRef.current.get(key));
           lastRangeRef.current = { start: startStr, end: endStr };
+          if (!initializedRef.current) {
+            // ⬅ 추가
+            initializedRef.current = true;
+            setInitialized(true);
+          }
           return;
         }
 
@@ -137,7 +143,12 @@ export default function CalendarPage() {
       } catch (e) {
         console.error("fetchSchedulesByRange error:", e);
       } finally {
-        hideLoading();
+        hideLoading(); // ⬅ 전역 로딩 off
+        if (!initializedRef.current) {
+          // ⬅ 추가
+          initializedRef.current = true;
+          setInitialized(true);
+        }
       }
     },
     [showLoading, hideLoading]
@@ -167,6 +178,14 @@ export default function CalendarPage() {
     fetchSchedulesByRange(start, end);
     lastRangeRef.current = { start, end };
     didInitialFetchRef.current = true;
+    // 혹시 응답이 실패해도 스켈레톤이 영원히 남지 않도록 3초 타임아웃 가드(선택)
+    const t = setTimeout(() => {
+      if (!initializedRef.current) {
+        initializedRef.current = true;
+        setInitialized(true);
+      }
+    }, 3000);
+    return () => clearTimeout(t);
   }, [fetchSchedulesByRange]);
 
   return (
@@ -194,13 +213,13 @@ export default function CalendarPage() {
       />
 
       {/* 초기 로딩 스켈레톤(간단 문구) */}
-      {eventsDataState.length === 0 ? (
+      {!initialized ? (
         <div style={{ padding: 24, textAlign: "center", color: "#666" }}>
           달력 불러오는 중…
         </div>
       ) : (
         <CustomCalendar
-          schedules={filteredEvents}
+          schedules={filteredEvents} // 0건이어도 달력은 렌더됨(정상)
           currentMonth={calendarDate}
           setCurrentMonth={setCalendarDate}
           onSelectSchedule={handleSelectEvent}
