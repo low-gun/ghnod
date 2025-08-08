@@ -21,9 +21,11 @@ function CustomCalendar({
   onDatesSet,
   mode = "user",
 }) {
+  console.log("render <CustomCalendar>", schedules?.length ?? 0);
+
   const [selectedSchedule, setSelectedSchedule] = useState(null);
-  const { showAlert } = useGlobalAlert();
-  const { showConfirm } = useGlobalConfirm();
+  const showAlert = useGlobalAlert((s) => s.showAlert);
+  const showConfirm = useGlobalConfirm((s) => s.showConfirm);
   const calendarRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -99,6 +101,51 @@ function CustomCalendar({
     },
     [colorList]
   );
+  const stableOnDatesSet = useCallback(
+    (info) => {
+      if (onDatesSet) onDatesSet(info);
+    },
+    [onDatesSet]
+  );
+  const renderEventContent = useCallback(
+    (arg) => {
+      const isPopover = arg.el?.closest?.(".fc-popover");
+      const title = arg.event.title;
+      const bgColor = getColor(arg.event.id);
+
+      return isPopover ? (
+        <div className="gh-popover-item">
+          <span className="gh-popover-title">{title}</span>
+        </div>
+      ) : (
+        <div
+          className="gh-event-chip"
+          style={{ backgroundColor: bgColor }}
+          title={title}
+        >
+          {title}
+        </div>
+      );
+    },
+    [getColor]
+  );
+  const handleEventClick = useCallback(
+    (info) => {
+      const eventData = {
+        id: info.event.id,
+        title: info.event.title,
+        start: info.event.start,
+        end: info.event.end,
+        ...info.event.extendedProps,
+      };
+      if (onSelectSchedule) {
+        onSelectSchedule(eventData);
+      } else {
+        setSelectedSchedule(eventData);
+      }
+    },
+    [onSelectSchedule]
+  );
   return (
     <div className="custom-calendar-wrapper">
       <FullCalendar
@@ -107,9 +154,7 @@ function CustomCalendar({
         initialView="dayGridMonth"
         locale="ko"
         height="auto"
-        datesSet={(info) => {
-          if (onDatesSet) onDatesSet(info);
-        }} // ⬅ 추가
+        datesSet={stableOnDatesSet}
         events={stableSchedules}
         /* 모바일: 더 촘촘하게(2개만 bar) / 데스크탑: 3개 */
         dayMaxEvents={isMobile ? 2 : 3}
@@ -127,44 +172,13 @@ function CustomCalendar({
             +{args.num}
           </span>
         )}
-        eventClick={(info) => {
-          const eventData = {
-            id: info.event.id,
-            title: info.event.title,
-            start: info.event.start,
-            end: info.event.end,
-            ...info.event.extendedProps,
-          };
-          if (onSelectSchedule) {
-            onSelectSchedule(eventData);
-          } else {
-            setSelectedSchedule(eventData);
-          }
-        }}
+        eventClick={handleEventClick}
         headerToolbar={{
           left: "prev",
           center: "title",
           right: "next",
         }}
-        eventContent={(arg) => {
-          const isPopover = arg.el?.closest?.(".fc-popover");
-          const title = arg.event.title;
-          const bgColor = getColor(arg.event.id);
-
-          return isPopover ? (
-            <div className="gh-popover-item">
-              <span className="gh-popover-title">{title}</span>
-            </div>
-          ) : (
-            <div
-              className="gh-event-chip"
-              style={{ backgroundColor: bgColor }}
-              title={title}
-            >
-              {title}
-            </div>
-          );
-        }}
+        eventContent={renderEventContent}
       />
 
       {selectedSchedule && (
