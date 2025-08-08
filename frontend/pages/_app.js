@@ -10,7 +10,7 @@ import GlobalConfirmModal from "@/components/common/GlobalConfirmModal"; // ì¶”ê
 import GlobalAlert from "@/components/common/GlobalAlert";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "../styles/customCalendar.css";
+import "@/styles/customCalendar.css";
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();

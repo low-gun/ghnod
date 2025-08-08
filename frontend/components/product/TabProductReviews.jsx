@@ -68,14 +68,19 @@ export default function TabProductReviews({ productId, scheduleId }) {
   }, [productId]);
 
   useEffect(() => {
-    if (!user || !scheduleId) return;
+    if (!scheduleId) return;
 
     api
       .get(`/education/schedules/${scheduleId}/reviews/check-eligible`)
       .then((res) => {
         if (res.data.success) setIsPurchaser(res.data.eligible);
+      })
+      .catch((err) => {
+        console.error("작성 가능 여부 확인 실패:", err);
+        setIsPurchaser(false);
       });
-  }, [user, scheduleId]);
+  }, [scheduleId]);
+
   return (
     <section
       id="review"

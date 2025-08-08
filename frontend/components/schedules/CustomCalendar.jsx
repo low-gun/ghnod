@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, {
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import moment from "moment";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -8,16 +14,35 @@ import api from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
 
-export default function CustomCalendar({
+function CustomCalendar({
   schedules = [],
   shouldFilterInactive = true,
   onSelectSchedule,
+  onDatesSet,
   mode = "user",
 }) {
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const { showAlert } = useGlobalAlert();
   const { showConfirm } = useGlobalConfirm();
   const calendarRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return; // SSR 가드
+
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setIsMobile(mq.matches);
+
+    apply();
+
+    // 브라우저 호환 처리
+    if (mq.addEventListener) {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    } else {
+      mq.addListener(apply);
+      return () => mq.removeListener(apply);
+    }
+  }, []);
 
   const handleEdit = (schedule) => {
     window.location.href = `/admin/schedules/${schedule.id}`;
@@ -51,7 +76,29 @@ export default function CustomCalendar({
       productTitle: s.productTitle ?? null,
     }));
   }, [schedules, shouldFilterInactive]);
+  const colorList = useMemo(
+    () => [
+      "#F28B82", // 부드러운 레드
+      "#F6AD55", // 따뜻한 오렌지
+      "#F6E58D", // 파스텔 옐로우
+      "#A3D9A5", // 톤다운 민트/그린
+      "#7EB6F3", // 파스텔 블루
+      "#A29BFE", // 연보라 (퍼플)
+      "#D7A9E3", // 라일락 핑크 퍼플
+    ],
+    []
+  );
 
+  const getColor = useCallback(
+    (id) => {
+      const idx = id
+        ? Array.from(String(id)).reduce((a, b) => a + b.charCodeAt(0), 0) %
+          colorList.length
+        : 0;
+      return colorList[idx];
+    },
+    [colorList]
+  );
   return (
     <div className="custom-calendar-wrapper">
       <FullCalendar
@@ -60,11 +107,23 @@ export default function CustomCalendar({
         initialView="dayGridMonth"
         locale="ko"
         height="auto"
+        datesSet={(info) => {
+          if (onDatesSet) onDatesSet(info);
+        }} // ⬅ 추가
         events={stableSchedules}
-        dayMaxEventRows={3} // 하루에 3개까지만 bar 표시
-        moreLinkClick="popover" // +more 클릭시 팝오버(기본)
+        /* 모바일: 더 촘촘하게(2개만 bar) / 데스크탑: 3개 */
+        dayMaxEvents={isMobile ? 2 : 3}
+        /* 요일 헤더를 더 짧게 */
+        dayHeaderFormat={
+          isMobile ? { weekday: "narrow" } : { weekday: "short" }
+        }
+        /* +n 라벨: 모바일은 간결하게 */
+        moreLinkClick="popover"
         moreLinkContent={(args) => (
-          <span style={{ color: "#222", fontWeight: 600, fontSize: "11px" }}>
+          <span
+            className="fc-more-link-custom"
+            title={`${args.num}개의 추가 일정 보기`}
+          >
             +{args.num}
           </span>
         )}
@@ -76,7 +135,6 @@ export default function CustomCalendar({
             end: info.event.end,
             ...info.event.extendedProps,
           };
-
           if (onSelectSchedule) {
             onSelectSchedule(eventData);
           } else {
@@ -89,87 +147,23 @@ export default function CustomCalendar({
           right: "next",
         }}
         eventContent={(arg) => {
-          // 다양한 색상 10종 분배
-          const colorList = [
-            "#2563eb", // 파랑
-            "#1e40af", // 남색
-            "#3b82f6", // 하늘파랑
-            "#60a5fa", // 연파랑
-            "#1d4ed8", // 진한파랑
-            "#38bdf8", // 푸른청록
-            "#10b981", // 민트그린
-            "#a21caf", // 보라
-            "#f59e42", // 오렌지
-            "#e11d48", // 핑크
-          ];
-          // id가 없으면 index 등으로 fallback
-          const colorIdx = arg.event.id
-            ? Array.from(String(arg.event.id)).reduce(
-                (a, b) => a + b.charCodeAt(0),
-                0
-              ) % colorList.length
-            : arg.event._def?.publicId
-              ? Array.from(String(arg.event._def.publicId)).reduce(
-                  (a, b) => a + b.charCodeAt(0),
-                  0
-                ) % colorList.length
-              : 0;
-          const bgColor = colorList[colorIdx];
-          return (
+          const isPopover = arg.el?.closest?.(".fc-popover");
+          const title = arg.event.title;
+          const bgColor = getColor(arg.event.id);
+
+          return isPopover ? (
+            <div className="gh-popover-item">
+              <span className="gh-popover-title">{title}</span>
+            </div>
+          ) : (
             <div
-              style={{
-                backgroundColor: bgColor,
-                color: "#fff",
-                borderRadius: "4px",
-                padding: "1px 4px",
-                fontSize: "12px",
-                fontWeight: 500,
-                minHeight: 16,
-                maxHeight: 16,
-                lineHeight: "24px",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                marginBottom: 4,
-                border: "none",
-                boxShadow: "none",
-                display: "flex", // 추가
-                alignItems: "center", // 추가
-              }}
-              title={arg.event.title}
+              className="gh-event-chip"
+              style={{ backgroundColor: bgColor }}
+              title={title}
             >
-              {arg.event.title}
+              {title}
             </div>
           );
-        }}
-        dayCellDidMount={(info) => {
-          // 현재 날짜의 이벤트 개수 구하기
-          const events = info.view.calendar
-            .getEvents()
-            .filter(
-              (ev) =>
-                ev.start &&
-                ev.start.getDate() === info.date.getDate() &&
-                ev.start.getMonth() === info.date.getMonth() &&
-                ev.start.getFullYear() === info.date.getFullYear()
-            );
-          // 표시된 이벤트 개수 (최대 3)
-          const showCount = Math.min(events.length, 3);
-          // 부족한 줄 수만큼 빈 bar 생성
-          const needEmpty = 3 - showCount;
-          if (needEmpty > 0) {
-            const container = info.el.querySelector(".fc-daygrid-day-events");
-            if (container) {
-              for (let i = 0; i < needEmpty; i++) {
-                const div = document.createElement("div");
-                div.style.minHeight = "14px";
-                div.style.maxHeight = "14px";
-                div.style.marginBottom = "4px";
-                div.style.visibility = "hidden";
-                container.appendChild(div);
-              }
-            }
-          }
         }}
       />
 
@@ -185,3 +179,4 @@ export default function CustomCalendar({
     </div>
   );
 }
+export default React.memo(CustomCalendar);

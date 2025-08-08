@@ -99,6 +99,7 @@
 ./frontend/components/common/MobileMenuDrawer.js
 ./frontend/components/common/PageSizeSelector.jsx
 ./frontend/components/common/PaginationControls.jsx
+./frontend/components/common/ResponsiveSubTabs.js
 ./frontend/components/common/SearchFilter.js
 ./frontend/components/common/SearchFilterBox.jsx
 ./frontend/components/consulting
