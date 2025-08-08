@@ -1,45 +1,56 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../../config/db");
-const auth = require("../../middlewares/authMiddleware"); // ✅ 인증 미들웨어 추가
-const serverTiming = require("../../middlewares/serverTiming"); // ✅ 추가
+const auth = require("../../middlewares/authMiddleware"); // (다른 라우트에서 사용)
+const serverTiming = require("../../middlewares/serverTiming"); // Server-Timing 미들웨어
 
-// 공개용 일정 목록 조회
-// 공개용 일정 목록 조회
+// 공개용 일정 목록 조회 (슬림 SELECT + LIMIT + 디버그 콘솔)
 router.get("/public", serverTiming, async (req, res) => {
-  // ✅ 미들웨어 적용
   let {
     type,
     sort = "start_date",
     order = "asc",
     start_date,
     end_date,
+    limit,
   } = req.query;
 
-  req.mark("parse"); // ✅ 구간 마킹
+  req.mark("parse");
 
+  // 안전 처리
   type = (type ?? "").trim();
   const hasRange = !!(start_date && end_date);
 
-  console.log("🔍 API 요청 받은 type =", type);
-
-  const allowedSortFields = ["start_date", "end_date", "price", "created_at"];
+  // 정렬 화이트리스트(실제 사용하는 컬럼만 허용)
+  const allowedSortFields = ["start_date", "end_date", "created_at"];
   const sortField = allowedSortFields.includes(sort) ? sort : "start_date";
   const sortOrder = order === "desc" ? "DESC" : "ASC";
 
+  // LIMIT: 숫자 보장 + 범위 제한 (쿼리에 직접 삽입할 것이므로 필수)
+  let limitNum = Number.parseInt(limit ?? "200", 10);
+  if (!Number.isFinite(limitNum)) limitNum = 200;
+  limitNum = Math.min(Math.max(limitNum, 1), 1000);
+
+  // 날짜: YYYY-MM-DD만 사용(드라이버 바인딩 안정)
+  const end = (end_date || "").slice(0, 10);
+  const start = (start_date || "").slice(0, 10);
+
   try {
+    // ✅ 필요한 컬럼만 SELECT (전송량↓)
     let query = `
-  SELECT 
-    s.*, 
-    p.title AS product_title, 
-    p.type, 
-    p.image_url AS product_image
-  FROM schedules s
-  JOIN products p ON s.product_id = p.id
-  WHERE p.category = '교육'
-    AND s.status = 'open'
-    AND s.is_active = 1
-`;
+      SELECT
+        s.id,
+        s.title,
+        s.start_date,
+        s.end_date,
+        p.type  AS type,
+        p.title AS product_title
+      FROM schedules s
+      JOIN products p ON s.product_id = p.id
+      WHERE p.category = '교육'
+        AND s.status = 'open'
+        AND s.is_active = 1
+    `;
 
     const values = [];
 
@@ -49,34 +60,40 @@ router.get("/public", serverTiming, async (req, res) => {
     }
 
     if (hasRange) {
+      // 기간 겹침
       query +=
         " AND s.start_date <= ? AND (s.end_date IS NULL OR s.end_date >= ?)";
-      values.push(end_date, start_date);
+      values.push(end, start);
     }
 
-    query += ` ORDER BY s.${sortField} ${sortOrder}`;
+    // ⚠️ LIMIT는 드라이버/버전에 따라 플레이스홀더가 거부될 수 있어, 검증된 정수를 문자열에 직접 삽입
+    query += ` ORDER BY s.${sortField} ${sortOrder} LIMIT ${limitNum}`;
 
-    req.mark("db:start"); // ✅ DB 전/후 마킹
+    // 디버그 로그 (실제 실행되는 SQL/바인딩 확인용)
+    console.log("[DBG:/public] sql =", query.trim());
+    console.log("[DBG:/public] values =", values);
+
+    req.mark("db:start");
     const [rows] = await pool.execute(query, values);
     req.mark("db:end");
 
-    // (선택) 후처리가 있다면 마킹 추가
-    // req.mark("transform");
+    // 짧은 캐시로 체감 개선 (공개 데이터)
+    res.set("Cache-Control", "public, max-age=60");
 
-    res.json({ success: true, schedules: rows });
+    return res.json({ success: true, schedules: rows });
   } catch (err) {
     console.error("공개 일정 조회 오류:", err);
-    res.status(500).json({ success: false, message: "서버 오류" });
+    return res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
 
+// 후기 작성 가능 여부
 router.get("/:id/reviews/check-eligible", async (req, res) => {
   const scheduleId = req.params.id;
 
   // 로그인 상태에서만 userId 확인 (authMiddleware 없이)
   const userId = req.user?.id || null;
 
-  // 로그인 안 한 경우 → eligible: false 반환
   if (!userId) {
     return res.json({ success: true, eligible: false });
   }
@@ -84,10 +101,12 @@ router.get("/:id/reviews/check-eligible", async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT 1
-       FROM orders o
-       JOIN order_items oi ON o.id = oi.order_id
-       WHERE o.user_id = ? AND oi.schedule_id = ? AND o.order_status = 'paid'
-       LIMIT 1`,
+         FROM orders o
+         JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.user_id = ?
+          AND oi.schedule_id = ?
+          AND o.order_status = 'paid'
+        LIMIT 1`,
       [userId, scheduleId]
     );
 
@@ -99,24 +118,24 @@ router.get("/:id/reviews/check-eligible", async (req, res) => {
   }
 });
 
-// 공개용 일정 단건 조회
+// 공개용 일정 단건 조회 (단건은 기존 로직 유지)
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
     const [rows] = await pool.execute(
       `SELECT 
-  s.*, 
-  s.product_id, -- ✅ 명시적 추가
-  p.title AS product_title, 
-  p.image_url AS product_image, 
-  p.price AS product_price,
-  p.type AS type
+         s.*,
+         s.product_id,           -- 명시적 포함
+         p.title      AS product_title, 
+         p.image_url  AS product_image, 
+         p.price      AS product_price,
+         p.type       AS type
        FROM schedules s
        LEFT JOIN products p ON s.product_id = p.id
-       WHERE s.id = ? 
-         AND s.status = 'open' 
-         AND s.is_active = 1`,
+      WHERE s.id = ?
+        AND s.status = 'open'
+        AND s.is_active = 1`,
       [id]
     );
 

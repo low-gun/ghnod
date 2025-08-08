@@ -32,16 +32,22 @@ export async function getServerSideProps(context) {
     const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
     const endOfMonth = now.clone().endOf("month").format("YYYY-MM-DD");
 
-    const res = await axios.get(
-      `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
-      { headers: { Cookie: cookie } }
-    );
+    const url = `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`;
+    const res = await axios.get(url, { headers: { Cookie: cookie } });
 
-    return {
-      props: {
-        eventsData: res.data?.schedules || [],
-      },
-    };
+    // ✅ 필요한 필드만 슬림화
+    const rows = Array.isArray(res.data?.schedules) ? res.data.schedules : [];
+    const slim = rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      type: r.type ?? null,
+      category: r.category ?? null,
+      product_title: r.product_title ?? null,
+    }));
+
+    return { props: { eventsData: slim } };
   } catch (error) {
     return { props: { eventsData: [] } };
   }
