@@ -2,9 +2,12 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../../config/db");
 const auth = require("../../middlewares/authMiddleware"); // ✅ 인증 미들웨어 추가
+const serverTiming = require("../../middlewares/serverTiming"); // ✅ 추가
 
 // 공개용 일정 목록 조회
-router.get("/public", async (req, res) => {
+// 공개용 일정 목록 조회
+router.get("/public", serverTiming, async (req, res) => {
+  // ✅ 미들웨어 적용
   let {
     type,
     sort = "start_date",
@@ -13,10 +16,12 @@ router.get("/public", async (req, res) => {
     end_date,
   } = req.query;
 
+  req.mark("parse"); // ✅ 구간 마킹
+
   type = (type ?? "").trim();
   const hasRange = !!(start_date && end_date);
 
-  console.log("🔍 API 요청 받은 type =", type); // ✅ 로그 찍기
+  console.log("🔍 API 요청 받은 type =", type);
 
   const allowedSortFields = ["start_date", "end_date", "price", "created_at"];
   const sortField = allowedSortFields.includes(sort) ? sort : "start_date";
@@ -43,14 +48,20 @@ router.get("/public", async (req, res) => {
       values.push(type);
     }
 
-    // 기간 필터 추가: start_date, end_date가 모두 있을 때만 적용
     if (hasRange) {
       query +=
         " AND s.start_date <= ? AND (s.end_date IS NULL OR s.end_date >= ?)";
       values.push(end_date, start_date);
     }
+
     query += ` ORDER BY s.${sortField} ${sortOrder}`;
+
+    req.mark("db:start"); // ✅ DB 전/후 마킹
     const [rows] = await pool.execute(query, values);
+    req.mark("db:end");
+
+    // (선택) 후처리가 있다면 마킹 추가
+    // req.mark("transform");
 
     res.json({ success: true, schedules: rows });
   } catch (err) {
@@ -58,6 +69,7 @@ router.get("/public", async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+
 router.get("/:id/reviews/check-eligible", async (req, res) => {
   const scheduleId = req.params.id;
 
