@@ -111,8 +111,8 @@ axiosInstance.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        const { data } = await axios.post(
-          "/api/auth/refresh-token",
+        const { data } = await axiosInstance.post(
+          "/auth/refresh-token",
           {},
           { withCredentials: true }
         );

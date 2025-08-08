@@ -86,6 +86,7 @@ function MyApp({ Component, pageProps }) {
     router.events.on("routeChangeStart", handleStart);
     router.events.on("routeChangeComplete", handleEnd);
     router.events.on("routeChangeError", handleEnd);
+    hideLoading();
 
     return () => {
       clearTimeout(maxTimeout);
