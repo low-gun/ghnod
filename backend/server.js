@@ -49,9 +49,36 @@ const corsOptions = {
   preflightContinue: false,
 };
 
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    const origin = req.headers.origin;
+    if (
+      !origin ||
+      ["https://ghnod.vercel.app", "http://localhost:3000"].includes(origin)
+    ) {
+      res.header(
+        "Access-Control-Allow-Origin",
+        origin || "https://ghnod.vercel.app"
+      );
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Credentials", "true");
+      res.header(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      );
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, x-guest-token"
+      );
+      return res.sendStatus(204);
+    }
+    return res.status(403).send("Not allowed by CORS");
+  }
+  next();
+});
+
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions)); // ✅ 동일 옵션으로 응답
-
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
 app.use(express.json({ limit: "10mb" }));
