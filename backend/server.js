@@ -32,29 +32,27 @@ console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
 console.log("✅ PORT:", PORT);
 
 // ✅ CORS 허용 도메인 리스트
-const allowedOrigins = [
-  "https://ghnod.vercel.app",
-  "http://localhost:3000",
-];
+const allowedOrigins = ["https://ghnod.vercel.app", "http://localhost:3000"];
 
 // ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 추가
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      console.log("📌 CORS 요청 origin:", origin);
+// ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 (동일 옵션) 추가
+const corsOptions = {
+  origin: (origin, callback) => {
+    console.log("📌 CORS 요청 origin:", origin);
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn("❌ 차단된 origin:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // ✅
+  allowedHeaders: ["Content-Type", "Authorization", "x-guest-token"], // ✅
+  optionsSuccessStatus: 204,
+  preflightContinue: false,
+};
 
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn("❌ 차단된 origin:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
-// OPTIONS 프리플라이트 전체 허용
-app.options("*", cors());
+app.use(cors(corsOptions));
+// ✅ 프리플라이트도 동일 옵션으로 응답 (중요)
+app.options("*", cors(corsOptions));
 
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
