@@ -156,7 +156,7 @@ export default function SearchFilter({
           onChange={handleQueryChange}
           style={{
             ...commonStyle,
-            width: isMobile ? "100%" : "340px", // 넉넉하게
+            width: isMobile ? "100%" : "450px", // 넉넉하게
             minWidth: isMobile ? undefined : "220px", // 줄여도 220px 이하 안 내려감
             maxWidth: isMobile ? "100%" : "450px",
             padding: isMobile ? "10px 12px" : "10px 18px",

@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { useRouter } from "next/router";
 import moment from "moment";
 import CustomCalendar from "../../components/schedules/CustomCalendar";
@@ -6,7 +12,9 @@ import axios from "axios";
 import ScheduleDetailModal from "@/components/schedules/ScheduleDetailModal";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import SearchFilter from "@/components/common/SearchFilter";
-import useGlobalLoading from "@/stores/globalLoading"; // ⬅ default import로 변경
+import useGlobalLoading from "@/stores/globalLoading";
+
+// (참고 함수: 필요 시 유지)
 function formatYYYYMMDD(date) {
   if (!(date instanceof Date)) return "";
   const yyyy = date.getFullYear();
@@ -14,51 +22,33 @@ function formatYYYYMMDD(date) {
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
 function parseYYYYMMDD(str) {
   if (!str) return null;
   const [y, m, d] = str.split("-");
   return new Date(Number(y), Number(m) - 1, Number(d));
 }
 
-export async function getServerSideProps(context) {
-  try {
-    const cookie = context.req.headers.cookie || "";
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseURL)
-      throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
-
-    const now = moment();
-    const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
-    const endOfMonth = now.clone().endOf("month").format("YYYY-MM-DD");
-
-    const url = `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`;
-    const res = await axios.get(url, { headers: { Cookie: cookie } });
-
-    // ✅ 필요한 필드만 슬림화
-    const rows = Array.isArray(res.data?.schedules) ? res.data.schedules : [];
-    const slim = rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      start_date: r.start_date,
-      end_date: r.end_date,
-      type: r.type ?? null,
-      category: r.category ?? null,
-      product_title: r.product_title ?? null,
-    }));
-
-    return { props: { eventsData: slim } };
-  } catch (error) {
-    return { props: { eventsData: [] } };
-  }
-}
-
-export default function CalendarPage({ eventsData }) {
+export default function CalendarPage() {
   const router = useRouter();
-  const { showAlert } = useGlobalAlert(); // ⬅ 복구
-  const [eventsDataState, setEventsDataState] = useState(eventsData || []);
+  const { showAlert } = useGlobalAlert();
   const { showLoading, hideLoading } = useGlobalLoading();
 
+  // ✅ CSR: 빈 배열로 시작
+  const [eventsDataState, setEventsDataState] = useState([]);
+
+  // ✅ 검색/필터 상태
+  const [searchType, setSearchType] = useState("전체");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date(2025, 11, 31));
+  const [calendarDate, setCalendarDate] = useState(moment());
+
+  // ✅ 범위/캐시/초기 페치 제어
+  const lastRangeRef = useRef({ start: "", end: "" });
+  const cacheRef = useRef(new Map()); // key: "start:end" -> rows
+  const didInitialFetchRef = useRef(false); // 첫 datesSet 스킵용
+
+  // ✅ 이벤트 변환
   const events = useMemo(
     () =>
       (eventsDataState || []).map((item) => ({
@@ -67,20 +57,16 @@ export default function CalendarPage({ eventsData }) {
         end: new Date(item.end_date),
         type: item.type || item.category || null,
       })),
-    [eventsDataState] // ⬅ 변경
+    [eventsDataState]
   );
 
-  const [searchType, setSearchType] = useState("전체");
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(2025, 11, 31));
-  const [calendarDate, setCalendarDate] = useState(moment());
-
+  // ✅ 상세 모달용 선택 이벤트
   const selectedEvent = useMemo(() => {
     const id = router.query.id;
     return events.find((e) => String(e.id) === String(id));
   }, [router.query.id, events]);
 
+  // ✅ 일정 클릭
   const handleSelectEvent = useCallback(
     (event) => {
       if (!event?.type) {
@@ -92,10 +78,12 @@ export default function CalendarPage({ eventsData }) {
     [router, showAlert]
   );
 
+  // ✅ 교육기간 검색 시 캘린더 이동
   useEffect(() => {
     if (searchType === "교육기간") setCalendarDate(moment(startDate));
   }, [searchType, startDate]);
 
+  // ✅ 필터 적용
   const filteredEvents = useMemo(() => {
     const kw = searchKeyword.toLowerCase();
     return events.filter((evt) => {
@@ -114,38 +102,72 @@ export default function CalendarPage({ eventsData }) {
       return true;
     });
   }, [events, searchType, searchKeyword, startDate, endDate]);
-  // ⬅ CalendarPage 내부 최상단 훅들 아래에 추가
-  const lastRangeRef = React.useRef({ start: "", end: "" });
-  const cacheRef = React.useRef(new Map()); // (key: "start:end")
-  const hasSSRDataRef = React.useRef(
-    Array.isArray(eventsData) && eventsData.length > 0
-  );
-  const skippedFirstDatesSetRef = React.useRef(false);
 
-  const fetchSchedulesByRange = React.useCallback(
+  // ✅ 범위별 스케줄 로드 (캐시 포함)
+  const fetchSchedulesByRange = useCallback(
     async (startStr, endStr) => {
-      /* 기존 그대로 */
+      try {
+        const key = `${startStr}:${endStr}`;
+
+        // 캐시 적중
+        if (cacheRef.current.has(key)) {
+          setEventsDataState(cacheRef.current.get(key));
+          lastRangeRef.current = { start: startStr, end: endStr };
+          return;
+        }
+
+        // 동일 범위 중복 방지
+        if (
+          lastRangeRef.current.start === startStr &&
+          lastRangeRef.current.end === endStr
+        )
+          return;
+
+        lastRangeRef.current = { start: startStr, end: endStr };
+
+        showLoading();
+
+        const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
+        const url = `${baseURL}/education/schedules/public?type=전체&start_date=${startStr}&end_date=${endStr}`;
+        const res = await axios.get(url);
+        const rows = res.data?.schedules || [];
+
+        cacheRef.current.set(key, rows);
+        setEventsDataState(rows);
+      } catch (e) {
+        console.error("fetchSchedulesByRange error:", e);
+      } finally {
+        hideLoading();
+      }
     },
     [showLoading, hideLoading]
   );
 
+  // ✅ 달력 범위 변경 시: 첫 트리거는 스킵(초기 CSR 페치가 이미 실행됨)
   const stableOnDatesSet = useCallback(
     (info) => {
       const start = info.startStr.slice(0, 10);
       const end = info.endStr.slice(0, 10);
 
-      // ✅ SSR로 이미 같은 달 데이터가 들어온 첫 렌더에서는 fetch를 건너뜀
-      if (hasSSRDataRef.current && !skippedFirstDatesSetRef.current) {
-        skippedFirstDatesSetRef.current = true;
-        // 현재 보이는 범위를 기록해 이후 동일 범위 재호출 방지
+      if (!didInitialFetchRef.current) {
         lastRangeRef.current = { start, end };
-        return;
+        didInitialFetchRef.current = true;
+        return; // 첫 datesSet 스킵
       }
 
       fetchSchedulesByRange(start, end);
     },
     [fetchSchedulesByRange]
   );
+
+  // ✅ 첫 진입: 현재 달 한 번만 CSR로 로드
+  useEffect(() => {
+    const start = moment().startOf("month").format("YYYY-MM-DD");
+    const end = moment().endOf("month").format("YYYY-MM-DD");
+    fetchSchedulesByRange(start, end);
+    lastRangeRef.current = { start, end };
+    didInitialFetchRef.current = true;
+  }, [fetchSchedulesByRange]);
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
@@ -171,14 +193,22 @@ export default function CalendarPage({ eventsData }) {
         isMobile={false}
       />
 
-      <CustomCalendar
-        schedules={filteredEvents}
-        currentMonth={calendarDate}
-        setCurrentMonth={setCalendarDate}
-        onSelectSchedule={handleSelectEvent}
-        shouldFilterInactive={false}
-        onDatesSet={stableOnDatesSet}
-      />
+      {/* 초기 로딩 스켈레톤(간단 문구) */}
+      {eventsDataState.length === 0 ? (
+        <div style={{ padding: 24, textAlign: "center", color: "#666" }}>
+          달력 불러오는 중…
+        </div>
+      ) : (
+        <CustomCalendar
+          schedules={filteredEvents}
+          currentMonth={calendarDate}
+          setCurrentMonth={setCalendarDate}
+          onSelectSchedule={handleSelectEvent}
+          shouldFilterInactive={false}
+          onDatesSet={stableOnDatesSet}
+        />
+      )}
+
       {selectedEvent && (
         <ScheduleDetailModal
           schedule={selectedEvent}
