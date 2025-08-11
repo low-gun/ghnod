@@ -9,6 +9,7 @@ node_modules/
 !.env.example         # 필요하면 템플릿으로 예외 허용
 !frontend/.env.production
 !backend/.env.production
+frontend/.env.local
 
 # ✅ 프론트엔드 (Next.js 빌드)
 frontend/.next/
