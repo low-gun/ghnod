@@ -1,6 +1,6 @@
 // 개선된 EducationScheduleDetailPage.js
 import { useRouter } from "next/router";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { useCartContext } from "@/context/CartContext";
 import { useUserContext } from "@/context/UserContext";
@@ -33,6 +33,10 @@ export default function EducationScheduleDetailPage() {
   const isMobile = useIsMobile();
   const isTabletOrBelow = useIsTabletOrBelow();
   const { showAlert } = useGlobalAlert();
+  const HEADER_HEIGHT = 80; // 헤더 높이에 맞게 조정
+
+  const tabsRef = useRef(null);
+  const [stuck, setStuck] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +50,22 @@ export default function EducationScheduleDetailPage() {
       .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // ✅ sticky 미작동 환경 폴백: 특정 지점 이후 fixed 전환
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const rect = el.getBoundingClientRect();
+      // 탭 상단이 헤더 높이와 같거나 위로 올라가면 fixed로 전환
+      setStuck(rect.top <= HEADER_HEIGHT);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [HEADER_HEIGHT]);
 
   const unitPrice = useMemo(
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
@@ -202,7 +222,7 @@ export default function EducationScheduleDetailPage() {
       {/* 브레드크럼 */}
       <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
         <span
-          onClick={() => router.push("/education")}
+          onClick={() => router.push("/education/followup")}
           style={{ cursor: "pointer", marginRight: 6 }}
         >
           교육
@@ -439,18 +459,29 @@ export default function EducationScheduleDetailPage() {
         </div>
       </div>
 
-      {/* 상세 설명, 탭 */}
       <div
-        style={{ position: "sticky", top: 0, background: "#fff", zIndex: 10 }}
+        ref={tabsRef}
+        style={{
+          position: stuck ? "fixed" : "sticky",
+          top: HEADER_HEIGHT,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          background: "#fff",
+          borderBottom: "1px solid #eee",
+          padding: "8px 0",
+        }}
       >
-        <ProductTabs
-          tabs={[
-            { id: "detail", label: "상품상세" },
-            { id: "review", label: "상품후기" },
-            { id: "inquiry", label: "상품문의" },
-            { id: "refund", label: "환불안내" },
-          ]}
-        />
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
+          <ProductTabs
+            tabs={[
+              { id: "detail", label: "상품상세" },
+              { id: "review", label: "상품후기" },
+              { id: "inquiry", label: "상품문의" },
+              { id: "refund", label: "환불안내" },
+            ]}
+          />
+        </div>
       </div>
 
       <div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
@@ -470,6 +501,13 @@ export default function EducationScheduleDetailPage() {
       <div id="refund" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabRefundPolicy />
       </div>
+
+      {/* ⬇️ 이 페이지에서만 #__next overflow를 해제해 sticky 복구 */}
+      <style jsx global>{`
+        #__next {
+          overflow: visible !important;
+        }
+      `}</style>
     </div>
   );
 }
