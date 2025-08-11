@@ -15,6 +15,7 @@
 ./backend/controllers/userController.js
 ./backend/middlewares
 ./backend/middlewares/authMiddleware.js
+./backend/middlewares/serverTiming.js
 ./backend/middlewares/trackVisitor.js
 ./backend/middlewares/uploadBlob.js
 ./backend/models

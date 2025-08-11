@@ -1,5 +1,5 @@
 import { Eye, EyeOff } from "lucide-react";
-import { useEffect } from "react";         // ★ 이 줄 추가
+import { useEffect } from "react"; // ★ 이 줄 추가
 
 export default function RegisterStep1({
   email,
@@ -20,18 +20,18 @@ export default function RegisterStep1({
   canGoNext,
   setPasswordConfirmError, // ← props로 받을 것
 }) {
-    // 비밀번호 확인 에러 자동 세팅
-    useEffect(() => {
-      if (!passwordConfirm) {
-        setPasswordConfirmError("");
-        return;
-      }
-      if (password !== passwordConfirm) {
-        setPasswordConfirmError("비밀번호가 일치하지 않습니다.");
-      } else {
-        setPasswordConfirmError("");
-      }
-    }, [password, passwordConfirm, setPasswordConfirmError]);
+  // 비밀번호 확인 에러 자동 세팅
+  useEffect(() => {
+    if (!passwordConfirm) {
+      setPasswordConfirmError("");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setPasswordConfirmError("비밀번호가 일치하지 않습니다.");
+    } else {
+      setPasswordConfirmError("");
+    }
+  }, [password, passwordConfirm, setPasswordConfirmError]);
   return (
     <>
       <form
@@ -40,8 +40,18 @@ export default function RegisterStep1({
         className="login-form"
         id="register-step1-form"
       >
-        <input type="text" name="fake_email" autoComplete="username" style={{ display: "none" }} />
-        <input type="password" name="fake_password" autoComplete="new-password" style={{ display: "none" }} />
+        <input
+          type="text"
+          name="fake_email"
+          autoComplete="username"
+          style={{ display: "none" }}
+        />
+        <input
+          type="password"
+          name="fake_password"
+          autoComplete="new-password"
+          style={{ display: "none" }}
+        />
 
         <input
           type="email"
@@ -107,13 +117,17 @@ export default function RegisterStep1({
             <PasswordHint valid={password.length >= 6} label="6자 이상" />
             <PasswordHint valid={/[a-zA-Z]/.test(password)} label="영문 포함" />
             <PasswordHint valid={/\d/.test(password)} label="숫자 포함" />
-            <PasswordHint valid={/[~!@#$%^&*()_+{}\[\]:;<>,.?/\\\-]/.test(password)} label="특수문자 포함" />
+            <PasswordHint
+              valid={/[~!@#$%^&*()_+{}\[\]:;<>,.?/\\\-]/.test(password)}
+              label="특수문자 포함"
+            />
           </div>
         </div>
 
-        {error && !error.includes("이메일") && !error.includes("비밀번호") && !error.includes("형식") &&
-          <p className="register-error">{error}</p>
-        }
+        {error &&
+          !error.includes("이메일") &&
+          !error.includes("비밀번호") &&
+          !error.includes("형식") && <p className="register-error">{error}</p>}
         <button
           type="submit"
           disabled={!canGoNext}
@@ -132,17 +146,19 @@ export default function RegisterStep1({
           다음
         </button>
       </div>
-         </>
+    </>
   );
 }
 
 function PasswordHint({ valid, label }) {
   return (
-    <span style={{
-      color: valid ? "#24a340" : "#e51b1b",
-      fontWeight: 400,
-      fontSize: "13.2px"
-    }}>
+    <span
+      style={{
+        color: valid ? "#24a340" : "#e51b1b",
+        fontWeight: 400,
+        fontSize: "13.2px",
+      }}
+    >
       {valid ? "✔️" : "❌"} {label}
     </span>
   );

@@ -1,12 +1,14 @@
+// pages/_app.js
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import Script from "next/script";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
 import { CartProvider, useCartContext } from "../context/CartContext";
 import UserProvider from "../context/UserContext";
 import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
-import GlobalConfirmModal from "@/components/common/GlobalConfirmModal"; // 추가
+import GlobalConfirmModal from "@/components/common/GlobalConfirmModal";
 import GlobalAlert from "@/components/common/GlobalAlert";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -44,6 +46,7 @@ function CartInitializer() {
 
   return null;
 }
+
 const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }) {
@@ -58,6 +61,10 @@ function MyApp({ Component, pageProps }) {
       "NEXT_PUBLIC_API_BASE_URL:",
       process.env.NEXT_PUBLIC_API_BASE_URL
     );
+    console.log(
+      "[ENV] KAKAO KEY:",
+      process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? "present" : "missing"
+    );
   }, []);
 
   useEffect(() => {
@@ -67,7 +74,7 @@ function MyApp({ Component, pageProps }) {
 
       maxTimeout = setTimeout(() => {
         hideLoading();
-        console.warn("⏱ 로딩이 10초 이상 지속되어 자동 종료되었습니다.");
+        console.warn("⏱ 로딩이 30초 이상 지속되어 자동 종료되었습니다.");
       }, 30000);
     };
 
@@ -95,19 +102,54 @@ function MyApp({ Component, pageProps }) {
     : ({ children }) => <MainLayout>{children}</MainLayout>;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <CartInitializer />
-        <UserProvider>
-          <GlobalLoadingBar />
-          <GlobalAlert />
-          <GlobalConfirmModal /> {/* 👈 여기에 추가 */}
-          <LayoutWrapper>
-            <Component {...pageProps} />
-          </LayoutWrapper>
-        </UserProvider>
-      </CartProvider>
-    </QueryClientProvider>
+    <>
+      {/* ✅ Kakao JavaScript SDK 로드 및 초기화 보장 */}
+      <Script
+        id="kakao-sdk"
+        src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
+        strategy="beforeInteractive"
+        onLoad={() => {
+          console.log("[Kakao] script tag loaded, checking window.Kakao...");
+
+          const checkKakao = setInterval(() => {
+            if (window.Kakao) {
+              console.log("[Kakao] object found");
+              if (!window.Kakao.isInitialized()) {
+                if (!process.env.NEXT_PUBLIC_KAKAO_JS_KEY) {
+                  console.warn("[Kakao] NEXT_PUBLIC_KAKAO_JS_KEY missing");
+                }
+                window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
+                console.log(
+                  "[Kakao] initialized:",
+                  window.Kakao.isInitialized()
+                );
+              }
+              clearInterval(checkKakao);
+            }
+          }, 200);
+
+          // 5초 후 중단
+          setTimeout(() => clearInterval(checkKakao), 5000);
+        }}
+        onError={(e) => console.error("[Kakao] script load error", e)}
+        crossOrigin="anonymous"
+      />
+
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          <CartInitializer />
+          <UserProvider>
+            <GlobalLoadingBar />
+            <GlobalAlert />
+            <GlobalConfirmModal />
+            <LayoutWrapper>
+              <Component {...pageProps} />
+            </LayoutWrapper>
+          </UserProvider>
+        </CartProvider>
+      </QueryClientProvider>
+    </>
   );
 }
+
 export default MyApp;

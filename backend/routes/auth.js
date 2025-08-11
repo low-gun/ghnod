@@ -1,15 +1,11 @@
 // backend/routes/auth.js
-console.log("실제 서버 JWT_SECRET:", process.env.JWT_SECRET);
-console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
-console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
-console.log("GOOGLE_REDIRECT_URI:", process.env.GOOGLE_REDIRECT_URI);
-
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
-const passport = require("passport");
 const axios = require("axios");
+const { sendAlimtalkVerify } = require("../utils/nhnAlimtalk"); // ← 추가
+const crypto = require("crypto"); // ← 추가
 const {
   authenticateToken,
   authenticateAdmin,
@@ -20,8 +16,6 @@ const { parseDeviceInfo } = require("../utils/parseDeviceInfo");
 // Google OAuth2 code 처리용 REST API
 // backend/routes/auth.js
 router.post("/google/callback", async (req, res) => {
-  console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
-  console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET);
   const { code, autoLogin } = req.body; // ← 변경
   if (!code) return res.status(400).json({ error: "No code provided" });
 
@@ -56,19 +50,27 @@ router.post("/google/callback", async (req, res) => {
     const username = profile.name || profile.email.split("@")[0];
 
     // 3. DB조회
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
     console.log("[google/callback] users.length:", users.length);
 
     if (users.length > 0) {
       const user = users[0];
       if (user.is_deleted === 1) {
-        return res.status(403).json({ error: "비활성화된 계정입니다. 관리자에게 문의하세요." });
+        return res
+          .status(403)
+          .json({ error: "비활성화된 계정입니다. 관리자에게 문의하세요." });
       }
       if (!user.role) {
-        return res.status(403).json({ error: "권한 없는 계정입니다. 관리자에게 문의하세요." });
+        return res
+          .status(403)
+          .json({ error: "권한 없는 계정입니다. 관리자에게 문의하세요." });
       }
       const tokenPayload = { id: user.id, role: user.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" }); // 변수명 변경
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "4h",
+      }); // 변수명 변경
       const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
@@ -79,7 +81,12 @@ router.post("/google/callback", async (req, res) => {
         path: "/",
         maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined, // ← 분기(7일/세션)
       });
-      console.log("쿠키 세팅 시 autoLogin:", autoLogin, "maxAge:", autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined);
+      console.log(
+        "쿠키 세팅 시 autoLogin:",
+        autoLogin,
+        "maxAge:",
+        autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined
+      );
 
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
@@ -106,16 +113,23 @@ router.post("/google/callback", async (req, res) => {
         name: username,
         photo: profile.picture || "",
       };
-      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, {
+        expiresIn: "15m",
+      });
       console.log("[google/callback] 신규유저 tempToken 발급, email:", email);
       return res.json({ tempToken });
     }
   } catch (err) {
     console.error("[google/callback] Google OAuth Error:", err);
     if (err.response) {
-      console.error("[google/callback] Error response.data:", err.response.data);
+      console.error(
+        "[google/callback] Error response.data:",
+        err.response.data
+      );
     }
-    return res.status(500).json({ error: "Google OAuth Error", detail: err.message });
+    return res
+      .status(500)
+      .json({ error: "Google OAuth Error", detail: err.message });
   }
 });
 
@@ -148,15 +162,20 @@ router.post("/kakao/callback", async (req, res) => {
     console.log("[kakao/callback] profileRes.data:", profileRes.data);
     const kakao = profileRes.data;
     const email = kakao.kakao_account?.email;
-    const username = kakao.properties?.nickname || (email ? email.split("@")[0] : "");
+    const username =
+      kakao.properties?.nickname || (email ? email.split("@")[0] : "");
 
     // 3. 사용자 DB 조회
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
     if (users.length > 0) {
       // 기존 유저
       const user = users[0];
       const tokenPayload = { id: user.id, role: user.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" }); // 변수명 변경
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "4h",
+      }); // 변수명 변경
       const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
@@ -187,17 +206,19 @@ router.post("/kakao/callback", async (req, res) => {
     } else {
       // 신규 유저: 임시 토큰 발급
       const kakaoAccount = kakao.kakao_account || {};
-const tempPayload = {
-  socialProvider: "kakao",
-  kakaoId: kakao.id,
-  email: kakaoAccount.email || "",
-  // 이름(본명) → 닉네임 → username 순서로 채움
-  name: kakaoAccount.name || kakaoAccount.profile?.nickname || username,
-  phone: kakaoAccount.phone_number || "",
-  photo: kakaoAccount.profile?.profile_image_url || "",
-};
+      const tempPayload = {
+        socialProvider: "kakao",
+        kakaoId: kakao.id,
+        email: kakaoAccount.email || "",
+        // 이름(본명) → 닉네임 → username 순서로 채움
+        name: kakaoAccount.name || kakaoAccount.profile?.nickname || username,
+        phone: kakaoAccount.phone_number || "",
+        photo: kakaoAccount.profile?.profile_image_url || "",
+      };
 
-      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, {
+        expiresIn: "15m",
+      });
       return res.json({ tempToken });
     }
   } catch (err) {
@@ -205,7 +226,6 @@ const tempPayload = {
     return res.status(500).json({ error: "Kakao OAuth Error" });
   }
 });
-
 
 // 네이버 code 처리 REST API
 router.post("/naver/callback", async (req, res) => {
@@ -235,17 +255,21 @@ router.post("/naver/callback", async (req, res) => {
     });
     console.log("[naver/callback] profileRes.data:", profileRes.data);
     const naver = profileRes.data.response;
-    
+
     const email = naver.email;
     const username = naver.nickname || (email ? email.split("@")[0] : "");
 
     // 3. 사용자 DB 조회
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
     if (users.length > 0) {
       // 기존 유저
       const user = users[0];
       const tokenPayload = { id: user.id, role: user.role };
-      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "4h" }); // 변수명 변경
+      const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: "4h",
+      }); // 변수명 변경
       const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
@@ -283,8 +307,10 @@ router.post("/naver/callback", async (req, res) => {
         phone: naver.mobile || naver.phone || "",
         photo: naver.profile_image || "",
       };
-      
-      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
+
+      const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, {
+        expiresIn: "15m",
+      });
       return res.json({ tempToken });
     }
   } catch (err) {
@@ -362,10 +388,20 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // INSERT 실행
+    // ✅ 휴대폰 인증 여부 확인 (최근 인증 성공 기록 필수)
+    const [pv] = await db.query(
+      "SELECT verified, expires_at FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
+      [phone]
+    );
+    if (!pv.length || pv[0].verified !== 1) {
+      return res.status(400).json({ error: "휴대폰 인증이 필요합니다." });
+    }
+
+    // INSERT 실행
     await db.query(
       `INSERT INTO users
-        (username, email, password, phone, company, department, position, marketing_agree, terms_agree, privacy_agree, role, password_reset_required)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', false)`,
+    (username, email, password, phone, company, department, position, marketing_agree, terms_agree, privacy_agree, role, password_reset_required)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', false)`,
       [
         username,
         email,
@@ -383,24 +419,33 @@ router.post("/register", async (req, res) => {
     console.log("✅ 회원가입 성공!", email);
     res.status(200).json({ message: "✅ 회원가입 성공!" });
   } catch (error) {
-    console.error("❌ 회원가입 오류:", error); // 기존 로그
-    console.error("❌ SQL 오류 메시지:", error.sqlMessage); // 추가
-    console.error("❌ SQL:", error.sql); // 추가
-    console.error("❌ stack:", error.stack); // 선택
+    console.error("❌ 회원가입 오류:", error);
     res.status(500).json({ error: "회원가입 실패" });
   }
 });
 
 router.post("/register-social", async (req, res) => {
-  const { token, username, phone, company, department, position, terms_agree, privacy_agree, marketing_agree } = req.body;
+  const {
+    token,
+    username,
+    phone,
+    company,
+    department,
+    position,
+    terms_agree,
+    privacy_agree,
+    marketing_agree,
+  } = req.body;
   try {
     // 1. 임시토큰 복호화 (만료 체크/에러처리)
     let payload;
     try {
       payload = require("jsonwebtoken").verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      if (err.name === 'TokenExpiredError') {
-        return res.status(400).json({ error: "인증 토큰이 만료되었습니다. 소셜로그인을 다시 시도하세요." });
+      if (err.name === "TokenExpiredError") {
+        return res.status(400).json({
+          error: "인증 토큰이 만료되었습니다. 소셜로그인을 다시 시도하세요.",
+        });
       }
       return res.status(500).json({ error: "토큰 복호화 실패" });
     }
@@ -413,26 +458,31 @@ router.post("/register-social", async (req, res) => {
 
     // 3. 이메일/전화번호 중복 체크
     // 3. 이메일/전화번호 중복 체크 + 소셜 정보 분기
-const [userByEmail] = await db.query("SELECT id, social_provider FROM users WHERE email = ?", [email]);
-const [userByPhone] = await db.query("SELECT id, social_provider FROM users WHERE phone = ?", [phone]);
+    const [userByEmail] = await db.query(
+      "SELECT id, social_provider FROM users WHERE email = ?",
+      [email]
+    );
+    const [userByPhone] = await db.query(
+      "SELECT id, social_provider FROM users WHERE phone = ?",
+      [phone]
+    );
 
-if (userByEmail.length > 0) {
-  const provider = userByEmail[0].social_provider || "local";
-  return res.status(409).json({
-    error: "이미 사용 중인 이메일입니다.",
-    errorType: "email",
-    provider, // "kakao", "naver", "google", "local"
-  });
-}
-if (userByPhone.length > 0) {
-  const provider = userByPhone[0].social_provider || "local";
-  return res.status(409).json({
-    error: "이미 사용 중인 휴대폰번호입니다.",
-    errorType: "phone",
-    provider, // "kakao", "naver", "google", "local"
-  });
-}
-
+    if (userByEmail.length > 0) {
+      const provider = userByEmail[0].social_provider || "local";
+      return res.status(409).json({
+        error: "이미 사용 중인 이메일입니다.",
+        errorType: "email",
+        provider, // "kakao", "naver", "google", "local"
+      });
+    }
+    if (userByPhone.length > 0) {
+      const provider = userByPhone[0].social_provider || "local";
+      return res.status(409).json({
+        error: "이미 사용 중인 휴대폰번호입니다.",
+        errorType: "phone",
+        provider, // "kakao", "naver", "google", "local"
+      });
+    }
 
     // 4. 더미 비밀번호 생성
     const hashedPassword = await bcrypt.hash("social_oauth_dummy", 10);
@@ -461,7 +511,9 @@ if (userByPhone.length > 0) {
 
     // 6. (선택) 회원가입 후 바로 로그인/토큰 발급
 
-    return res.status(200).json({ success: true, message: "소셜 회원가입 완료" });
+    return res
+      .status(200)
+      .json({ success: true, message: "소셜 회원가입 완료" });
   } catch (err) {
     console.error("❌ 소셜회원가입 오류:", err);
     return res.status(500).json({ error: "서버 오류" });
@@ -553,20 +605,20 @@ router.post("/login", async (req, res) => {
       });
     }
 
-   // JWT 발급 (role 포함)
-  const tokenPayload = { id: user.id, role: user.role };
+    // JWT 발급 (role 포함)
+    const tokenPayload = { id: user.id, role: user.role };
 
-  // ✅ 자동로그인 분기: accessToken/refreshToken 만료 분기
-  const accessTokenExpiresIn = "4h"; // accessToken은 그대로
-  const refreshTokenExpiresIn = autoLogin ? "30d" : "7d"; // ✅ 30일/7일 분기
+    // ✅ 자동로그인 분기: accessToken/refreshToken 만료 분기
+    const accessTokenExpiresIn = "4h"; // accessToken은 그대로
+    const refreshTokenExpiresIn = autoLogin ? "30d" : "7d"; // ✅ 30일/7일 분기
 
-  const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-    expiresIn: accessTokenExpiresIn,
-  });
+    const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: accessTokenExpiresIn,
+    });
 
-  const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-    expiresIn: refreshTokenExpiresIn,
-  });
+    const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: refreshTokenExpiresIn,
+    });
 
     // (1) refresh_tokens 테이블에 새로 insert (삭제 안 함)
     const userAgent = req.headers["user-agent"];
@@ -898,5 +950,85 @@ router.get(
     }
   }
 );
+router.post("/phone/send-code", async (req, res) => {
+  const { phone } = req.body;
+  if (!phone)
+    return res.status(400).json({ error: "휴대폰번호가 필요합니다." });
+
+  try {
+    // 1) 6자리 코드 생성
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 2) 알림톡 발송 (실패 시 SMS 대체 — nhnAlimtalk.js 내부 설정)
+    await sendAlimtalkVerify(phone, code);
+
+    // 3) 코드 저장(해시) + 유효기간(5분)
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const [exists] = await db.query(
+      "SELECT id FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
+      [phone]
+    );
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5분
+
+    if (exists.length > 0) {
+      await db.query(
+        "UPDATE phone_verifications SET code_hash=?, verified=0, attempts=0, expires_at=? WHERE id=?",
+        [codeHash, expiresAt, exists[0].id]
+      );
+    } else {
+      await db.query(
+        "INSERT INTO phone_verifications (phone, code_hash, expires_at) VALUES (?, ?, ?)",
+        [phone, codeHash, expiresAt]
+      );
+    }
+
+    return res.json({ success: true, message: "인증번호를 발송했습니다." });
+  } catch (err) {
+    console.error("❌ 인증번호 발송 오류:", err.message);
+    return res.status(500).json({ error: "인증번호 발송 실패" });
+  }
+});
+// 휴대폰 인증번호 검증
+router.post("/phone/verify-code", async (req, res) => {
+  const { phone, code } = req.body;
+  if (!phone || !code) {
+    return res
+      .status(400)
+      .json({ error: "휴대폰번호와 인증번호가 필요합니다." });
+  }
+
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
+      [phone]
+    );
+    if (rows.length === 0)
+      return res.status(400).json({ error: "인증 요청이 없습니다." });
+
+    const rec = rows[0];
+    if (new Date(rec.expires_at).getTime() < Date.now()) {
+      return res.status(400).json({ error: "인증번호가 만료되었습니다." });
+    }
+    if (rec.attempts >= 5) {
+      return res.status(429).json({ error: "시도 횟수를 초과했습니다." });
+    }
+
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const isMatch = codeHash === rec.code_hash;
+
+    await db.query(
+      "UPDATE phone_verifications SET attempts = attempts + 1, verified = ? WHERE id = ?",
+      [isMatch ? 1 : 0, rec.id]
+    );
+
+    if (!isMatch)
+      return res.status(400).json({ error: "인증번호가 일치하지 않습니다." });
+
+    return res.json({ success: true, message: "인증 완료" });
+  } catch (err) {
+    console.error("❌ 인증번호 검증 오류:", err.message);
+    return res.status(500).json({ error: "인증번호 검증 실패" });
+  }
+});
 
 module.exports = router;

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import AgreementModal from "@/components/AgreementModal";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert";
+import api from "@/lib/api"; // ← 추가 (axios 인스턴스)
 
 export default function RegisterStep2({
   socialMode = false,
@@ -74,7 +75,20 @@ export default function RegisterStep2({
       setIsVerified(true);
     }
   }, [socialMode, phone, socialProvider, setIsVerified]);
+  useEffect(() => {
+    // 소셜 자동인증 케이스는 유지
+    if (isSocialPhoneVerified) return;
 
+    // 번호가 바뀌면 인증 흐름 초기화
+    setIsVerified(false);
+    setVerificationCode("");
+    setVerificationError("");
+    setShowVerificationInput(false);
+    setHasRequestedCode(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimeLeft(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phone]);
   const isSocialPhoneVerified =
     socialMode &&
     !!phone &&
@@ -140,21 +154,33 @@ export default function RegisterStep2({
             <button
               type="button"
               className="verify-btn"
-              onClick={() => {
-                setShowVerificationInput(true);
-                setHasRequestedCode(true);
-                setTimeLeft(180);
-                if (timerRef.current) clearInterval(timerRef.current);
-                timerRef.current = setInterval(() => {
-                  setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                      clearInterval(timerRef.current);
-                      return 0;
-                    }
-                    return prev - 1;
-                  });
-                }, 1000);
-                showAlert("인증번호가 전송되었습니다.");
+              onClick={async () => {
+                try {
+                  // 1) 백엔드로 전송 요청
+                  await api.post("/auth/phone/send-code", { phone });
+
+                  // 2) 타이머 시작
+                  setShowVerificationInput(true);
+                  setHasRequestedCode(true);
+                  setTimeLeft(180);
+                  if (timerRef.current) clearInterval(timerRef.current);
+                  timerRef.current = setInterval(() => {
+                    setTimeLeft((prev) => {
+                      if (prev <= 1) {
+                        clearInterval(timerRef.current);
+                        return 0;
+                      }
+                      return prev - 1;
+                    });
+                  }, 1000);
+
+                  setVerificationError("");
+                  showAlert("인증번호가 전송되었습니다.");
+                } catch (e) {
+                  setVerificationError(
+                    e?.response?.data?.error || "인증번호 전송 실패"
+                  );
+                }
               }}
               disabled={isDisabled}
             >
@@ -174,20 +200,34 @@ export default function RegisterStep2({
               type="text"
               placeholder="인증번호 입력"
               value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
+              onChange={(e) =>
+                setVerificationCode(
+                  e.target.value.replace(/\D/g, "").slice(0, 6)
+                )
+              }
               className="login-input"
               style={{ paddingRight: 80 }}
+              maxLength={6}
             />
+
             <button
               type="button"
               className="confirm-btn"
-              onClick={() => {
-                if (verificationCode === "123456") {
+              onClick={async () => {
+                try {
+                  await api.post("/auth/phone/verify-code", {
+                    phone,
+                    code: verificationCode,
+                  });
                   setIsVerified(true);
                   setVerificationError("");
                   showAlert("인증 성공");
-                } else {
-                  setVerificationError("인증번호가 일치하지 않습니다.");
+                  if (timerRef.current) clearInterval(timerRef.current);
+                  setTimeLeft(0);
+                } catch (e) {
+                  const msg =
+                    e?.response?.data?.error || "인증번호가 일치하지 않습니다.";
+                  setVerificationError(msg);
                 }
               }}
               disabled={!verificationCode || isVerified}
