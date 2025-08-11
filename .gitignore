@@ -6,19 +6,24 @@ node_modules/
 # ✅ 환경변수 (Git에선 제외, Docker에선 포함)
 .env
 .env.*
-!.env.example         # 필요하면 템플릿으로 예외 허용
+!.env.example
 !frontend/.env.production
 !backend/.env.production
 frontend/.env.local
+backend/.env.local
 
-# ✅ 프론트엔드 (Next.js 빌드)
+# ✅ 프론트엔드 빌드
 frontend/.next/
 frontend/out/
 
 # ✅ 백엔드 업로드 (Azure Blob 사용 시 무조건 제외)
 backend/uploads/
 
-# ✅ 루트 압축 캐시
+# ✅ 루트 빌드/캐시
 node_modules.tar.gz
 release/node_modules
 release/.next
+
+# ✅ Next.js 빌드 결과
+.next/
+out/
