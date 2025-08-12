@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import Header from "./Header";
 import Footer from "./Footer";
-import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import { useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 
 const HEADER_HEIGHT_DESKTOP = 80;
 const HEADER_HEIGHT_MOBILE = 48;
@@ -10,7 +10,7 @@ const HEADER_HEIGHT_MOBILE = 48;
 export default function MainLayout({ children }) {
   const [showProfile, setShowProfile] = useState(false);
   const [activeMenu, setActiveMenu] = useState("내 정보");
-  const isTabletOrBelow = useIsTabletOrBelow();
+  const isTabletOrBelow = useIsTabletOrBelow980();
   const router = useRouter();
 
   // 헤더/푸터 숨김 처리 (로그인, 회원가입 페이지)

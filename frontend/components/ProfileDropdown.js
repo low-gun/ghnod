@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useContext, useState } from "react";
 import { UserContext } from "../context/UserContext";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
-import { formatPrice } from "@/lib/format"; // ✅
+import { formatPrice } from "@/lib/format";
 import { User } from "lucide-react";
 
 export default function ProfileDropdown({ showProfile, setShowProfile }) {
@@ -32,7 +32,9 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
     if (!showProfile) return;
     const fetchSummary = async () => {
       try {
-        const res = await api.get("/mypage/header_summary");
+        const res = await api.get("/mypage/header_summary", {
+          headers: { "x-skip-loading": "1" }, // 🔹 전역 로딩바 스킵
+        });
         setSummary(res.data);
       } catch (err) {
         console.error("요약 정보 불러오기 실패:", err);
@@ -46,18 +48,23 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
   const userName = user.name || user.username || "홍길동";
   const userEmail = user.email || "test@example.com";
 
-  const goToMyPage = () => {
+  const goToMyPage = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     router.push({ pathname: "/mypage", query: { menu: "내정보" } });
   };
 
-  const handleLogout = async () => {
-    await logout(); // ✅ 서버 + 상태 초기화
-    router.push("/login"); // ✅ 리디렉션
+  const handleLogout = async (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    await logout();
+    router.push("/login");
   };
 
   return (
     <div
       ref={dropdownRef}
+      onClick={(e) => e.stopPropagation()} // ✅ 버블링 차단
       style={{
         position: "absolute",
         top: "50px",
@@ -69,25 +76,34 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
         padding: "16px",
         zIndex: 9999,
       }}
+      role="menu"
+      aria-label="프로필 메뉴"
     >
       {/* 사용자 정보 */}
-      <div
+      <button
+        type="button" // ✅ submit 방지
+        onClick={goToMyPage}
         style={{
           display: "flex",
+          width: "100%",
           marginBottom: "12px",
           alignItems: "center",
           cursor: "pointer",
+          background: "none",
+          border: "none",
+          padding: 0,
+          textAlign: "left",
         }}
-        onClick={goToMyPage}
       >
-        <User size={36} style={{ marginRight: "10px" }} />        <div>
+        <User size={36} style={{ marginRight: "10px" }} />
+        <div>
           <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
             {userName}
           </div>
           <div style={{ color: "#666", fontSize: "14px" }}>{userEmail}</div>
         </div>
         <span style={{ marginLeft: "auto", fontSize: "1.5rem" }}>›</span>
-      </div>
+      </button>
 
       {/* 요약 박스 */}
       <div
@@ -97,9 +113,12 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
           marginBottom: "12px",
         }}
       >
-        <div
-          style={boxStyle}
-          onClick={() =>
+        <button
+          type="button"
+          style={boxStyleBtn}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             router.push({
               pathname: "/mypage",
               query: {
@@ -107,34 +126,42 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
                 filterType: "status",
                 filterValue: ["예정", "진행중"],
               },
-            })
-          }
+            });
+          }}
         >
           신청내역
           <div style={countStyle}>{summary.applicationsCount}개</div>
-        </div>
-        <div
-          style={boxStyle}
-          onClick={() =>
-            router.push({ pathname: "/mypage", query: { menu: "쿠폰" } })
-          }
+        </button>
+
+        <button
+          type="button"
+          style={boxStyleBtn}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            router.push({ pathname: "/mypage", query: { menu: "쿠폰" } });
+          }}
         >
           쿠폰
           <div style={countStyle}>{summary.couponsCount}장</div>
-        </div>
-        <div
-          style={boxStyle}
-          onClick={() =>
-            router.push({ pathname: "/mypage", query: { menu: "포인트" } })
-          }
+        </button>
+
+        <button
+          type="button"
+          style={boxStyleBtn}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            router.push({ pathname: "/mypage", query: { menu: "포인트" } });
+          }}
         >
           포인트
           <div style={countStyle}>{formatPrice(summary.totalPoints)}P</div>
-        </div>
+        </button>
       </div>
 
       {/* 로그아웃 버튼 */}
-      <button onClick={handleLogout} style={logoutBtnStyle}>
+      <button type="button" onClick={handleLogout} style={logoutBtnStyle}>
         로그아웃
       </button>
     </div>
@@ -142,13 +169,14 @@ export default function ProfileDropdown({ showProfile, setShowProfile }) {
 }
 
 // 스타일
-const boxStyle = {
+const boxStyleBtn = {
   width: "33%",
   background: "#f9f9f9",
   padding: "8px",
   textAlign: "center",
   borderRadius: "4px",
   cursor: "pointer",
+  border: "none",
 };
 
 const countStyle = {

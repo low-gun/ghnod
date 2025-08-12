@@ -2,7 +2,6 @@ import { createContext, useState, useEffect, useContext } from "react";
 import api, { setAccessToken as applyAccessTokenToAxios } from "@/lib/api";
 import { getClientSessionId } from "@/lib/session";
 import { useRouter } from "next/router";
-import { useCartContext } from "./CartContext";
 import { clearSessionAndNotifyAndRedirect } from "@/utils/session";
 
 // ✅ 전역 세션 만료 중복 실행 방지 플래그
@@ -20,8 +19,6 @@ export function UserProvider({ children }) {
       console.log("🔴 [UserProvider] UNMOUNTED");
     };
   }, []);
-
-  const { setCartItems, setCartReady } = useCartContext();
 
   const [user, setUser] = useState(undefined);
   const [accessToken, setAccessToken] = useState(null);
@@ -161,9 +158,6 @@ export function UserProvider({ children }) {
 
     localStorage.setItem("user", JSON.stringify(userData));
     sessionStorage.setItem("accessToken", token);
-
-    setCartItems(cartItems);
-    setCartReady(true);
   };
 
   // 로그아웃 시 호출
@@ -191,8 +185,7 @@ export function UserProvider({ children }) {
     const newGuestToken = crypto.randomUUID();
     localStorage.setItem("guest_token", newGuestToken);
 
-    setCartItems([]);
-    setCartReady(false);
+    // 장바구니 상태는 CartContext가 user 변경을 감지해 자동 초기화
 
     router.push("/login");
   };

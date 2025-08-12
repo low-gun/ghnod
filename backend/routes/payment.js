@@ -103,37 +103,6 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
- * [POST] /api/admin/payments/charge
- * 결제 생성
- */
-router.post("/charge", async (req, res) => {
-  try {
-    const { user_id, amount, cardNumber, expiry, cvc } = req.body;
-    const [result] = await db.query(
-      `
-      INSERT INTO payments (user_id, amount, status, payment_method, created_at)
-      VALUES (?, ?, 'paid', 'credit_card', NOW())
-    `,
-      [user_id, amount]
-    );
-    const newPaymentId = result.insertId;
-    const [rows] = await db.query("SELECT * FROM payments WHERE id = ?", [
-      newPaymentId,
-    ]);
-
-    return res.json({
-      success: true,
-      message: "가짜 결제가 완료되었습니다!",
-      payment: rows[0],
-    });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, error: "결제 생성에 실패했습니다." });
-  }
-});
-
-/**
  * [PUT] /api/admin/payments/:id/status
  * 결제 상태 변경
  */

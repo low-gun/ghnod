@@ -1,63 +1,76 @@
-import { useEffect, useState } from "react";
+// frontend/pages/checkout.js
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
+import { loadTossPayments } from "@tosspayments/payment-sdk";
 import CartItemCard from "@/components/cart/CartItemCard";
 import CartSummary from "@/components/cart/CartSummary";
-import { useRef } from "react"; // 이미 있으면 생략
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert";
 
 export default function CheckoutPage() {
-  const buyNowTriggeredRef = useRef(false); // ✅ 추가
+  const buyNowTriggeredRef = useRef(false);
   const router = useRouter();
-  const { itemIds, point, couponId } = router.query;
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { itemIds, point, couponId, buyNow } = router.query;
+  const { showAlert } = useGlobalAlert();
 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [cartItems, setCartItems] = useState([]);
-  const [isBuyNow, setIsBuyNow] = useState(false); // ✅ 추가
 
-  console.log("🧪 초기 isBuyNow 상태:", isBuyNow); // ✅ 위치 A
-  const [availableCoupons, setAvailableCoupons] = useState([]);
-  const [availablePoint, setAvailablePoint] = useState(0);
+  const [availableCoupons, setAvailableCoupons] = useState(null);
+  const [availablePoint, setAvailablePoint] = useState(null);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [pointUsed, setPointUsed] = useState(Number(point) || 0);
-  const [paymentMethod, setPaymentMethod] = useState("card");
   const [userInfo, setUserInfo] = useState(null);
-  const [buyNowHandled, setBuyNowHandled] = useState(false); // 🔧 이 줄 추가
-  useEffect(() => {
-    console.log("🔍 [checkout.js] useEffect 진입"); // ✅ 여기에 추가
 
+  /** /user 데이터 로딩 (게스트 차단) */
+  useEffect(() => {
     const fetchInitial = async () => {
       try {
-        console.log("🚀 fetchInitial 실행됨"); // ✅ 여기에 추가
         const res = await api.get("/user");
-
-        console.log("📥 [checkout.js] /user 응답:", res.data);
-        console.log(
-          "🪙 point_balance 타입 확인:",
-          typeof res.data.point_balance,
-          res.data.point_balance
+        const user = res.data.user || {};
+        if (!user?.id) {
+          const qs = new URLSearchParams(router.query).toString();
+          router.replace(
+            `/login?redirect=${encodeURIComponent(`/checkout${qs ? "?" + qs : ""}`)}`
+          );
+          return;
+        }
+        setUserInfo(user);
+        setAvailablePoint(Number(user.point_balance ?? 0));
+        setAvailableCoupons(Array.isArray(user.coupons) ? user.coupons : []);
+      } catch {
+        const qs = new URLSearchParams(router.query).toString();
+        router.replace(
+          `/login?redirect=${encodeURIComponent(`/checkout${qs ? "?" + qs : ""}`)}`
         );
-        setUserInfo(res.data);
-        setAvailablePoint(res.data.point_balance || 0);
-      } catch (err) {
-        console.error("❌ 유저 정보 조회 실패", err);
       }
     };
     fetchInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** 금액 계산 */
+  function calcFinalAmount(items, couponAmount, pointUsedValue) {
+    const total = items.reduce(
+      (sum, it) => sum + it.unit_price * it.quantity,
+      0
+    );
+    const discount = Number(couponAmount || 0);
+    const points = Number(pointUsedValue || 0);
+    return Math.max(0, total - discount - points);
+  }
+
+  /** cartItems 로딩 (로그인 이후) */
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!router.isReady || !userInfo?.id) return;
 
     const fetchCartItems = async () => {
       try {
-        // ✅ buyNow 흐름만 ref, handled 체크
-        if (router.query.buyNow && !buyNowTriggeredRef.current) {
+        // buyNow 흐름
+        if (buyNow && !buyNowTriggeredRef.current) {
           buyNowTriggeredRef.current = true;
-
-          const decoded = decodeURIComponent(router.query.buyNow);
+          const decoded = decodeURIComponent(buyNow);
           const parsedItem = JSON.parse(decoded);
 
           const res = await api.post("/cart/items?buyNow=1", {
@@ -71,31 +84,27 @@ export default function CheckoutPage() {
           const cart_item_id = res.data?.item?.id;
           if (!cart_item_id) throw new Error("cart_item_id 없음");
 
-          setIsBuyNow(true);
           setCartItems([{ ...parsedItem, id: cart_item_id }]);
-          setBuyNowHandled(true);
 
           router.replace({
             pathname: router.pathname,
             query: { itemIds: String(cart_item_id) },
           });
-
           return;
         }
 
-        // ✅ 일반 itemIds 흐름은 별도 처리
-        if (router.query.itemIds) {
-          setIsBuyNow(false);
+        // 일반 itemIds 흐름
+        if (itemIds) {
+          const ids = itemIds.split(",").map((id) => id.trim());
+          if (!ids.length || ids.some((id) => !id)) {
+            setMessage("선택된 상품이 없습니다.");
+            return;
+          }
 
           const res = await api.get("/cart/items", {
-            params: {
-              ids: router.query.itemIds.split(","),
-              excludeBuyNow: "true",
-            },
+            params: { ids, excludeBuyNow: "true" },
           });
-
           setCartItems(res.data.items || []);
-          setBuyNowHandled(true);
           return;
         }
 
@@ -107,10 +116,9 @@ export default function CheckoutPage() {
     };
 
     fetchCartItems();
-  }, [router.isReady, router.query]);
+  }, [router.isReady, router.query, itemIds, buyNow, userInfo?.id, router]);
 
-  // ✅ cartItems 로딩 후 쿠폰 할인 금액 계산
-  // ✅ 1) 쿠폰 목록 계산
+  /** 쿠폰 할인 금액 계산 */
   useEffect(() => {
     if (!userInfo?.coupons || cartItems.length === 0) return;
 
@@ -129,71 +137,131 @@ export default function CheckoutPage() {
             : 0,
     }));
 
-    console.log("✅ [checkout.js] 계산된 쿠폰 리스트:", couponsWithAmount);
     setAvailableCoupons(couponsWithAmount);
   }, [userInfo, cartItems]);
 
+  /** 쿼리 기반 쿠폰 자동 적용 */
   useEffect(() => {
-    if (!couponId || availableCoupons.length === 0 || cartItems.length === 0)
+    if (!couponId || !Array.isArray(availableCoupons) || cartItems.length === 0)
       return;
-
-    console.log("🧩 쿠폰 자동 적용 시점 진입");
-    console.log("🧾 couponId:", couponId);
-    console.log("💡 availableCoupons:", availableCoupons);
-    console.log("🧮 cartItems:", cartItems);
 
     const found = availableCoupons.find(
       (c) => String(c.id) === String(couponId)
     );
-    if (!found || typeof found.amount !== "number") {
-      console.log("❌ 해당 쿠폰을 찾을 수 없거나 amount 없음:", found);
-      return;
-    }
+    if (!found || typeof found.amount !== "number") return;
 
-    console.log("✅ 쿼리 기반 쿠폰 자동 적용:", found, "amount:", found.amount);
     setSelectedCoupon({ ...found, _ts: Date.now() });
   }, [couponId, availableCoupons, cartItems]);
 
-  useEffect(() => {
-    console.log("🧾 useEffect - selectedCoupon 변경 감지됨:", selectedCoupon);
-  }, [selectedCoupon]);
-
+  /** 주문 처리 */
   const handleOrder = async () => {
-    console.log("🧪 [handleOrder] 현재 isBuyNow:", isBuyNow); // ✅ 위치 C
+    if (!userInfo?.id) {
+      showAlert("로그인이 필요합니다.");
+      return;
+    }
     if (!itemIds) return;
+
     setIsLoading(true);
     setMessage("");
 
-    console.log("🧪 [handleOrder] buyNow 쿼리값:", router.query.buyNow); // ✅ 위치 1
-
-    const payload = {
-      cart_item_ids: itemIds.split(",").map((id) => Number(id)),
-      coupon_id: selectedCoupon?.id || null,
-      used_point: pointUsed || 0,
-      payment_method: paymentMethod,
-    };
-
     try {
-      console.log("🚨 주문 payload:", payload);
-      const res = await api.post("/orders", payload);
-      const { order_id } = res.data;
+      const couponAmount =
+        selectedCoupon && typeof selectedCoupon.amount === "number"
+          ? selectedCoupon.amount
+          : 0;
+      const amount = calcFinalAmount(cartItems, couponAmount, pointUsed);
 
-      let paymentSuccess = false;
+      // 무료결제
+      if (amount <= 0) {
+        try {
+          const res = await api.post("/payments/free-checkout", {
+            cart_item_ids: itemIds.split(",").map(Number),
+            coupon_id: selectedCoupon?.id || null,
+            used_point: pointUsed || 0,
+          });
+          const { orderId } = res.data;
+          router.replace(`/orders/${orderId}/complete`);
+        } catch (e) {
+          setMessage(e?.response?.data?.error || "무료 결제 처리 실패");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // 토스 결제 준비
+      const prepareRes = await api.post("/payments/toss/prepare", {
+        cart_item_ids: itemIds.split(",").map((id) => Number(id)),
+        coupon_id: selectedCoupon?.id || null,
+        used_point: pointUsed || 0,
+      });
+
+      const {
+        orderId: preparedOrderId,
+        orderName,
+        customerName,
+        customerEmail,
+        amount: serverAmount,
+        clientKey,
+        successUrl,
+        failUrl,
+      } = prepareRes.data;
+
+      const safeOrderId = String(preparedOrderId || "")
+        .replace(/[^A-Za-z0-9_-]/g, "")
+        .slice(0, 64);
+
+      if (safeOrderId.length < 6) {
+        setIsLoading(false);
+        setMessage("주문번호 형식 오류: 관리자에게 문의하세요.");
+        return;
+      }
+
+      if (Number(serverAmount) !== Number(amount)) {
+        setMessage("금액 검증 실패. 페이지를 새로고침 후 다시 시도하세요.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!clientKey) {
+        setIsLoading(false);
+        setMessage("결제키 로딩 실패: clientKey가 없습니다.");
+        return;
+      }
+
+      const toss = await loadTossPayments(clientKey);
+      if (!toss || typeof toss.requestPayment !== "function") {
+        setIsLoading(false);
+        setMessage("결제 모듈 초기화 실패");
+        return;
+      }
 
       try {
-        await api.put(`/orders/${order_id}`);
-        paymentSuccess = true;
-      } catch (err) {
-        console.error("❌ 주문 상태 업데이트 실패:", err.response?.data);
-        setMessage("⚠️ 결제는 완료되었으나 주문 상태 업데이트에 실패했습니다.");
-      }
-      if (paymentSuccess) {
-        router.push(`/orders/${order_id}/complete`);
+        await toss.requestPayment("카드", {
+          amount,
+          orderId: safeOrderId,
+          orderName,
+          successUrl,
+          failUrl,
+          customerName: customerName || userInfo?.username || "",
+          customerEmail: customerEmail || userInfo?.email || "",
+        });
+      } catch (e) {
+        const msg = String(e?.message || "");
+        const code = String(e?.code || "");
+        const isUserCancel =
+          code === "USER_CANCEL" ||
+          code === "PAY_PROCESS_CANCELED" ||
+          /취소/.test(msg);
+        if (isUserCancel) {
+          setIsLoading(false);
+          return;
+        }
+        throw e;
       }
     } catch (err) {
-      console.error("❌ 주문 생성 오류:", err);
-      setMessage("❌ 주문 생성에 실패했습니다.");
-    } finally {
+      console.error("❌ 결제 시작 실패:", err);
+      setMessage(err?.response?.data?.error || "결제 시작에 실패했습니다.");
       setIsLoading(false);
     }
   };
@@ -206,52 +274,32 @@ export default function CheckoutPage() {
       ? selectedCoupon.amount
       : 0;
 
-  console.log("🧾 렌더 직전 selectedCoupon 상태:", selectedCoupon);
-  console.log("🧾 계산된 couponDiscount 값:", validCouponDiscount);
   return (
     <div style={{ padding: 20 }}>
-      <h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>주문 확인</h2>
+      <h2 style={{ fontSize: "19.2px", marginBottom: 16 }}>주문 확인</h2>
 
       {cartItems.length === 0 ? (
         <p style={{ textAlign: "center", width: "100%", marginTop: 40 }}>
           선택한 상품을 불러오는 중입니다...
         </p>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-            gap: 24,
-            marginTop: 20,
-          }}
-        >
-          {/* 카드 리스트 */}
-          <div
-            style={{
-              flex: "1 1 0%",
-              minWidth: 0,
-              display: "grid",
-              gridTemplateColumns:
-                cartItems.length === 1
-                  ? "1fr"
-                  : "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 16,
-            }}
-          >
+        <div className="checkout-main">
+          {/* 좌측: 주문 목록 + 안내/결제수단 */}
+          <div className="checkout-left">
             {cartItems
               .filter((it) => it && typeof it === "object" && it.schedule_id)
               .map((it) => (
-                <CartItemCard key={it.id} item={it} disableActions />
+                <CartItemCard key={it.id} item={it} variant="checkout" />
               ))}
-            <div style={{ gridColumn: "1 / -1", marginTop: 20 }}>
-              <p style={{ fontSize: 13, color: "#555", marginBottom: 12 }}>
-                결제 완료 후 수강 안내 메일이 발송됩니다.
-              </p>
 
+            <div style={{ marginTop: 20 }}>
+              <p style={{ fontSize: 13, color: "#555", marginBottom: 12 }}>
+                영업일 제외 2일 내에 주문자의 계정으로 안내메일이 발송될
+                예정입니다.
+              </p>
               <div
                 style={{
-                  border: "1px solid #ddd",
+                  border: ".0625rem solid #ddd",
                   borderRadius: 6,
                   padding: 12,
                   background: "#fafafa",
@@ -260,84 +308,170 @@ export default function CheckoutPage() {
                 <strong style={{ display: "block", marginBottom: 8 }}>
                   결제수단
                 </strong>
-                <label
-                  style={{ fontSize: 14, display: "block", marginBottom: 4 }}
+
+                {/* 라디오 버튼 그룹 (향후 확장 대비) */}
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
                 >
-                  <input
-                    type="radio"
-                    value="card"
-                    checked={paymentMethod === "card"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    style={{ marginRight: 6 }}
-                  />
-                  카드 결제
-                </label>
-                <label style={{ fontSize: 14, display: "block" }}>
-                  <input
-                    type="radio"
-                    value="bank"
-                    checked={paymentMethod === "bank"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    style={{ marginRight: 6 }}
-                  />
-                  무통장 입금
-                </label>
+                  <label
+                    style={{
+                      fontSize: 14,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="card"
+                      defaultChecked
+                    />
+                    간편 / 카드결제
+                  </label>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* 요약 */}
-          <div
-            style={{
-              flex: "0 0 320px",
-              maxWidth: "100%",
-              width: 320,
-              alignSelf: "flex-start",
-              position: "sticky",
-              top: 100,
-            }}
-          >
+          {/* 우측: 주문자 정보 + 결제 요약 */}
+          <aside className="checkout-right">
             {userInfo && (
-              <div
+              <section
+                aria-labelledby="orderer-heading"
                 style={{
-                  background: "#f9f9f9",
-                  border: "1px solid #ddd",
-                  borderRadius: 6,
-                  padding: 12,
-                  fontSize: 14,
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: 14,
                   marginBottom: 16,
+                  boxShadow: "inset 4px 0 0 #3b82f6",
                 }}
               >
-                <strong>주문자:</strong> {userInfo.username || userInfo.email}
-                <br />
-                <strong>이메일:</strong> {userInfo.email}
-              </div>
+                <div
+                  id="orderer-heading"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 14,
+                    marginBottom: 6,
+                    color: "#0f172a",
+                  }}
+                >
+                  주문자 정보
+                </div>
+                <div
+                  style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}
+                >
+                  안내 메일은 아래 주소로 발송됩니다.
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  {/* 이름 */}
+                  <div
+                    style={{
+                      flex: "1 1 160px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 160,
+                    }}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
+                        fill="#334155"
+                      />
+                    </svg>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748b" }}>
+                        주문자
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "#0f172a",
+                        }}
+                      >
+                        {userInfo.username || userInfo.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 이메일 (하이퍼링크 제거) */}
+                  <div
+                    style={{
+                      flex: "1 1 220px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 220,
+                    }}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M20 4H4a2 2 0 0 0-2 2v1.2l10 5.8 10-5.8V6a2 2 0 0 0-2-2Zm0 5.4-8 4.6-8-4.6V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2Z"
+                        fill="#334155"
+                      />
+                    </svg>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748b" }}>
+                        이메일
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "#0f172a",
+                        }}
+                      >
+                        {userInfo.email}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             )}
 
             <CartSummary
+              variant="checkout"
               items={cartItems}
               couponDiscount={validCouponDiscount}
               pointUsed={pointUsed}
               onCouponChange={(coupon) => {
-                console.log("💡 쿠폰 선택됨:", coupon);
                 if (!coupon) {
                   setSelectedCoupon(null);
                   return;
                 }
-
                 if (cartItems.length === 0) {
                   showAlert(
                     "상품 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요."
                   );
                   return;
                 }
-
                 const totalPrice = cartItems.reduce(
                   (sum, item) => sum + item.unit_price * item.quantity,
                   0
                 );
-
-                // ✅ amount가 이미 있는 경우 그대로 쓰고, 없으면 계산해서 세팅
                 const amount =
                   typeof coupon.amount === "number"
                     ? coupon.amount
@@ -349,20 +483,13 @@ export default function CheckoutPage() {
                               100
                           )
                         : 0;
-
-                console.log("✅ 최종 쿠폰 할인 금액:", amount);
-                setSelectedCoupon({ ...coupon, amount, _ts: Date.now() }); // ✅ 리렌더 보장
-                console.log("🧾 상태로 저장한 selectedCoupon:", {
-                  ...coupon,
-                  amount,
-                });
+                setSelectedCoupon({ ...coupon, amount, _ts: Date.now() });
               }}
               onPointChange={setPointUsed}
-              couponList={availableCoupons.length > 0 ? availableCoupons : null}
-              maxPoint={typeof availablePoint === "number" ? availablePoint : 0}
+              couponList={availableCoupons}
+              maxPoint={Number(availablePoint ?? 0)}
               onCheckout={handleOrder}
-              isLoading={isLoading} // ✅ 이 줄 추가
-              checkoutMode
+              isLoading={isLoading}
             />
 
             {message && (
@@ -370,7 +497,44 @@ export default function CheckoutPage() {
                 {message}
               </p>
             )}
-          </div>
+          </aside>
+
+          {/* 반응형 스타일 */}
+          <style jsx>{`
+            .checkout-main {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: flex-start;
+              gap: 24px;
+              margin-top: 20px;
+            }
+            .checkout-left {
+              flex: 1 1 auto;
+              min-width: 0;
+              display: grid;
+              gap: 16px;
+            }
+            .checkout-right {
+              flex: 0 0 320px;
+              width: 320px;
+              max-width: 100%;
+              align-self: flex-start;
+              position: sticky;
+              top: 100px;
+            }
+            @media (max-width: 1024px) {
+              .checkout-main {
+                flex-direction: column;
+              }
+              .checkout-left {
+                width: 100%;
+              }
+              .checkout-right {
+                position: static;
+                width: 100%;
+              }
+            }
+          `}</style>
         </div>
       )}
     </div>

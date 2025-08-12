@@ -38,6 +38,42 @@ export default function EducationScheduleDetailPage() {
   const tabsRef = useRef(null);
   const [stuck, setStuck] = useState(false);
 
+  // ✅ Toss 결제 인스턴스 준비
+  // ✅ Toss 결제 인스턴스 준비
+  const tossPaymentsRef = useRef(null);
+  const [tossReady, setTossReady] = useState(false);
+
+  // ✅ 바로구매 임시 cart_item 정리용
+  const lastBuyNowCartItemIdRef = useRef(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const init = () => {
+      if (window.TossPayments && !tossPaymentsRef.current) {
+        try {
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+          if (!clientKey) {
+            console.error("NEXT_PUBLIC_TOSS_CLIENT_KEY 누락");
+            return;
+          }
+          tossPaymentsRef.current = window.TossPayments(clientKey);
+          setTossReady(true);
+        } catch (e) {
+          console.error("TossPayments 초기화 실패", e);
+        }
+      }
+    };
+
+    if (!window.TossPayments) {
+      const s = document.createElement("script");
+      s.src = "https://js.tosspayments.com/v1/payment";
+      s.async = true;
+      s.onload = init;
+      document.head.appendChild(s);
+    } else {
+      init();
+    }
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -72,29 +108,113 @@ export default function EducationScheduleDetailPage() {
     [schedule]
   );
 
-  const handleBuyNow = useCallback(() => {
+  const handleBuyNow = useCallback(async () => {
     if (!user) {
+      const redirect =
+        typeof window !== "undefined"
+          ? window.location.pathname + window.location.search
+          : "/";
       showAlert("로그인 후 결제하실 수 있습니다.");
-      router.push("/login");
+      router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
-    if (!schedule) return showAlert("일정 정보를 불러오지 못했습니다.");
-    router.push({
-      pathname: "/checkout",
-      query: {
-        buyNow: encodeURIComponent(
-          JSON.stringify({
-            schedule_id: schedule.id,
-            quantity,
-            unit_price: unitPrice,
-            discount_price: 0,
-          })
-        ),
-      },
-    });
-  }, [user, schedule, quantity, unitPrice]);
+    if (!schedule) {
+      showAlert("일정 정보를 불러오지 못했습니다.");
+      return;
+    }
+    if (!tossReady || !tossPaymentsRef.current) {
+      showAlert("결제 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    try {
+      // 1) 서버에 주문 준비(펜딩 생성)
+      // 1) 임시 장바구니 항목 생성
+      const addRes = await api.post("/cart/items", {
+        schedule_id: schedule.id,
+        quantity,
+        unit_price: unitPrice,
+        type: "buyNow", // 구분용
+      });
+      const cartItemId = addRes?.data?.item?.id || addRes?.data?.id;
+      if (!cartItemId) {
+        showAlert("바로구매 준비에 실패했습니다. 다시 시도해 주세요.");
+        return;
+      }
+      // ✅ 이후 취소 시 정리할 수 있도록 보관
+      lastBuyNowCartItemIdRef.current = Number(cartItemId);
+      // 2) 결제 준비
+      const prepareRes = await api.post("/payments/toss/prepare", {
+        cart_item_ids: [Number(cartItemId)],
+        coupon_id: null,
+        used_point: 0,
+      });
+
+      // 응답 안전 처리(백엔드 형식에 맞게 유연 파싱)
+      const data = prepareRes?.data?.data || prepareRes?.data || {};
+      const orderId = data.orderId || data.order_id;
+      const amount = Number(data.amount ?? unitPrice * quantity);
+      const orderName = data.orderName || data.order_name || schedule.title;
+
+      if (!orderId || !amount) {
+        showAlert("주문 준비 중 오류가 발생했습니다. 다시 시도해 주세요.");
+        return;
+      }
+
+      // 2) 토스 결제창 호출
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const successUrl = `${origin}/payments/toss/success`;
+      const failUrl = `${origin}/payments/toss/fail`;
+
+      await tossPaymentsRef.current.requestPayment("카드", {
+        amount,
+        orderId,
+        orderName,
+        // 선택: 고객 식별 정보
+        customerName: user?.name || user?.username || user?.email || "고객",
+        successUrl,
+        failUrl,
+      });
+      // 요청 후 흐름은 토스가 success/fail로 리다이렉트
+
+      // 요청 후 흐름은 토스가 success/fail로 리다이렉트
+    } catch (e) {
+      // ✅ 사용자가 결제창을 닫아 취소한 경우(토스 SDK: USER_CANCEL 등)
+      const isUserCancel =
+        e?.code === "USER_CANCEL" ||
+        e?.message?.includes("취소") ||
+        e?.message?.toLowerCase?.()?.includes("cancel");
+
+      if (isUserCancel) {
+        // ✅ 임시 cart_item 정리 (성공/실패 페이지로 안 가므로 수동 삭제)
+        const id = lastBuyNowCartItemIdRef.current;
+        if (id) {
+          try {
+            await api.delete(`/cart/items/${id}`);
+          } catch {}
+          lastBuyNowCartItemIdRef.current = null;
+        }
+        showAlert("결제를 취소하였습니다.");
+        return; // ❗️오류로 처리하지 않음
+      }
+
+      // 그 외 실제 오류
+      console.error("바로구매 결제 시작 실패", e);
+      showAlert("결제 시작에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+  }, [user, schedule, quantity, unitPrice, tossReady, router, showAlert]);
 
   const handleAddToCart = useCallback(async () => {
+    if (!user) {
+      const redirect =
+        typeof window !== "undefined"
+          ? window.location.pathname + window.location.search
+          : "/";
+      showAlert("로그인 후 장바구니를 이용하실 수 있습니다.");
+      router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
     try {
       const payload = {
         schedule_id: schedule.id,
@@ -102,10 +222,7 @@ export default function EducationScheduleDetailPage() {
         unit_price: unitPrice,
         type: "cart",
       };
-      const guestToken = localStorage.getItem("guest_token");
-      const res = await api.post("/cart/items", payload, {
-        headers: { "x-guest-token": guestToken || "" },
-      });
+      const res = await api.post("/cart/items", payload);
       if (res.data.success) {
         showAlert("장바구니에 담았습니다!");
         await refreshCart();
@@ -115,7 +232,8 @@ export default function EducationScheduleDetailPage() {
     } catch {
       showAlert("오류가 발생했습니다. 다시 시도해주세요.");
     }
-  }, [schedule, quantity, unitPrice, refreshCart]);
+  }, [user, schedule, quantity, unitPrice, refreshCart, router, showAlert]);
+
   const handleCopyLink = useCallback(async () => {
     try {
       const url = typeof window !== "undefined" ? window.location.href : "";

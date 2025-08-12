@@ -110,6 +110,7 @@ app.use("/api", require("./routes/productReviews"));
 app.use("/api/upload", require("./routes/upload"));
 console.log("✅ API 라우터 등록 완료");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/payments", require("./routes/payments.public"));
 
 // ✅ DB 연결 테스트용
 app.get("/test-db", async (req, res) => {

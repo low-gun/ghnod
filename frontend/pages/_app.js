@@ -1,4 +1,5 @@
 // pages/_app.js
+import Head from "next/head"; // ✅ 추가
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Script from "next/script";
@@ -103,6 +104,14 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
+      {/* ✅ 전역 viewport 설정 */}
+      <Head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
+      </Head>
+
       {/* ✅ Kakao JavaScript SDK 로드 및 초기화 보장 */}
       <Script
         id="kakao-sdk"
@@ -136,17 +145,16 @@ function MyApp({ Component, pageProps }) {
       />
 
       <QueryClientProvider client={queryClient}>
-        <CartProvider>
-          <CartInitializer />
-          <UserProvider>
+        <UserProvider>
+          <CartProvider>
             <GlobalLoadingBar />
             <GlobalAlert />
             <GlobalConfirmModal />
             <LayoutWrapper>
               <Component {...pageProps} />
             </LayoutWrapper>
-          </UserProvider>
-        </CartProvider>
+          </CartProvider>
+        </UserProvider>
       </QueryClientProvider>
     </>
   );

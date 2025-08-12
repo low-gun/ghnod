@@ -1,27 +1,24 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "@/lib/api";
+import { useUserContext } from "@/context/UserContext";
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [cartReady, setCartReady] = useState(false);
+  const { user } = useUserContext();
 
   const refreshCart = async () => {
+    if (!user) {
+      setCartItems([]);
+      setCartReady(true);
+      return;
+    }
     try {
-      let guestToken = localStorage.getItem("guest_token");
-
-      if (!guestToken) {
-        guestToken = crypto.randomUUID();
-        localStorage.setItem("guest_token", guestToken);
-      }
-
       const res = await api.get("/cart/items", {
-        headers: {
-          "x-guest-token": guestToken,
-        },
+        params: { excludeBuyNow: "true" }, // 임시 buyNow 숨김
       });
-
       if (res.data.success) {
         setCartItems(res.data.items);
       }
@@ -31,6 +28,14 @@ export const CartProvider = ({ children }) => {
       setCartReady(true);
     }
   };
+
+  // ✅ user 변화(로그인/로그아웃) 시 자동 갱신
+  useEffect(() => {
+    // user === undefined : 아직 판별 전 → 대기
+    if (user === undefined) return;
+    setCartReady(false);
+    refreshCart();
+  }, [user]); // <-- 핵심
 
   return (
     <CartContext.Provider
@@ -42,14 +47,3 @@ export const CartProvider = ({ children }) => {
 };
 
 export const useCartContext = () => useContext(CartContext);
-
-// ✅ 앱 마운트 시 1회 실행될 CartInitializer 컴포넌트
-export const CartInitializer = () => {
-  const { refreshCart } = useCartContext();
-
-  useEffect(() => {
-    refreshCart(); // ✅ 외부 재사용 가능
-  }, []);
-
-  return null;
-};

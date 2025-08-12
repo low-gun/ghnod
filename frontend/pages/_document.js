@@ -8,10 +8,7 @@ export default class MyDocument extends Component {
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <meta name="theme-color" content="#ffffff" />
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-          />
+          {/* viewport meta는 _document.js에서 제거 */}
         </Head>
         <body>
           <Main />

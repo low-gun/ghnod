@@ -11,6 +11,7 @@
 ./backend/controllers/adminController.js
 ./backend/controllers/cartController.js
 ./backend/controllers/mypageController.js
+./backend/controllers/paymentController.js
 ./backend/controllers/productReviewController.js
 ./backend/controllers/userController.js
 ./backend/middlewares
@@ -39,6 +40,7 @@
 ./backend/routes/mypage.js
 ./backend/routes/order.js
 ./backend/routes/payment.js
+./backend/routes/payments.public.js
 ./backend/routes/productReviews.js
 ./backend/routes/public
 ./backend/routes/public/inquiry.js
@@ -54,6 +56,7 @@
 ./backend/uploads/certificates/backgrounds
 ./backend/uploads/images
 ./backend/utils
+./backend/utils/nhnAlimtalk.js
 ./backend/utils/parseDeviceInfo.js
 ./frontend
 ./frontend/.next
@@ -130,7 +133,6 @@
 ./frontend/components/layout/AdminLayout.js
 ./frontend/components/layout/AdminSidebar.js
 ./frontend/components/layout/contents
-./frontend/components/layout/contents/ProductDetail.js
 ./frontend/components/layout/contents/TabNavigation.js
 ./frontend/components/layout/contents/TextContent.js
 ./frontend/components/layout/Footer.js
@@ -241,6 +243,10 @@
 ./frontend/pages/orders/[id]
 ./frontend/pages/orders/[id]/complete.js
 ./frontend/pages/orders/[id]/index.js
+./frontend/pages/payments
+./frontend/pages/payments/toss
+./frontend/pages/payments/toss/fail.js
+./frontend/pages/payments/toss/success.js
 ./frontend/pages/privacy.js
 ./frontend/pages/register
 ./frontend/pages/register/agreements.js

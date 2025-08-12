@@ -1,209 +1,494 @@
 // components/cart/CartSummary.jsx
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { formatPrice } from "@/lib/format";
 import CouponSelector from "./CouponSelector";
 import PointInputModal from "./PointInputModal";
+import TermsModal from "@/components/modals/TermsModal";
+import PrivacyModal from "@/components/modals/PrivacyModal";
 export default function CartSummary({
   items = [],
-  couponDiscount = 0, // ✅ 실제 할인 금액이 넘어오도록 유지 (이제 제대로 전달됨)
+  couponDiscount = 0,
   pointUsed = 0,
   onCheckout,
   onCouponChange,
   onPointChange,
   maxPoint = 0,
   couponList = [],
-  isLoading = false, // ✅ 이 줄 추가
+  isLoading = false,
+  // ✅ 추가
+  variant = "cart", // "cart" | "checkout"
 }) {
-  console.log("📦 CartSummary → items 확인:", items); // ✅ 여기에 추가
   const [showCouponPopup, setShowCouponPopup] = useState(false);
   const [showPointPopup, setShowPointPopup] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
-  const totalQuantity = items.reduce((sum, item) => {
-    console.log("🔢 item.quantity:", item.quantity); // ✅ 여기서 각 item의 수량도 확인
-    return sum + item.quantity;
-  }, 0);
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.unit_price * item.quantity,
-    0
-  );
-  const totalDiscount = items.reduce((sum, item) => {
-    const hasDiscount =
-      item.discount_price !== null &&
-      item.discount_price !== undefined &&
-      item.discount_price > 0 &&
-      item.discount_price < item.unit_price;
+  const isCart = variant === "cart";
+  const isCheckout = variant === "checkout";
+  const selectedCardCount = items.length; // ✅ 카드(항목) 개수 기준
 
-    const discountAmount = hasDiscount
-      ? (item.unit_price - item.discount_price) * item.quantity
-      : 0;
+  const {
+    totalQuantity,
+    totalPrice,
+    totalDiscount,
+    safeCoupon,
+    maxUsablePoint, // ✅ 추가
+    effectivePoint,
+    totalFinal,
+  } = useMemo(() => {
+    const q = items.reduce((s, it) => s + Number(it.quantity || 0), 0);
+    const price = items.reduce(
+      (s, it) => s + Number(it.unit_price || 0) * Number(it.quantity || 0),
+      0
+    );
+    const discount = items.reduce((s, it) => {
+      const u = Number(it.unit_price || 0);
+      const d = Number(it.discount_price || 0);
+      const qty = Number(it.quantity || 0);
+      const has = d > 0 && d < u;
+      return s + (has ? (u - d) * qty : 0);
+    }, 0);
+    const couponEff =
+      q === 0 || typeof couponDiscount !== "number" ? 0 : couponDiscount;
+    const couponSafe = isNaN(couponEff) ? 0 : couponEff;
 
-    return sum + discountAmount;
-  }, 0);
+    // ✅ 포인트 캡: 결제 전 최대 사용 가능 포인트
+    const gross = Math.max(0, price - discount - couponSafe);
+    const capByCash = gross; // 금액 한도
+    const cap = Math.max(0, Math.min(Number(maxPoint || 0), capByCash));
 
-  const effectiveCoupon =
-    totalQuantity === 0 || typeof couponDiscount !== "number"
-      ? 0
-      : couponDiscount;
-  const effectivePoint = totalQuantity === 0 ? 0 : pointUsed;
-  const safeCoupon = isNaN(effectiveCoupon) ? 0 : effectiveCoupon;
+    const pointRaw = q === 0 ? 0 : Number(pointUsed || 0);
+    const pointEff = Math.max(0, Math.min(pointRaw, cap)); // ✅ 캡 적용
 
-  console.log("💸 전달받은 couponDiscount:", couponDiscount);
-  console.log("💸 safeCoupon 계산 결과:", safeCoupon);
+    const final = Math.max(0, price - discount - couponSafe - pointEff);
 
-  const totalFinal = Math.max(
-    0,
-    totalPrice - totalDiscount - effectiveCoupon - effectivePoint
-  );
+    return {
+      totalQuantity: q,
+      totalPrice: price,
+      totalDiscount: discount,
+      safeCoupon: couponSafe,
+      maxUsablePoint: cap, // ✅ 반환
+      effectivePoint: pointEff, // ✅ 캡 적용된 값
+      totalFinal: final,
+    };
+  }, [items, couponDiscount, pointUsed, maxPoint]);
+  useEffect(() => {
+    if (totalQuantity === 0) {
+      if (effectivePoint !== 0) onPointChange(0);
+      return;
+    }
+    // pointUsed(부모 상태)와 캡 비교
+    const raw = Number(pointUsed || 0);
+    if (raw < 0) onPointChange(0);
+    else if (raw > maxUsablePoint) onPointChange(maxUsablePoint);
+  }, [totalQuantity, effectivePoint, maxUsablePoint, pointUsed, onPointChange]);
+  // ✅ 버튼 비활성 조건: 0원이어도 결제(무료결제) 가능해야 하므로 막지 않음
+  const btnDisabled = totalQuantity === 0 || isLoading;
 
   return (
-    <div
-      style={{
-        background: "#f9f9f9",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "20px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-        height: "fit-content",
-      }}
-    >
-      <h3 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: 12 }}>
-        주문정보
-      </h3>
-
-      {/* 수량 */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>수량:</span>
-        <span>{totalQuantity}개</span>
+    <div style={wrapStyle}>
+      {/* 헤더 */}
+      <div style={headerStyle}>
+        <span>{isCheckout ? "결제 요약" : "주문정보"}</span>
+        <span style={badgeStyle}>선택 {selectedCardCount}개</span>
       </div>
 
-      {/* 금액 */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>금액:</span>
-        <span>{formatPrice(totalPrice)}원</span>
-      </div>
-      {/* 쿠폰 할인 - couponList가 있을 때만 표시 */}
-      {couponList && couponList.length > 0 && (
-        <div style={{ ...rowStyle, color: "#d9534f" }}>
-          <span style={labelStyle}>쿠폰:</span>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <span>
-              {totalQuantity > 0 && safeCoupon > 0
-                ? `− ${formatPrice(safeCoupon)}원`
-                : "선택된 항목 없음"}
-            </span>
-            <button
-              onClick={() => setShowCouponPopup(true)}
-              style={useBtnStyle}
-              disabled={totalQuantity === 0}
-            >
-              사용
-            </button>
+      {/* ✅ 카트에서만: 선택 미니 프리뷰 (썸네일 최대 3개 + 외 N개) */}
+      {/* ✅ 카트에서만: 선택 미니 프리뷰 → “상품명 · 금액” 목록(최대 3개) + 외 N개 */}
+      {isCart && items.length > 0 && (
+        <div style={previewRow}>
+          <div style={{ width: "100%" }}>
+            {items.slice(0, 3).map((it) => {
+              const u = Number(it.unit_price || 0);
+              const d = Number(it.discount_price || 0);
+              const qty = Number(it.quantity || 0);
+              const has = d > 0 && d < u;
+              const lineTotal = (has ? d : u) * qty; // 할인 반영 합계
+
+              return (
+                <div key={it.id} style={listRow}>
+                  <span style={listTitle} title={it.schedule_title || it.title}>
+                    {it.schedule_title || it.title || "선택 항목"}
+                  </span>
+                  <span style={listPrice}>{formatPrice(lineTotal)}원</span>
+                </div>
+              );
+            })}
+
+            {items.length > 3 && (
+              <div style={{ marginTop: 4 }}>
+                <span style={moreText}>외 {items.length - 3}개</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* 포인트 사용 - maxPoint가 0보다 클 때만 표시 */}
-      {!isNaN(maxPoint) && Number(maxPoint) > 0 && (
-        <div style={{ ...rowStyle, color: "#d9534f" }}>
-          <span style={labelStyle}>포인트:</span>
-          <span>
-            {totalQuantity > 0 && effectivePoint > 0
-              ? `− ${formatPrice(effectivePoint)}원`
-              : "선택된 항목 없음"}
-            <button
-              onClick={() => setShowPointPopup(true)}
-              style={useBtnStyle}
-              disabled={totalQuantity === 0}
-            >
-              사용
-            </button>
-          </span>
+      {/* 금액 요약 */}
+      {/* 금액 요약: cart에서는 숨김, checkout에서는 노출 */}
+      {!isCart && (
+        <div style={rowStyle}>
+          <span style={labelStyle}>상품금액</span>
+          <span>{formatPrice(totalPrice)}원</span>
         </div>
       )}
 
-      <div
-        style={{
-          fontSize: "16px",
-          fontWeight: "bold",
-          marginTop: 8,
-          borderTop: "1px dashed #ccc",
-          paddingTop: 8,
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+      {totalDiscount > 0 && (
+        <div style={{ ...rowStyle, color: "#ef4444" }}>
+          <span style={labelStyle}>상품 할인</span>
+          <span>- {formatPrice(totalDiscount)}원</span>
+        </div>
+      )}
+
+      {/* ✅ 쿠폰: 항상 표시 (목록 없으면 비활성) */}
+      {/* ✅ 쿠폰: 없으면 '없음', 있으면 버튼만. 적용 후에는 금액 표기 + 버튼 */}
+      {(() => {
+        const hasCoupons = Array.isArray(couponList) && couponList.length > 0;
+        const isUnavailable = totalQuantity === 0 || !hasCoupons; // 없을 때
+        const isApplied = totalQuantity > 0 && safeCoupon > 0; // 적용됨
+
+        return (
+          <div style={{ ...rowStyle, color: "#ef4444" }}>
+            <span style={labelStyle}>쿠폰</span>
+
+            {/* 없을 때: '없음'만 */}
+            {isUnavailable && <span>없음</span>}
+
+            {/* 있을 때 & 미적용: 버튼만 */}
+            {!isUnavailable && !isApplied && (
+              <button
+                onClick={() => setShowCouponPopup(true)}
+                style={miniBtnStyle(false)}
+                title="쿠폰 선택"
+              >
+                사용
+              </button>
+            )}
+
+            {/* 적용 후: 금액 + 버튼(변경/재선택) */}
+            {isApplied && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>- {formatPrice(safeCoupon)}원</span>
+                <button
+                  onClick={() => setShowCouponPopup(true)}
+                  style={miniBtnStyle(false)}
+                  title="쿠폰 변경"
+                >
+                  변경
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ✅ 포인트: 없으면 '없음', 있으면 버튼만. 적용 후에는 금액 표기 + 버튼 */}
+      {(() => {
+        const owned = Number(maxPoint || 0);
+        const isUnavailable = totalQuantity === 0 || owned <= 0; // 없을 때
+        const isApplied = totalQuantity > 0 && effectivePoint > 0; // 적용됨
+
+        return (
+          <div style={{ ...rowStyle, color: "#ef4444" }}>
+            <span style={labelStyle}>포인트</span>
+
+            {/* 없을 때: '없음'만 */}
+            {isUnavailable && <span>없음</span>}
+
+            {/* 있을 때 & 미적용: 버튼만 */}
+            {!isUnavailable && !isApplied && (
+              <button
+                onClick={() => setShowPointPopup(true)}
+                style={miniBtnStyle(false)}
+                title="포인트 사용"
+              >
+                사용
+              </button>
+            )}
+
+            {/* 적용 후: 금액 + 버튼(변경/재입력) */}
+            {isApplied && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>- {formatPrice(effectivePoint)}원</span>
+                <button
+                  onClick={() => setShowPointPopup(true)}
+                  style={miniBtnStyle(false)}
+                  title="포인트 변경"
+                >
+                  변경
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      <div style={totalRowStyle}>
         <span>결제 금액</span>
-        <span>{formatPrice(totalFinal)}원</span>
+        {/* ✅ 접근성: 금액 변경 읽어주기 */}
+        <span aria-live="polite">{formatPrice(totalFinal)}원</span>
       </div>
+      {isCheckout && (
+        <div style={consentWrapStyle}>
+          <div style={consentTitleStyle}>
+            주문 내용을 확인했으며, 아래 내용에 모두 동의합니다.
+          </div>
+
+          <ul style={consentListStyle}>
+            <li>
+              개인정보 수집/이용 동의{" "}
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(true)}
+                style={consentLinkStyle}
+                aria-haspopup="dialog"
+                aria-controls="privacy-modal"
+              >
+                보기
+              </button>
+            </li>
+
+            <li>
+              개인정보 제3자 제공 동의{" "}
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                style={consentLinkStyle}
+                aria-haspopup="dialog"
+                aria-controls="thirdparty-modal"
+              >
+                보기
+              </button>
+            </li>
+
+            <li>
+              결제대행 서비스 이용약관{" "}
+              <a
+                href="https://pages.tosspayments.com/terms/user"
+                target="_blank"
+                rel="noopener"
+                style={consentLinkStyle}
+              >
+                (주)토스페이먼츠
+              </a>
+            </li>
+          </ul>
+        </div>
+      )}
 
       <button
         onClick={onCheckout}
-        disabled={totalQuantity === 0 || isLoading}
-        style={{
-          marginTop: "16px",
-          width: "100%",
-          padding: "10px 0",
-          fontWeight: "bold",
-          backgroundColor:
-            totalQuantity === 0 || isLoading ? "#ccc" : "#3b82f6",
-          color: "#fff",
-          border: "none",
-          borderRadius: "6px",
-          cursor: totalQuantity === 0 || isLoading ? "not-allowed" : "pointer",
-          fontSize: "15px",
-          opacity: isLoading ? 0.6 : 1,
+        disabled={btnDisabled}
+        style={orderBtnStyle(btnDisabled)}
+        title={
+          totalQuantity === 0
+            ? "선택된 항목이 없습니다"
+            : isLoading
+              ? "처리 중입니다"
+              : isCheckout
+                ? "결제하기"
+                : "주문하기"
+        }
+        onMouseDown={(e) => {
+          if (btnDisabled) return;
+          e.currentTarget.style.transform = "translateY(1px)";
+        }}
+        onMouseUp={(e) => {
+          if (btnDisabled) return;
+          e.currentTarget.style.transform = "translateY(0)";
         }}
       >
-        {isLoading ? "처리 중..." : "주문하기"}
+        {isLoading ? "처리 중..." : isCheckout ? "결제하기" : "주문하기"}
       </button>
 
       {showCouponPopup && (
         <CouponSelector
           couponList={couponList}
-          onSelect={(selectedCoupon) => {
-            onCouponChange(selectedCoupon); // ✅ 전체 쿠폰 객체 통째로 넘김 (id + amount 포함)
-          }}
+          onSelect={(coupon) => onCouponChange(coupon)}
           onClose={() => setShowCouponPopup(false)}
         />
       )}
 
       {showPointPopup && (
         <PointInputModal
-          maxPoint={maxPoint} // ✅ props로 받은 값 전달
-          defaultValue={pointUsed} // ✅ 이전 값 유지
-          onApply={(val) => onPointChange(val)}
+          // ✅ 모달에도 실제 사용 가능 한도 전달
+          maxPoint={Number(maxUsablePoint || 0)}
+          defaultValue={effectivePoint}
+          onApply={(val) => {
+            const v = Number(val || 0);
+            const capped = Math.max(
+              0,
+              Math.min(v, Number(maxUsablePoint || 0))
+            );
+            onPointChange(capped); // ✅ 입력 즉시 캡 적용
+          }}
           onClose={() => setShowPointPopup(false)}
+        />
+      )}
+      {/* 정책/약관 모달 */}
+      {showPrivacyModal && (
+        <PrivacyModal
+          id="privacy-modal"
+          visible={showPrivacyModal}
+          onClose={() => setShowPrivacyModal(false)}
+        />
+      )}
+      {showTermsModal && (
+        <TermsModal
+          id="thirdparty-modal"
+          visible={showTermsModal}
+          onClose={() => setShowTermsModal(false)}
         />
       )}
     </div>
   );
 }
 
+/* ───────── styles ───────── */
+const wrapStyle = {
+  background: "#fff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  padding: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+  height: "fit-content",
+};
+
+const headerStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  fontWeight: 700,
+  fontSize: 15,
+  marginBottom: 10,
+};
+
+const badgeStyle = {
+  fontSize: 12,
+  background: "#eef2ff",
+  color: "#4f46e5",
+  padding: "4px 8px",
+  borderRadius: 999,
+};
+
+/* ✅ 선택 미니 프리뷰 */
+const previewRow = {
+  marginBottom: 10,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+};
+
+const moreText = {
+  fontSize: 12,
+  color: "#475569",
+};
+
+/* ✅ 카트 목록형 미리보기용 */
+const listRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 8,
+  padding: "4px 0",
+};
+const listTitle = {
+  fontSize: 13,
+  color: "#111827",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  maxWidth: "70%",
+};
+const listPrice = {
+  fontSize: 13,
+  fontWeight: 400,
+  color: "#0f172a",
+};
+
 const rowStyle = {
-  fontSize: "14px",
-  marginBottom: 4,
+  fontSize: 14,
+  marginBottom: 6,
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+};
+
+const totalRowStyle = {
+  fontSize: 16,
+  fontWeight: 800,
+  marginTop: 8,
+  borderTop: "1px dashed #cbd5e1",
+  paddingTop: 10,
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
 };
 
 const labelStyle = {
-  minWidth: "90px",
-  fontWeight: "normal",
+  minWidth: 90,
+  color: "#475569",
 };
 
-const useBtnStyle = {
-  fontSize: "12px",
-  marginLeft: 8,
-  padding: "2px 6px",
-  borderRadius: "4px",
-  border: "1px solid #ccc",
-  background: "#fff",
+const miniBtnStyle = (disabled) => ({
+  fontSize: 12,
+  padding: "4px 8px",
+  borderRadius: 8,
+  border: "1px solid #cdd3df",
+  background: disabled ? "#f1f5f9" : "#fff",
+  color: disabled ? "#94a3b8" : "#111827",
+  cursor: disabled ? "not-allowed" : "pointer",
+  transition: "all .12s ease",
+});
+
+const orderBtnStyle = (disabled) => ({
+  marginTop: 14,
+  width: "100%",
+  padding: "12px 0",
+  fontWeight: 800,
+  background: disabled ? "#cbd5e1" : "linear-gradient(90deg,#3b82f6,#2563eb)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  cursor: disabled ? "not-allowed" : "pointer",
+  fontSize: 15,
+  opacity: disabled ? 0.8 : 1,
+  transition: "transform .08s ease, box-shadow .12s ease, opacity .12s ease",
+  boxShadow: disabled ? "none" : "0 10px 18px rgba(59,130,246,.25)",
+});
+const consentWrapStyle = {
+  marginTop: 10,
+  padding: "10px 12px",
+  border: "1px solid #e5e7eb",
+  borderRadius: 10,
+  background: "#f9fafb",
+};
+
+const consentTitleStyle = {
+  fontSize: 13,
+  color: "#374151",
+  marginBottom: 8,
+  fontWeight: 600,
+};
+
+const consentListStyle = {
+  listStyle: "none",
+  padding: 0,
+  margin: 0,
+  display: "grid",
+  rowGap: 6,
+  fontSize: 13,
+  color: "#4b5563",
+};
+
+const consentLinkStyle = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  marginLeft: 6,
+  color: "#4b5563", // 어두운 회색
   cursor: "pointer",
+  textDecoration: "underline",
+  fontWeight: 500,
+  fontSize: "inherit",
 };

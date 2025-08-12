@@ -7,7 +7,10 @@ import ProfileDropdown from "../ProfileDropdown";
 import LogoutButton from "@/components/common/LogoutButton";
 import { useCartContext } from "@/context/CartContext";
 import MyPageMenuDrawer from "@/components/mypage/MyPageMenuDrawer";
-import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import {
+  useIsTabletOrBelow980, // <=980: 모바일 UI
+  useIsTabletWide,
+} from "@/lib/hooks/useIsDeviceSize";
 import MobileMenuDrawer from "@/components/common/MobileMenuDrawer";
 import { Menu, LogIn, User, ShoppingCart } from "lucide-react";
 
@@ -27,8 +30,11 @@ export default function Header({
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(null);
 
-  const isTabletOrBelow = useIsTabletOrBelow();
-  const headerHeight = isTabletOrBelow
+  // ✅ 레이아웃 기준: 768px (모바일/태블릿)
+  const isCompactNav = useIsTabletOrBelow980();
+  const isTabletWide = useIsTabletWide();
+
+  const headerHeight = isCompactNav
     ? HEADER_HEIGHT_MOBILE
     : HEADER_HEIGHT_DESKTOP;
 
@@ -64,7 +70,7 @@ export default function Header({
                   src="/logo_blue.png"
                   alt="Logo"
                   style={{
-                    width: isTabletOrBelow ? "85px" : "150px",
+                    width: isCompactNav ? "85px" : "150px",
                     height: "auto",
                     cursor: "pointer",
                   }}
@@ -94,7 +100,9 @@ export default function Header({
   }
 
   function renderCenterGroup() {
-    if (isTabletOrBelow) return null;
+    // ✅ 중앙 메뉴는 980px 이하에서 숨김
+    if (isCompactNav) return null;
+
     return (
       <>
         <style>{`
@@ -227,59 +235,63 @@ export default function Header({
           alignItems: "center",
         }}
       >
-        <div
-          style={{
-            position: "relative",
-            marginRight: "16px",
-            minWidth: 30,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "40px",
-            height: "40px",
-          }}
-        >
-          <Link
-            href="/cart"
+        {/* 로그인 사용자에게만 카트 아이콘 표시 */}
+        {user && (
+          <div
             style={{
+              position: "relative",
+              marginRight: "16px",
+              minWidth: 30,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               width: "40px",
               height: "40px",
-              cursor: "pointer",
-              textDecoration: "none",
-              background: "none",
-              border: "none",
-              padding: 0,
-              position: "relative",
             }}
           >
-            <ShoppingCart size={26} />
-            {cartReady && cartItems.length > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: 3,
-                  right: 3,
-                  backgroundColor: "#ef4444",
-                  color: "#fff",
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  width: 16,
-                  height: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  boxShadow: "0 0 0 1px #fff",
-                }}
-              >
-                {cartItems.length}
-              </span>
-            )}
-          </Link>
-        </div>
+            <Link
+              href="/cart"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "40px",
+                height: "40px",
+                cursor: "pointer",
+                textDecoration: "none",
+                background: "none",
+                border: "none",
+                padding: 0,
+                position: "relative",
+              }}
+              aria-label="장바구니"
+            >
+              <ShoppingCart size={26} />
+              {cartReady && cartItems.length > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 3,
+                    right: 3,
+                    backgroundColor: "#ef4444",
+                    color: "#fff",
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                    width: 16,
+                    height: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    boxShadow: "0 0 0 1px #fff",
+                  }}
+                >
+                  {cartItems.length}
+                </span>
+              )}
+            </Link>
+          </div>
+        )}
 
         {group.map((item, idx) => {
           if (item.isProfile) {
@@ -316,17 +328,17 @@ export default function Header({
               key={item.label || idx}
               href={item.link}
               style={{
-                display: "flex", // flex로
-                alignItems: "center", // 수직 중앙정렬
-                justifyContent: "center", // 필요하면 수평 중앙도
-                height: "40px", // header 아이콘들과 높이 맞추기
-                width: "40px", // (원형 등 맞추고 싶을 때)
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "40px",
+                width: "40px",
                 marginLeft: "20px",
                 color: "#333",
                 fontWeight: "bold",
                 fontSize: "16px",
                 textDecoration: "none",
-                gap: "0", // 텍스트 없으면 gap 0
+                gap: "0",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -352,7 +364,7 @@ export default function Header({
           height: `${headerHeight}px`,
           backgroundColor: "#fff",
           zIndex: 999,
-          boxShadow: isTabletOrBelow ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
+          boxShadow: isCompactNav ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
           transition: "height 0.2s",
         }}
       >
@@ -368,9 +380,9 @@ export default function Header({
           }}
         >
           {renderLeftGroup()}
-          {!isTabletOrBelow && renderCenterGroup()}
-          {!isTabletOrBelow && renderRightGroup()}
-          {isTabletOrBelow && (
+          {!isCompactNav && renderCenterGroup()}
+          {!isCompactNav && renderRightGroup()}
+          {isCompactNav && (
             <div
               style={{
                 display: "flex",
@@ -405,7 +417,6 @@ export default function Header({
               {/* 회원: 장바구니, 마이페이지 */}
               {user && (
                 <>
-                  {/* 장바구니 */}
                   <Link
                     href="/cart"
                     style={{
@@ -447,7 +458,6 @@ export default function Header({
                       </span>
                     )}
                   </Link>
-                  {/* 마이페이지 */}
                   <button
                     onClick={() => setMyDrawerOpen(true)}
                     style={{
@@ -487,7 +497,6 @@ export default function Header({
                   />
                 </>
               )}
-              {/* 햄버거 메뉴: 항상 */}
               <button
                 onClick={() => setShowMobileMenu(true)}
                 style={{
@@ -505,16 +514,13 @@ export default function Header({
               >
                 <Menu size={28} color="#222" />
               </button>
-              <MobileMenuDrawer
-                open={showMobileMenu}
-                onClose={() => setShowMobileMenu(false)}
-              />
             </div>
           )}
         </div>
       </header>
+
       {/* 모바일 Drawer(메인 메뉴) */}
-      {isTabletOrBelow && (
+      {isCompactNav && (
         <MobileMenuDrawer
           open={showMobileMenu}
           onClose={() => setShowMobileMenu(false)}

@@ -1,6 +1,12 @@
-import { Drawer, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+} from "@mui/material";
 import { useRouter } from "next/router";
-import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import { useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 import { centerGroup } from "@/data/menuData";
 import {
   Activity,
@@ -8,23 +14,23 @@ import {
   CalendarDays,
   Handshake,
   FolderOpen,
-  ShoppingBag
+  ShoppingBag,
 } from "lucide-react";
 
 const MENU_ICONS = {
-  "진단": <Activity size={18} />,
-  "교육": <GraduationCap size={18} />,
-  "교육일정": <CalendarDays size={18} />,
-  "컨설팅": <Handshake size={18} />,
-  "수행사례": <FolderOpen size={18} />,
-  "FTShop": <ShoppingBag size={18} />
+  진단: <Activity size={18} />,
+  교육: <GraduationCap size={18} />,
+  교육일정: <CalendarDays size={18} />,
+  컨설팅: <Handshake size={18} />,
+  수행사례: <FolderOpen size={18} />,
+  FTShop: <ShoppingBag size={18} />,
 };
 
 export default function MobileMenuDrawer({ open, onClose }) {
-  const isTabletOrBelow = useIsTabletOrBelow();
+  const isCompactNav = useIsTabletOrBelow980(); // ✅ 980px 이하에서만 렌더
   const router = useRouter();
 
-  if (!isTabletOrBelow) return null;
+  if (!isCompactNav) return null;
 
   return (
     <Drawer
@@ -36,7 +42,7 @@ export default function MobileMenuDrawer({ open, onClose }) {
           width: 230,
           padding: "24px 0",
           boxSizing: "border-box",
-        }
+        },
       }}
     >
       <List>
@@ -45,14 +51,16 @@ export default function MobileMenuDrawer({ open, onClose }) {
             key={menu.label}
             onClick={() => {
               onClose();
-              router.push(menu.sub ? `${menu.link}/${menu.sub[0].slug}` : menu.link);
+              router.push(
+                menu.sub ? `${menu.link}/${menu.sub[0].slug}` : menu.link
+              );
             }}
             sx={{
               borderRadius: "6px",
               transition: "background 0.12s, color 0.11s",
               cursor: "pointer",
               mb: "2px",
-              '&:hover': {
+              "&:hover": {
                 background: "#e5eefe",
                 color: "#1e3a6e",
                 fontWeight: 700,
