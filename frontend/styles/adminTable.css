@@ -1,0 +1,85 @@
+/* 스크롤 래퍼 */
+.admin-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* 테이블 기본 */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.6;
+  background: #fff;
+}
+
+/* 헤더 */
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 1;
+  text-align: center;
+  padding: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  cursor: default;
+}
+.admin-th {
+  /* 정렬/클릭 가능한 헤더에 공통 사용 */
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 1;
+  text-align: center;
+  padding: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 바디 */
+.admin-table tbody td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  background: #fff;
+}
+
+/* 지브라 & 호버 */
+.admin-table tbody tr:nth-child(2n) {
+  background: #fafafa;
+}
+.admin-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+/* 링크 셀 */
+.admin-td-link {
+  color: #0070f3;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* 스위치/버튼 정렬 */
+.admin-td-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 좁은 화면 보완 */
+@media (max-width: 768px) {
+  .admin-table thead th,
+  .admin-th {
+    font-size: 14px;
+    padding: 10px;
+  }
+  .admin-table tbody td {
+    font-size: 14px;
+    padding: 10px;
+  }
+}

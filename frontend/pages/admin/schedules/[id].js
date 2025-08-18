@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
 import TiptapEditor from "@/components/editor/TiptapEditor";
@@ -26,9 +26,16 @@ export default function ScheduleFormPage() {
     image_url: "",
   });
   const [products, setProducts] = useState([]);
+  const [selectedType, setSelectedType] = useState(""); // ★ 추가
   const [loading, setLoading] = useState(false);
   const [originalImageUrl, setOriginalImageUrl] = useState("");
-
+  const educationTypes = useMemo(() => {
+    const types = products
+      .filter((p) => p.category === "교육")
+      .map((p) => p.type)
+      .filter(Boolean);
+    return Array.from(new Set(types));
+  }, [products]);
   // 상품 목록 최초 1회만 불러오기
   useEffect(() => {
     api.get("admin/products").then((res) => {
@@ -70,8 +77,19 @@ export default function ScheduleFormPage() {
     if (type === "number") {
       newValue = value === "" ? "" : Number(value);
     }
-    // 상품 선택 시 관련 필드 자동 채움
+
+    if (name === "product_type") {
+      // ★ 유형 선택 시: 유형 상태만 설정, 상품 선택 초기화
+      setSelectedType(newValue);
+      setForm((prev) => ({
+        ...prev,
+        product_id: "",
+      }));
+      return;
+    }
+
     if (name === "product_id") {
+      // 상품 선택 시 관련 필드 자동 채움 (기존 로직 유지)
       const selected = products.find((p) => p.id === Number(value));
       setForm((prev) => ({
         ...prev,
@@ -83,12 +101,13 @@ export default function ScheduleFormPage() {
         image_url: selected?.image_url || "",
       }));
       setOriginalImageUrl(selected?.image_url || "");
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]: newValue,
-      }));
+      return;
     }
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
   };
 
   // 유효성 체크
@@ -257,30 +276,64 @@ export default function ScheduleFormPage() {
               </div>
               {/* 2. 우측 폼 */}
               <div style={{ flex: 1 }}>
-                {/* 상품 선택 */}
+                {/* 상품 선택: 유형 → 상품명 2단계 */}
                 <div style={{ marginBottom: 16 }}>
-                  <label>상품</label>
+                  <label>유형</label>
                   <select
-                    name="product_id"
-                    value={form.product_id || ""}
+                    name="product_type"
+                    value={selectedType}
                     onChange={handleChange}
                     style={{
                       width: "100%",
                       padding: 10,
                       borderRadius: 6,
                       border: "1px solid #ccc",
+                      marginBottom: 8,
                     }}
                   >
-                    <option value="">교육 상품 선택</option>
-                    {products
-                      .filter((p) => p.category === "교육")
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title} ({p.type})
-                        </option>
-                      ))}
+                    <option value="">유형 선택</option>
+                    {educationTypes.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label>상품명</label>
+                  <select
+                    name="product_id"
+                    value={form.product_id || ""}
+                    onChange={handleChange}
+                    disabled={!selectedType} // ★ 유형 미선택 시 비활성
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      borderRadius: 6,
+                      border: "1px solid #ccc",
+                      color: !selectedType ? "#aaa" : "#000",
+                      backgroundColor: !selectedType ? "#f7f7f7" : "#fff",
+                    }}
+                  >
+                    {!selectedType ? (
+                      <option value="">유형을 먼저 선택해주세요.</option>
+                    ) : (
+                      <>
+                        <option value="">상품 선택</option>
+                        {products
+                          .filter(
+                            (p) =>
+                              p.category === "교육" && p.type === selectedType
+                          )
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.title}
+                            </option>
+                          ))}
+                      </>
+                    )}
                   </select>
                 </div>
+
                 {/* 일정명 */}
                 <div style={{ marginBottom: 16 }}>
                   <label>일정명</label>

@@ -154,13 +154,6 @@ export default function CartPage() {
           <div className="empty__desc">
             원하는 상품을 장바구니에 담아보세요.
           </div>
-          <button
-            className="empty__cta"
-            onClick={() => router.push("/education")}
-          >
-            상품 보러가기
-          </button>
-
           <style jsx>{`
             .empty {
               text-align: center;

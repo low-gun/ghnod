@@ -19,23 +19,25 @@ export default function PrivacyModal({ visible, onClose }) {
   return (
     <div style={backdropStyle}>
       <div style={modalStyle}>
-        <button style={closeButtonStyle} onClick={onClose}>
-          ×
-        </button>
-        <h2 style={titleStyle}>개인정보처리방침</h2>
+        <div style={headerStyle}>
+          <h2 style={titleStyle}>개인정보처리방침</h2>
+          <button style={closeButtonStyle} onClick={onClose}>
+            ×
+          </button>
+        </div>
         <div style={contentStyle}>
-  <div
-    style={{
-      fontSize: "15px",
-      color: "#333",
-      lineHeight: "1.7",
-      whiteSpace: "pre-line",
-      fontFamily: "inherit", // 또는 "Noto Sans KR, sans-serif" 등 원하는 웹폰트 지정
-    }}
-  >
-    {privacyText}
-  </div>
-</div>
+          <div
+            style={{
+              fontSize: "15px",
+              color: "#333",
+              lineHeight: "1.7",
+              whiteSpace: "pre-line",
+              fontFamily: "inherit",
+            }}
+          >
+            {privacyText}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -60,30 +62,46 @@ const modalStyle = {
   width: "90%",
   maxWidth: "600px",
   maxHeight: "80vh",
-  padding: "24px",
+  // 패딩은 좌우/하단만, 상단은 헤더에서 처리
+  padding: "0 24px 24px",
   position: "relative",
-  overflowY: "auto",
+  display: "flex",
+  flexDirection: "column",
 };
-
 const closeButtonStyle = {
-  position: "absolute",
-  top: "12px",
+  position: "absolute", // 헤더 내부 기준으로 고정
+  top: "50%",
   right: "16px",
+  transform: "translateY(-50%)",
   background: "none",
   border: "none",
   fontSize: "24px",
   cursor: "pointer",
   color: "#999",
 };
+const headerStyle = {
+  position: "sticky",
+  top: 0,
+  backgroundColor: "#fff",
+  zIndex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center", // 타이틀 중앙정렬
+  padding: "16px 24px",
+  borderBottom: "1px solid #eee",
+};
 
 const titleStyle = {
   fontSize: "20px",
   fontWeight: "bold",
-  marginBottom: "16px",
+  margin: 0, // 헤더 내부에서 여백은 headerStyle padding으로 통일
   textAlign: "center",
 };
 
 const contentStyle = {
   fontSize: "14px",
   color: "#333",
+  flex: 1, // 남은 영역을 차지
+  overflowY: "auto", // 내용만 스크롤
+  paddingTop: "16px", // 헤더와 본문 간격
 };

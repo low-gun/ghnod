@@ -1,70 +1,125 @@
-import { useEffect, useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/router";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminTopPanels from "@/components/common/AdminTopPanels";
+import AdminSearchFilter from "@/components/common/AdminSearchFilter";
 import PaymentsTable from "@/components/admin/PaymentsTable";
-import api from "@/lib/api";
-import { UserContext } from "@/context/UserContext"; // 🔥 누락 없이 꼭 추가!
+import { formatPrice } from "@/lib/format";
+import { UserContext } from "@/context/UserContext";
+import { useGlobalAlert } from "@/stores/globalAlert";
 
 export default function AdminPaymentsPage() {
-  const { user } = useContext(UserContext); // 🔥 관리자 체크
   const router = useRouter();
-  const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { user } = useContext(UserContext);
+  const { showAlert } = useGlobalAlert();
 
-  // 🔥 관리자 외 접근 차단: useEffect에서 리디렉트
+  // 상단 현황
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
+
+  // 검색 상태
+  // 검색 상태
+  const [searchType, setSearchType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchSyncKey, setSearchSyncKey] = useState(0);
+
+  // 날짜 범위 상태(기간 검색용)
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+
+  // 엑셀 데이터
+  const [excelData, setExcelData] = useState({ headers: [], data: [] });
+
+  // 권한 체크
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/");
     }
   }, [user, router]);
 
-  useEffect(() => {
-    if (!user || user.role !== "admin") return; // 권한자만 API 호출
-
-    const fetchPayments = async () => {
-      try {
-        console.log("[ADMIN] ▶ GET /admin/payments 요청");
-        const res = await api.get("admin/payments");
-        console.log("[ADMIN] ◀ 응답:", res.data);
-
-        if (res.data?.success) {
-          setPayments(res.data.payments || []);
-        } else {
-          setError(res.data?.message || "❌ 결제내역 조회 실패");
-        }
-      } catch (err) {
-        console.error("[ADMIN] ❌ /admin/payments axios 오류:", err);
-        if (err.response) {
-          console.error("↳ status:", err.response.status);
-          console.error("↳ data  :", err.response.data);
-        }
-        setError("서버 오류");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPayments();
-  }, [user]);
-
-  // 🔥 SSR에서 user null일 때(로딩 중) → null
   if (!user) return null;
-  // 🔥 비관리자면 아예 렌더 차단 (리디렉트도 위에서 실행됨)
   if (user.role !== "admin") return null;
 
   return (
     <AdminLayout pageTitle="💳 결제내역">
-      {loading && <></>}
-      {!loading && error && <p style={{ color: "red" }}>{error}</p>}
-      {!loading && !error && payments.length === 0 && (
-        <p>결제 내역이 없습니다.</p>
-      )}
-      {!loading && !error && payments.length > 0 && (
-        <>
-          {console.log("✅ CSR: payments 데이터:", payments)}
-          <PaymentsTable payments={payments} />
-        </>
-      )}
+      <AdminTopPanels
+        stats={[
+          {
+            title: "총 결제 현황",
+            value: [
+              `건수: ${totalCount}건`,
+              `금액: ${formatPrice(totalAmount)}원`,
+            ],
+          },
+        ]}
+        searchComponent={
+          <AdminSearchFilter
+            searchType={searchType}
+            setSearchType={setSearchType}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchOptions={[
+              { value: "payment_id", label: "주문번호", type: "text" },
+              { value: "username", label: "사용자", type: "text" },
+              { value: "total_quantity", label: "수강인원", type: "text" },
+              { value: "amount", label: "결제금액", type: "text" },
+              { value: "discount_total", label: "할인적용", type: "text" },
+              {
+                value: "payment_method",
+                label: "결제수단",
+                type: "select",
+                options: [
+                  { value: "card", label: "카드" },
+                  { value: "transfer", label: "계좌이체" },
+                  { value: "vbank", label: "가상계좌" },
+                ],
+              },
+              { value: "created_at", label: "결제일시", type: "date" },
+              {
+                value: "status",
+                label: "상태",
+                type: "select",
+                options: [
+                  { value: "paid", label: "결제완료" },
+                  { value: "failed", label: "결제실패" },
+                  { value: "refunded", label: "환불완료" },
+                  { value: "pending", label: "결제대기" },
+                ],
+              },
+            ]}
+            onSearchClick={(nextQuery) => {
+              if (typeof nextQuery === "string") {
+                setSearchQuery(nextQuery); // ✅ 먼저 최신 검색어를 반영
+              }
+              setSearchSyncKey((k) => k + 1); // ✅ 그 다음 fetch 트리거
+            }}
+            startDate={startDate}
+            endDate={endDate}
+            setStartDate={setStartDate}
+            setEndDate={setEndDate}
+          />
+        }
+        excel={{
+          visible: true,
+          fileName: "결제내역",
+          sheetName: "Payments",
+          headers: excelData.headers,
+          data: excelData.data,
+        }}
+        actions={[]}
+      />
+
+      <PaymentsTable
+        onExcelData={setExcelData}
+        useExternalToolbar={true}
+        externalSearchType={searchType}
+        externalSearchQuery={searchQuery}
+        searchSyncKey={searchSyncKey}
+        onLoaded={({ totalCount, totalAmount }) => {
+          setTotalCount(totalCount);
+          setTotalAmount(totalAmount);
+        }}
+      />
     </AdminLayout>
   );
 }

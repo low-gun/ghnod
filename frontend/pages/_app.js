@@ -13,7 +13,7 @@ import GlobalConfirmModal from "@/components/common/GlobalConfirmModal";
 import GlobalAlert from "@/components/common/GlobalAlert";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "../styles/customCalendar.css";
+import "../styles/adminTable.css"; // ✅ 추가
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();

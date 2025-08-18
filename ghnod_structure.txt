@@ -91,6 +91,8 @@
 ./frontend/components/cart/CouponSelector.jsx
 ./frontend/components/cart/PointInputModal.jsx
 ./frontend/components/common
+./frontend/components/common/AdminSearchFilter.jsx
+./frontend/components/common/AdminToolbar.jsx
 ./frontend/components/common/AuthBottomBarButton.jsx
 ./frontend/components/common/AuthCardLayout.jsx
 ./frontend/components/common/DateRangeSelector.jsx
@@ -106,6 +108,11 @@
 ./frontend/components/common/ResponsiveSubTabs.js
 ./frontend/components/common/SearchFilter.js
 ./frontend/components/common/SearchFilterBox.jsx
+./frontend/components/common/skeletons
+./frontend/components/common/skeletons/CardSkeleton.jsx
+./frontend/components/common/skeletons/TableSkeleton.jsx
+./frontend/components/common/StatusBadge.jsx
+./frontend/components/common/ToggleSwitch.jsx
 ./frontend/components/consulting
 ./frontend/components/consulting/ConsultingSubTabs.jsx
 ./frontend/components/content
@@ -153,6 +160,9 @@
 ./frontend/components/mypage/PaymentHistory.js
 ./frontend/components/mypage/Points.js
 ./frontend/components/mypage/ReviewModal.js
+./frontend/components/orders
+./frontend/components/orders/OrderCompleteSkeleton.js
+./frontend/components/orders/OrderCompleteStyles.js
 ./frontend/components/policy
 ./frontend/components/policy/policyText.js
 ./frontend/components/product
@@ -188,6 +198,7 @@
 ./frontend/lib/downloadExcel.js
 ./frontend/lib/format.js
 ./frontend/lib/hooks
+./frontend/lib/hooks/useDataTable.js
 ./frontend/lib/hooks/useIsDeviceSize.js
 ./frontend/lib/session.js
 ./frontend/node_modules

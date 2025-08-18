@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("../../config/db"); // ✅ 상대 경로 맞음
 const { authenticateAdmin } = require("../../middlewares/authMiddleware"); // ✅ 추가
 // 관리자 전용 사용자 상세 조회
-router.get("/users/:id", async (req, res) => {
+router.get("/users/:id", authenticateAdmin, async (req, res) => {
   const userId = req.params.id;
 
   try {

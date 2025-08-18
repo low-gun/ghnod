@@ -10,7 +10,8 @@ import { useGlobalAlert } from "@/stores/globalAlert";
 export default function CheckoutPage() {
   const buyNowTriggeredRef = useRef(false);
   const router = useRouter();
-  const { itemIds, point, couponId, buyNow } = router.query;
+  const { ids, itemIds, point, couponId, mode, buyNow } = router.query; // ids, mode 추가
+  const selectedIds = (ids || itemIds || "").toString().trim(); // 통합 사용
   const { showAlert } = useGlobalAlert();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +68,51 @@ export default function CheckoutPage() {
 
     const fetchCartItems = async () => {
       try {
-        // buyNow 흐름
+        // 1) 신규: buyNow 모드 - 해당 ids만 로딩 (장바구니의 다른 품목은 영향 없음)
+        if (mode === "buyNow") {
+          let idsToUse = selectedIds;
+
+          // ids가 비어있으면 sessionStorage 백업 활용
+          if (!idsToUse && typeof window !== "undefined") {
+            try {
+              const raw = sessionStorage.getItem("BUY_NOW_IDS");
+              const arr = raw ? JSON.parse(raw) : null;
+              if (Array.isArray(arr) && arr.length) {
+                idsToUse = arr.join(",");
+                // URL 정리 (shallow)
+                router.replace(
+                  {
+                    pathname: router.pathname,
+                    query: { ...router.query, ids: idsToUse },
+                  },
+                  undefined,
+                  { shallow: true }
+                );
+              }
+            } catch {}
+          }
+
+          if (!idsToUse) {
+            setMessage("선택된 상품이 없습니다.");
+            return;
+          }
+
+          const idArr = idsToUse
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
+          if (!idArr.length) {
+            setMessage("선택된 상품이 없습니다.");
+            return;
+          }
+
+          // buyNow 아이템을 가져와야 하므로 excludeBuyNow 파라미터는 넣지 않음
+          const res = await api.get("/cart/items", { params: { ids: idArr } });
+          setCartItems(res.data.items || []);
+          return;
+        }
+
+        // 2) (레거시) JSON buyNow 파라미터 지원 - 필요 시 유지
         if (buyNow && !buyNowTriggeredRef.current) {
           buyNowTriggeredRef.current = true;
           const decoded = decodeURIComponent(buyNow);
@@ -88,21 +133,24 @@ export default function CheckoutPage() {
 
           router.replace({
             pathname: router.pathname,
-            query: { itemIds: String(cart_item_id) },
+            query: { ids: String(cart_item_id), mode: "buyNow" }, // 통일
           });
           return;
         }
 
-        // 일반 itemIds 흐름
-        if (itemIds) {
-          const ids = itemIds.split(",").map((id) => id.trim());
-          if (!ids.length || ids.some((id) => !id)) {
+        // 3) 일반 선택 ids 흐름 (장바구니에서 선택해서 온 경우)
+        if (selectedIds) {
+          const idArr = selectedIds
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
+          if (!idArr.length) {
             setMessage("선택된 상품이 없습니다.");
             return;
           }
 
           const res = await api.get("/cart/items", {
-            params: { ids, excludeBuyNow: "true" },
+            params: { ids: idArr, excludeBuyNow: "true" }, // 일반 흐름에서는 buyNow 제외
           });
           setCartItems(res.data.items || []);
           return;
@@ -116,7 +164,7 @@ export default function CheckoutPage() {
     };
 
     fetchCartItems();
-  }, [router.isReady, router.query, itemIds, buyNow, userInfo?.id, router]);
+  }, [router.isReady, userInfo?.id, mode, selectedIds, buyNow, router]);
 
   /** 쿠폰 할인 금액 계산 */
   useEffect(() => {
@@ -159,7 +207,7 @@ export default function CheckoutPage() {
       showAlert("로그인이 필요합니다.");
       return;
     }
-    if (!itemIds) return;
+    if (!selectedIds) return;
 
     setIsLoading(true);
     setMessage("");
@@ -175,7 +223,7 @@ export default function CheckoutPage() {
       if (amount <= 0) {
         try {
           const res = await api.post("/payments/free-checkout", {
-            cart_item_ids: itemIds.split(",").map(Number),
+            cart_item_ids: selectedIds.split(",").map(Number),
             coupon_id: selectedCoupon?.id || null,
             used_point: pointUsed || 0,
           });
@@ -191,7 +239,7 @@ export default function CheckoutPage() {
 
       // 토스 결제 준비
       const prepareRes = await api.post("/payments/toss/prepare", {
-        cart_item_ids: itemIds.split(",").map((id) => Number(id)),
+        cart_item_ids: selectedIds.split(",").map((id) => Number(id)),
         coupon_id: selectedCoupon?.id || null,
         used_point: pointUsed || 0,
       });

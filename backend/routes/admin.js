@@ -19,8 +19,12 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { giveUserCouponsBatch } = require("../controllers/adminController");
-
-
+router.get(
+  "/users/summary/by-ids",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.getUserSummaryByIds
+);
 router.get(
   "/dashboard-summary",
   authenticateToken,
@@ -221,23 +225,26 @@ router.get("/users/summary", async (req, res) => {
     const {
       page = 1,
       pageSize = 20,
-      sort = "username",
-      order = "asc",
+      sort = "created_at",
+      order = "desc",
       type = "all",
       search = "",
     } = req.query;
+    const offset = (parseInt(page, 10) - 1) * parseInt(pageSize, 10);
 
-    const offset = (page - 1) * pageSize;
     const validFields = [
+      "created_at",
       "username",
       "email",
       "courseCount",
-      "pointTotal",
       "paymentTotal",
-      "couponCount",
+      "pointGiven",
+      "pointUsed",
+      "pointBalance",
+      "couponBalance",
       "inquiryCount",
     ];
-    const sortField = validFields.includes(sort) ? sort : "username";
+    const sortField = validFields.includes(sort) ? sort : "created_at";
     const sortOrder = order === "desc" ? "DESC" : "ASC";
 
     let whereClause = "WHERE u.is_deleted = 0";
@@ -257,16 +264,17 @@ router.get("/users/summary", async (req, res) => {
     const [[{ totalCount }]] = await db.query(countQuery, values);
 
     const dataQuery = `
-      SELECT
-        u.id,
-        u.username,
-        u.email,
-        (
-          SELECT COUNT(*)
-          FROM order_items oi
-          JOIN orders o ON oi.order_id = o.id
-          WHERE o.user_id = u.id AND o.order_status = 'paid'
-        ) AS courseCount,
+     SELECT
+  u.id,
+  u.username,
+  u.email,
+  u.created_at AS created_at,
+  (
+    SELECT COUNT(*)
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.user_id = u.id AND o.order_status = 'paid'
+  ) AS courseCount,
 
 (
   SELECT COALESCE(SUM(CASE WHEN change_type = '적립' THEN amount ELSE 0 END), 0)
@@ -421,11 +429,10 @@ router.get("/users", async (req, res) => {
 
     const showDeleted = req.query.showDeleted === "true";
 
-    let whereClause = "";
+    let whereClause = "WHERE 1=1";
     if (!showDeleted) {
-      whereClause = "WHERE is_deleted = 0";
+      whereClause += " AND is_deleted = 0";
     }
-
     const offset = (page - 1) * pageSize;
     const validFields = [
       "id",
@@ -576,13 +583,6 @@ router.delete("/users/coupons/:couponId", async (req, res) => {
   }
 });
 
-// 📌 포인트 일괄 지급 API
-router.post(
-  "/batch-points",
-  authenticateToken,
-  authenticateAdmin,
-  adminController.giveUserPointsBatch
-);
 // 문의 답변 등록 (관리자 전용)
 router.put(
   "/users/inquiries/:id/answer",

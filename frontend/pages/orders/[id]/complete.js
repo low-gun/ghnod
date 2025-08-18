@@ -1,12 +1,30 @@
-// frontend/pages/orders/[id]/complete.js (파일 경로는 사용 중인 라우팅에 맞춰 두면 돼)
+// frontend/pages/orders/[id]/complete.js
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import api from "@/lib/api";
+import { useGlobalAlert } from "@/stores/globalAlert";
+import { useGlobalConfirm } from "@/stores/globalConfirm";
+import OrderCompleteSkeleton from "@/components/orders/OrderCompleteSkeleton";
+import OrderCompleteStyles from "@/components/orders/OrderCompleteStyles"; // ⬅️ 추가
 
 export default function OrderCompletePage() {
   const router = useRouter();
   const { id: orderId } = router.query;
+  const alert = useGlobalAlert(); // ✅ 추가
+  const confirm = useGlobalConfirm(); // ✅ 추가 (향후 사용 대비)
 
+  const handleCopy = async (text, doneMsg = "복사되었습니다.") => {
+    try {
+      await navigator.clipboard.writeText(String(text ?? ""));
+      alert?.open?.(doneMsg) || alert?.show?.(doneMsg); // 프로젝트 구현에 맞게 하나가 동작
+    } catch (e) {
+      console.warn("복사 실패:", e);
+      alert?.open?.("복사에 실패했습니다. 다시 시도해 주세요.") ||
+        alert?.show?.("복사에 실패했습니다. 다시 시도해 주세요.");
+    }
+  };
+  // 🔒 dev(StrictMode/HMR)에서 useEffect 중복 실행 방지
+  const ranRef = useRef(false);
   const [order, setOrder] = useState(null);
   const [items, setItems] = useState([]);
   const [user, setUser] = useState(null);
@@ -14,7 +32,9 @@ export default function OrderCompletePage() {
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (!orderId) return;
+    if (!router.isReady || !orderId) return;
+    if (ranRef.current) return; // ✅ 중복 실행 방지
+    ranRef.current = true;
 
     const fetchData = async () => {
       try {
@@ -27,18 +47,33 @@ export default function OrderCompletePage() {
           throw new Error("주문 상세 정보를 찾을 수 없습니다.");
         }
 
+        // 🔎 디버깅: 응답 구조 점검
+        if (process.env.NODE_ENV !== "production") {
+          console.groupCollapsed("[Complete] /orders/:id debug");
+          console.log("route orderId:", orderId);
+          console.log("order keys:", Object.keys(itemRes.data.order || {}));
+          console.log("order:", itemRes.data.order);
+          console.table(
+            (itemRes.data.items || []).map((i) => ({
+              id: i.id,
+              title: i.title,
+              qty: i.quantity,
+              unit: i.unit_price,
+              disc: i.discount_price,
+            }))
+          );
+          console.groupEnd();
+        }
+
         setOrder(itemRes.data.order);
         setItems(itemRes.data.items || []);
         setUser(userRes.data?.user || null);
 
-        // 주문 상태 최종 업데이트 (백엔드 로직에 맞게 유지)
         await api.put(`/orders/${orderId}`);
 
-        // 로그인된 경우에만 장바구니 비우기
         if (userRes.data?.user?.id) {
           try {
             await api.delete("/cart/items/clear");
-            // console.log("🧹 cart_items 초기화 완료");
           } catch (err) {
             console.warn("❌ cart clear 실패:", err);
           }
@@ -52,35 +87,47 @@ export default function OrderCompletePage() {
     };
 
     fetchData();
-  }, [orderId]);
+  }, [router.isReady, orderId]);
 
-  // 뒤로가기 경고는 완료 페이지에선 불필요할 수 있어 잠깐 보류
-  // 필요하면 아래 주석 해제
-  // useEffect(() => {
-  //   const handleBeforeUnload = (e) => {
-  //     e.preventDefault();
-  //     e.returnValue = "";
-  //   };
-  //   window.addEventListener("beforeunload", handleBeforeUnload);
-  //   return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  // }, []);
+  // ✅ 금액 계산: 훅 순서 유지 위해 로딩/에러 분기보다 위
+  const {
+    totalBeforeDiscount,
+    couponDiscount,
+    pointsUsed,
+    totalAfterDiscount,
+  } = useMemo(() => {
+    const tbd = (items || []).reduce(
+      (sum, item) =>
+        sum + Number(item?.unit_price ?? 0) * Number(item?.quantity ?? 0),
+      0
+    );
+    const cd = Number(order?.coupon_discount ?? 0);
+    const tad = Number(order?.total_amount ?? 0);
+    const used = Math.max(0, tbd - cd - tad);
+
+    return {
+      totalBeforeDiscount: tbd,
+      couponDiscount: cd,
+      pointsUsed: used,
+      totalAfterDiscount: tad,
+    };
+  }, [items, order]);
 
   if (isLoading)
-    return <p style={{ padding: 40 }}>⏳ 주문 정보를 불러오는 중입니다...</p>;
+    return <OrderCompleteSkeleton totalAfterDiscount={totalAfterDiscount} />;
+
   if (errorMsg) return <p style={{ padding: 40, color: "red" }}>{errorMsg}</p>;
 
-  // 금액 계산 (표시용)
-  const totalBeforeDiscount = items.reduce(
-    (sum, item) => sum + Number(item.unit_price) * Number(item.quantity),
-    0
-  );
-  const couponDiscount = Number(order?.coupon_discount ?? 0);
-  // 포인트 사용액은 총액에서 (쿠폰 + 최종결제금액)을 제외한 값으로 역산
-  const pointsUsed = Math.max(
-    0,
-    totalBeforeDiscount - couponDiscount - Number(order?.total_amount ?? 0)
-  );
-  const totalAfterDiscount = Number(order?.total_amount ?? 0);
+  // 표시용 주문번호 (여러 키 폴백, 최후에는 URL orderId)
+  const displayOrderNo =
+    order?.order_no ||
+    order?.orderNo ||
+    order?.order_id ||
+    order?.id ||
+    orderId;
+
+  // PG 주문번호(결제 키/거래번호 등) 후보들
+  const displayPgNo = extractPgNo(order);
 
   return (
     <div className="oc-wrap">
@@ -105,20 +152,60 @@ export default function OrderCompletePage() {
 
         {/* 주문 메타 */}
         <div className="oc-meta">
+          {/* 1행: 주문일시 (두 칸 사용) */}
           {order && (
-            <div className="oc-meta-item">
+            <div className="oc-meta-item full">
               <span className="oc-meta-label">주문일시</span>
               <span className="oc-meta-value">
-                {new Date(order.created_at).toLocaleString()}
+                {formatKSTDate(order?.created_at)}
               </span>
             </div>
           )}
-          {order && (
+          {/* 2행: 주문번호, PG 주문번호 */}
+          {(order || orderId) && (
             <div className="oc-meta-item">
               <span className="oc-meta-label">주문번호</span>
-              <span className="oc-meta-value">{order.id}</span>
+              <span className="oc-meta-value">
+                <span className="oc-code">{displayOrderNo}</span>
+                <button
+                  type="button"
+                  className="oc-copy"
+                  onClick={() =>
+                    handleCopy(displayOrderNo, "주문번호가 복사되었습니다.")
+                  }
+                  aria-label="주문번호 복사"
+                >
+                  복사
+                </button>
+              </span>
             </div>
           )}
+          <div className="oc-meta-item">
+            <span className="oc-meta-label">PG주문번호</span>
+            <span className="oc-meta-value">
+              {displayPgNo ? (
+                <>
+                  <span className="oc-code">{displayPgNo}</span>
+                  <button
+                    type="button"
+                    className="oc-copy"
+                    onClick={() =>
+                      handleCopy(displayPgNo, "PG주문번호가 복사되었습니다.")
+                    }
+                    aria-label="PG주문번호 복사"
+                  >
+                    복사
+                  </button>
+                </>
+              ) : (
+                <span style={{ color: "#6b7280", fontWeight: 500 }}>
+                  미표시
+                </span>
+              )}
+            </span>
+          </div>
+
+          {/* 3행: 주문자, 이메일 */}
           {user && (
             <div className="oc-meta-item">
               <span className="oc-meta-label">주문자</span>
@@ -140,28 +227,55 @@ export default function OrderCompletePage() {
           <h2 className="oc-section-title">주문 상품</h2>
           <div className="oc-items">
             {items.map((item) => {
-              const priceEach = Number(item.discount_price ?? item.unit_price);
-              const lineTotal = priceEach * Number(item.quantity);
+              const toNum = (v) => Number(String(v ?? 0).replaceAll(",", ""));
+              const unit = toNum(item.unit_price);
+              const disc = toNum(item.discount_price);
+              const qty = toNum(item.quantity);
+
+              // 정가(할인 전)로 고정
+              const priceEach = unit;
+              const lineTotal = priceEach * qty;
               return (
                 <div key={item.id} className="oc-item">
                   <div className="oc-thumb">
                     {item.thumbnail_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.thumbnail_url}
-                        alt="상품 썸네일"
-                        className="oc-img"
-                      />
+                      <>
+                        <img
+                          src={item.thumbnail_url}
+                          alt="상품 썸네일"
+                          className="oc-img"
+                          loading="lazy"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            const fb =
+                              e.currentTarget.parentElement?.querySelector(
+                                ".oc-thumb-fallback"
+                              );
+                            if (fb) fb.style.display = "flex";
+                          }}
+                        />
+                        <span
+                          className="oc-thumb-fallback"
+                          style={{ display: "none" }}
+                        >
+                          이미지 없음
+                        </span>
+                      </>
                     ) : (
-                      <span className="oc-thumb-fallback">이미지 없음</span>
+                      <span className="oc-thumb-fallback">
+                        이미지{"\n"}없음
+                      </span>
                     )}
                   </div>
+
                   <div className="oc-item-main">
                     <div className="oc-item-title">{item.title}</div>
                     {item.option_str ? (
                       <div className="oc-item-option">{item.option_str}</div>
                     ) : null}
-                    <div className="oc-item-qty">{item.quantity}개</div>
+                    <div className="oc-item-qty">수량 : {item.quantity}</div>
                   </div>
                   <div className="oc-item-price">{formatPrice(lineTotal)}</div>
                 </div>
@@ -172,29 +286,31 @@ export default function OrderCompletePage() {
 
         {/* 결제 금액 요약 */}
         <section className="oc-section">
-          <h2 className="oc-section-title">결제 금액</h2>
-          <div className="oc-summary">
-            <Row label="총 상품금액" value={formatPrice(totalBeforeDiscount)} />
-            {couponDiscount > 0 && (
-              <Row
-                label="쿠폰 할인"
-                value={`- ${formatPrice(couponDiscount)}`}
-                highlight="coupon"
-              />
-            )}
-            {pointsUsed > 0 && (
-              <Row
-                label="포인트 사용"
-                value={`- ${formatPrice(pointsUsed)}`}
-                highlight="point"
-              />
-            )}
+          <h2 className="oc-section-title">결제금액</h2>
+          <div className="oc-summary" role="region" aria-label="결제 금액 요약">
+            <Row label="상품금액" value={formatPrice(totalBeforeDiscount)} />
+            <Row
+              label="쿠폰"
+              value={
+                couponDiscount > 0 ? `- ${formatPrice(couponDiscount)}` : "0원"
+              }
+              highlight={couponDiscount > 0 ? "coupon" : ""}
+            />
+            <Row
+              label="포인트"
+              value={pointsUsed > 0 ? `- ${formatPrice(pointsUsed)}` : "0원"}
+              highlight={pointsUsed > 0 ? "point" : ""}
+            />
             <div className="oc-divider" />
             <Row
-              label={<strong>최종 결제금액</strong>}
+              label={<strong>결제금액</strong>}
               value={<strong>{formatPrice(totalAfterDiscount)}</strong>}
               large
             />
+            <p className="oc-note">
+              표시된 금액은 부가세(VAT) 포함 기준입니다.
+            </p>{" "}
+            {/* ✅ 가격 라벨 작은 주석 */}
           </div>
         </section>
 
@@ -206,7 +322,7 @@ export default function OrderCompletePage() {
             onClick={() => router.push("/mypage?menu=수강정보")}
             aria-label="주문 내역으로 이동"
           >
-            주문내역 보기
+            수강정보로 이동
           </button>
           <button
             type="button"
@@ -217,234 +333,7 @@ export default function OrderCompletePage() {
           </button>
         </div>
       </div>
-
-      {/* 스타일 */}
-      <style jsx>{`
-        .oc-wrap {
-          padding: 32px 16px;
-          display: flex;
-          justify-content: center;
-        }
-        .oc-card {
-          width: 100%;
-          max-width: 720px;
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
-          padding: 28px 24px 24px;
-        }
-        .oc-header {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        .oc-badge {
-          width: 56px;
-          height: 56px;
-          border-radius: 999px;
-          background: #ecfdf5;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 8px;
-        }
-        .oc-title {
-          font-size: 22px;
-          font-weight: 800;
-          margin: 2px 0 4px;
-          color: #0f172a;
-        }
-        .oc-sub {
-          color: #6b7280;
-          font-size: 14px;
-        }
-        .oc-meta {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 8px 14px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          padding: 12px;
-          margin: 14px 0 8px;
-        }
-        .oc-meta-item {
-          display: flex;
-          gap: 8px;
-          font-size: 13px;
-          align-items: baseline;
-        }
-        .oc-meta-label {
-          color: #64748b;
-          min-width: 72px;
-        }
-        .oc-meta-value {
-          color: #111827;
-          font-weight: 600;
-          word-break: break-all;
-        }
-        .oc-section {
-          margin-top: 18px;
-        }
-        .oc-section-title {
-          font-size: 16px;
-          font-weight: 700;
-          margin-bottom: 10px;
-          color: #0f172a;
-        }
-        .oc-items {
-          display: grid;
-          gap: 10px;
-        }
-        .oc-item {
-          display: grid;
-          grid-template-columns: 56px 1fr auto;
-          gap: 14px;
-          align-items: center;
-          background: #f8f9fa;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          padding: 12px 14px;
-        }
-        .oc-thumb {
-          width: 56px;
-          height: 56px;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #eef2f7;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .oc-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-        .oc-thumb-fallback {
-          font-size: 11px;
-          color: #9ca3af;
-          line-height: 1.2;
-          text-align: center;
-          padding: 0 2px;
-        }
-        .oc-item-main {
-          min-width: 0;
-        }
-        .oc-item-title {
-          font-weight: 600;
-          font-size: 15px;
-          color: #111827;
-          margin-bottom: 2px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .oc-item-option {
-          color: #6b7280;
-          font-size: 13px;
-          margin-bottom: 2px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .oc-item-qty {
-          font-size: 12px;
-          color: #64748b;
-        }
-        .oc-item-price {
-          min-width: 90px;
-          text-align: right;
-          font-weight: 700;
-          font-size: 15px;
-          color: #0f172a;
-        }
-        .oc-summary {
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          padding: 12px;
-          background: #fafafa;
-        }
-        .oc-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-          margin-bottom: 8px;
-          font-size: 15px;
-        }
-        .oc-row.coupon span:last-child {
-          color: #e23e57;
-        }
-        .oc-row.point span:last-child {
-          color: #20bfa9;
-        }
-        .oc-row.large {
-          font-size: 18px;
-        }
-        .oc-divider {
-          height: 1px;
-          background: #e5e7eb;
-          margin: 10px 0;
-        }
-        .oc-actions {
-          display: flex;
-          gap: 10px;
-          justify-content: center;
-          margin-top: 18px;
-        }
-        .oc-btn {
-          border: 1px solid #cbd5e1;
-          background: #fff;
-          color: #0f172a;
-          padding: 10px 14px;
-          border-radius: 10px;
-          font-weight: 700;
-          font-size: 14px;
-          cursor: pointer;
-          transition:
-            box-shadow 0.12s ease,
-            transform 0.06s ease;
-        }
-        .oc-btn:hover {
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
-        }
-        .oc-btn:active {
-          transform: translateY(1px);
-        }
-        .oc-btn-primary {
-          background: linear-gradient(90deg, #3b82f6, #2563eb);
-          color: #fff;
-          border: none;
-          box-shadow: 0 10px 18px rgba(59, 130, 246, 0.22);
-        }
-        .oc-btn-ghost {
-          background: #fff;
-        }
-
-        @media (max-width: 560px) {
-          .oc-card {
-            padding: 22px 16px 16px;
-            border-radius: 12px;
-          }
-          .oc-meta {
-            grid-template-columns: 1fr;
-          }
-          .oc-item {
-            grid-template-columns: 48px 1fr auto;
-            gap: 10px;
-            padding: 10px 12px;
-          }
-          .oc-thumb {
-            width: 48px;
-            height: 48px;
-          }
-          .oc-item-price {
-            min-width: 80px;
-          }
-        }
-      `}</style>
+      <OrderCompleteStyles /> {/* ⬅️ 공통 스타일 주입 */}
     </div>
   );
 }
@@ -452,10 +341,85 @@ export default function OrderCompletePage() {
 function Row({ label, value, highlight, large }) {
   return (
     <div className={`oc-row ${highlight || ""} ${large ? "large" : ""}`}>
-      <span style={{ color: "#4b5563" }}>{label}</span>
-      <span>{value}</span>
+      <span className="oc-row-label">{label}</span>
+      <span className="oc-row-value">{value}</span>
     </div>
   );
 }
 
 const formatPrice = (num) => `${Number(num).toLocaleString("ko-KR")}원`;
+
+const formatKSTDate = (input) => {
+  if (!input) return "날짜 정보 없음";
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return "유효하지 않은 날짜";
+
+  try {
+    const fmt = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return fmt.format(d); // 예: 2025년 8월 13일 (수) 14:07
+  } catch (e) {
+    console.warn("날짜 포맷 실패:", e);
+    return d.toISOString();
+  }
+};
+// PG 주문번호 후보를 다각도로 탐색
+function extractPgNo(o) {
+  if (!o || typeof o !== "object") return null;
+
+  // 1) 가장 흔한 키들 우선 매칭
+  const keys = [
+    "merchant_uid",
+    "merchantUid",
+    "payment_key",
+    "paymentKey",
+    "pg_tid",
+    "pgTid",
+    "imp_uid",
+    "impUid",
+    "transaction_id",
+    "transactionId",
+    "tid",
+  ];
+  for (const k of keys) {
+    const v = o?.[k];
+    if (typeof v === "string" && v.trim()) return v;
+  }
+
+  // 2) 중첩 필드 (예: order.payment.tid / transaction_id 등)
+  const nested = o.payment || o.pg || o.checkout || null;
+  if (nested && typeof nested === "object") {
+    const nk = [
+      "tid",
+      "transaction_id",
+      "transactionId",
+      "merchant_uid",
+      "payment_key",
+    ];
+    for (const k of nk) {
+      const v = nested?.[k];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+  }
+
+  // 3) 느슨한 정규식 스캔 (키 이름에 결제 식별자 흔적이 있는 경우)
+  for (const [k, v] of Object.entries(o)) {
+    if (
+      typeof v === "string" &&
+      v.trim() &&
+      /(merchant|payment|pg|tid|imp)/i.test(k)
+    ) {
+      return v;
+    }
+  }
+
+  return null;
+}

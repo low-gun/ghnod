@@ -1,37 +1,44 @@
 // backend/controllers/adminController.js
-const db = require("../config/db");
+const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
 const courseModel = require("../models/course.model");
 const paymentModel = require("../models/payment.model");
 const pointModel = require("../models/point.model");
-const pool = require("../config/db");
+
+/** ======================= 대시보드 요약 ======================= */
 exports.getDashboardSummary = async (req, res) => {
   try {
     const [[userRow]] = await pool.query(
       "SELECT COUNT(*) AS count FROM users WHERE is_deleted = 0"
     );
+
     const [[orderRow]] = await pool.query(
-      `SELECT COUNT(*) AS count FROM orders 
+      `SELECT COUNT(*) AS count
+       FROM orders 
        WHERE DATE(created_at) = CURDATE() AND order_status = 'paid'`
     );
+
     const [[totalRevenue]] = await pool.query(`
       SELECT COALESCE(SUM(total_amount), 0) AS total
       FROM orders
       WHERE order_status = 'paid'
     `);
 
+    // 상태 공백/대소문자 혼용 대응
     const [[paymentRevenue]] = await pool.query(`
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM payments
-      WHERE status IN ('paid', '완료')
+      WHERE TRIM(LOWER(status)) IN ('paid', '완료')
     `);
 
     const [[pendingInquiries]] = await pool.query(
       `SELECT COUNT(*) AS count FROM inquiries WHERE status = '접수'`
     );
+
     const [[refundWait]] = await pool.query(
       `SELECT COUNT(*) AS count FROM orders WHERE order_status = 'refunded'`
     );
+
     const [[weekRevenue]] = await pool.query(`
       SELECT COALESCE(SUM(total_amount), 0) AS total
       FROM orders
@@ -45,6 +52,7 @@ exports.getDashboardSummary = async (req, res) => {
       WHERE order_status = 'paid' 
         AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
     `);
+
     const [[todayVisitorsRow]] = await pool.query(`
       SELECT COUNT(DISTINCT ip_address) AS count
       FROM visit_logs
@@ -98,7 +106,7 @@ exports.getDashboardSummary = async (req, res) => {
       userCount: userRow.count,
       todayOrders: orderRow.count,
       totalRevenue: totalRevenue.total,
-      paymentRevenue: paymentRevenue.total, // ✅ 여기에 추가
+      paymentRevenue: paymentRevenue.total,
       weekRevenue: weekRevenue.total,
       monthRevenue: monthRevenue.total,
       todayVisitors: todayVisitorsRow.count,
@@ -115,10 +123,10 @@ exports.getDashboardSummary = async (req, res) => {
   }
 };
 
-// ======================= 사용자 목록 조회 =======================
+/** ======================= 사용자 목록 조회 ======================= */
 exports.getUsers = async (req, res) => {
   try {
-    const [users] = await db.query(
+    const [users] = await pool.query(
       "SELECT id, username, email, phone, role, created_at, updated_at FROM users"
     );
     res.json({ success: true, users });
@@ -128,17 +136,15 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// ======================= 사용자 요약(수강, 포인트, 결제 등) 조회 =======================
+/** ======================= 사용자 요약(수강, 포인트, 결제 등) 조회 ======================= */
 exports.getUserSummary = async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const [rows] = await pool.query(`
       SELECT 
         u.id,
         u.username,
         u.email,
-        (
-          SELECT COUNT(*) FROM courses WHERE user_id = u.id
-        ) AS courseCount,
+        (SELECT COUNT(*) FROM courses WHERE user_id = u.id) AS courseCount,
         (
           SELECT IFNULL(SUM(CASE WHEN change_type = '사용' THEN -amount ELSE amount END), 0)
           FROM points WHERE user_id = u.id
@@ -146,14 +152,10 @@ exports.getUserSummary = async (req, res) => {
         (
           SELECT IFNULL(SUM(amount), 0)
           FROM payments 
-          WHERE user_id = u.id AND status = '완료'
+          WHERE user_id = u.id AND TRIM(LOWER(status)) IN ('paid','완료')
         ) AS paymentTotal,
-        (
-          SELECT COUNT(*) FROM user_coupons WHERE user_id = u.id
-        ) AS couponCount,
-        (
-          SELECT COUNT(*) FROM inquiries WHERE user_id = u.id
-        ) AS inquiryCount
+        (SELECT COUNT(*) FROM user_coupons WHERE user_id = u.id) AS couponCount,
+        (SELECT COUNT(*) FROM inquiries WHERE user_id = u.id) AS inquiryCount
       FROM users u
       WHERE u.is_deleted != 1 OR u.is_deleted IS NULL
       ORDER BY u.created_at DESC
@@ -166,13 +168,13 @@ exports.getUserSummary = async (req, res) => {
   }
 };
 
-// ======================= 사용자 역할 변경 =======================
+/** ======================= 사용자 역할 변경 ======================= */
 exports.updateUserRole = async (req, res) => {
   const { id } = req.params;
   const { role } = req.body;
 
   try {
-    await db.query("UPDATE users SET role = ? WHERE id = ?", [role, id]);
+    await pool.query("UPDATE users SET role = ? WHERE id = ?", [role, id]);
     res.json({ success: true, user: { id, role } });
   } catch (err) {
     console.error("❌ 사용자 역할 업데이트 오류:", err);
@@ -180,14 +182,14 @@ exports.updateUserRole = async (req, res) => {
   }
 };
 
-// ======================= 사용자 비밀번호 초기화 =======================
+/** ======================= 사용자 비밀번호 초기화 ======================= */
 exports.resetUserPassword = async (req, res) => {
   const { id } = req.params;
   const newPassword = "1234";
 
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.query(
+    await pool.query(
       "UPDATE users SET password = ?, password_reset_required = true WHERE id = ?",
       [hashedPassword, id]
     );
@@ -202,7 +204,7 @@ exports.resetUserPassword = async (req, res) => {
   }
 };
 
-// ======================= 특정 유저의 수강내역 조회 =======================
+/** ======================= 특정 유저의 수강내역 조회 ======================= */
 exports.getUserCourses = async (req, res) => {
   const userId = req.params.id;
   try {
@@ -214,7 +216,7 @@ exports.getUserCourses = async (req, res) => {
   }
 };
 
-// ======================= 특정 유저의 결제내역 조회 =======================
+/** ======================= 특정 유저의 결제내역 조회 ======================= */
 exports.getUserPayments = async (req, res) => {
   const userId = req.params.id;
   try {
@@ -226,7 +228,7 @@ exports.getUserPayments = async (req, res) => {
   }
 };
 
-// ======================= 특정 유저의 포인트 조회 =======================
+/** ======================= 특정 유저의 포인트 조회 ======================= */
 exports.getUserPoints = async (req, res) => {
   const userId = req.params.id;
   try {
@@ -238,11 +240,11 @@ exports.getUserPoints = async (req, res) => {
   }
 };
 
-// ======================= 특정 유저의 쿠폰 조회 =======================
+/** ======================= 특정 유저의 쿠폰 조회 ======================= */
 exports.getUserCoupons = async (req, res) => {
   const userId = req.params.id;
   try {
-    const [coupons] = await db.query(
+    const [coupons] = await pool.query(
       `SELECT 
          c.id,
          c.user_id,
@@ -274,31 +276,24 @@ exports.getUserCoupons = async (req, res) => {
 
 exports.giveUserCouponsBatch = async (req, res) => {
   const { userIds, templateId } = req.body;
-  console.log("📥 [쿠폰 발급 요청]", { userIds, templateId });
-
   if (!userIds?.length || !templateId) {
-    console.warn("❌ 잘못된 요청: 유저 또는 템플릿 ID 없음");
     return res
       .status(400)
       .json({ success: false, message: "요청이 유효하지 않습니다." });
   }
 
   try {
-    const [[template]] = await db.query(
+    const [[template]] = await pool.query(
       `SELECT * FROM coupon_templates WHERE id = ?`,
       [templateId]
     );
-    console.log("📦 [템플릿 조회 결과]", template);
-
     if (!template) {
-      console.warn("❌ 템플릿 없음, ID:", templateId);
       return res
         .status(404)
         .json({ success: false, message: "쿠폰 템플릿을 찾을 수 없습니다." });
     }
 
     if (template.expired_at && new Date(template.expired_at) < new Date()) {
-      console.warn("⏰ 템플릿 만료됨:", template.expired_at);
       return res
         .status(400)
         .json({ success: false, message: "만료된 쿠폰은 발급할 수 없습니다." });
@@ -314,14 +309,11 @@ exports.giveUserCouponsBatch = async (req, res) => {
       now,
     ]);
 
-    console.log("📝 [INSERT 예정 쿠폰 데이터]", values);
-
-    await db.query(
+    await pool.query(
       `INSERT INTO coupons (user_id, template_id, is_used, expiry_date, issued_at) VALUES ?`,
       [values]
     );
 
-    console.log("✅ 쿠폰 발급 완료!");
     res.json({ success: true, message: "쿠폰이 일괄 지급되었습니다." });
   } catch (error) {
     console.error("❌ 쿠폰 발급 중 오류:", error);
@@ -329,11 +321,11 @@ exports.giveUserCouponsBatch = async (req, res) => {
   }
 };
 
-// ======================= 특정 유저 정보 조회 =======================
+/** ======================= 특정 유저 정보 조회 ======================= */
 exports.getUserById = async (req, res) => {
   const userId = req.params.id;
   try {
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT id, username, email, phone, role, department, position, company,
               marketing_agree, created_at
        FROM users
@@ -351,10 +343,10 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// ======================= 쿠폰 템플릿 조회 (발급수, 사용수 포함) =======================
+/** ======================= 쿠폰 템플릿 조회 ======================= */
 exports.getCouponTemplates = async (req, res) => {
   try {
-    const [templates] = await db.query(
+    const [templates] = await pool.query(
       `SELECT 
          ct.id,
          ct.name,
@@ -364,16 +356,8 @@ exports.getCouponTemplates = async (req, res) => {
          ct.valid_days,
          ct.expired_at,
          ct.is_active,
-         (
-           SELECT COUNT(*)
-           FROM coupons c
-           WHERE c.template_id = ct.id
-         ) AS issued_count,
-         (
-           SELECT COUNT(*)
-           FROM coupons c
-           WHERE c.template_id = ct.id AND c.is_used = 1
-         ) AS used_count
+         (SELECT COUNT(*) FROM coupons c WHERE c.template_id = ct.id) AS issued_count,
+         (SELECT COUNT(*) FROM coupons c WHERE c.template_id = ct.id AND c.is_used = 1) AS used_count
        FROM coupon_templates ct
        ORDER BY ct.created_at DESC`
     );
@@ -385,8 +369,7 @@ exports.getCouponTemplates = async (req, res) => {
   }
 };
 
-// ======================= 쿠폰 템플릿 등록 (is_active 기본 1) =======================
-// 함수 위에 추가 (코드 자동 생성 함수)
+/** ======================= 쿠폰 템플릿 등록 ======================= */
 const generateCouponCode = (length = 8) => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
@@ -396,19 +379,16 @@ const generateCouponCode = (length = 8) => {
   return code;
 };
 
-// ✅ 수정된 createCouponTemplate 함수
 exports.createCouponTemplate = async (req, res) => {
   const { name, discount_type, discount_value, discount_amount, expired_at } =
     req.body;
 
-  // ✅ 기본 필수값 검사
   if (!name || !discount_type) {
     return res
       .status(400)
       .json({ success: false, message: "쿠폰명, 할인타입은 필수입니다." });
   }
 
-  // ✅ 정액 할인 유효성 검사 강화
   if (discount_type === "fixed") {
     const amount = Number(discount_amount);
     if (!amount || amount <= 0) {
@@ -419,7 +399,6 @@ exports.createCouponTemplate = async (req, res) => {
     }
   }
 
-  // ✅ 퍼센트 할인 유효성 검사
   if (discount_type === "percent") {
     const percent = Number(discount_value);
     if (!percent || percent <= 0) {
@@ -430,19 +409,18 @@ exports.createCouponTemplate = async (req, res) => {
     }
   }
 
-  // ✅ 코드 자동 생성
   const code = generateCouponCode();
 
   try {
-    await db.query(
+    await pool.query(
       `INSERT INTO coupon_templates (code, name, discount_type, discount_value, discount_amount, expired_at, is_active, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 1, NOW())`,
       [
         code,
         name,
         discount_type,
-        discount_type === "percent" ? Number(discount_value) : null, // ⬅️ 타입별로 명확하게 분기
-        discount_type === "fixed" ? Number(discount_amount) : null, // ⬅️ 0도 올바르게 저장됨
+        discount_type === "percent" ? Number(discount_value) : null,
+        discount_type === "fixed" ? Number(discount_amount) : null,
         expired_at || null,
       ]
     );
@@ -454,7 +432,7 @@ exports.createCouponTemplate = async (req, res) => {
   }
 };
 
-// ======================= 쿠폰 템플릿 수정 =======================
+/** ======================= 쿠폰 템플릿 수정/삭제/토글 ======================= */
 exports.updateCouponTemplate = async (req, res) => {
   const { id } = req.params;
   const {
@@ -467,7 +445,7 @@ exports.updateCouponTemplate = async (req, res) => {
   } = req.body;
 
   try {
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `UPDATE coupon_templates
        SET name = ?, discount_type = ?, discount_value = ?, discount_amount = ?, valid_days = ?, expired_at = ?, updated_at = NOW()
        WHERE id = ?`,
@@ -494,13 +472,12 @@ exports.updateCouponTemplate = async (req, res) => {
     res.status(500).json({ success: false, message: "쿠폰 템플릿 수정 실패" });
   }
 };
-// ======================= 쿠폰 템플릿 삭제 =======================
+
 exports.deleteCouponTemplate = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 먼저 발급된 쿠폰이 있는지 체크
-    const [[{ count }]] = await db.query(
+    const [[{ count }]] = await pool.query(
       `SELECT COUNT(*) AS count FROM coupons WHERE template_id = ?`,
       [id]
     );
@@ -512,7 +489,7 @@ exports.deleteCouponTemplate = async (req, res) => {
       });
     }
 
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `DELETE FROM coupon_templates WHERE id = ?`,
       [id]
     );
@@ -530,13 +507,12 @@ exports.deleteCouponTemplate = async (req, res) => {
   }
 };
 
-// ======================= 쿠폰 지급 (만료일 체크 추가) =======================
 exports.giveUserCoupon = async (req, res) => {
   const userId = req.params.id;
   const { templateId } = req.body;
 
   try {
-    const [templateRows] = await db.query(
+    const [templateRows] = await pool.query(
       `SELECT * FROM coupon_templates WHERE id = ?`,
       [templateId]
     );
@@ -547,16 +523,15 @@ exports.giveUserCoupon = async (req, res) => {
     }
     const template = templateRows[0];
 
-    // ✅ 여기 추가: 만료 체크
     if (template.expired_at && new Date(template.expired_at) < new Date()) {
       return res
         .status(400)
         .json({ success: false, message: "만료된 쿠폰은 발급할 수 없습니다." });
     }
 
-    let expiryDate = template.expired_at;
+    const expiryDate = template.expired_at || null;
 
-    await db.query(
+    await pool.query(
       `INSERT INTO coupons
        (user_id, template_id, is_used, expiry_date, issued_at)
        VALUES (?, ?, 0, ?, NOW())`,
@@ -569,12 +544,13 @@ exports.giveUserCoupon = async (req, res) => {
     res.status(500).json({ success: false, message: "쿠폰 지급 실패" });
   }
 };
+
 exports.toggleCouponTemplateActive = async (req, res) => {
   const { id } = req.params;
-  const { is_active } = req.body; // 1 or 0
+  const { is_active } = req.body;
 
   try {
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `UPDATE coupon_templates
        SET is_active = ?, updated_at = NOW()
        WHERE id = ?`,
@@ -593,14 +569,16 @@ exports.toggleCouponTemplateActive = async (req, res) => {
     res.status(500).json({ success: false, message: "활성화/비활성화 실패" });
   }
 };
-// ======================= 사용자 정보 수정 (이력 기록) =======================
+
+/** ======================= 사용자 정보 수정(이력 기록) ======================= */
 exports.updateUserInfo = async (req, res) => {
-  console.log("✅ 인증된 사용자 정보:", req.user);
   const userId = req.params.id;
   const newValues = req.body;
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [userId]);
+    const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [
+      userId,
+    ]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: "사용자 없음" });
     }
@@ -620,7 +598,6 @@ exports.updateUserInfo = async (req, res) => {
     const updates = {};
     const historyLogs = [];
 
-    // 요청 origin
     const origin = req.originalUrl.startsWith("/api/admin")
       ? "admin"
       : req.originalUrl.startsWith("/api/mypage")
@@ -648,23 +625,20 @@ exports.updateUserInfo = async (req, res) => {
       return res.json({ success: false, message: "변경된 항목이 없습니다." });
     }
 
-    // 실제 DB 업데이트
     const updateFields = Object.keys(updates)
       .map((field) => `${field} = ?`)
       .join(", ");
     const updateValues = Object.values(updates);
 
-    await db.query(
+    await pool.query(
       `UPDATE users SET ${updateFields}, updated_at = NOW() WHERE id = ?`,
       [...updateValues, userId]
     );
 
-    // user_history 테이블에 기록
     for (const log of historyLogs) {
-      await db.query(
+      await pool.query(
         `INSERT INTO user_history
-         (user_id, field, old_value, new_value, changed_at,
-          modified_by, modifier_role, origin)
+         (user_id, field, old_value, new_value, changed_at, modified_by, modifier_role, origin)
          VALUES (?, ?, ?, ?, NOW(), ?, ?, ?)`,
         [
           log.user_id,
@@ -685,10 +659,179 @@ exports.updateUserInfo = async (req, res) => {
   }
 };
 
-// 📌 관리자 전체 결제 내역 조회 – payments 기준 + orders LEFT JOIN
+/** ======================= 관리자 전체 결제 내역 조회 ======================= */
 exports.getAllPayments = async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const {
+      page = 1,
+      pageSize = 20,
+      sort = "created_at",
+      order = "desc",
+      type = "all",
+      search = "",
+    } = req.query;
+
+    const limit = Math.max(parseInt(pageSize, 10) || 20, 1);
+    const offset = Math.max((parseInt(page, 10) - 1) * limit, 0);
+    const sortOrder = String(order).toLowerCase() === "asc" ? "ASC" : "DESC";
+
+    const SORT_MAP = {
+      payment_id: "p.id",
+      id: "p.id",
+      username: "u.username",
+      email: "u.email",
+      amount: "p.amount",
+      total_quantity:
+        "(SELECT SUM(quantity) FROM order_items WHERE order_id = o.id)",
+      payment_method: "p.payment_method",
+      created_at: "p.created_at",
+      status: "p.status",
+      discount_total: `(
+        COALESCE(o.used_point,0) +
+        COALESCE(
+          CASE
+            WHEN ct.discount_type='fixed'   THEN ct.discount_amount
+            WHEN ct.discount_type='percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
+            ELSE 0
+          END
+        ,0)
+      )`,
+    };
+    const sortCol = SORT_MAP[sort] || "p.created_at";
+
+    const SEARCH_MAP = {
+      payment_id: "p.id",
+      username: "u.username",
+      email: "u.email",
+      total_quantity:
+        "(SELECT SUM(quantity) FROM order_items WHERE order_id = o.id)",
+      amount: "p.amount",
+      discount_total: `(
+        COALESCE(o.used_point,0) +
+        COALESCE(
+          CASE
+            WHEN ct.discount_type='fixed'   THEN ct.discount_amount
+            WHEN ct.discount_type='percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
+            ELSE 0
+          END
+        ,0)
+      )`,
+      payment_method: "p.payment_method",
+      created_at: "p.created_at",
+      status: "p.status",
+      all: null,
+    };
+
+    const where = [];
+    const vals = [];
+
+    if (search) {
+      const col = SEARCH_MAP[type] ?? null;
+
+      if (type !== "all" && col) {
+        if (type === "created_at") {
+          // ✅ 날짜 검색: 단일 날짜 또는 기간 "YYYY-MM-DD|YYYY-MM-DD" 모두 지원
+          const raw = String(search).trim();
+          const colDate = `DATE(${col})`;
+
+          if (raw.includes("|")) {
+            const [startRaw, endRaw] = raw.split("|");
+            const start = (startRaw || "").slice(0, 10).replace(/\//g, "-");
+            const end = (endRaw || "").slice(0, 10).replace(/\//g, "-");
+
+            if (
+              /^\d{4}-\d{2}-\d{2}$/.test(start) &&
+              /^\d{4}-\d{2}-\d{2}$/.test(end)
+            ) {
+              where.push(`${colDate} BETWEEN ? AND ?`);
+              vals.push(start, end);
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+              where.push(`${colDate} >= ?`);
+              vals.push(start);
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+              where.push(`${colDate} <= ?`);
+              vals.push(end);
+            } else {
+              // 형식 불명확 시 LIKE fallback
+              where.push(`DATE_FORMAT(${col}, '%Y-%m-%d') LIKE ?`);
+              vals.push(`%${raw.replace("|", "%")}%`);
+            }
+          } else {
+            const day = raw.slice(0, 10).replace(/\//g, "-");
+            if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+              where.push(`${colDate} = ?`);
+              vals.push(day);
+            } else {
+              where.push(`DATE_FORMAT(${col}, '%Y-%m-%d') LIKE ?`);
+              vals.push(`%${day}%`);
+            }
+          }
+        } else if (
+          type === "payment_id" ||
+          type === "amount" ||
+          type === "total_quantity" ||
+          type === "discount_total"
+        ) {
+          if (/^\d+$/.test(search)) {
+            where.push(`${col} = ?`);
+            vals.push(parseInt(search, 10));
+          } else {
+            where.push(`CAST(${col} AS CHAR) LIKE ?`);
+            vals.push(`%${search}%`);
+          }
+        } else if (type === "payment_method") {
+          const s = String(search).toLowerCase();
+          if (s === "card") {
+            where.push(`(LOWER(${col}) LIKE '%card%' OR ${col} LIKE '%카드%')`);
+          } else if (s === "transfer") {
+            where.push(
+              `(LOWER(${col}) LIKE '%transfer%' OR ${col} LIKE '%계좌%' OR ${col} LIKE '%이체%')`
+            );
+          } else if (s === "vbank") {
+            where.push(
+              `(LOWER(${col}) LIKE '%vbank%' OR ${col} LIKE '%가상%')`
+            );
+          } else {
+            where.push(`(${col} LIKE ? OR LOWER(${col}) LIKE LOWER(?))`);
+            vals.push(`%${search}%`, `%${search}%`);
+          }
+        } else if (type === "status") {
+          where.push(
+            `TRIM(LOWER(REPLACE(${col}, ' ', ''))) LIKE TRIM(LOWER(REPLACE(?, ' ', '')))`
+          );
+          vals.push(`%${search}%`);
+        } else if (type === "username") {
+          // ✅ 주문자 검색 개선 (공백/대소문자 무시)
+          where.push(
+            `REPLACE(LOWER(u.username), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`
+          );
+          vals.push(`%${search.toLowerCase()}%`);
+        } else {
+          where.push(`${col} LIKE ?`);
+          vals.push(`%${search}%`);
+        }
+      } else {
+        // all 검색
+        where.push(`(
+          REPLACE(LOWER(u.username), ' ', '') LIKE REPLACE(LOWER(?), ' ', '') OR
+          u.email LIKE ? OR
+          p.payment_method LIKE ? OR
+          p.status LIKE ? OR
+          CAST(p.id AS CHAR) LIKE ?
+        )`);
+        vals.push(
+          `%${search.toLowerCase()}%`,
+          `%${search}%`,
+          `%${search}%`,
+          `%${search}%`,
+          `%${search}%`
+        );
+      }
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    const listSql = `
       SELECT
         p.id AS payment_id,
         p.amount,
@@ -702,37 +845,70 @@ exports.getAllPayments = async (req, res) => {
         u.email,
         o.id AS order_id,
         o.total_amount,
-        COALESCE(o.used_point, 0) AS used_point,        -- ✅ 반드시 0 기본값
-        COALESCE(ct.discount_amount, 0) AS coupon_discount, -- ✅ 쿠폰할인 연결
-        (
-          SELECT SUM(quantity)
-          FROM order_items
-          WHERE order_id = o.id
-        ) AS total_quantity
+        COALESCE(o.used_point, 0) AS used_point,
+        COALESCE((
+          SELECT
+            CASE
+              WHEN ct.discount_type='fixed'   THEN ct.discount_amount
+              WHEN ct.discount_type='percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
+              ELSE 0
+            END
+          FROM coupons c
+          JOIN coupon_templates ct ON c.template_id = ct.id
+          WHERE c.id = o.coupon_id
+          LIMIT 1
+        ),0) AS coupon_discount,
+        (SELECT SUM(quantity) FROM order_items WHERE order_id = o.id) AS total_quantity
       FROM payments p
-      JOIN users u ON u.id = p.user_id
+      JOIN users u       ON u.id = p.user_id
       LEFT JOIN orders o ON o.payment_id = p.id
-      LEFT JOIN coupons c ON o.coupon_id = c.id
-      LEFT JOIN coupon_templates ct ON c.template_id = ct.id
-      ORDER BY p.created_at DESC
-    `);
+      ${whereSql}
+      ORDER BY ${sortCol} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+    const [rows] = await pool.query(listSql, [...vals, limit, offset]);
 
-    return res.json({ success: true, payments: rows });
+    const countSql = `
+      SELECT COUNT(*) AS totalCount
+      FROM payments p
+      JOIN users u       ON u.id = p.user_id
+      LEFT JOIN orders o ON o.payment_id = p.id
+      ${whereSql}
+    `;
+    const [[{ totalCount }]] = await pool.query(countSql, vals);
+
+    const sumSql = `
+      SELECT COALESCE(SUM(p.amount), 0) AS totalAmount
+      FROM payments p
+      JOIN users u       ON u.id = p.user_id
+      LEFT JOIN orders o ON o.payment_id = p.id
+      ${whereSql}
+      ${whereSql ? "AND" : "WHERE"} TRIM(LOWER(REPLACE(p.status, ' ', ''))) IN ('paid','완료')
+    `;
+    const [[{ totalAmount }]] = await pool.query(sumSql, vals);
+
+    return res.json({
+      success: true,
+      payments: rows,
+      totalCount: totalCount || 0,
+      totalAmount: totalAmount || 0,
+    });
   } catch (err) {
     console.error("❌ 관리자 결제내역 조회 실패:", err);
-    res.status(500).json({ success: false, message: "결제내역 조회 실패" });
+    return res
+      .status(500)
+      .json({ success: false, message: "결제내역 조회 실패" });
   }
 };
 
-// 📌 관리자 환불 처리
+/** ======================= 관리자 환불 처리 ======================= */
 exports.refundOrderByAdmin = async (req, res) => {
   const orderId = req.params.id;
-
+  let conn;
   try {
-    const conn = await db.getConnection();
+    conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    // 1. orders 상태 변경
     await conn.query(
       `UPDATE orders 
        SET order_status = 'refunded', updated_at = NOW()
@@ -740,29 +916,30 @@ exports.refundOrderByAdmin = async (req, res) => {
       [orderId]
     );
 
-    // 2. payments 상태 변경
     await conn.query(
       `UPDATE payments 
        SET status = 'refunded', updated_at = NOW()
-       WHERE id = (
-         SELECT payment_id FROM orders WHERE id = ?
-       )`,
+       WHERE id = (SELECT payment_id FROM orders WHERE id = ?)`,
       [orderId]
     );
 
     await conn.commit();
     res.json({ success: true, message: "✅ 관리자 환불 처리 완료" });
   } catch (err) {
+    if (conn) await conn.rollback();
     console.error("❌ 관리자 환불 처리 실패:", err);
     res.status(500).json({ success: false, message: "관리자 환불 실패" });
+  } finally {
+    if (conn) conn.release();
   }
 };
-// 📌 관리자 결제 단건 조회 (payment_id 기준)
+
+/** ======================= 관리자 결제 단건 조회 ======================= */
 exports.getPaymentDetail = async (req, res) => {
   const paymentId = req.params.id;
 
   try {
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `
       SELECT
         p.id              AS payment_id,
@@ -777,26 +954,21 @@ exports.getPaymentDetail = async (req, res) => {
         o.id              AS order_id,
         o.total_amount,
         o.used_point,
-(
-  SELECT 
-    CASE 
-      WHEN ct.discount_type = 'fixed' THEN ct.discount_amount
-      WHEN ct.discount_type = 'percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
-      ELSE 0
-    END
-  FROM coupons c
-  JOIN coupon_templates ct ON c.template_id = ct.id
-  WHERE c.id = o.coupon_id
-  LIMIT 1
-) AS coupon_discount
-
         (
-          SELECT SUM(quantity)
-          FROM order_items
-          WHERE order_id = o.id
-        ) AS total_quantity
+          SELECT 
+            CASE 
+              WHEN ct.discount_type='fixed'   THEN ct.discount_amount
+              WHEN ct.discount_type='percent' THEN FLOOR(o.total_amount * ct.discount_value / 100)
+              ELSE 0
+            END
+          FROM coupons c
+          JOIN coupon_templates ct ON c.template_id = ct.id
+          WHERE c.id = o.coupon_id
+          LIMIT 1
+        ) AS coupon_discount,
+        (SELECT SUM(quantity) FROM order_items WHERE order_id = o.id) AS total_quantity
       FROM payments p
-      JOIN users u     ON u.id = p.user_id
+      JOIN users u  ON u.id = p.user_id
       LEFT JOIN orders o ON o.payment_id = p.id
       WHERE p.id = ?
       LIMIT 1
@@ -818,7 +990,7 @@ exports.getPaymentDetail = async (req, res) => {
   }
 };
 
-// ======================= 관리자 포인트 일괄 지급 =======================
+/** ======================= 관리자 포인트 일괄 지급 ======================= */
 exports.giveUserPointsBatch = async (req, res) => {
   const { userIds, amount, description } = req.body;
 
@@ -839,7 +1011,7 @@ exports.giveUserPointsBatch = async (req, res) => {
       now,
     ]);
 
-    await db.query(
+    await pool.query(
       `INSERT INTO points (user_id, change_type, amount, description, created_at)
        VALUES ?`,
       [values]
@@ -849,5 +1021,85 @@ exports.giveUserPointsBatch = async (req, res) => {
   } catch (error) {
     console.error("❌ 포인트 일괄 지급 오류:", error);
     res.status(500).json({ success: false, message: "서버 오류로 지급 실패" });
+  }
+};
+
+/** ======================= 사용자 요약(메트릭) by-ids ======================= */
+exports.getUserSummaryByIds = async (req, res) => {
+  try {
+    const raw = (req.query.ids || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const ids = raw
+      .map((v) => Number(v))
+      .filter((n) => Number.isInteger(n) && n > 0);
+
+    if (!ids.length) {
+      return res.status(400).json({
+        success: false,
+        message: "ids 파라미터가 필요합니다. 예: ?ids=1,2,3",
+      });
+    }
+    if (ids.length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: "요청 가능한 사용자 수(최대 200명)를 초과했습니다.",
+      });
+    }
+
+    const placeholders = ids.map(() => "?").join(",");
+    const params = [...ids];
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        u.id AS id,
+        (SELECT COUNT(*) FROM courses WHERE user_id = u.id) AS course_count,
+        (
+          SELECT IFNULL(SUM(amount), 0)
+          FROM payments
+          WHERE user_id = u.id AND TRIM(LOWER(status)) IN ('paid','완료')
+        ) AS payment_total,
+        (
+          SELECT IFNULL(SUM(CASE WHEN change_type = '적립' THEN amount ELSE 0 END), 0)
+          FROM points WHERE user_id = u.id
+        ) AS point_given,
+        (
+          SELECT IFNULL(SUM(CASE WHEN change_type = '사용' THEN amount ELSE 0 END), 0)
+          FROM points WHERE user_id = u.id
+        ) AS point_used,
+        (
+          SELECT IFNULL(SUM(CASE
+                              WHEN change_type = '적립' THEN amount
+                              WHEN change_type = '사용' THEN -amount
+                              ELSE 0 END), 0)
+          FROM points WHERE user_id = u.id
+        ) AS point_balance,
+        (SELECT COUNT(*) FROM coupons WHERE user_id = u.id AND is_used = 0) AS coupon_balance,
+        (SELECT COUNT(*) FROM inquiries WHERE user_id = u.id) AS inquiry_count
+      FROM users u
+      WHERE u.id IN (${placeholders})
+      `,
+      params
+    );
+
+    const summaries = rows.map((r) => ({
+      id: r.id,
+      courseCount: r.course_count,
+      paymentTotal: r.payment_total,
+      pointGiven: r.point_given,
+      pointUsed: r.point_used,
+      pointBalance: r.point_balance,
+      couponBalance: r.coupon_balance,
+      inquiryCount: r.inquiry_count,
+    }));
+
+    return res.json({ success: true, summaries });
+  } catch (err) {
+    console.error("❌ getUserSummaryByIds 오류:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "요약 데이터 조회 실패" });
   }
 };

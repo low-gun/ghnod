@@ -47,7 +47,33 @@ export default function AdminProductsPage() {
   }, [user]);
 
   // 로딩 처리
+  // 로딩 처리
   if (user && user.role !== "admin") return null; // 권한 없는 경우 리턴
+
+  // ===== UI 스타일 상수(사이드바 톤 매칭) =====
+  const primaryBtnStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "10px 14px",
+    background: "#0f172a", // 사이드바와 동일 계열
+    color: "#fff",
+    border: "none",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "600",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+    transition: "background 0.15s ease",
+    outline: "none",
+  };
+  const cardStyle = {
+    background: "#fff",
+    border: "1px solid rgba(15,23,42,0.08)",
+    borderLeft: "4px solid #0f172a", // 사이드바 컬러 포인트
+    borderRadius: "12px",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+    padding: 16,
+  };
 
   // 기존 코드
   return (

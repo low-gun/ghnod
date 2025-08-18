@@ -122,88 +122,34 @@ export default function EducationScheduleDetailPage() {
       showAlert("일정 정보를 불러오지 못했습니다.");
       return;
     }
-    if (!tossReady || !tossPaymentsRef.current) {
-      showAlert("결제 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-      return;
-    }
 
     try {
-      // 1) 서버에 주문 준비(펜딩 생성)
-      // 1) 임시 장바구니 항목 생성
+      // 1) 지금 상품만 'buyNow' 타입으로 담기 (장바구니 기존 품목은 그대로)
       const addRes = await api.post("/cart/items", {
         schedule_id: schedule.id,
         quantity,
         unit_price: unitPrice,
-        type: "buyNow", // 구분용
+        type: "buyNow",
       });
       const cartItemId = addRes?.data?.item?.id || addRes?.data?.id;
       if (!cartItemId) {
         showAlert("바로구매 준비에 실패했습니다. 다시 시도해 주세요.");
         return;
       }
-      // ✅ 이후 취소 시 정리할 수 있도록 보관
-      lastBuyNowCartItemIdRef.current = Number(cartItemId);
-      // 2) 결제 준비
-      const prepareRes = await api.post("/payments/toss/prepare", {
-        cart_item_ids: [Number(cartItemId)],
-        coupon_id: null,
-        used_point: 0,
-      });
 
-      // 응답 안전 처리(백엔드 형식에 맞게 유연 파싱)
-      const data = prepareRes?.data?.data || prepareRes?.data || {};
-      const orderId = data.orderId || data.order_id;
-      const amount = Number(data.amount ?? unitPrice * quantity);
-      const orderName = data.orderName || data.order_name || schedule.title;
-
-      if (!orderId || !amount) {
-        showAlert("주문 준비 중 오류가 발생했습니다. 다시 시도해 주세요.");
-        return;
+      // 2) 체크아웃에서 이 아이템만 결제하도록 힌트 전달
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          "BUY_NOW_IDS",
+          JSON.stringify([Number(cartItemId)])
+        );
       }
-
-      // 2) 토스 결제창 호출
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : "";
-      const successUrl = `${origin}/payments/toss/success`;
-      const failUrl = `${origin}/payments/toss/fail`;
-
-      await tossPaymentsRef.current.requestPayment("카드", {
-        amount,
-        orderId,
-        orderName,
-        // 선택: 고객 식별 정보
-        customerName: user?.name || user?.username || user?.email || "고객",
-        successUrl,
-        failUrl,
-      });
-      // 요청 후 흐름은 토스가 success/fail로 리다이렉트
-
-      // 요청 후 흐름은 토스가 success/fail로 리다이렉트
+      router.push(`/checkout?mode=buyNow&ids=${Number(cartItemId)}`);
     } catch (e) {
-      // ✅ 사용자가 결제창을 닫아 취소한 경우(토스 SDK: USER_CANCEL 등)
-      const isUserCancel =
-        e?.code === "USER_CANCEL" ||
-        e?.message?.includes("취소") ||
-        e?.message?.toLowerCase?.()?.includes("cancel");
-
-      if (isUserCancel) {
-        // ✅ 임시 cart_item 정리 (성공/실패 페이지로 안 가므로 수동 삭제)
-        const id = lastBuyNowCartItemIdRef.current;
-        if (id) {
-          try {
-            await api.delete(`/cart/items/${id}`);
-          } catch {}
-          lastBuyNowCartItemIdRef.current = null;
-        }
-        showAlert("결제를 취소하였습니다.");
-        return; // ❗️오류로 처리하지 않음
-      }
-
-      // 그 외 실제 오류
-      console.error("바로구매 결제 시작 실패", e);
-      showAlert("결제 시작에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      console.error("바로구매 준비 실패", e);
+      showAlert("준비 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
-  }, [user, schedule, quantity, unitPrice, tossReady, router, showAlert]);
+  }, [user, schedule, quantity, unitPrice, router, showAlert]);
 
   const handleAddToCart = useCallback(async () => {
     if (!user) {
@@ -276,9 +222,12 @@ export default function EducationScheduleDetailPage() {
 
       // ✅ base64 이미지 방지 + 절대경로 보장
       let pick =
-        schedule?.image_url || schedule?.product_image || "/no-image.png";
+        schedule?.image_url ||
+        schedule?.product_image ||
+        "/images/no-image.png";
       if (pick.startsWith("data:image")) {
-        pick = "/no-image.png"; // 카카오에서 허용하는 정적 이미지로 대체
+        pick = "/images/no-image.png";
+        // 카카오에서 허용하는 정적 이미지로 대체
       }
       const imageUrl = pick.startsWith("http")
         ? pick
@@ -370,7 +319,9 @@ export default function EducationScheduleDetailPage() {
         <div style={{ flex: 1 }}>
           <img
             src={
-              schedule.image_url || schedule.product_image || "/no-image.png"
+              schedule.image_url ||
+              schedule.product_image ||
+              "/images/no-image.png"
             }
             alt={schedule.title}
             style={{
@@ -455,8 +406,15 @@ export default function EducationScheduleDetailPage() {
             </button>
           </div>
 
-          <p style={{ fontSize: 20, fontWeight: "bold", color: "#e60023" }}>
-            {Number(schedule.price).toLocaleString()}원
+          <p
+            style={{
+              fontSize: 20,
+              fontWeight: "bold",
+              color: "#e60023",
+              margin: "4px 0 0",
+            }}
+          >
+            {Number(unitPrice * quantity).toLocaleString()}원
           </p>
 
           {/* 정보 카드 */}
@@ -558,9 +516,6 @@ export default function EducationScheduleDetailPage() {
               >
                 +
               </button>
-            </div>
-            <div style={{ marginTop: 10, fontWeight: "bold" }}>
-              총 결제금액: {Number(unitPrice * quantity).toLocaleString()}원
             </div>
           </div>
 

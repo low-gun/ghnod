@@ -91,6 +91,17 @@ router.post("/items", optionalAuthenticate, (req, res, next) => {
 
 // 2) PUT /api/cart/items/:itemId - 아이템 수정 (비로그인도 허용)
 
+// ✅ '특정 경로'를 '파라미터 경로'보다 먼저 선언
+router.delete(
+  "/items/clear",
+  authenticateToken,
+  (req, res, next) => {
+    console.log("🧨 DELETE /items/clear 라우터 진입");
+    next();
+  },
+  cartController.clearCart
+);
+
 router.put(
   "/items/:itemId",
   optionalAuthenticate,
@@ -100,15 +111,6 @@ router.delete(
   "/items/:itemId",
   optionalAuthenticate,
   cartController.removeItem
-);
-router.delete(
-  "/items/clear",
-  authenticateToken,
-  (req, res, next) => {
-    console.log("🧨 DELETE /items/clear 라우터 진입"); // ✅ 이거 추가
-    next();
-  },
-  cartController.clearCart
 );
 exports.updateCartItem = async (req, res) => {
   try {

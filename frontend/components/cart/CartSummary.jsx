@@ -236,7 +236,7 @@ export default function CartSummary({
 
           <ul style={consentListStyle}>
             <li>
-              개인정보 수집/이용 동의{" "}
+              개인정보처리방침침{" "}
               <button
                 type="button"
                 onClick={() => setShowPrivacyModal(true)}
@@ -249,7 +249,7 @@ export default function CartSummary({
             </li>
 
             <li>
-              개인정보 제3자 제공 동의{" "}
+              서비스이용약관{" "}
               <button
                 type="button"
                 onClick={() => setShowTermsModal(true)}

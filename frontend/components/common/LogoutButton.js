@@ -54,14 +54,42 @@ export default function LogoutButton({ collapsed = false }) {
       style={{
         display: "flex",
         alignItems: "center",
+        gap: "12px",
         width: "100%",
-        background: "none",
+        minHeight: "44px",
+        padding: "10px 12px",
+        background: "transparent",
         border: "none",
+        borderRadius: "10px",
         cursor: "pointer",
         color: "#fff",
+        transition: "background 0.15s ease",
+        outline: "none",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "transparent";
       }}
     >
-      🔒 {!collapsed && <span style={{ marginLeft: "10px" }}>로그아웃</span>}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m16 17 5-5-5-5"></path>
+        <path d="M21 12H9"></path>
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+      </svg>
+      {!collapsed && <span style={{ marginLeft: "2px" }}>로그아웃</span>}
     </button>
   );
 }
