@@ -97,8 +97,9 @@ app.use((req, res, next) => {
 console.log("✅ API 라우터 등록 시작");
 app.use("/api/admin/schedules", require("./routes/admin/schedules"));
 app.use("/api/admin/products", require("./routes/admin/products"));
-app.use("/api/admin/payments", require("./routes/payment"));
-app.use("/api/admin", require("./routes/admin"));
+// app.use("/api/admin/payments", require("./routes/payment")); // 🔥 제거
+app.use("/api/admin", require("./routes/admin")); // ✅ admin.js가 /payments 처리
+
 app.use("/api/user", require("./routes/user"));
 app.use("/api/mypage", require("./routes/mypage"));
 app.use("/api/orders", require("./routes/order"));

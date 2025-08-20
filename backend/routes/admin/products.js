@@ -5,6 +5,7 @@ const {
   authenticateToken,
   adminOnly,
 } = require("../../middlewares/authMiddleware");
+const adminController = require("../../controllers/adminController");
 
 // 전체 상품 목록 조회 (Node.js 기반 정렬/필터/페이징)
 router.get("/", authenticateToken, adminOnly, async (req, res) => {
@@ -54,35 +55,98 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
       );
     }
     if (endDate) {
-      filtered = filtered.filter(
-        (p) => new Date(p.created_at) <= new Date(endDate)
-      );
+      const [y, m, d] = String(endDate).split("-").map(Number);
+      const endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+      filtered = filtered.filter((p) => new Date(p.created_at) <= endOfDay);
     }
 
     // 🔁 정렬
+    // 🔁 정렬 (숫자/날짜 보강)
+    const toTime = (v) => (v ? new Date(v).getTime() : NaN);
     const sorted = [...filtered].sort((a, b) => {
       const aVal = a[sort];
       const bVal = b[sort];
 
-      if (typeof aVal === "string") {
-        return order === "asc"
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
-      } else if (typeof aVal === "number" || aVal instanceof Date) {
-        return order === "asc" ? aVal - bVal : bVal - aVal;
+      // 날짜 컬럼 처리
+      if (sort === "created_at" || sort === "updated_at") {
+        const at = toTime(aVal);
+        const bt = toTime(bVal);
+        if (!Number.isNaN(at) && !Number.isNaN(bt)) {
+          return order === "asc" ? at - bt : bt - at;
+        }
       }
-      return 0;
+
+      // 숫자 컬럼 처리
+      if (sort === "id" || sort === "price") {
+        const an = Number(aVal);
+        const bn = Number(bVal);
+        if (!Number.isNaN(an) && !Number.isNaN(bn)) {
+          return order === "asc" ? an - bn : bn - an;
+        }
+      }
+
+      // 문자열 기본
+      const as = (aVal ?? "").toString();
+      const bs = (bVal ?? "").toString();
+      return order === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
     });
 
-    // 📄 페이징
+    // 📄 페이징 (all=true면 전체, 아니면 slice)
+    const all = String(req.query.all) === "true";
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const pageSizeNum = Math.max(parseInt(pageSize, 10) || 20, 1);
+    const start = (pageNum - 1) * pageSizeNum;
+    const paged = all ? sorted : sorted.slice(start, start + pageSizeNum);
+
     res.json({
       success: true,
-      products: sorted, // 전체 데이터
+      products: paged,
       totalCount: filtered.length,
+      page: pageNum,
+      pageSize: pageSizeNum,
     });
   } catch (err) {
     console.error("❌ 상품 목록 조회 오류:", err);
     res.status(500).json({ success: false, message: "서버 오류" });
+  }
+});
+// 등록된 상품 유형 목록
+router.get("/types", authenticateToken, adminOnly, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT DISTINCT type 
+         FROM products 
+        WHERE type IS NOT NULL AND type <> '' 
+        ORDER BY type`
+    );
+    const types = rows.map((r) => r.type);
+    return res.json({ success: true, types });
+  } catch (err) {
+    console.error("❌ 상품 유형 조회 오류:", err);
+    return res.status(500).json({ success: false, message: "유형 조회 실패" });
+  }
+});
+// 상품 현황 요약(총개수 + 유형별 개수)
+router.get("/stats", authenticateToken, adminOnly, async (req, res) => {
+  try {
+    const [[{ totalCount }]] = await pool.query(
+      `SELECT COUNT(*) AS totalCount FROM products`
+    );
+    const [rows] = await pool.query(
+      `SELECT type, COUNT(*) AS count
+         FROM products
+        WHERE type IS NOT NULL AND type <> ''
+        GROUP BY type
+        ORDER BY type`
+    );
+    return res.json({
+      success: true,
+      totalCount,
+      byType: rows.map((r) => ({ type: r.type, count: Number(r.count) })),
+    });
+  } catch (err) {
+    console.error("❌ 상품 현황 통계 오류:", err);
+    return res.status(500).json({ success: false, message: "통계 조회 실패" });
   }
 });
 
@@ -102,25 +166,12 @@ router.patch("/:id/active", authenticateToken, adminOnly, async (req, res) => {
 });
 
 // 선택 상품 삭제
-router.delete("/", authenticateToken, adminOnly, async (req, res) => {
-  const { ids } = req.body;
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return res
-      .status(400)
-      .json({ success: false, message: "삭제할 ID가 없습니다." });
-  }
-
-  try {
-    const placeholders = ids.map(() => "?").join(", ");
-    const sql = `DELETE FROM products WHERE id IN (${placeholders})`;
-    await pool.execute(sql, ids);
-
-    return res.json({ success: true });
-  } catch (err) {
-    console.error("❌ 상품 삭제 오류:", err);
-    return res.status(500).json({ success: false, message: "서버 오류" });
-  }
-});
+router.delete(
+  "/",
+  authenticateToken,
+  adminOnly,
+  adminController.deleteProducts
+);
 
 // 상품별 일정 조회
 router.get("/:id/schedules", authenticateToken, adminOnly, async (req, res) => {
@@ -171,9 +222,28 @@ router.put("/:id", authenticateToken, adminOnly, async (req, res) => {
   console.log("📥 length =", type?.length);
   console.log("📥 전체 req.body =", req.body);
   try {
+    // 0/1 안전 변환
+    const activeVal =
+      typeof is_active === "boolean"
+        ? is_active
+          ? 1
+          : 0
+        : Number(is_active ?? 1)
+          ? 1
+          : 0;
+
     await pool.execute(
       `UPDATE products SET title=?, type=?, image_url=?, description=?, detail=?, price=?, is_active=?, updated_at=NOW() WHERE id=?`,
-      [title, type, image_url, description, detail, price, is_active || 1, id]
+      [
+        title,
+        type,
+        image_url,
+        description,
+        detail,
+        Number(price ?? 0),
+        activeVal,
+        id,
+      ]
     );
 
     res.json({ success: true });

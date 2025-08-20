@@ -1,5 +1,5 @@
 // ./frontend/components/admin/SchedulesTable.js
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import SearchFilter from "@/components/common/SearchFilter";
 import api from "@/lib/api";
@@ -15,24 +15,34 @@ import AdminToolbar from "@/components/common/AdminToolbar";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
 import ToggleSwitch from "@/components/common/ToggleSwitch";
+import SelectableCard from "@/components/common/SelectableCard"; // ← 추가
 
-/** ✅ SSR 안전: UTC 고정 포맷 (서버/클라이언트 동일 표시) */
-function formatDateUTC(iso) {
+/** ✅ 로컬시간 포맷(UTC 표기 제거) */
+function formatDateLocal(iso) {
   if (!iso) return "-";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "-";
   const pad = (n) => String(n).padStart(2, "0");
-  const Y = d.getUTCFullYear();
-  const M = pad(d.getUTCMonth() + 1);
-  const D = pad(d.getUTCDate());
-  const h = pad(d.getUTCHours());
-  const m = pad(d.getUTCMinutes());
-  const s = pad(d.getUTCSeconds());
-  return `${Y}-${M}-${D} ${h}:${m}:${s} UTC`;
+  const Y = d.getFullYear();
+  const M = pad(d.getMonth() + 1);
+  const D = pad(d.getDate());
+  const h = pad(d.getHours());
+  const m = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 }
 const formatDateOnly = (iso) => (iso ? iso.slice(0, 10) : "-");
 
-export default function SchedulesTable() {
+export default function SchedulesTable({
+  useExternalToolbar = false,
+  externalSearchType,
+  externalSearchQuery,
+  externalStartDate,
+  externalEndDate,
+  externalInProgress, // ← 추가
+  searchSyncKey,
+  onExcelData,
+}) {
   const router = useRouter();
   const { showAlert } = useGlobalAlert();
   const { showConfirm } = useGlobalConfirm();
@@ -63,7 +73,7 @@ export default function SchedulesTable() {
   const [typeOptions, setTypeOptions] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [startDate, setStartDate] = useState(null); // SearchFilter 시그니처 맞춤
+  const [startDate, setStartDate] = useState(null); // SearchFilter 시그니처 맞춤 (YYYY-MM-DD)
   const [endDate, setEndDate] = useState(null);
   const [total, setTotal] = useState(0); // 서버 total
   const [isLoading, setIsLoading] = useState(false);
@@ -75,14 +85,98 @@ export default function SchedulesTable() {
       .get("admin/schedules/types")
       .then((res) => {
         if (res.data?.success) {
-          setTypeOptions(res.data.types.map((t) => ({ label: t, value: t })));
+          const opts = res.data.types.map((t) => ({ label: t, value: t }));
+          setTypeOptions(opts);
         }
       })
       .catch(() => {});
   }, []);
 
+  // ✅ 외부 검색 주입 시 사용할 유효값
+  const effSearchField = useExternalToolbar
+    ? (externalSearchType ?? "title")
+    : searchField;
+  const effSearchQuery = useExternalToolbar
+    ? (externalSearchQuery ?? "")
+    : searchQuery;
+  const effStartDate = useExternalToolbar
+    ? (externalStartDate ?? null)
+    : startDate;
+  const effEndDate = useExternalToolbar ? (externalEndDate ?? null) : endDate;
+  // ✅ fetch 트리거 키: 외부 검색이면 버튼 클릭 시 올리는 searchSyncKey만 반응
+  const refreshKey = useMemo(() => {
+    if (useExternalToolbar) {
+      return [
+        tabType,
+        page,
+        pageSize,
+        sortConfig.key,
+        sortConfig.direction,
+        searchSyncKey, // 🔑 버튼 클릭
+        externalInProgress, // ← 진행중 플래그 변화에도 반응
+      ].join("|");
+    }
+
+    // 내부 검색 모드일 땐 기존대로 필드/쿼리/기간에 반응
+    return [
+      tabType,
+      page,
+      pageSize,
+      sortConfig.key,
+      sortConfig.direction,
+      searchField,
+      searchQuery,
+      startDate,
+      endDate,
+    ].join("|");
+  }, [
+    useExternalToolbar,
+    tabType,
+    page,
+    pageSize,
+    sortConfig.key,
+    sortConfig.direction,
+    searchSyncKey,
+    // 내부 검색 모드용
+    searchField,
+    searchQuery,
+    startDate,
+    endDate,
+  ]);
   // ✅ 목록 조회
+  const inFlightRef = useRef(false); // ✅ ref로 변경
+  // ✅ 엑셀 내보내기: 헤더/데이터 계산
+  const excelHeaders = [
+    "일정명",
+    "상품명",
+    "유형",
+    "기간",
+    "강사",
+    "가격",
+    "상태",
+    "등록일시",
+    "수정일시",
+  ];
+
+  const excelRows = useMemo(
+    () =>
+      schedules.map((s) => ({
+        일정명: s.title,
+        상품명: s.product_title,
+        유형: s.product_type,
+        기간: `${formatDateOnly(s.start_date)} ~ ${formatDateOnly(s.end_date)}`,
+        강사: s.instructor,
+        가격: s.price != null ? `${Number(s.price).toLocaleString()}원` : "-",
+        상태: s.is_active ? "활성" : "비활성",
+        등록일시: formatDateLocal(s.created_at),
+        수정일시: s.updated_at ? formatDateLocal(s.updated_at) : "-",
+      })),
+    [schedules]
+  );
+
   const fetchSchedules = async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
       setIsLoading(true);
       setLoadError("");
@@ -91,10 +185,22 @@ export default function SchedulesTable() {
         page,
         sortKey: sortConfig.key,
         sortDir: sortConfig.direction,
-        searchField,
-        searchQuery,
+        searchField: effSearchField,
+        searchQuery: effSearchQuery,
       };
-      if (tabType && tabType !== "전체") params.type = tabType; // ✅ "전체"일 땐 안 보냄
+
+      if (effStartDate) params.start_date = effStartDate;
+      if (effEndDate) params.end_date = effEndDate;
+
+      if (tabType && tabType !== "전체") params.type = tabType;
+
+      // 진행중: 날짜 파라미터 제거 + 서버에 in_progress=1 전달
+      if (useExternalToolbar && externalInProgress) {
+        delete params.start_date;
+        delete params.end_date;
+        params.in_progress = 1;
+      }
+
       const res = await api.get("admin/schedules", { params });
       if (res.data?.success) {
         setSchedules(res.data.schedules || []);
@@ -103,7 +209,7 @@ export default function SchedulesTable() {
           res.data.totalCount ??
           res.data.pagination?.total ??
           (Array.isArray(res.data.schedules) ? res.data.schedules.length : 0);
-        setTotal(t);
+        setTotal(Number(t) || 0);
       } else {
         setLoadError("일정 목록을 불러오지 못했습니다.");
       }
@@ -111,23 +217,24 @@ export default function SchedulesTable() {
       setLoadError("일정 목록 조회 실패");
     } finally {
       setIsLoading(false);
+      inFlightRef.current = false;
     }
   };
 
   useEffect(() => {
     fetchSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    tabType,
-    page,
-    pageSize,
-    searchField,
-    searchQuery,
-    sortConfig.key,
-    sortConfig.direction,
-  ]);
+  }, [refreshKey]); // 🔑 외부: 버튼 클릭 시만, 내부: 필드/쿼리/기간 변경 시
+  // ✅ 외부 툴바(페이지 상단) 사용 시, 계산된 엑셀 데이터를 상향 전달
+  useEffect(() => {
+    if (useExternalToolbar && typeof onExcelData === "function") {
+      onExcelData({ headers: excelHeaders, data: excelRows });
+    }
+    // 🔑 onExcelData는 제외 (부모의 setState는 참조 변경되기 때문에 루프 원인)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useExternalToolbar, excelRows]);
 
-  // ✅ 정렬
+  // ✅ 정렬 (헤더 화살표 제거, 클릭 정렬은 유지)
   const handleSort = (key) => {
     setPage(1);
     setSortConfig((prev) => {
@@ -136,22 +243,6 @@ export default function SchedulesTable() {
         isSameKey && prev.direction === "asc" ? "desc" : "asc";
       return { key, direction: nextDirection };
     });
-  };
-  const renderArrow = (key, config) => {
-    const baseStyle = {
-      marginLeft: "6px",
-      fontSize: "12px",
-      display: "inline-block",
-      width: "18px",
-      textAlign: "center",
-    };
-    if (config.key !== key)
-      return <span style={{ ...baseStyle, color: "#ccc" }}>↕</span>;
-    return (
-      <span style={{ ...baseStyle, color: "#000" }}>
-        {config.direction === "asc" ? "▲" : "▼"}
-      </span>
-    );
   };
 
   // ✅ 선택/삭제/토글
@@ -165,17 +256,83 @@ export default function SchedulesTable() {
     );
 
   const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
     const ok = await showConfirm("정말로 선택한 일정을 삭제하시겠습니까?");
     if (!ok) return;
+
+    const ids = Array.from(new Set(selectedIds.map(Number))).filter(
+      (n) => n > 0
+    );
+
     try {
-      await api.delete("admin/schedules", { data: { ids: selectedIds } });
+      // 1차: DELETE body 방식(백엔드 컨트롤러 deleteSchedules)
+      await api.request({
+        method: "delete",
+        url: "admin/schedules",
+        headers: { "Content-Type": "application/json" },
+        data: { ids },
+      });
+
       showAlert("삭제되었습니다.");
       setSelectedIds([]);
       fetchSchedules();
-    } catch {
-      showAlert("삭제 실패");
+    } catch (e1) {
+      // FK 차단(주문/수료증) → 409 + details 반환
+      if (
+        e1?.response?.status === 409 &&
+        e1?.response?.data?.code === "HAS_DEPENDENCIES"
+      ) {
+        const details = e1.response.data.details || {};
+        const oc = (details.orderBlocks || []).reduce(
+          (a, b) => a + (b.order_count || 0),
+          0
+        );
+        const cc = (details.certBlocks || []).reduce(
+          (a, b) => a + (b.cert_count || 0),
+          0
+        );
+        const lines = ["삭제 불가: 연결된 데이터가 있습니다."];
+
+        // 줄마다 접두사 붙여 좌측정렬 느낌 강화
+        if (Number(oc) > 0) lines.push(`• 주문내역: ${oc}건`);
+        if (Number(cc) > 0) lines.push(`• 수료증: ${cc}건`);
+
+        lines.push("관련 데이터를 먼저 정리한 후 삭제하세요.");
+
+        showAlert(lines.join("\n"));
+        return;
+      }
+      // 폴백: 쿼리스트링 방식 (서버가 body 미수용일 경우)
+      try {
+        await api.delete("admin/schedules", { params: { ids: ids.join(",") } });
+        showAlert("삭제되었습니다.");
+        setSelectedIds([]);
+        fetchSchedules();
+      } catch {
+        showAlert("삭제 실패");
+      }
     }
   };
+
+  // ✅ 상단 패널의 "- 삭제" 빠른 작업과 연동 (선택 항목이 있을 때만 동작)
+  useEffect(() => {
+    const handler = () => {
+      if (!selectedIds || selectedIds.length === 0) return;
+      // 기존 삭제 로직 재사용
+      (async () => {
+        await handleDeleteSelected();
+      })();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("schedules:deleteSelected", handler);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("schedules:deleteSelected", handler);
+      }
+    };
+    // selectedIds 변동 시 최신 선택 상태 반영
+  }, [selectedIds]);
 
   const handleToggleActive = async (id, currentValue) => {
     try {
@@ -190,7 +347,8 @@ export default function SchedulesTable() {
 
   const handleReset = () => {
     setPage(1);
-    setSortConfig({ key: "start_date", direction: "asc" });
+    setPageSize(20);
+    setSortConfig({ key: "updated_at", direction: "desc" });
     setSearchQuery("");
     setSearchField("title");
     setStartDate(null);
@@ -207,143 +365,97 @@ export default function SchedulesTable() {
   // ========== 렌더 ==========
   return (
     <div>
-      {/* 상단 툴바 (공통 컴포넌트) */}
-      <AdminToolbar>
-        <div className="toolbar-left">
-          {mounted && showFilter ? (
-            <SearchFilter
-              searchType={searchField}
-              setSearchType={setSearchField}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              startDate={startDate}
-              endDate={endDate}
-              setStartDate={setStartDate}
-              setEndDate={setEndDate}
-              onSearchUpdate={(field, query) => {
-                setSearchField(field);
-                setSearchQuery(query);
+      {/* 상단 툴바 (공통 컴포넌트) — 외부 툴바 사용 시 렌더링 생략 */}
+      {!useExternalToolbar && (
+        <AdminToolbar>
+          <div className="toolbar-left">
+            {mounted && showFilter ? (
+              <SearchFilter
+                searchType={searchField}
+                setSearchType={setSearchField}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                startDate={startDate}
+                endDate={endDate}
+                setStartDate={setStartDate}
+                setEndDate={setEndDate}
+                onSearchUpdate={(field, query) => {
+                  setSearchField(field);
+                  setSearchQuery(query);
+                  setPage(1);
+                }}
+                searchOptions={[
+                  { value: "title", label: "일정명", type: "text" },
+                  { value: "product_title", label: "상품명", type: "text" },
+                  {
+                    value: "product_type",
+                    label: "유형",
+                    type: "select",
+                    options: typeOptions,
+                  },
+                  { value: "start_date", label: "기간", type: "date" },
+                  { value: "instructor", label: "강사", type: "text" },
+                  { value: "price", label: "가격", type: "text" },
+                  {
+                    value: "is_active",
+                    label: "활성화 상태",
+                    type: "select",
+                    options: [
+                      { value: "1", label: "활성" },
+                      { value: "0", label: "비활성" },
+                    ],
+                  },
+                  { value: "created_at", label: "등록일시", type: "date" },
+                  { value: "updated_at", label: "수정일시", type: "date" },
+                ]}
+              />
+            ) : null}
+
+            <button onClick={handleReset} style={resetBtn}>
+              초기화
+            </button>
+          </div>
+
+          <div className="toolbar-right">
+            <button
+              className="filter-toggle"
+              onClick={() => setShowFilter((v) => !v)}
+              style={primaryBtn}
+            >
+              필터
+            </button>
+
+            <button
+              onClick={handleDeleteSelected}
+              disabled={selectedIds.length === 0}
+              style={{
+                ...dangerBtn,
+                cursor: selectedIds.length === 0 ? "not-allowed" : "pointer",
+              }}
+            >
+              삭제
+            </button>
+
+            <PageSizeSelector
+              value={pageSize}
+              onChange={(newSize) => {
+                setPageSize(newSize);
                 setPage(1);
               }}
-              searchOptions={[
-                { value: "title", label: "일정명", type: "text" },
-                { value: "product_title", label: "상품명", type: "text" },
-                {
-                  value: "product_type",
-                  label: "유형",
-                  type: "select",
-                  options: typeOptions,
-                },
-                { value: "start_date", label: "기간", type: "date" },
-                { value: "instructor", label: "강사", type: "text" },
-                { value: "price", label: "가격", type: "text" },
-                {
-                  value: "is_active",
-                  label: "활성화 상태",
-                  type: "select",
-                  options: [
-                    { value: "1", label: "활성" },
-                    { value: "0", label: "비활성" },
-                  ],
-                },
-                { value: "created_at", label: "등록일시", type: "date" },
-                { value: "updated_at", label: "수정일시", type: "date" },
-              ]}
             />
-          ) : null}
-          <button onClick={handleReset} style={resetBtn}>
-            초기화
-          </button>
-        </div>
 
-        <div className="toolbar-right">
-          <button
-            className="filter-toggle"
-            onClick={() => setShowFilter((v) => !v)}
-            style={primaryBtn}
-          >
-            필터
-          </button>
-
-          <button
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.length === 0}
-            style={{
-              ...dangerBtn,
-              cursor: selectedIds.length === 0 ? "not-allowed" : "pointer",
-            }}
-          >
-            삭제
-          </button>
-
-          <PageSizeSelector
-            value={pageSize}
-            onChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
-          />
-
-          <ExcelDownloadButton
-            fileName="일정목록"
-            sheetName="일정목록"
-            headers={[
-              "일정명",
-              "상품명",
-              "유형",
-              "기간",
-              "강사",
-              "가격",
-              "활성화",
-              "등록일시",
-              "수정일시",
-            ]}
-            data={schedules.map((s) => ({
-              일정명: s.title,
-              상품명: s.product_title,
-              유형: s.product_type,
-              기간: `${formatDateOnly(s.start_date)} ~ ${formatDateOnly(
-                s.end_date
-              )}`,
-              강사: s.instructor,
-              가격:
-                s.price != null ? `${Number(s.price).toLocaleString()}원` : "-",
-              활성화: s.is_active ? "활성" : "비활성",
-              등록일시: formatDateUTC(s.created_at),
-              수정일시: s.updated_at ? formatDateUTC(s.updated_at) : "-",
-            }))}
-            extraSheets={[
-              {
-                name: "일정별_신청자목록",
-                fetch: async () => {
-                  const allRows = [];
-                  for (const s of schedules) {
-                    const res = await api.get(
-                      `admin/schedules/${s.id}/students`
-                    );
-                    const students = res.data.students || [];
-                    const mapped = students.map((stu) => ({
-                      일정명: s.title,
-                      상품명: s.product_title,
-                      이름: stu.username,
-                      이메일: stu.email,
-                      수량: stu.quantity,
-                      구분: stu.source,
-                      신청일: formatDateUTC(stu.created_at),
-                    }));
-                    allRows.push(...mapped);
-                  }
-                  return allRows;
-                },
-              },
-            ]}
-          />
-        </div>
-      </AdminToolbar>
+            <ExcelDownloadButton
+              fileName="일정목록"
+              sheetName="일정목록"
+              headers={excelHeaders}
+              data={excelRows}
+            />
+          </div>
+        </AdminToolbar>
+      )}
 
       {/* 본문: 로딩/에러/빈/목록 */}
       {isLoading ? (
-        // ✅ Skeleton (공통)
         isNarrow ? (
           <div style={{ display: "grid", gap: 12 }}>
             {Array.from({ length: 6 }).map((_, i) => (
@@ -351,10 +463,9 @@ export default function SchedulesTable() {
             ))}
           </div>
         ) : (
-          <TableSkeleton columns={11} rows={6} />
+          <TableSkeleton columns={12} rows={6} />
         )
       ) : loadError ? (
-        // Error
         <div style={errorBox}>
           {loadError}
           <button
@@ -365,185 +476,200 @@ export default function SchedulesTable() {
           </button>
         </div>
       ) : total === 0 && schedules.length === 0 ? (
-        // Empty
         <div style={emptyBox}>
           일정이 없습니다. 필터를 변경하거나 검색어를 조정해 보세요.
         </div>
       ) : !isNarrow ? (
         // 데스크톱: 테이블
         <>
-          <div style={{ overflowX: "auto", width: "100%" }}>
+          <div className="admin-table-wrap" style={{ overflowX: "auto" }}>
             <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "15px",
-                lineHeight: "1.6",
-                tableLayout: "fixed",
-              }}
+              className="admin-table"
+              style={{ tableLayout: "fixed", width: "100%" }}
             >
-              <thead style={{ background: "#f9f9f9" }}>
+              <thead style={{ backgroundColor: "#f9f9f9" }}>
                 <tr>
-                  <th style={{ ...thCenter, width: "50px" }}>
+                  <th className="admin-th" style={{ width: "50px" }}>
                     <input
                       type="checkbox"
                       onChange={(e) => toggleAll(e.target.checked)}
                       checked={isAllChecked}
                     />
                   </th>
+                  <th className="admin-th" style={{ width: "70px" }}>
+                    No
+                  </th>
                   <th
-                    style={{ ...thCenter, width: "280px" }}
+                    className="admin-th"
+                    style={{ width: "260px" }}
                     onClick={() => handleSort("title")}
                   >
-                    일정명 {renderArrow("title", sortConfig)}
+                    일정명
                   </th>
-                  <th style={{ ...thCenter, width: "80px" }}>썸네일</th>
+                  <th className="admin-th" style={{ width: "80px" }}>
+                    썸네일
+                  </th>
                   <th
-                    style={{ ...thCenter, width: "160px" }}
+                    className="admin-th"
+                    style={{ width: "160px" }}
                     onClick={() => handleSort("product_title")}
                   >
-                    상품명 {renderArrow("product_title", sortConfig)}
+                    상품명
                   </th>
                   <th
-                    style={{ ...thCenter, width: "120px" }}
+                    className="admin-th"
+                    style={{ width: "120px" }}
                     onClick={() => handleSort("product_type")}
                   >
-                    유형 {renderArrow("product_type", sortConfig)}
+                    유형
                   </th>
                   <th
-                    style={{ ...thCenter, width: "140px" }}
+                    className="admin-th"
+                    style={{ width: "160px" }}
                     onClick={() => handleSort("start_date")}
                   >
-                    기간 {renderArrow("start_date", sortConfig)}
+                    기간
                   </th>
                   <th
-                    style={{ ...thCenter, width: "100px" }}
+                    className="admin-th"
+                    style={{ width: "110px" }}
                     onClick={() => handleSort("instructor")}
                   >
-                    강사 {renderArrow("instructor", sortConfig)}
+                    강사
                   </th>
                   <th
-                    style={{ ...thCenter, width: "100px" }}
+                    className="admin-th"
+                    style={{ width: "110px" }}
                     onClick={() => handleSort("price")}
                   >
-                    가격 {renderArrow("price", sortConfig)}
+                    가격
                   </th>
                   <th
-                    onClick={() => handleSort("is_active")}
-                    style={{
-                      ...thCenter,
-                      width: "80px",
-                      cursor: "pointer",
-                      textAlign: "center",
-                    }}
-                  >
-                    활성 {renderArrow("is_active", sortConfig)}
-                  </th>
-                  <th
-                    style={{ ...thCenter, width: "140px" }}
+                    className="admin-th"
+                    style={{ width: "150px" }}
                     onClick={() => handleSort("created_at")}
                   >
-                    등록일시 {renderArrow("created_at", sortConfig)}
+                    등록일시
                   </th>
                   <th
-                    style={{ ...thCenter, width: "140px" }}
+                    className="admin-th"
+                    style={{ width: "150px" }}
                     onClick={() => handleSort("updated_at")}
                   >
-                    수정일시 {renderArrow("updated_at", sortConfig)}
+                    수정일시
+                  </th>
+                  <th className="admin-th" style={{ width: "90px" }}>
+                    상태
                   </th>
                 </tr>
               </thead>
+
               <tbody>
-                {schedules.map((s, idx) => (
-                  <tr
-                    key={s.id}
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                      borderBottom: "1px solid #eee",
-                      textAlign: "center",
-                      opacity: s.is_active ? 1 : 0.4,
-                      height: 80,
-                    }}
-                  >
-                    <td style={{ ...tdCenter, width: "50px" }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(s.id)}
-                        onChange={(e) => toggleOne(s.id, e.target.checked)}
-                      />
-                    </td>
-                    <td style={{ ...tdCenter, width: "280px" }}>
-                      <span
-                        onClick={() => router.push(`/admin/schedules/${s.id}`)}
-                        style={{
-                          color: "#0070f3",
-                          textDecoration: "underline",
-                          cursor: "pointer",
-                          fontWeight: "500",
-                          display: "block",
-                        }}
-                      >
-                        {s.title}
-                      </span>
-                      <span style={{ fontSize: "13px", color: "#666" }}>
-                        {s.product_title ?? "-"}
-                      </span>
-                    </td>
-                    <td style={{ ...tdCenter, width: "80px" }}>
-                      {s.thumbnail || s.image_url || s.product_image ? (
-                        <img
-                          src={s.thumbnail || s.image_url || s.product_image}
-                          alt="일정 썸네일"
-                          style={{ width: 60, height: 60, objectFit: "cover" }}
-                          loading="lazy"
+                {schedules.map((s, idx) => {
+                  const rowNo = (page - 1) * pageSize + (idx + 1);
+                  return (
+                    <tr
+                      key={s.id}
+                      style={{
+                        backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                        borderBottom: "1px solid #eee",
+                        opacity: s.is_active ? 1 : 0.4,
+                        height: 80,
+                      }}
+                    >
+                      <td className="admin-td" style={{ width: "50px" }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(s.id)}
+                          onChange={(e) => toggleOne(s.id, e.target.checked)}
                         />
-                      ) : (
-                        <div style={thumbEmpty}>썸네일 없음</div>
-                      )}
-                    </td>
-                    <td style={{ ...tdCenter, width: "160px" }}>
-                      {s.product_title ?? "-"}
-                    </td>
-                    <td style={{ ...tdCenter, width: "120px" }}>
-                      {s.product_type ?? "-"}
-                    </td>
-                    <td style={{ ...tdCenter, width: "140px" }}>
-                      <div>
-                        {formatDateOnly(s.start_date)}
-                        <br />~ {formatDateOnly(s.end_date)}
-                      </div>
-                    </td>
-                    <td style={{ ...tdCenter, width: "100px" }}>
-                      {s.instructor}
-                    </td>
-                    <td style={{ ...tdCenter, width: "100px" }}>
-                      {s.price != null
-                        ? `${Number(s.price).toLocaleString()}원`
-                        : "-"}
-                    </td>
-                    <td style={{ ...tdCenter, width: "80px" }}>
-                      <ToggleSwitch
-                        checked={!!s.is_active}
-                        onChange={(next) =>
-                          handleToggleActive(s.id, !next ? true : false)
-                        }
-                        size="sm"
-                        onLabel="ON"
-                        offLabel="OFF"
-                      />
-                    </td>
-                    <td style={{ ...tdCenter, width: "140px" }}>
-                      {formatDateUTC(s.created_at)}
-                    </td>
-                    <td style={{ ...tdCenter, width: "140px" }}>
-                      {s.updated_at ? formatDateUTC(s.updated_at) : "-"}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td className="admin-td" style={{ width: "70px" }}>
+                        {rowNo}
+                      </td>
+                      <td
+                        className="admin-td"
+                        style={{ width: "260px", textAlign: "center" }}
+                      >
+                        <span
+                          onClick={() =>
+                            router.push(`/admin/schedules/${s.id}`)
+                          }
+                          style={{
+                            color: "#0070f3",
+                            textDecoration: "none",
+                            cursor: "pointer",
+                            fontWeight: "500",
+                            display: "block",
+                          }}
+                        >
+                          {s.title}
+                        </span>
+                      </td>
+                      <td className="admin-td" style={{ width: "80px" }}>
+                        {s.thumbnail || s.image_url || s.product_image ? (
+                          <img
+                            src={s.thumbnail || s.image_url || s.product_image}
+                            alt="일정 썸네일"
+                            style={{
+                              width: 60,
+                              height: 60,
+                              objectFit: "cover",
+                            }}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div style={thumbEmpty}>
+                            썸네일
+                            <br />
+                            없음
+                          </div>
+                        )}
+                      </td>
+                      <td className="admin-td" style={{ width: "160px" }}>
+                        {s.product_title ?? "-"}
+                      </td>
+                      <td className="admin-td" style={{ width: "120px" }}>
+                        {s.product_type ?? "-"}
+                      </td>
+                      <td className="admin-td" style={{ width: "160px" }}>
+                        <div>
+                          {formatDateOnly(s.start_date)}
+                          <br />~ {formatDateOnly(s.end_date)}
+                        </div>
+                      </td>
+                      <td className="admin-td" style={{ width: "110px" }}>
+                        {s.instructor}
+                      </td>
+                      <td className="admin-td" style={{ width: "110px" }}>
+                        {s.price != null
+                          ? `${Number(s.price).toLocaleString()}원`
+                          : "-"}
+                      </td>
+                      <td className="admin-td" style={{ width: "150px" }}>
+                        {formatDateLocal(s.created_at)}
+                      </td>
+                      <td className="admin-td" style={{ width: "150px" }}>
+                        {s.updated_at ? formatDateLocal(s.updated_at) : "-"}
+                      </td>
+                      <td className="admin-td" style={{ width: "90px" }}>
+                        <ToggleSwitch
+                          checked={!!s.is_active}
+                          onChange={() =>
+                            handleToggleActive(s.id, !!s.is_active)
+                          }
+                          size="sm"
+                          onLabel="ON"
+                          offLabel="OFF"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-
           <PaginationControls
             page={page}
             totalPages={totalPages}
@@ -554,115 +680,167 @@ export default function SchedulesTable() {
         // 모바일/태블릿: 카드형
         <>
           <div style={{ display: "grid", gap: 12 }}>
-            {schedules.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  ...cardShell,
-                  opacity: s.is_active ? 1 : 0.5,
-                }}
-              >
-                {/* 체크 + 코드 */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(s.id)}
-                    onChange={(e) => toggleOne(s.id, e.target.checked)}
-                  />
-                  <div style={{ fontSize: 13, color: "#666" }}>S-{s.id}</div>
-                </div>
+            {schedules.map((s, idx) => {
+              const rowNo = (page - 1) * pageSize + (idx + 1);
+              const isSelected = selectedIds.includes(s.id);
+              const toggleSelected = () => toggleOne(s.id, !isSelected);
 
-                {/* 제목(링크) */}
-                <div
-                  style={cardTitleLink}
-                  onClick={() => router.push(`/admin/schedules/${s.id}`)}
+              return (
+                <SelectableCard
+                  key={s.id}
+                  selected={isSelected}
+                  onToggle={toggleSelected}
+                  style={{ ...cardShell, opacity: s.is_active ? 1 : 0.5 }}
                 >
-                  {s.title}
-                </div>
+                  {/* 체크 + No + 코드 */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => toggleOne(s.id, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
 
-                {/* 썸네일 + 주요 정보 */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "88px 1fr",
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    {s.thumbnail || s.image_url || s.product_image ? (
-                      <img
-                        src={s.thumbnail || s.image_url || s.product_image}
-                        alt="일정 썸네일"
-                        style={{
-                          width: 88,
-                          height: 88,
-                          objectFit: "cover",
-                          borderRadius: 6,
-                        }}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div style={{ ...thumbEmpty, width: 88, height: 88 }}>
-                        없음
-                      </div>
-                    )}
+                    <div style={{ fontSize: 13, color: "#666" }}>
+                      No. {rowNo}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#999" }}>S-{s.id}</div>
                   </div>
-                  <div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>상품</span>
-                      <span style={cardValue}>{s.product_title || "-"}</span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>유형</span>
-                      <span style={cardValue}>{s.product_type || "-"}</span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>기간</span>
-                      <span style={cardValue}>
-                        {formatDateOnly(s.start_date)} ~{" "}
-                        {formatDateOnly(s.end_date)}
-                      </span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>강사</span>
-                      <span style={cardValue}>{s.instructor || "-"}</span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>가격</span>
-                      <span style={cardValue}>
-                        {s.price != null
-                          ? `${Number(s.price).toLocaleString()}원`
-                          : "-"}
-                      </span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>활성</span>
-                      <ToggleSwitch
-                        checked={!!s.is_active}
-                        onChange={(next) =>
-                          handleToggleActive(s.id, !next ? true : false)
+
+                  {/* 제목(텍스트 링크만 클릭) */}
+                  <div
+                    style={{
+                      ...cardTitleLink,
+                      cursor: "default",
+                      color: "#222",
+                    }}
+                  >
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation(); // 카드 선택 토글 방지
+                        router.push(`/admin/schedules/${s.id}`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/admin/schedules/${s.id}`);
                         }
-                        size="sm"
-                        onLabel="ON"
-                        offLabel="OFF"
-                      />
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>등록</span>
-                      <span style={cardValue}>
-                        {formatDateUTC(s.created_at)}
-                      </span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>수정</span>
-                      <span style={cardValue}>
-                        {s.updated_at ? formatDateUTC(s.updated_at) : "-"}
-                      </span>
+                      }}
+                      role="link"
+                      tabIndex={0}
+                      style={{
+                        color: "#0070f3",
+                        textDecoration: "none",
+                        cursor: "pointer", // ← 텍스트만 클릭
+                        display: "inline",
+                      }}
+                    >
+                      {s.title}
+                    </span>
+                  </div>
+
+                  {/* 썸네일 + 주요 정보 */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "88px 1fr",
+                      gap: 10,
+                    }}
+                  >
+                    {(() => {
+                      const src = s.thumbnail || s.image_url || s.product_image;
+                      const hasThumb = !!src;
+                      return (
+                        <div>
+                          {hasThumb ? (
+                            <img
+                              src={src}
+                              alt="일정 썸네일"
+                              style={{
+                                width: 88,
+                                height: 88,
+                                objectFit: "cover",
+                                borderRadius: 6,
+                                cursor: "default", // ← 클릭 아님
+                              }}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div
+                              style={{ ...thumbEmpty, width: 88, height: 88 }}
+                            >
+                              없음
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    <div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>상품</span>
+                        <span style={cardValue}>{s.product_title || "-"}</span>
+                      </div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>유형</span>
+                        <span style={cardValue}>{s.product_type || "-"}</span>
+                      </div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>기간</span>
+                        <span style={cardValue}>
+                          {formatDateOnly(s.start_date)} ~{" "}
+                          {formatDateOnly(s.end_date)}
+                        </span>
+                      </div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>강사</span>
+                        <span style={cardValue}>{s.instructor || "-"}</span>
+                      </div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>가격</span>
+                        <span style={cardValue}>
+                          {s.price != null
+                            ? `${Number(s.price).toLocaleString()}원`
+                            : "-"}
+                        </span>
+                      </div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>등록</span>
+                        <span style={cardValue}>
+                          {formatDateLocal(s.created_at)}
+                        </span>
+                      </div>
+                      <div style={cardRow}>
+                        <span style={cardLabel}>수정</span>
+                        <span style={cardValue}>
+                          {s.updated_at ? formatDateLocal(s.updated_at) : "-"}
+                        </span>
+                      </div>
+                      <div style={cardRow} onClick={(e) => e.stopPropagation()}>
+                        <span style={cardLabel}>상태</span>
+                        <ToggleSwitch
+                          checked={!!s.is_active}
+                          onChange={() =>
+                            handleToggleActive(s.id, !!s.is_active)
+                          }
+                          size="sm"
+                          onLabel="ON"
+                          offLabel="OFF"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </SelectableCard>
+              );
+            })}
           </div>
 
           <PaginationControls

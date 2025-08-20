@@ -1,3 +1,10 @@
+find . \( -name "*.js" -o -name "*.jsx" -o -type d \) \
+  -not -path "*/node_modules/*" \
+  -not -path "*/.next/*" \
+  -not -path "*/dist/*" \
+  -not -path "*/.git/*" \
+  > ghnod_structure.txt
+
 .
 ./.git
 ./.github
@@ -30,9 +37,9 @@
 ./backend/node_modules
 ./backend/routes
 ./backend/routes/admin
+./backend/routes/admin/inquiries.js
 ./backend/routes/admin/products.js
 ./backend/routes/admin/schedules.js
-./backend/routes/admin/users.js
 ./backend/routes/admin.js
 ./backend/routes/auth.js
 ./backend/routes/cart.js
@@ -49,6 +56,8 @@
 ./backend/routes/user.js
 ./backend/routes/userSchedules.js
 ./backend/server.js
+./backend/services
+./backend/services/txCheckout.js
 ./backend/test-db.js
 ./backend/test-env.js
 ./backend/uploads
@@ -70,6 +79,7 @@
 ./frontend/components/admin/ProductSchedulesModal.js
 ./frontend/components/admin/ProductTable.js
 ./frontend/components/admin/SchedulesTable.js
+./frontend/components/admin/UnansweredInquiriesModal.jsx
 ./frontend/components/admin/UserCouponGrantModal.jsx
 ./frontend/components/admin/UserCouponModal.js
 ./frontend/components/admin/UserCouponsTab.js
@@ -81,7 +91,6 @@
 ./frontend/components/admin/UserPointGrantModal.jsx
 ./frontend/components/admin/UserPointModal.js
 ./frontend/components/admin/UserPointsTab.js
-./frontend/components/admin/UserSummaryTable.js
 ./frontend/components/admin/UserTable.js
 ./frontend/components/admin/UserTabs.js
 ./frontend/components/AgreementModal.jsx
@@ -91,8 +100,10 @@
 ./frontend/components/cart/CouponSelector.jsx
 ./frontend/components/cart/PointInputModal.jsx
 ./frontend/components/common
+./frontend/components/common/AdminDialog.jsx
 ./frontend/components/common/AdminSearchFilter.jsx
 ./frontend/components/common/AdminToolbar.jsx
+./frontend/components/common/AdminTopPanels.jsx
 ./frontend/components/common/AuthBottomBarButton.jsx
 ./frontend/components/common/AuthCardLayout.jsx
 ./frontend/components/common/DateRangeSelector.jsx

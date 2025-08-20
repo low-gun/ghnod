@@ -1,57 +1,55 @@
-import { useState, useContext, useEffect } from "react";
+import { useEffect, useState, useContext, useMemo } from "react";
 import { useRouter } from "next/router";
+
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminTopPanels from "@/components/common/AdminTopPanels";
 import AdminSearchFilter from "@/components/common/AdminSearchFilter";
 import PaymentsTable from "@/components/admin/PaymentsTable";
+
 import { formatPrice } from "@/lib/format";
 import { UserContext } from "@/context/UserContext";
-import { useGlobalAlert } from "@/stores/globalAlert";
 
 export default function AdminPaymentsPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);
-  const { showAlert } = useGlobalAlert();
 
-  // 상단 현황
+  // ---------- 권한 ----------
+  useEffect(() => {
+    if (user && user.role !== "admin") router.replace("/");
+  }, [user, router]);
+  const isBlocked = !user || (user && user.role !== "admin");
+
+  // ---------- 상단 현황(테이블 로드 시 상향 보고) ----------
   const [totalCount, setTotalCount] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
 
-  // 검색 상태
-  // 검색 상태
-  const [searchType, setSearchType] = useState("all");
+  // ---------- 상단 검색 ----------
+  const [searchType, setSearchType] = useState("payment_id");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchSyncKey, setSearchSyncKey] = useState(0);
-
-  // 날짜 범위 상태(기간 검색용)
-  const [startDate, setStartDate] = useState(null);
+  const [startDate, setStartDate] = useState(null); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(null);
 
-  // 엑셀 데이터
+  // 엑셀 데이터(테이블에서 상향 보고)
   const [excelData, setExcelData] = useState({ headers: [], data: [] });
 
-  // 권한 체크
-  useEffect(() => {
-    if (user && user.role !== "admin") {
-      router.replace("/");
-    }
-  }, [user, router]);
+  const stats = useMemo(
+    () => [
+      {
+        title: "총 결제 현황",
+        value: [`건수: ${totalCount}건`, `금액: ${formatPrice(totalAmount)}원`],
+      },
+    ],
+    [totalCount, totalAmount]
+  );
 
-  if (!user) return null;
-  if (user.role !== "admin") return null;
+  // ✅ 모든 훅 선언이 끝난 뒤에만 가드
+  if (isBlocked) return null;
 
   return (
     <AdminLayout pageTitle="💳 결제내역">
       <AdminTopPanels
-        stats={[
-          {
-            title: "총 결제 현황",
-            value: [
-              `건수: ${totalCount}건`,
-              `금액: ${formatPrice(totalAmount)}원`,
-            ],
-          },
-        ]}
+        stats={stats}
         searchComponent={
           <AdminSearchFilter
             searchType={searchType}
@@ -61,7 +59,7 @@ export default function AdminPaymentsPage() {
             searchOptions={[
               { value: "payment_id", label: "주문번호", type: "text" },
               { value: "username", label: "사용자", type: "text" },
-              { value: "total_quantity", label: "수강인원", type: "text" },
+              { value: "total_quantity", label: "수량", type: "number" },
               { value: "amount", label: "결제금액", type: "text" },
               { value: "discount_total", label: "할인적용", type: "text" },
               {
@@ -88,10 +86,8 @@ export default function AdminPaymentsPage() {
               },
             ]}
             onSearchClick={(nextQuery) => {
-              if (typeof nextQuery === "string") {
-                setSearchQuery(nextQuery); // ✅ 먼저 최신 검색어를 반영
-              }
-              setSearchSyncKey((k) => k + 1); // ✅ 그 다음 fetch 트리거
+              if (typeof nextQuery === "string") setSearchQuery(nextQuery);
+              setSearchSyncKey((k) => k + 1);
             }}
             startDate={startDate}
             endDate={endDate}
@@ -110,15 +106,17 @@ export default function AdminPaymentsPage() {
       />
 
       <PaymentsTable
-        onExcelData={setExcelData}
         useExternalToolbar={true}
         externalSearchType={searchType}
         externalSearchQuery={searchQuery}
+        externalStartDate={startDate}
+        externalEndDate={endDate}
         searchSyncKey={searchSyncKey}
         onLoaded={({ totalCount, totalAmount }) => {
-          setTotalCount(totalCount);
-          setTotalAmount(totalAmount);
+          setTotalCount(totalCount ?? 0);
+          setTotalAmount(totalAmount ?? 0);
         }}
+        onExcelData={setExcelData}
       />
     </AdminLayout>
   );

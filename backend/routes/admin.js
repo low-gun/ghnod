@@ -98,7 +98,7 @@ router.post("/schedules", async (req, res) => {
 });
 
 // ======================= 일정 삭제(숨김 처리) API =======================
-router.delete("/schedules/:id", async (req, res) => {
+router.delete("/schedules/:id(\\d+)", async (req, res) => {
   try {
     const { id } = req.params;
     const [existing] = await db.query("SELECT * FROM schedules WHERE id = ?", [
@@ -127,10 +127,68 @@ router.delete("/schedules/:id", async (req, res) => {
     res.status(500).json({ success: false, message: "일정 숨김 실패" });
   }
 });
+/* ✅ 추가: 일정 삭제 사전 체크 (FK: order_items, certificates) */
+router.get(
+  "/schedules/deletion-check",
+  authenticateToken,
+  authenticateAdmin,
+  async (req, res) => {
+    try {
+      const ids = String(req.query.ids || "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0);
 
+      if (!ids.length) {
+        return res.status(400).json({
+          success: false,
+          message: "ids 쿼리스트링이 필요합니다. 예: ?ids=1,2,3",
+        });
+      }
+
+      const placeholders = ids.map(() => "?").join(",");
+
+      const [orderBlocks] = await db.query(
+        `SELECT schedule_id, COUNT(*) AS order_count
+           FROM order_items
+          WHERE schedule_id IN (${placeholders})
+          GROUP BY schedule_id`,
+        ids
+      );
+
+      const [certBlocks] = await db.query(
+        `SELECT schedule_id, COUNT(*) AS cert_count
+           FROM certificates
+          WHERE schedule_id IN (${placeholders})
+          GROUP BY schedule_id`,
+        ids
+      );
+
+      const blocked =
+        (orderBlocks?.length || 0) > 0 || (certBlocks?.length || 0) > 0;
+
+      return res.json({
+        success: true,
+        blocked, // true면 삭제 차단 필요
+        details: { orderBlocks, certBlocks },
+      });
+    } catch (e) {
+      console.error("❌ /schedules/deletion-check 오류:", e);
+      return res.status(500).json({ success: false, message: "체크 실패" });
+    }
+  }
+);
+
+/* ✅ 추가: 일정 일괄 삭제 (컨트롤러로 위임; body.ids 또는 ?ids= 지원) */
+router.delete(
+  "/schedules",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.deleteSchedules
+);
 // ======================= 일정 상세 조회 API =======================
 // ⚠️ 이 부분에 있던 router.get("/products", adminController.getProducts); 를 제거했습니다!
-router.get("/schedules/:id", async (req, res) => {
+router.get("/schedules/:id(\\d+)", async (req, res) => {
   try {
     const { id } = req.params;
     const [schedules] = await db.query(
@@ -158,7 +216,7 @@ router.get("/schedules/:id", async (req, res) => {
 });
 
 // ======================= 일정 수정 API =======================
-router.put("/schedules/:id", async (req, res) => {
+router.put("/schedules/:id(\\d+)", async (req, res) => {
   const { id } = req.params;
   const {
     title,
@@ -220,142 +278,52 @@ router.put("/schedules/:id", async (req, res) => {
 });
 
 // ======================= 사용자 요약 데이터 조회 API =======================
-router.get("/users/summary", async (req, res) => {
-  try {
-    const {
-      page = 1,
-      pageSize = 20,
-      sort = "created_at",
-      order = "desc",
-      type = "all",
-      search = "",
-    } = req.query;
-    const offset = (parseInt(page, 10) - 1) * parseInt(pageSize, 10);
-
-    const validFields = [
-      "created_at",
-      "username",
-      "email",
-      "courseCount",
-      "paymentTotal",
-      "pointGiven",
-      "pointUsed",
-      "pointBalance",
-      "couponBalance",
-      "inquiryCount",
-    ];
-    const sortField = validFields.includes(sort) ? sort : "created_at";
-    const sortOrder = order === "desc" ? "DESC" : "ASC";
-
-    let whereClause = "WHERE u.is_deleted = 0";
-    let values = [];
-
-    if (search) {
-      if (type !== "all" && ["username", "email"].includes(type)) {
-        whereClause += ` AND u.${type} LIKE ?`;
-        values.push(`%${search}%`);
-      } else {
-        whereClause += ` AND (u.username LIKE ? OR u.email LIKE ?)`;
-        values.push(`%${search}%`, `%${search}%`);
-      }
-    }
-
-    const countQuery = `SELECT COUNT(*) AS totalCount FROM users u ${whereClause}`;
-    const [[{ totalCount }]] = await db.query(countQuery, values);
-
-    const dataQuery = `
-     SELECT
-  u.id,
-  u.username,
-  u.email,
-  u.created_at AS created_at,
-  (
-    SELECT COUNT(*)
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
-    WHERE o.user_id = u.id AND o.order_status = 'paid'
-  ) AS courseCount,
-
-(
-  SELECT COALESCE(SUM(CASE WHEN change_type = '적립' THEN amount ELSE 0 END), 0)
-  FROM points
-  WHERE user_id = u.id
-) AS pointGiven,
-
-(
-  SELECT COALESCE(SUM(CASE WHEN change_type = '사용' THEN amount ELSE 0 END), 0)
-  FROM points
-  WHERE user_id = u.id
-) AS pointUsed,
-
-(
-  SELECT COALESCE(SUM(CASE WHEN change_type = '적립' THEN amount ELSE 0 END), 0) -
-         COALESCE(SUM(CASE WHEN change_type = '사용' THEN amount ELSE 0 END), 0)
-  FROM points
-  WHERE user_id = u.id
-) AS pointBalance,
-
-(
-  SELECT COALESCE(SUM(amount), 0)
-  FROM payments
-  WHERE user_id = u.id AND status IN ('완료', 'paid')
-) AS paymentTotal,
-
-(
-  SELECT COUNT(*)
-  FROM coupons
-  WHERE user_id = u.id
-) AS couponGiven,
-
-(
-  SELECT COUNT(*)
-  FROM coupons
-  WHERE user_id = u.id AND is_used = 1
-) AS couponUsed,
-
-(
-  SELECT COUNT(*)
-  FROM coupons
-  WHERE user_id = u.id AND is_used = 0
-) AS couponBalance,
-
-(
-  SELECT COUNT(*)
-  FROM inquiries
-  WHERE user_id = u.id
-) AS inquiryCount
-
-      FROM users u
-      ${whereClause}
-      ORDER BY ${sortField} ${sortOrder}
-      LIMIT ? OFFSET ?
-    `;
-
-    const dataValues = [...values, parseInt(pageSize), parseInt(offset)];
-    const [summaries] = await db.query(dataQuery, dataValues);
-
-    res.json({ success: true, summaries, totalCount });
-  } catch (error) {
-    console.error("❌ 사용자 요약 데이터 조회 실패:", error);
-    if (error.sqlMessage) {
-      console.error("📛 SQL 에러 메시지:", error.sqlMessage);
-    }
-    res.status(500).json({ success: false, message: "요약 데이터 조회 실패" });
-  }
-});
-
+router.get(
+  "/users/summary",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.getUserSummary
+);
+router.get(
+  "/inquiries",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.getUnansweredInquiries
+);
 // ======================= 사용자 기본 정보 조회 API =======================
-router.get("/users/:id", getUserById);
-router.get("/coupon-templates", adminController.getCouponTemplates);
+router.get("/users/:id", authenticateToken, authenticateAdmin, getUserById);
+router.get(
+  "/coupon-templates",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.getCouponTemplates
+);
 // ======================= 쿠폰 템플릿 등록/수정/삭제 API =======================
-router.post("/coupon-templates", adminController.createCouponTemplate);
+router.post(
+  "/coupon-templates",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.createCouponTemplate
+);
 router.patch(
   "/coupon-templates/:id/activate",
+  authenticateToken,
+  authenticateAdmin,
   adminController.toggleCouponTemplateActive
 );
 
-router.put("/coupon-templates/:id", adminController.updateCouponTemplate);
-router.delete("/coupon-templates/:id", adminController.deleteCouponTemplate);
+router.put(
+  "/coupon-templates/:id",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.updateCouponTemplate
+);
+router.delete(
+  "/coupon-templates/:id",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.deleteCouponTemplate
+);
 
 // ======================= 사용자 역할 변경 API =======================
 router.put("/users/:id/role", adminController.updateUserRole);
@@ -367,7 +335,78 @@ router.put("/users/:id/reset-password", adminController.resetUserPassword);
 router.put("/users/:id", authenticateToken, adminController.updateUserInfo);
 
 // ======================= 상품 관련 라우터 연결 =======================
+/* ✅ 추가: 상품 삭제 사전 체크 (FK: schedules, reviews) */
+router.get(
+  "/products/deletion-check",
+  authenticateToken,
+  authenticateAdmin,
+  async (req, res) => {
+    try {
+      const ids = String(req.query.ids || "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0);
+
+      if (!ids.length) {
+        return res.status(400).json({
+          success: false,
+          message: "ids 쿼리스트링이 필요합니다. 예: ?ids=1,2,3",
+        });
+      }
+
+      const placeholders = ids.map(() => "?").join(",");
+
+      const [scheduleBlocks] = await db.query(
+        `SELECT product_id, COUNT(*) AS schedule_count
+           FROM schedules
+          WHERE product_id IN (${placeholders})
+          GROUP BY product_id`,
+        ids
+      );
+
+      const [reviewBlocks] = await db.query(
+        `SELECT product_id, COUNT(*) AS review_count
+           FROM reviews
+          WHERE product_id IN (${placeholders})
+          GROUP BY product_id`,
+        ids
+      );
+
+      const blocked =
+        (scheduleBlocks?.length || 0) > 0 || (reviewBlocks?.length || 0) > 0;
+
+      return res.json({
+        success: true,
+        blocked, // true면 삭제 차단 필요
+        details: { scheduleBlocks, reviewBlocks },
+      });
+    } catch (e) {
+      console.error("❌ /products/deletion-check 오류:", e);
+      return res.status(500).json({ success: false, message: "체크 실패" });
+    }
+  }
+);
+
+/* ✅ 추가: 상품 일괄 삭제 (컨트롤러로 위임; body.ids 또는 ?ids= 지원) */
+router.delete(
+  "/products",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.deleteProducts
+);
+
+// ======================= 상품 관련 라우터 연결 =======================
 router.use("/products", productRoutes); // ✅ 최하단에서 연결
+
+// 상품 활성/비활성 토글
+router.put(
+  "/products/:id/active",
+  authenticateToken,
+  authenticateAdmin,
+  async (req, res) => {
+    // ...
+  }
+);
 
 // ======================= 사용자 수정 이력 조회 API =======================
 router.get("/users/:id/history", async (req, res) => {
@@ -416,67 +455,10 @@ router.post("/users/:id/coupons", adminController.giveUserCoupon);
 router.get("/users/:id/points", getUserPoints);
 
 // ======================= 사용자 목록 조회 API =======================
-router.get("/users", async (req, res) => {
-  try {
-    const {
-      page = 1,
-      pageSize = 20,
-      sort = "created_at",
-      order = "desc",
-      type = "all",
-      search = "",
-    } = req.query;
+// ======================= 사용자 목록 조회 API =======================
+const { getUsers } = require("../controllers/adminController");
 
-    const showDeleted = req.query.showDeleted === "true";
-
-    let whereClause = "WHERE 1=1";
-    if (!showDeleted) {
-      whereClause += " AND is_deleted = 0";
-    }
-    const offset = (page - 1) * pageSize;
-    const validFields = [
-      "id",
-      "username",
-      "email",
-      "phone",
-      "role",
-      "created_at",
-      "updated_at",
-    ];
-    const sortField = validFields.includes(sort) ? sort : "created_at";
-    const sortOrder = order === "asc" ? "ASC" : "DESC";
-    let values = [];
-
-    if (search) {
-      if (type !== "all" && validFields.includes(type)) {
-        whereClause += ` AND ${type} LIKE ?`;
-        values.push(`%${search}%`);
-      } else {
-        whereClause += ` AND (username LIKE ? OR email LIKE ? OR phone LIKE ? OR role LIKE ?)`;
-        values.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
-      }
-    }
-
-    const countQuery = `SELECT COUNT(*) AS totalCount FROM users ${whereClause}`;
-    const [[{ totalCount }]] = await db.query(countQuery, values);
-
-    const dataQuery = `
-      SELECT id, username, email, phone, role, created_at, updated_at, is_deleted
-      FROM users
-      ${whereClause}
-      ORDER BY ${sortField} ${sortOrder}
-      LIMIT ? OFFSET ?
-    `;
-
-    const dataValues = [...values, parseInt(pageSize), parseInt(offset)];
-    const [users] = await db.query(dataQuery, dataValues);
-
-    res.json({ success: true, users, totalCount });
-  } catch (error) {
-    console.error("❌ 사용자 목록 조회 실패:", error);
-    res.status(500).json({ success: false, message: "사용자 목록 조회 실패" });
-  }
-});
+router.get("/users", authenticateToken, authenticateAdmin, getUsers);
 
 // ======================= 사용자 활성/비활성 상태 변경 API =======================
 router.put("/users/:id/status", async (req, res) => {
@@ -513,26 +495,38 @@ router.put("/users/:id/status", async (req, res) => {
 });
 router.get(
   "/payments",
+  authenticateToken,
+  authenticateAdmin,
   (req, res, next) => {
-    // ① 요청 직전
     console.log("▶ [ADMIN-ROUTE] GET /admin/payments  query:", req.query);
     next();
   },
   async (req, res, next) => {
     try {
-      await adminController.getAllPayments(req, res); // ② 실제 처리
+      await adminController.getAllPayments(req, res);
       console.log("◀ [ADMIN-ROUTE] /admin/payments 응답 완료");
     } catch (err) {
-      // ③ 에러 발생
       console.error("❌ [ADMIN-ROUTE] /admin/payments 오류:", err);
-      next(err); // 에러 핸들러로 전달
+      next(err);
     }
   }
 );
+
 // ======================= 쿠폰 템플릿 활성화/비활성화 토글 =======================
 
-router.get("/payments/:id", adminController.getPaymentDetail); // ✅ 결제 상세 조회
-router.put("/orders/:id/refund", adminController.refundOrderByAdmin);
+router.get(
+  "/payments/:id",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.getPaymentDetail
+);
+// ✅ 결제 상세 조회
+router.put(
+  "/orders/:id/refund",
+  authenticateToken,
+  authenticateAdmin,
+  adminController.refundOrderByAdmin
+);
 // ✅ 이걸로 교체
 router.post(
   "/batch-coupons",
@@ -588,37 +582,9 @@ router.put(
   "/users/inquiries/:id/answer",
   authenticateToken,
   authenticateAdmin,
-  async (req, res) => {
-    const { id } = req.params;
-    const { answer } = req.body;
-
-    if (!answer) {
-      return res
-        .status(400)
-        .json({ success: false, message: "답변 내용이 필요합니다." });
-    }
-
-    try {
-      const [result] = await db.query(
-        `UPDATE inquiries
-       SET answer = ?, status = '답변완료', answered_at = NOW()
-       WHERE id = ?`,
-        [answer, id]
-      );
-
-      if (result.affectedRows === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "해당 문의를 찾을 수 없습니다." });
-      }
-
-      res.json({ success: true, message: "답변이 등록되었습니다." });
-    } catch (err) {
-      console.error("❌ 문의 답변 등록 실패:", err);
-      res.status(500).json({ success: false, message: "답변 등록 실패" });
-    }
-  }
+  adminController.answerInquiryByAdmin
 );
+
 router.get("/users/:id/inquiries", async (req, res) => {
   const userId = req.params.id;
 

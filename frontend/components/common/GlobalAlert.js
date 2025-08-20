@@ -21,23 +21,25 @@ export default function GlobalAlert() {
   // PC 토스트
   if (type === "toast") {
     return (
+      // PC 토스트
       <div
         style={{
           position: "fixed",
           top: "40%",
           left: "50.4%",
           transform: "translateX(-50%)",
-          width: 320, // ← 추가: 고정
+          width: 320,
           background: "#333",
           color: "#fff",
           borderRadius: 8,
-          padding: "10px 0", // ← 좌우 padding은 0으로 두고, width로 맞춤
+          padding: "10px 0",
           zIndex: 9999,
           textAlign: "center",
           boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
           fontSize: 15,
           cursor: "pointer",
           transition: "all 0.25s",
+          whiteSpace: "pre-line", // ← 추가: \n 줄바꿈 표시
         }}
         onClick={hideAlert}
       >
@@ -132,7 +134,11 @@ export default function GlobalAlert() {
           >
             &times;
           </button>
-          <div style={{ paddingTop: 18, paddingBottom: 2 }}>{message}</div>
+          <div
+            style={{ paddingTop: 18, paddingBottom: 2, whiteSpace: "pre-line" }}
+          >
+            {message}
+          </div>{" "}
         </div>
         <style>
           {`

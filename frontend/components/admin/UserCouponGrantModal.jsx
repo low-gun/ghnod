@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+// /frontend/components/admin/UserCouponGrantModal.jsx
+import { useState } from "react";
 import api from "@/lib/api";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert";
+import AdminDialog from "@/components/common/AdminDialog";
 
 export default function UserCouponGrantModal({
   selectedIds = [],
@@ -8,63 +10,101 @@ export default function UserCouponGrantModal({
   onClose,
   onSuccess,
 }) {
+  const { showAlert } = useGlobalAlert();
   const [templateId, setTemplateId] = useState("");
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
-
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
+      showAlert("쿠폰 지급 대상을 선택해주세요.");
+      return;
+    }
+    if (!templateId) {
+      showAlert("지급할 쿠폰을 선택해주세요.");
+      return;
+    }
     try {
-      console.log("🎯 지급 버튼 클릭됨");
-      if (selectedIds.length === 0) {
-        showAlert("쿠폰 지급 대상을 선택해주세요.");
-        return;
-      }
-      if (!templateId) {
-        showAlert("지급할 쿠폰을 선택해주세요.");
-        return;
-      }
-
-      const token = sessionStorage.getItem("accessToken");
-      console.log("🔥 accessToken from sessionStorage:", token);
-
-      const res = await api.post("admin/batch-coupons", {
+      setSubmitting(true);
+      await api.post("admin/batch-coupons", {
         userIds: selectedIds.map((id) => Number(id)),
         templateId: Number(templateId),
       });
-      console.log("✅ 쿠폰 지급 성공 응답:", res.data);
       showAlert("쿠폰 지급이 완료되었습니다.");
       onSuccess?.();
-      onClose();
+      onClose?.();
     } catch (err) {
-      console.log("📛 전체 응답 데이터:", err.response?.data);
       const msg =
-        err.response?.data?.message || err.message || "쿠폰 지급 중 오류 발생";
-      console.error("❌ 쿠폰 지급 실패:", msg);
+        err?.response?.data?.message ||
+        err?.message ||
+        "쿠폰 지급 중 오류가 발생했습니다.";
       showAlert(String(msg));
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const footer = (
+    <>
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={submitting}
+        style={{
+          padding: "10px 14px",
+          borderRadius: 8,
+          border: "1px solid #e5e7eb",
+          background: "#fff",
+          color: "#374151",
+          cursor: "pointer",
+          opacity: submitting ? 0.7 : 1,
+        }}
+      >
+        취소
+      </button>
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={submitting}
+        style={{
+          padding: "10px 14px",
+          borderRadius: 8,
+          border: "none",
+          background: "#ffc107",
+          color: "#212529",
+          cursor: "pointer",
+          opacity: submitting ? 0.7 : 1,
+        }}
+      >
+        {submitting ? "지급 중..." : "지급"}
+      </button>
+    </>
+  );
+
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        <button onClick={onClose} style={closeButtonStyle}>
-          ×
-        </button>
-        <h3 style={{ marginBottom: 12 }}>쿠폰 지급</h3>
-        <p style={{ fontSize: 14, marginBottom: 8 }}>
-          선택된 사용자: {selectedIds.length}명
-        </p>
+    <AdminDialog
+      open={true}
+      onClose={submitting ? undefined : onClose}
+      title="쿠폰 지급"
+      subtitle={`선택된 사용자: ${selectedIds.length}명`}
+      size="sm"
+      footer={footer}
+      closeOnBackdrop={!submitting}
+    >
+      <div style={{ display: "grid", gap: 12 }}>
+        <label style={{ fontSize: 14, color: "#374151" }}>지급할 쿠폰</label>
         <select
           value={templateId}
           onChange={(e) => setTemplateId(e.target.value)}
-          style={selectStyle}
+          disabled={submitting}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid #e5e7eb",
+            fontSize: 14,
+            outline: "none",
+            background: "#fff",
+          }}
         >
           <option value="">쿠폰을 선택하세요</option>
           {couponTemplates.map((tpl) => {
@@ -79,61 +119,10 @@ export default function UserCouponGrantModal({
             );
           })}
         </select>
-        <div style={{ textAlign: "right", marginTop: 16 }}>
-          <button onClick={handleSubmit} style={submitButtonStyle}>
-            지급
-          </button>
-        </div>
+        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+          • 선택된 템플릿 기준으로 즉시 지급됩니다.
+        </p>
       </div>
-    </div>
+    </AdminDialog>
   );
 }
-
-// ✅ 스타일
-const overlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.4)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 1000,
-};
-
-const modalStyle = {
-  backgroundColor: "#fff",
-  padding: "24px",
-  borderRadius: "8px",
-  width: "360px",
-  position: "relative",
-};
-
-const closeButtonStyle = {
-  position: "absolute",
-  top: 8,
-  right: 12,
-  border: "none",
-  background: "transparent",
-  fontSize: 24,
-  cursor: "pointer",
-};
-
-const selectStyle = {
-  width: "100%",
-  padding: "8px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  fontSize: "14px",
-};
-
-const submitButtonStyle = {
-  padding: "8px 16px",
-  backgroundColor: "#ffc107",
-  color: "#212529",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-};

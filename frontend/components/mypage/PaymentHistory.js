@@ -5,7 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { formatPrice } from "@/lib/format";
 import { useRouter } from "next/router";
 import { useIsCardLayout } from "@/lib/hooks/useIsDeviceSize";
-import SearchFilter from "@/components/common/SearchFilter";  // ← 이 줄 추가
+import SearchFilter from "@/components/common/SearchFilter"; // ← 이 줄 추가
 
 function formatKoreanDateTime(isoString) {
   if (!isoString) return "";
@@ -204,7 +204,7 @@ export default function PaymentHistory() {
         fontWeight: 400,
       }}
     >
-      <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>💳</span>
+      <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}></span>
       결제내역이 없습니다
       <div style={{ fontSize: "0.97rem", color: "#ccc", marginTop: 4 }}>
         첫 결제를 진행해보세요!
@@ -219,42 +219,58 @@ export default function PaymentHistory() {
 
       {/* 필터 (카드형일 때는 숨김) */}
       {!isCardLayout && filteredData.length > 0 && (
-  <SearchFilter
-    searchType={filterType}
-    setSearchType={setFilterType}
-    searchQuery={searchValue}
-    setSearchQuery={setSearchValue}
-    startDate={dateRange[0]}
-    endDate={dateRange[1]}
-    setStartDate={(date) => setDateRange([date, dateRange[1]])}
-    setEndDate={(date) => setDateRange([dateRange[0], date])}
-    searchOptions={[
-      { value: "order_id", label: "주문번호", type: "text" },
-      { value: "amount", label: "금액", type: "text" },
-      { value: "payment_method", label: "결제수단", type: "select", options: paymentMethods.map(m => ({ value: m, label: m })) },
-      { value: "status", label: "상태", type: "select", options: [
-        { value: "완료", label: "완료" },
-        { value: "실패", label: "실패" },
-        { value: "환불", label: "환불" },
-      ] },
-      { value: "date", label: "결제일", type: "date" },
-    ]}
-    onSearchUpdate={(type, query) => {
-      setFilterType(type);
-      setSearchValue(query);
-      setCurrentPage(1);
-    }}
-    isMobile={false}
-  />
-)}
-
+        <SearchFilter
+          searchType={filterType}
+          setSearchType={setFilterType}
+          searchQuery={searchValue}
+          setSearchQuery={setSearchValue}
+          startDate={dateRange[0]}
+          endDate={dateRange[1]}
+          setStartDate={(date) => setDateRange([date, dateRange[1]])}
+          setEndDate={(date) => setDateRange([dateRange[0], date])}
+          searchOptions={[
+            { value: "order_id", label: "주문번호", type: "text" },
+            { value: "amount", label: "금액", type: "text" },
+            {
+              value: "payment_method",
+              label: "결제수단",
+              type: "select",
+              options: paymentMethods.map((m) => ({ value: m, label: m })),
+            },
+            {
+              value: "status",
+              label: "상태",
+              type: "select",
+              options: [
+                { value: "완료", label: "완료" },
+                { value: "실패", label: "실패" },
+                { value: "환불", label: "환불" },
+              ],
+            },
+            { value: "date", label: "결제일", type: "date" },
+          ]}
+          onSearchUpdate={(type, query) => {
+            setFilterType(type);
+            setSearchValue(query);
+            setCurrentPage(1);
+          }}
+          isMobile={false}
+        />
+      )}
 
       {/* 카드형 or 테이블 */}
       {isCardLayout ? (
         filteredData.length === 0 ? (
           renderEmpty()
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+              width: "100%",
+            }}
+          >
             {filteredData.map((item) => (
               <div
                 key={item.order_id}
@@ -277,36 +293,68 @@ export default function PaymentHistory() {
                 {/* 상단: 금액 + 상태 */}
 
                 {/* 주문번호 */}
-                <div style={{ color: "#727F98", fontSize: 13, fontWeight: 500, marginBottom: 2 }}>
+                <div
+                  style={{
+                    color: "#727F98",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    marginBottom: 2,
+                  }}
+                >
                   주문번호 {item.order_id}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 17, color: "#284785" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 2,
+                  }}
+                >
+                  <span
+                    style={{ fontWeight: 700, fontSize: 17, color: "#284785" }}
+                  >
                     {formatPrice(item.amount)}원
                   </span>
-                  <span style={{ fontSize: 14, color: "#555", marginLeft: "auto" }}>
+                  <span
+                    style={{ fontSize: 14, color: "#555", marginLeft: "auto" }}
+                  >
                     {renderStatusBadge(getStatusLabel(item.status))}
                   </span>
                 </div>
                 {/* 결제일/인원/할인 */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 15, color: "#4e5560" }}>
-  <span>🗓 {formatKoreanDateTime(item.created_at)}</span>
-  <span>👥 {item.quantity || 0}명</span>
-  {((item.used_point || 0) + (item.coupon_discount || 0)) > 0 && (
-    <span>
-      할인 {formatPrice((item.used_point || 0) + (item.coupon_discount || 0))}원
-    </span>
-  )}
-</div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    fontSize: 15,
+                    color: "#4e5560",
+                  }}
+                >
+                  <span>🗓 {formatKoreanDateTime(item.created_at)}</span>
+                  <span>👥 {item.quantity || 0}명</span>
+                  {(item.used_point || 0) + (item.coupon_discount || 0) > 0 && (
+                    <span>
+                      할인{" "}
+                      {formatPrice(
+                        (item.used_point || 0) + (item.coupon_discount || 0)
+                      )}
+                      원
+                    </span>
+                  )}
+                </div>
                 {/* 결제수단 */}
-                <div style={{
-                  fontSize: 14,
-                  color: "#888",
-                  marginTop: 4,
-                  borderTop: "1px solid #f3f3f5",
-                  paddingTop: 7,
-                  letterSpacing: "-0.5px",
-                }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "#888",
+                    marginTop: 4,
+                    borderTop: "1px solid #f3f3f5",
+                    paddingTop: 7,
+                    letterSpacing: "-0.5px",
+                  }}
+                >
                   결제수단: <b>{getPaymentMethodLabel(item.payment_method)}</b>
                 </div>
               </div>
@@ -317,130 +365,141 @@ export default function PaymentHistory() {
         // PC(테이블형)
         <div style={{ overflowX: "auto" }}>
           <table style={tableStyle}>
-          <thead style={{ background: "#f9f9f9" }}>
-  <tr>
-    {columnDefs.map((col) => {
-      const isActive = sortConfig.key === col.key;
-      return (
-        <th
-          key={col.key}
-          style={thCenter}
-          onClick={col.sortable ? () => handleSort(col.key) : undefined}
-        >
-          {col.label}
-          {/* 정렬화살표: ↕ 제거, isActive일 때만 ▲▼ 표시 */}
-          {col.sortable && isActive && (
-            <span style={{ ...sortArrowStyle, color: "#000" }}>
-              {sortConfig.direction === "asc" ? "▲" : "▼"}
-            </span>
-          )}
-        </th>
-      );
-    })}
-  </tr>
-</thead>
-<tbody>
-  {pagedData.length === 0 ? (
-    <tr>
-      <td colSpan={columnDefs.length} style={tdCenter}>
-        {renderEmpty()}
-      </td>
-    </tr>
-  ) : (
-    pagedData.map((item, idx) => (
-      <tr
-        key={item.order_id + "-" + idx}
-        style={{
-          backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-          cursor: "pointer",
-        }}
-        onClick={() => router.push(`/orders/${item.order_id}`)}
-      >
-        {columnDefs.map((col, colIdx) => {
-          if (col.key === "No") {
-            return (
-              <td key={col.key} style={tdCenter}>
-                {(currentPage - 1) * itemsPerPage + idx + 1}
-              </td>
-            );
-          }
-          if (col.key === "order_id") {
-            return (
-              <td key={col.key} style={{ ...tdCenter, color: "#0070f3" }}>
-                {item.order_id}
-              </td>
-            );
-          }
-          if (col.key === "created_at") {
-            return (
-              <td key={col.key} style={tdCenter}>
-                {formatKoreanDateTime(item.created_at)}
-              </td>
-            );
-          }
-          if (col.key === "amount") {
-            const discount = (item.used_point || 0) + (item.coupon_discount || 0);
-            return (
-              <td
-                key={col.key}
-                style={tdCenter}
-                title={discount > 0 ? `할인 적용: ${formatPrice(discount)}원` : ""}
-              >
-                {formatPrice(item.amount)}원
-                {/* 아이콘/표시도 가능: discount > 0 && <span style={{marginLeft:4,color:"#888"}}>ⓘ</span> */}
-              </td>
-            );
-          }
-          if (col.key === "total_quantity") {
-            return (
-              <td key={col.key} style={tdCenter}>
-                {item.quantity || 0}명
-              </td>
-            );
-          }
-          if (col.key === "payment_method") {
-            return (
-              <td key={col.key} style={tdCenter}>
-                {getPaymentMethodLabel(item.payment_method)}
-              </td>
-            );
-          }
-          if (col.key === "status") {
-            return (
-              <td key={col.key} style={tdCenter}>
-                {renderStatusBadge(getStatusLabel(item.status))}
-              </td>
-            );
-          }
-          return <td key={col.key} style={tdCenter}></td>;
-        })}
-      </tr>
-    ))
-  )}
-</tbody>
-
+            <thead style={{ background: "#f9f9f9" }}>
+              <tr>
+                {columnDefs.map((col) => {
+                  const isActive = sortConfig.key === col.key;
+                  return (
+                    <th
+                      key={col.key}
+                      style={thCenter}
+                      onClick={
+                        col.sortable ? () => handleSort(col.key) : undefined
+                      }
+                    >
+                      {col.label}
+                      {/* 정렬화살표: ↕ 제거, isActive일 때만 ▲▼ 표시 */}
+                      {col.sortable && isActive && (
+                        <span style={{ ...sortArrowStyle, color: "#000" }}>
+                          {sortConfig.direction === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {pagedData.length === 0 ? (
+                <tr>
+                  <td colSpan={columnDefs.length} style={tdCenter}>
+                    {renderEmpty()}
+                  </td>
+                </tr>
+              ) : (
+                pagedData.map((item, idx) => (
+                  <tr
+                    key={item.order_id + "-" + idx}
+                    style={{
+                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => router.push(`/orders/${item.order_id}`)}
+                  >
+                    {columnDefs.map((col, colIdx) => {
+                      if (col.key === "No") {
+                        return (
+                          <td key={col.key} style={tdCenter}>
+                            {(currentPage - 1) * itemsPerPage + idx + 1}
+                          </td>
+                        );
+                      }
+                      if (col.key === "order_id") {
+                        return (
+                          <td
+                            key={col.key}
+                            style={{ ...tdCenter, color: "#0070f3" }}
+                          >
+                            {item.order_id}
+                          </td>
+                        );
+                      }
+                      if (col.key === "created_at") {
+                        return (
+                          <td key={col.key} style={tdCenter}>
+                            {formatKoreanDateTime(item.created_at)}
+                          </td>
+                        );
+                      }
+                      if (col.key === "amount") {
+                        const discount =
+                          (item.used_point || 0) + (item.coupon_discount || 0);
+                        return (
+                          <td
+                            key={col.key}
+                            style={tdCenter}
+                            title={
+                              discount > 0
+                                ? `할인 적용: ${formatPrice(discount)}원`
+                                : ""
+                            }
+                          >
+                            {formatPrice(item.amount)}원
+                            {/* 아이콘/표시도 가능: discount > 0 && <span style={{marginLeft:4,color:"#888"}}>ⓘ</span> */}
+                          </td>
+                        );
+                      }
+                      if (col.key === "total_quantity") {
+                        return (
+                          <td key={col.key} style={tdCenter}>
+                            {item.quantity || 0}명
+                          </td>
+                        );
+                      }
+                      if (col.key === "payment_method") {
+                        return (
+                          <td key={col.key} style={tdCenter}>
+                            {getPaymentMethodLabel(item.payment_method)}
+                          </td>
+                        );
+                      }
+                      if (col.key === "status") {
+                        return (
+                          <td key={col.key} style={tdCenter}>
+                            {renderStatusBadge(getStatusLabel(item.status))}
+                          </td>
+                        );
+                      }
+                      return <td key={col.key} style={tdCenter}></td>;
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
           </table>
           {/* 페이지네이션 */}
           {pagedData.length !== 0 && (
             <div style={{ marginTop: "20px", textAlign: "center" }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    padding: "6px 10px",
-                    fontSize: "14px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    margin: "0 4px",
-                    cursor: "pointer",
-                    fontWeight: currentPage === page ? "bold" : "normal",
-                    backgroundColor: currentPage === page ? "#eee" : "#fff",
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      padding: "6px 10px",
+                      fontSize: "14px",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                      margin: "0 4px",
+                      cursor: "pointer",
+                      fontWeight: currentPage === page ? "bold" : "normal",
+                      backgroundColor: currentPage === page ? "#eee" : "#fff",
+                    }}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>

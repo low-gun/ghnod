@@ -1,29 +1,35 @@
-// 📄 frontend/components/admin/ProductSchedulesModal.js
+// /frontend/components/admin/ProductSchedulesModal.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import axios from "@/lib/api";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import api from "@/lib/api";
+import AdminDialog from "@/components/common/AdminDialog";
+import { useGlobalAlert } from "@/stores/globalAlert";
 
-const ProductSchedulesModal = ({ productId, onClose }) => {
+export default function ProductSchedulesModal({ productId, onClose }) {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useGlobalAlert();
   const router = useRouter();
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
-
-  const fetchSchedules = async () => {
-    try {
-      const res = await axios.get(`admin/products/${productId}/schedules`);
-      setSchedules(res.data.schedules);
-    } catch (err) {
-      showAlert("일정 조회 실패");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchSchedules();
-  }, [productId]);
+    const fetchSchedules = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`admin/products/${productId}/schedules`);
+        if (res.data?.success !== false) {
+          setSchedules(res.data?.schedules || []);
+        } else {
+          setSchedules([]);
+        }
+      } catch (err) {
+        showAlert("일정 조회 실패");
+        setSchedules([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (productId) fetchSchedules();
+  }, [productId, showAlert]);
 
   const formatDate = (d) =>
     new Date(d)
@@ -35,108 +41,112 @@ const ProductSchedulesModal = ({ productId, onClose }) => {
       .replace(/\. /g, ".")
       .replace(/\.$/, "");
 
-  return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        <h3 style={{ marginBottom: "16px" }}>일정보기</h3>
-        <button onClick={onClose} style={closeButton}>
-          ×
-        </button>
+  const footer = (
+    <button
+      type="button"
+      onClick={onClose}
+      style={{
+        padding: "10px 14px",
+        borderRadius: 8,
+        border: "1px solid #e5e7eb",
+        background: "#fff",
+        color: "#374151",
+        cursor: "pointer",
+      }}
+    >
+      닫기
+    </button>
+  );
 
-        {loading ? (
-          <p>불러오는 중...</p>
-        ) : schedules.length === 0 ? (
-          <p>등록된 일정이 없습니다.</p>
-        ) : (
-          <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-            {schedules.map((s) => (
-              <li key={s.id} style={itemStyle}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+  return (
+    <AdminDialog
+      open={true}
+      onClose={onClose}
+      title="일정 보기"
+      subtitle={productId ? `상품 #${productId}` : ""}
+      size="sm"
+      footer={footer}
+    >
+      {loading ? (
+        <p>불러오는 중...</p>
+      ) : schedules.length === 0 ? (
+        <div
+          style={{
+            padding: 16,
+            textAlign: "center",
+            color: "#6b7280",
+            background: "#f8fafc",
+            border: "1px dashed #e5e7eb",
+            borderRadius: 10,
+          }}
+        >
+          등록된 일정이 없습니다.
+        </div>
+      ) : (
+        <ul
+          style={{
+            paddingLeft: 0,
+            listStyle: "none",
+            margin: 0,
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          {schedules.map((s) => (
+            <li
+              key={s.id}
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: 10,
+                padding: 12,
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
                   <div
                     style={{
-                      flex: 1,
-                      fontSize: "13px",
-                      color: "#555",
-                      lineHeight: "1.5",
+                      fontWeight: 600,
+                      color: "#111827",
+                      fontSize: 14,
+                      overflowWrap: "anywhere",
                     }}
                   >
-                    <div style={{ fontWeight: 500 }}>{s.title}</div>
-                    <div style={{ marginTop: 2 }}>
-                      {formatDate(s.start_date)} ~ {formatDate(s.end_date)} /{" "}
-                      {s.status}
-                    </div>
+                    {s.title}
                   </div>
+                  <div style={{ marginTop: 4, fontSize: 13, color: "#6b7280" }}>
+                    {formatDate(s.start_date)} ~ {formatDate(s.end_date)}
+                    {s.status ? ` · ${s.status}` : ""}
+                  </div>
+                </div>
+                <div style={{ flexShrink: 0 }}>
                   <button
                     onClick={() => router.push(`/admin/schedules/${s.id}`)}
-                    style={moveButton}
+                    style={{
+                      padding: "6px 10px",
+                      fontSize: 13,
+                      backgroundColor: "#fff",
+                      color: "#374151",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     이동
                   </button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </AdminDialog>
   );
-};
-
-export default ProductSchedulesModal;
-
-// 스타일
-const overlayStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 1000,
-};
-
-const modalStyle = {
-  backgroundColor: "#fff",
-  padding: "24px",
-  borderRadius: "8px",
-  width: "400px",
-  maxHeight: "80vh",
-  overflowY: "auto",
-  position: "relative",
-};
-
-const closeButton = {
-  position: "absolute",
-  top: "10px",
-  right: "12px",
-  background: "transparent",
-  border: "none",
-  fontSize: "20px",
-  cursor: "pointer",
-  color: "#999",
-};
-
-const itemStyle = {
-  padding: "10px 0",
-  borderBottom: "1px solid #eee",
-};
-
-const moveButton = {
-  marginLeft: "12px",
-  padding: "4px 10px",
-  fontSize: "13px",
-  backgroundColor: "#f0f0f0",
-  border: "1px solid #ccc",
-  borderRadius: "4px",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
+}

@@ -1,798 +1,648 @@
-// ./frontend/components/admin/ProductTable.js
-import React, { useState, useEffect, useMemo } from "react";
-import SearchFilter from "@/components/common/SearchFilter";
-import ProductSchedulesModal from "./ProductSchedulesModal";
+// /frontend/components/admin/ProductTable.js
+import { useMemo, useState, useEffect } from "react";
 import api from "@/lib/api";
-import PaginationControls from "@/components/common/PaginationControls";
-import PageSizeSelector from "@/components/common/PageSizeSelector";
-import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
+import ToggleSwitch from "@/components/common/ToggleSwitch";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
+import Image from "next/image";
+import { formatPrice } from "@/lib/format";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-
-// ✅ 공통 UI
-import AdminToolbar from "@/components/common/AdminToolbar";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
-import ToggleSwitch from "@/components/common/ToggleSwitch";
+import ProductSchedulesModal from "@/components/admin/ProductSchedulesModal";
+import SelectableCard from "@/components/common/SelectableCard"; // ← 추가
 
-/** ✅ SSR 안전: UTC 고정 포맷 (서버/클라이언트 동일 표시) */
-function formatDateUTC(iso) {
+/** 로컬시간 포맷 (YYYY-MM-DD HH:mm:ss) */
+function formatDateLocal(iso) {
   if (!iso) return "-";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "-";
   const pad = (n) => String(n).padStart(2, "0");
-  const Y = d.getUTCFullYear();
-  const M = pad(d.getUTCMonth() + 1);
-  const D = pad(d.getUTCDate());
-  const h = pad(d.getUTCHours());
-  const m = pad(d.getUTCMinutes());
-  const s = pad(d.getUTCSeconds());
-  return `${Y}-${M}-${D} ${h}:${m}:${s} UTC`;
+  const Y = d.getFullYear();
+  const M = pad(d.getMonth() + 1);
+  const D = pad(d.getDate());
+  const h = pad(d.getHours());
+  const m = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 }
 
-export default function ProductTable({ onEdit }) {
+/**
+ * 공통 톤 ProductTable
+ * props:
+ *  - products: []
+ *  - productTypes: []
+ *  - onEdit(product)
+ *  - onRefresh(nextProducts?)  // 없으면 무시
+ *  - loading? (선택)
+ */
+export default function ProductTable({
+  products = [],
+  productTypes = [],
+  onEdit,
+  onRefresh,
+  loading = false,
+  onExcelData, // ✅ 추가
+}) {
   const isTabletOrBelow = useIsTabletOrBelow();
+  const mounted = true; // CSR 환경에서만 사용하면 충분
 
-  // ✅ SSR 안정: 초기에는 데스크톱 DOM로 렌더 → 마운트 후 반응형 분기
-  const [mounted, setMounted] = useState(false);
-  const [showFilter, setShowFilter] = useState(false); // 초기 SSR과 동일하게 false
-  useEffect(() => setMounted(true), []);
+  // ✅ rows를 먼저 선언(아래에서 참조하므로)
+  const rows = useMemo(() => products || [], [products]);
+  // ✅ 엑셀 헤더/데이터 구성
+  // ✅ excelHeaders는 불변 객체(useMemo로 고정)
+  const excelHeaders = useMemo(
+    () => [
+      "ID",
+      "코드",
+      "상품명",
+      "유형",
+      "가격",
+      "상태",
+      "등록일시",
+      "수정일시",
+    ],
+    []
+  );
+
+  const excelRows = useMemo(
+    () =>
+      rows.map((p) => ({
+        ID: p.id,
+        코드: p.code ?? `P-${p.id}`,
+        상품명: p.title ?? p.name ?? "(제목 없음)",
+        유형: p.type ?? "-",
+        가격: Number(p.price ?? 0),
+        상태: Number(p.is_active) === 1 ? "활성" : "비활성",
+        등록일시: formatDateLocal(p.created_at),
+        수정일시: formatDateLocal(p.updated_at),
+      })),
+    [rows]
+  );
+
+  // ✅ 이제 headers 배열이 고정이라 무한 루프 안 돈다
   useEffect(() => {
-    if (!mounted) return;
-    setShowFilter(!isTabletOrBelow); // 데스크톱=보임, 모바일=접힘
-  }, [isTabletOrBelow, mounted]);
-
-  const [products, setProducts] = useState([]);
-  const [productTypes, setProductTypes] = useState([]);
-  const [pageSize, setPageSize] = useState(20);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState(null);
-
-  const [searchField, setSearchField] = useState("title");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-
-  const [sortConfig, setSortConfig] = useState({
-    key: "updated_at",
-    direction: "desc",
-  });
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const { showAlert } = useGlobalAlert();
-  const { showConfirm } = useGlobalConfirm();
-
-  // 로딩/에러/빈 상태
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState("");
-
-  // ✅ 최초 데이터 로드
-  const fetchProducts = async () => {
-    try {
-      setIsLoading(true);
-      setLoadError("");
-      const res = await api.get("admin/products", { params: { all: true } });
-      if (res.data?.success) {
-        setProducts(res.data.products);
-        setProductTypes([
-          ...new Set(res.data.products.map((p) => p.type).filter(Boolean)),
-        ]);
-      } else {
-        setLoadError("상품 데이터를 불러오지 못했습니다.");
-        showAlert("상품 데이터를 불러오지 못했습니다.");
-      }
-    } catch {
-      setLoadError("상품 데이터를 불러오지 못했습니다.");
-      showAlert("상품 데이터를 불러오지 못했습니다.");
-    } finally {
-      setIsLoading(false);
+    if (typeof onExcelData === "function") {
+      onExcelData({ headers: excelHeaders, data: excelRows });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excelRows]); // onExcelData는 부모 setState라 참조가 자주 바뀔 수 있어 제외
+
+  // ✅ 알림/확인
+  const { showAlert } = useGlobalAlert?.() ?? { showAlert: () => {} };
+  const { showConfirm } = useGlobalConfirm?.() ?? {
+    showConfirm: async () => true,
   };
 
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ✅ 먼저 selectedIds 상태 선언
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  // ✅ 검색/필터
-  const filteredProducts = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return products.filter((product) => {
-      if (searchField === "id") return String(product.id).includes(q);
-      if (searchField === "title")
-        return (product.title || "").toLowerCase().includes(q);
-      if (searchField === "type")
-        return (product.type || "").toLowerCase().includes(q);
-      if (searchField === "price")
-        return String(product.price || "").includes(q);
-      if (searchField === "is_active") {
-        if (!q) return true;
-        return String(product.is_active) === q; // '1'/'0' 방식이면 API에서 맞춰서 내려줌
-      }
-      if (searchField === "created_at" || searchField === "updated_at") {
-        const date = product[searchField]
-          ? new Date(product[searchField])
-          : null;
-        if (!date) return false;
-        const startOnly = startDate
-          ? new Date(new Date(startDate).setHours(0, 0, 0, 0))
-          : null;
-        const endOnly = endDate
-          ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
-          : null;
-        if (startOnly && date < startOnly) return false;
-        if (endOnly && date > endOnly) return false;
-        return true;
-      }
-      return true;
-    });
-  }, [products, searchField, searchQuery, startDate, endDate]);
-
-  // ✅ 정렬
-  const sortedProducts = useMemo(() => {
-    if (!sortConfig) return filteredProducts;
-    const { key, direction } = sortConfig;
-    const getVal = (row) => {
-      if (key === "is_active") return Number(!!row.is_active);
-      return row[key];
-    };
-    return [...filteredProducts].sort((a, b) => {
-      const av = getVal(a);
-      const bv = getVal(b);
-      if (av == null && bv == null) return 0;
-      if (av == null) return direction === "asc" ? -1 : 1;
-      if (bv == null) return direction === "asc" ? 1 : -1;
-      if (typeof av === "number" && typeof bv === "number") {
-        return direction === "asc" ? av - bv : bv - av;
-      }
-      return direction === "asc"
-        ? String(av).localeCompare(String(bv))
-        : String(bv).localeCompare(String(av));
-    });
-  }, [filteredProducts, sortConfig]);
-
-  // ✅ 페이징
-  const totalPages = useMemo(
-    () => Math.ceil(sortedProducts.length / pageSize),
-    [sortedProducts.length, pageSize]
-  );
-  const pagedProducts = useMemo(() => {
-    const startIdx = (currentPage - 1) * pageSize;
-    return sortedProducts.slice(startIdx, startIdx + pageSize);
-  }, [sortedProducts, currentPage, pageSize]);
-
-  // ✅ 체크박스
+  // 전체선택/개별선택
   const isAllChecked =
-    pagedProducts.length > 0 &&
-    pagedProducts.every((p) => selectedIds.includes(p.id));
+    rows.length > 0 && rows.every((p) => selectedIds.includes(p.id));
   const toggleAll = (checked) =>
-    setSelectedIds(checked ? pagedProducts.map((p) => p.id) : []);
+    setSelectedIds(checked ? rows.map((p) => p.id) : []);
   const toggleOne = (id, checked) =>
     setSelectedIds((prev) =>
-      checked ? [...prev, id] : prev.filter((i) => i !== id)
+      checked ? [...prev, id] : prev.filter((x) => x !== id)
     );
 
-  // ✅ 정렬 핸들러/아이콘
-  const handleSort = (key) => {
-    setSortConfig((prev) =>
-      prev?.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "asc" }
-    );
-    setCurrentPage(1);
-  };
-  const renderArrow = (key) => {
-    if (sortConfig.key !== key)
-      return <span style={{ marginLeft: 6, color: "#ccc" }}>↕</span>;
-    return (
-      <span style={{ marginLeft: 6, color: "#000" }}>
-        {sortConfig.direction === "asc" ? "▲" : "▼"}
-      </span>
-    );
-  };
-
-  // ✅ 검색 초기화
-  const handleReset = () => {
-    setSearchField("title");
-    setSearchQuery("");
-    setStartDate(null);
-    setEndDate(null);
-    setCurrentPage(1);
-  };
-
-  // ✅ 삭제
+  // ✅ 선택 삭제 핸들러
   const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
     const ok = await showConfirm("정말로 선택한 상품을 삭제하시겠습니까?");
     if (!ok) return;
+
+    const ids = Array.from(new Set(selectedIds.map(Number))).filter(
+      (n) => n > 0
+    );
+
     try {
-      await api.delete("admin/products", { data: { ids: selectedIds } });
+      // 1차: DELETE body 방식
+      await api.request({
+        method: "delete",
+        url: "admin/products",
+        headers: { "Content-Type": "application/json" },
+        data: { ids },
+      });
+
       showAlert("삭제되었습니다.");
       setSelectedIds([]);
-      await fetchProducts();
-    } catch {
-      showAlert("삭제 실패");
+      if (typeof onRefresh === "function") onRefresh();
+    } catch (e1) {
+      // FK 차단(연결 일정/후기) → 409 + details 반환
+      if (
+        e1?.response?.status === 409 &&
+        e1?.response?.data?.code === "HAS_DEPENDENCIES"
+      ) {
+        const det = e1.response.data.details || {};
+        const sc = (det.scheduleBlocks || []).reduce(
+          (a, b) => a + (b.schedule_count || 0),
+          0
+        );
+        const rc = (det.reviewBlocks || []).reduce(
+          (a, b) => a + (b.review_count || 0),
+          0
+        );
+        // 삭제 불가 응답 수신 시
+        const lines = ["삭제 불가: 연결된 데이터가 있습니다."];
+
+        // 0건은 숨기고, 있는 항목만 추가 (• 기호 사용)
+        if (Number(sc) > 0) lines.push(`• 일정: ${sc}건`);
+        if (Number(rc) > 0) lines.push(`• 후기: ${rc}건`);
+
+        lines.push("관련 데이터를 먼저 정리한 후 삭제하세요.");
+
+        // 줄바꿈(\n)으로 합쳐 알럿 표시
+        showAlert(lines.join("\n"));
+
+        return;
+      }
+      // 2차 폴백: 쿼리스트링 방식 (?ids=1,2,3)
+      try {
+        await api.delete("admin/products", { params: { ids: ids.join(",") } });
+        showAlert("삭제되었습니다.");
+        setSelectedIds([]);
+        if (typeof onRefresh === "function") onRefresh();
+      } catch {
+        showAlert("삭제 실패");
+      }
     }
   };
 
-  // ✅ 활성/비활성 토글 (낙관적 업데이트)
-  const handleToggleActive = async (id) => {
-    const snapshot = products;
-    const updated = products.map((p) =>
-      p.id === id ? { ...p, is_active: !p.is_active } : p
-    );
-    setProducts(updated);
+  // ✅ 상단 패널의 "- 삭제" 버튼과 연동
+  useEffect(() => {
+    const handler = () => {
+      if (!selectedIds || selectedIds.length === 0) return;
+      (async () => {
+        await handleDeleteSelected();
+      })();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("products:deleteSelected", handler);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("products:deleteSelected", handler);
+      }
+    };
+  }, [selectedIds]);
+
+  // ✅ 상태 토글 (활성/비활성) — 필요 시 엔드포인트 맞춰 조정
+  const handleToggleActive = async (product) => {
+    const nextActive = Number(product.is_active) === 1 ? 0 : 1;
+    const ok = await showConfirm("상태를 변경하시겠습니까?");
+    if (!ok) return;
     try {
-      await api.patch(`admin/products/${id}/active`);
+      await api.put(`admin/products/${product.id}/active`, {
+        is_active: nextActive,
+      });
       showAlert("상태가 변경되었습니다.");
-    } catch {
+      // 부모 onRefresh가 배열/함수 모두 수용하도록 이전 구현 유지
+      if (typeof onRefresh === "function") onRefresh();
+    } catch (e) {
       showAlert("상태 변경 실패");
-      setProducts(snapshot); // 실패 시 원복
     }
   };
 
-  const loading = isLoading;
+  const [scheduleProductId, setScheduleProductId] = useState(null);
 
-  return (
-    <div>
-      {/* 상단 툴바 (공통) */}
-      <AdminToolbar>
-        <div className="toolbar-left">
-          {mounted && showFilter ? (
-            <div style={{ width: "100%" }}>
-              <SearchFilter
-                searchType={searchField}
-                setSearchType={setSearchField}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                startDate={startDate}
-                endDate={endDate}
-                setStartDate={setStartDate}
-                setEndDate={setEndDate}
-                searchOptions={[
-                  { value: "id", label: "코드", type: "text" },
-                  { value: "title", label: "상품명", type: "text" },
-                  {
-                    value: "type",
-                    label: "유형",
-                    type: "select",
-                    options: productTypes.map((type) => ({
-                      value: type,
-                      label: type,
-                    })),
-                  },
-                  { value: "price", label: "가격", type: "text" },
-                  {
-                    value: "is_active",
-                    label: "활성화 상태",
-                    type: "select",
-                    options: [
-                      { value: "1", label: "활성" },
-                      { value: "0", label: "비활성" },
-                    ],
-                  },
-                  { value: "created_at", label: "등록일시", type: "date" },
-                  { value: "updated_at", label: "수정일시", type: "date" },
-                ]}
-                onSearchUpdate={(type, query) => {
-                  setSearchField(type);
-                  setSearchQuery(query);
-                  setCurrentPage(1);
-                }}
+  // ✅ 열 너비 고정(colgroup)
+  const COL_W = {
+    sel: 44, // 체크박스
+    no: 60, // No
+    code: 100,
+    thumb: 84,
+    title: 240,
+    type: 120,
+    price: 120,
+    created: 160,
+    updated: 160,
+    schedule: 100,
+    status: 96, // 토글
+  };
+  const renderColGroup = () => (
+    <colgroup>
+      <col style={{ width: COL_W.sel, minWidth: COL_W.sel }} />
+      <col style={{ width: COL_W.no, minWidth: COL_W.no }} />
+      <col style={{ width: COL_W.code, minWidth: COL_W.code }} />
+      <col style={{ width: COL_W.thumb, minWidth: COL_W.thumb }} />
+      <col style={{ width: COL_W.title, minWidth: COL_W.title }} />
+      <col style={{ width: COL_W.type, minWidth: COL_W.type }} />
+      <col style={{ width: COL_W.price, minWidth: COL_W.price }} />
+      <col style={{ width: COL_W.created, minWidth: COL_W.created }} />
+      <col style={{ width: COL_W.updated, minWidth: COL_W.updated }} />
+      <col style={{ width: COL_W.schedule, minWidth: COL_W.schedule }} />
+      <col style={{ width: COL_W.status, minWidth: COL_W.status }} />
+    </colgroup>
+  );
+
+  // ⬇️ 이하 나머지 코드는 그대로 유지
+
+  if (loading) {
+    return mounted && isTabletOrBelow ? (
+      <div style={{ display: "grid", gap: 12 }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <CardSkeleton key={i} lines={3} />
+        ))}
+      </div>
+    ) : (
+      <TableSkeleton columns={11} rows={6} />
+    );
+  }
+
+  if (!rows.length) {
+    return (
+      <div
+        style={{
+          border: "1px dashed #d0d7de",
+          background: "#fafbfc",
+          color: "#57606a",
+          padding: "18px 16px",
+          borderRadius: 8,
+          textAlign: "center",
+        }}
+      >
+        상품이 없습니다. 상단에서 등록하거나 필터를 조정해 보세요.
+      </div>
+    );
+  }
+
+  // 🔹 모바일/태블릿 카드 렌더러
+  const renderCards = () =>
+    rows.map((p, idx) => {
+      const code = p.code || `P-${p.id}`;
+      const title = p.title ?? p.name ?? "(제목 없음)";
+      const type = p.type ?? "-";
+      const price = formatPrice(Number(p.price ?? 0));
+      const isActive = Number(p.is_active) === 1;
+      const thumb = p.thumbnail_url || p.thumb_url || "";
+
+      return (
+        <SelectableCard
+          key={p.id}
+          selected={selectedIds.includes(p.id)}
+          onToggle={() => toggleOne(p.id, !selectedIds.includes(p.id))}
+          style={{
+            border: "1px solid #eee",
+            borderRadius: 10,
+            padding: 12,
+            background: "#fff",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+            opacity: isActive ? 1 : 0.6,
+          }}
+        >
+          {/* 상단 체크 + 코드 + 토글 */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(p.id)}
+                onChange={(e) => toggleOne(p.id, e.target.checked)}
+                onClick={(e) => e.stopPropagation()} // 카드 토글 방지
+              />
+              <div style={{ fontSize: 13, color: "#666" }}>
+                #{idx + 1} · {code}
+              </div>
+            </div>
+
+            <div onClick={(e) => e.stopPropagation()}>
+              <ToggleSwitch
+                size="sm"
+                checked={isActive}
+                onChange={() => handleToggleActive(p)}
+                onLabel="ON"
+                offLabel="OFF"
               />
             </div>
-          ) : (
-            <div style={{ height: 8 }} />
-          )}
-          <button onClick={handleReset} style={resetBtn}>
-            초기화
-          </button>
-        </div>
-
-        <div className="toolbar-right">
-          <button
-            className="filter-toggle"
-            onClick={() => setShowFilter((v) => !v)}
-            style={primaryBtn}
-          >
-            필터
-          </button>
-          <button
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.length === 0}
-            style={{
-              ...dangerBtn,
-              cursor: selectedIds.length === 0 ? "not-allowed" : "pointer",
-            }}
-          >
-            삭제
-          </button>
-
-          <PageSizeSelector
-            value={pageSize}
-            onChange={(size) => {
-              setPageSize(size);
-              setCurrentPage(1);
-            }}
-          />
-
-          <ExcelDownloadButton
-            fileName="상품목록"
-            sheetName="상품목록"
-            headers={["상품명", "유형", "가격", "등록일시", "수정일시", "상태"]}
-            data={sortedProducts.map((product) => ({
-              상품명: product.title,
-              유형: product.type,
-              가격:
-                typeof product.price === "number"
-                  ? `${product.price.toLocaleString()}원`
-                  : "-",
-              등록일시: formatDateUTC(product.created_at),
-              수정일시: product.updated_at
-                ? formatDateUTC(product.updated_at)
-                : "-",
-              상태: product.is_active ? "활성" : "비활성",
-            }))}
-            extraSheets={[
-              {
-                name: "상품별_신청자목록",
-                fetch: async () => {
-                  const allRows = [];
-                  for (const product of sortedProducts) {
-                    const res = await api.get(
-                      `admin/products/${product.id}/schedules`
-                    );
-                    const schedules = res.data.schedules || [];
-                    for (const s of schedules) {
-                      const r = await api.get(
-                        `admin/schedules/${s.id}/students`
-                      );
-                      const students = r.data.students || [];
-                      const mapped = students.map((stu) => ({
-                        상품명: product.title,
-                        일정명: s.title,
-                        이름: stu.username,
-                        이메일: stu.email,
-                        수량: stu.quantity,
-                        구분: stu.source,
-                        신청일: formatDateUTC(stu.created_at),
-                      }));
-                      allRows.push(...mapped);
-                    }
-                  }
-                  return allRows;
-                },
-              },
-            ]}
-          />
-        </div>
-      </AdminToolbar>
-
-      {/* 본문: 로딩/에러/빈/목록 */}
-      {loading ? (
-        mounted && isTabletOrBelow ? (
-          <div style={{ display: "grid", gap: 12 }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <CardSkeleton key={i} lines={3} />
-            ))}
           </div>
-        ) : (
-          <TableSkeleton columns={10} rows={6} />
-        )
-      ) : loadError ? (
-        <div style={errorBox}>
-          {loadError}
-          <button
-            style={{ ...primaryBtn, marginLeft: 10, background: "#e53e3e" }}
-            onClick={fetchProducts}
+
+          {/* 제목(텍스트만 클릭) */}
+          <div style={{ marginTop: 6, color: "#222", cursor: "default" }}>
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(p);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit?.(p);
+                }
+              }}
+              style={{
+                color: "#0070f3",
+                cursor: "pointer",
+                textDecoration: "none",
+              }}
+            >
+              {title}
+            </span>
+          </div>
+
+          {/* 썸네일 + 라벨/값 */}
+          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+            <div
+              style={{
+                width: 72,
+                height: 72,
+                position: "relative",
+                flex: "0 0 72px",
+              }}
+            >
+              {thumb ? (
+                <Image
+                  src={thumb}
+                  alt="thumbnail"
+                  fill
+                  style={{
+                    objectFit: "cover",
+                    borderRadius: 8,
+                    border: "1px solid #eee",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 8,
+                    border: "1px dashed #ddd",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#aaa",
+                    fontSize: 12,
+                  }}
+                >
+                  no image
+                </div>
+              )}
+            </div>
+
+            <div style={{ flex: 1, fontSize: 14, color: "#374151" }}>
+              <Row label="유형" value={type} />
+              <Row label="가격" value={`${price}원`} />
+              <Row label="등록일시" value={formatDateLocal(p.created_at)} />
+              <Row label="수정일시" value={formatDateLocal(p.updated_at)} />
+            </div>
+          </div>
+
+          {/* 액션 */}
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginTop: 10,
+              justifyContent: "flex-end", // ✅ 우측 정렬
+              alignItems: "center",
+            }}
           >
-            다시 시도
-          </button>
-        </div>
-      ) : products.length === 0 ? (
-        <div style={emptyBox}>상품이 없습니다. 상품을 등록해 보세요.</div>
-      ) : mounted && isTabletOrBelow ? (
-        // ✅ 모바일/태블릿: 카드형
-        <>
-          <div style={{ display: "grid", gap: 12 }}>
-            {pagedProducts.map((product) => (
-              <div
-                key={product.id}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setScheduleProductId(p.id)}
+                style={ghostBtn}
+              >
+                일정
+              </button>
+              <button onClick={() => onEdit?.(p)} style={primaryBtn}>
+                수정
+              </button>
+            </div>
+          </div>
+        </SelectableCard>
+      );
+    });
+
+  // 🔹 데스크톱 테이블 렌더러
+  const renderTable = () => (
+    <div className="admin-table-wrap" style={{ overflowX: "auto" }}>
+      <table
+        className="admin-table"
+        style={{ tableLayout: "fixed", width: "100%" }}
+      >
+        {renderColGroup()}
+
+        <thead style={{ backgroundColor: "#f9f9f9" }}>
+          <tr>
+            <th className="admin-th">
+              <input
+                type="checkbox"
+                checked={isAllChecked}
+                onChange={(e) => toggleAll(e.target.checked)}
+              />
+            </th>
+            <th className="admin-th">No</th>
+            <th className="admin-th">코드</th>
+            <th className="admin-th">썸네일</th>
+            <th className="admin-th">상품명</th>
+            <th className="admin-th">유형</th>
+            <th className="admin-th">가격</th>
+            <th className="admin-th">등록일시</th>
+            <th className="admin-th">수정일시</th>
+            <th className="admin-th">일정</th>
+            <th className="admin-th">상태</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((p, idx) => {
+            const code = p.code || `P-${p.id}`;
+            const title = p.title ?? p.name ?? "(제목 없음)";
+            const type = p.type ?? "-";
+            const price = formatPrice(Number(p.price ?? 0));
+            const isActive = Number(p.is_active) === 1;
+            const thumb = p.thumbnail_url || p.thumb_url || "";
+
+            return (
+              <tr
+                key={p.id}
                 style={{
-                  ...cardShell,
-                  opacity: product.is_active ? 1 : 0.5,
+                  backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                  opacity: isActive ? 1 : 0.6,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* 체크박스(개별) */}
+                <td className="admin-td">
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(product.id)}
-                    onChange={(e) => toggleOne(product.id, e.target.checked)}
+                    checked={selectedIds.includes(p.id)}
+                    onChange={(e) => toggleOne(p.id, e.target.checked)}
                   />
-                  <div style={{ fontSize: 13, color: "#666" }}>
-                    P-{product.id}
-                  </div>
-                </div>
+                </td>
 
-                <div
+                {/* No */}
+                <td className="admin-td">{idx + 1}</td>
+
+                {/* 코드 */}
+                <td
+                  className="admin-td"
                   style={{
-                    color: "#0070f3",
-                    fontWeight: 600,
-                    marginTop: 8,
-                    marginBottom: 6,
-                    cursor: "pointer",
-                    fontSize: 16,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
-                  onClick={() => onEdit(product)}
+                  title={code}
                 >
-                  {product.title}
-                </div>
+                  {code}
+                </td>
 
-                <div
+                {/* 썸네일 */}
+                <td className="admin-td">
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={thumb}
+                      alt="thumbnail"
+                      width="48"
+                      height="48"
+                      style={{
+                        objectFit: "cover",
+                        borderRadius: 6,
+                        border: "1px solid #eee",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                        border: "1px dashed #ddd",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#aaa",
+                        fontSize: 12,
+                      }}
+                    >
+                      썸네일<br></br>없음
+                    </div>
+                  )}
+                </td>
+
+                <td
+                  className="admin-td"
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "72px 1fr",
-                    gap: 10,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
+                  title={title}
                 >
-                  <div>
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt="썸네일"
-                        style={{
-                          width: 72,
-                          height: 72,
-                          objectFit: "cover",
-                          borderRadius: 6,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          ...thumbEmpty,
-                          width: 72,
-                          height: 72,
-                          borderRadius: 6,
-                        }}
-                      >
-                        없음
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>유형</span>
-                      <span style={cardValue}>{product.type || "-"}</span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>가격</span>
-                      <span style={cardValue}>
-                        {typeof product.price === "number"
-                          ? `${product.price.toLocaleString()}원`
-                          : "-"}
-                      </span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>상태</span>
-                      <span style={cardValue}>
-                        <ToggleSwitch
-                          checked={!!product.is_active}
-                          onChange={() => handleToggleActive(product.id)}
-                          aria-label="활성 전환"
-                        />
-                      </span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>등록</span>
-                      <span style={cardValue}>
-                        {formatDateUTC(product.created_at)}
-                      </span>
-                    </div>
-                    <div style={cardRow}>
-                      <span style={cardLabel}>수정</span>
-                      <span style={cardValue}>
-                        {product.updated_at
-                          ? formatDateUTC(product.updated_at)
-                          : "-"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  <span
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => onEdit?.(p)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") onEdit?.(p);
+                    }}
+                    style={{
+                      color: "#0070f3",
+                      cursor: "pointer",
+                      textDecoration: "none",
+                    }} // 텍스트만 클릭
+                  >
+                    {title}
+                  </span>
+                </td>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                {/* 유형 / 가격 / 등록/수정 / 일정 */}
+                <td className="admin-td">{type}</td>
+                <td className="admin-td">{price}원</td>
+                <td className="admin-td">{formatDateLocal(p.created_at)}</td>
+                <td className="admin-td">{formatDateLocal(p.updated_at)}</td>
+                <td className="admin-td">
                   <button
-                    onClick={() => setSelectedProductId(product.id)}
-                    style={scheduleButtonStyle}
+                    style={ghostBtn}
+                    onClick={() => setScheduleProductId(p.id)}
                   >
                     일정
                   </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                </td>
 
-          <PaginationControls
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </>
-      ) : (
-        // ✅ 데스크톱: 테이블
-        <>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "14px",
-            }}
-          >
-            <thead style={{ background: "#f9f9f9" }}>
-              <tr>
-                <th style={thStyle}>
-                  <input
-                    type="checkbox"
-                    onChange={(e) => toggleAll(e.target.checked)}
-                    checked={isAllChecked}
+                {/* 상태 토글 */}
+                <td className="admin-td">
+                  <ToggleSwitch
+                    size="sm"
+                    checked={isActive}
+                    onChange={() => handleToggleActive(p)}
+                    onLabel="ON"
+                    offLabel="OFF"
                   />
-                </th>
-                <th style={thStyle} onClick={() => handleSort("id")}>
-                  코드 {renderArrow("id")}
-                </th>
-                <th style={thStyle}>썸네일</th>
-                <th style={thStyle} onClick={() => handleSort("title")}>
-                  상품명 {renderArrow("title")}
-                </th>
-                <th style={thStyle} onClick={() => handleSort("type")}>
-                  유형 {renderArrow("type")}
-                </th>
-                <th style={thStyle} onClick={() => handleSort("price")}>
-                  가격 {renderArrow("price")}
-                </th>
-                <th style={thStyle} onClick={() => handleSort("is_active")}>
-                  상태 {renderArrow("is_active")}
-                </th>
-                <th style={thStyle} onClick={() => handleSort("created_at")}>
-                  등록일시 {renderArrow("created_at")}
-                </th>
-                <th style={thStyle} onClick={() => handleSort("updated_at")}>
-                  수정일시 {renderArrow("updated_at")}
-                </th>
-                <th style={thStyle}>일정</th>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {pagedProducts.map((product, index) => (
-                <tr
-                  key={product.id}
-                  style={{
-                    backgroundColor: index % 2 === 0 ? "#fff" : "#f9f9f9",
-                    opacity: product.is_active ? 1 : 0.45,
-                    height: 80,
-                  }}
-                >
-                  <td style={tdStyle}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(product.id)}
-                      onChange={(e) => toggleOne(product.id, e.target.checked)}
-                    />
-                  </td>
-                  <td style={tdStyle}>P-{product.id}</td>
-                  <td style={tdStyle}>
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt="썸네일"
-                        style={{ width: 60, height: 60, objectFit: "cover" }}
-                      />
-                    ) : (
-                      <div style={thumbEmpty}>
-                        썸네일
-                        <br />
-                        없음
-                      </div>
-                    )}
-                  </td>
-                  <td style={tdStyle}>
-                    <span
-                      onClick={() => onEdit(product)}
-                      style={{ color: "#0070f3", cursor: "pointer" }}
-                    >
-                      {product.title}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>{product.type}</td>
-                  <td style={tdStyle}>
-                    {typeof product.price === "number"
-                      ? `${product.price.toLocaleString()}원`
-                      : "-"}
-                  </td>
-                  <td style={tdStyle}>
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <ToggleSwitch
-                        checked={!!product.is_active}
-                        onChange={() => handleToggleActive(product.id)}
-                        aria-label="활성 전환"
-                      />
-                    </div>
-                  </td>
-                  <td style={tdStyle}>{formatDateUTC(product.created_at)}</td>
-                  <td style={tdStyle}>
-                    {product.updated_at
-                      ? formatDateUTC(product.updated_at)
-                      : "-"}
-                  </td>
-                  <td style={tdStyle}>
-                    <button
-                      onClick={() => setSelectedProductId(product.id)}
-                      style={scheduleButtonStyle}
-                    >
-                      일정
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 
-          <PaginationControls
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </>
+  return (
+    <>
+      {mounted && isTabletOrBelow ? (
+        <div style={{ display: "grid", gap: 12 }}>{renderCards()}</div>
+      ) : (
+        renderTable()
       )}
 
-      {selectedProductId && (
+      {scheduleProductId && (
         <ProductSchedulesModal
-          productId={selectedProductId}
-          onClose={() => setSelectedProductId(null)}
+          productId={scheduleProductId}
+          onClose={() => setScheduleProductId(null)}
         />
       )}
+    </>
+  );
+}
 
-      <style jsx>{`
-        .admin-toolbar {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          align-items: start;
-          gap: 12px 16px;
-          margin-bottom: 16px;
-        }
-        .toolbar-left {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          min-width: 0;
-        }
-        .toolbar-right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-        .filter-toggle {
-          display: none;
-        }
-        @media (max-width: 980px) {
-          .admin-toolbar {
-            grid-template-columns: 1fr;
-          }
-          .toolbar-left,
-          .toolbar-right {
-            width: 100%;
-          }
-          .toolbar-right {
-            justify-content: space-between;
-            gap: 8px;
-          }
-          .filter-toggle {
-            display: inline-flex;
-          }
-        }
-      `}</style>
+/* 공통 카드 라벨/값 한 줄 */
+function Row({ label, value }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 12,
+        padding: "6px 0",
+        borderBottom: "1px dashed #f0f0f0",
+      }}
+    >
+      <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>{label}</span>
+      <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>
+        {value}
+      </span>
     </div>
   );
 }
 
-/* 테이블 공통 */
-const thStyle = {
-  padding: "10px",
-  textAlign: "center",
-  cursor: "pointer",
-};
-const tdStyle = {
-  padding: "10px",
-  textAlign: "center",
-};
-
-/* 버튼 */
-const resetBtn = {
-  padding: "8px 14px",
-  backgroundColor: "#ccc",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-};
-const dangerBtn = {
-  padding: "8px 12px",
-  backgroundColor: "#ef4444",
-  color: "#fff",
-  border: "none",
-  borderRadius: "6px",
-  fontWeight: "bold",
-};
+/* 버튼 스타일 */
 const primaryBtn = {
   padding: "6px 10px",
-  fontSize: "13px",
-  background: "#0070f3",
+  backgroundColor: "#0070f3",
   color: "#fff",
   border: "none",
-  borderRadius: "6px",
+  borderRadius: 6,
+  fontSize: 13,
   cursor: "pointer",
 };
-const scheduleButtonStyle = {
+const ghostBtn = {
   padding: "6px 10px",
-  backgroundColor: "#6c63ff",
-  color: "#fff",
-  border: "none",
-  borderRadius: "4px",
+  backgroundColor: "#fff",
+  color: "#374151",
+  border: "1px solid #e5e7eb",
+  borderRadius: 6,
+  fontSize: 13,
   cursor: "pointer",
-  fontSize: "13px",
-};
-
-/* 썸네일 없음 */
-const thumbEmpty = {
-  height: 60,
-  width: 60,
-  border: "1px dashed #ccc",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  color: "#aaa",
-  fontSize: 12,
-};
-
-/* 카드 레이아웃 */
-const cardShell = {
-  border: "1px solid #eee",
-  borderRadius: 10,
-  padding: 12,
-  background: "#fff",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-};
-const cardRow = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "12px",
-  padding: "6px 0",
-  borderBottom: "1px dashed #f0f0f0",
-};
-const cardLabel = { color: "#888", fontSize: 13, minWidth: 80 };
-const cardValue = { color: "#222", fontSize: 14, wordBreak: "break-all" };
-
-/* 상태 박스 */
-const errorBox = {
-  border: "1px solid #ffd5d5",
-  background: "#fff5f5",
-  color: "#c53030",
-  padding: "14px 16px",
-  borderRadius: 8,
-  marginBottom: 16,
-};
-const emptyBox = {
-  border: "1px dashed #d0d7de",
-  background: "#fafbfc",
-  color: "#57606a",
-  padding: "18px 16px",
-  borderRadius: 8,
-  textAlign: "center",
 };
