@@ -1,248 +1,318 @@
-import { useState, useEffect, useRef } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import Table from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import { StyledTableCell } from "./extensions/StyledTableCell";
-import { StyledTableHeader } from "./extensions/StyledTableHeader";
-import Blockquote from "@tiptap/extension-blockquote";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import { FontSize } from "./extensions/FontSize";
-import { FontFamily } from "./extensions/FontFamily";
-import { ResizableImage } from "./extensions/ResizableImage";
-import ToolbarButtons from "./extensions/ToolbarButtons";
-import EditorModeButtons from "./extensions/EditorModeButtons";
-import BulletList from "@tiptap/extension-bullet-list";
-import OrderedList from "@tiptap/extension-ordered-list";
-import ListItem from "@tiptap/extension-list-item";
-import api from "@/lib/api"; // 반드시 상단에 추가
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
+import AdminLayout from "@/components/layout/AdminLayout";
+import TiptapEditor from "@/components/editor/TiptapEditor";
+import { useGlobalAlert } from "@/stores/globalAlert";
 
-export default function TiptapEditor({ value, onChange, height = 280 }) {
-  const [sourceMode, setSourceMode] = useState(false);
-  const [mounted, setMounted] = useState(false); // ✅ 추가
-  const fileInputRef = useRef(null);
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
+export default function ProductFormPage() {
+  const router = useRouter();
+  const { id } = router.query;
+  const isEdit = id !== "new";
+  const categoryMap = {
+    교육: ["followup", "certification", "opencourse", "facilitation"],
+    컨설팅: ["워크숍", "숙의토론", "조직개발"],
+    진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
+  };
+  const { showAlert } = useGlobalAlert();
 
+  const initialForm = {
+    title: "",
+    category: "",
+    type: "",
+    image_url: "",
+    description: "",
+    detail: "",
+    price: "",
+    is_active: 1,
+    created_at: "",
+    updated_at: "",
+  };
+  const [form, setForm] = useState(initialForm);
+  const [loading, setLoading] = useState(false);
+
+  // 상품 데이터 불러오기(수정일 때만)
   useEffect(() => {
-    setMounted(true); // 🔹 클라이언트에서만 editor 생성되도록
-  }, []);
+    if (!isEdit || !id) return;
+    setLoading(true);
+    api
+      .get(`/admin/products/${id}`)
+      .then((res) => {
+        if (res.data.success) setForm(res.data.product);
+        else showAlert("상품 정보를 불러오지 못했습니다.");
+      })
+      .catch(() => showAlert("상품 정보를 불러오지 못했습니다."))
+      .finally(() => setLoading(false));
+  }, [id, isEdit, showAlert]);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        blockquote: false,
-        bulletList: false,
-        orderedList: false,
-        listItem: false,
-      }),
-      Link.configure({ openOnClick: false }),
-      Table.configure({
-        resizable: true,
-        allowTableNodeSelection: false,
-      }),
-      TableRow,
-      StyledTableHeader,
-      StyledTableCell,
-      Blockquote,
-      Underline,
-      TextStyle,
-      Color,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      FontSize,
-      FontFamily,
-      ResizableImage,
-      BulletList,
-      OrderedList,
-      ListItem,
-    ],
-    content: value?.trim() || "<p><br></p><p><br></p><p><br></p>",
-    editorProps: {
-      attributes: { class: "tiptap-editor" },
-    },
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
-    },
-    editable: mounted, // ✅ 여기서 SSR일 땐 비활성화
-    immediatelyRender: false, // ✅ hydration mismatch 방지
-  });
+  // 입력값 변경 핸들러
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+    }));
+  };
 
-  useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || "");
-    }
-  }, [value, editor]);
+  // 이미지 업로드 핸들러(썸네일)
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({ ...prev, image_url: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
 
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length || !editor) return;
+  // 유효성 검사
+  const validate = () => {
+    if (!form.title) return "상품명을 입력하세요.";
+    if (!form.category) return "상품군을 선택하세요.";
+    if (!form.type) return "세부유형을 입력하세요.";
+    return null;
+  };
 
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-
+  // 저장
+  const handleSave = async () => {
+    const error = validate();
+    if (error) return showAlert(error);
     try {
-      const res = await api.post("/upload/image", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const urls = res.data.urls || [];
-
-      // 여러 장 한 번에 삽입!
-      const html = urls
-        .map(
-          (item) => `<img src="${item.detail}" alt="image" loading="lazy" />`
-        )
-        .join("");
-      editor.commands.insertContent(html);
-      onChange(editor.getHTML());
+      const method = isEdit ? "put" : "post";
+      const url = isEdit ? `/admin/products/${id}` : "/admin/products";
+      const cleanForm = { ...form, type: String(form.type).trim() };
+      const res = await api[method](url, cleanForm);
+      if (res.data.success) {
+        showAlert(isEdit ? "수정 완료!" : "등록 완료!");
+        router.push("/admin/products");
+      } else {
+        showAlert("저장 실패: " + res.data.message);
+      }
     } catch (err) {
-      showAlert("이미지 업로드 실패");
+      showAlert("저장 중 오류 발생");
     }
   };
 
-  if (!mounted || !editor) return null;
+  // 삭제
+  const handleDelete = async () => {
+    if (!isEdit || !id) return;
+    if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) return;
+    try {
+      const res = await api.delete(`/admin/products/${id}`);
+      if (res.data.success) {
+        showAlert("삭제완료");
+        router.push("/admin/products");
+      } else {
+        showAlert("삭제실패: " + res.data.message);
+      }
+    } catch (err) {
+      showAlert("삭제 중 오류 발생");
+    }
+  };
+
+  // 입력값 초기화
+  const handleReset = () => setForm(initialForm);
+
+  if (!router.isReady) return null;
+
   return (
-    <div>
-      <style>
-        {`
-          .tiptap-editor ul {
-            padding-left: 1.2rem;
-            list-style-type: disc;
-          }
-          .tiptap-editor *:first-child {
-            margin-top: 0;
-          }
+    <AdminLayout pageTitle={isEdit ? "상품수정" : "상품등록"}>
+      <div style={mainWrapStyle}>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+          {/* 이미지 업로드 */}
+          <label htmlFor="image-upload" style={imageBoxStyle}>
+            {form.image_url ? (
+              <img src={form.image_url} alt="상품 이미지" style={imgStyle} />
+            ) : (
+              <span style={{ color: "#777", fontSize: 14 }}>[이미지 업로드]</span>
+            )}
+            <input
+              id="image-upload"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleImageUpload}
+            />
+          </label>
 
-          .tiptap-editor,
-          .preview-wrapper {
-            word-break: break-word;
-            min-height: 280px;
-          }
-          .tiptap-editor table {
-            border-collapse: separate;
-            border-spacing: 0;
-            table-layout: fixed;
-            width: auto;
-            max-width: 100%;
-            transition: outline 0.2s ease-in-out;
-          }
-          .tiptap-editor table:hover {
-            outline: 1px dashed #aaa;
-            outline-offset: 2px;
-          }
-          .tiptap-editor td,
-          .tiptap-editor th {
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-            position: relative;
-            vertical-align: top;
-            min-height: 30px;
-          }
-          .tiptap-editor th {
-            font-weight: normal;
-          }
-          .tiptap-editor .selectedCell {
-            background-color: rgba(0, 112, 243, 0.1);
-          }
-                     .tiptap-editor img,
-.preview-wrapper img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  vertical-align: top;
-  line-height: 0;
-}
+          {/* 입력 폼 */}
+          <div style={{ flex: 1, minWidth: 280 }}>
+            {loading ? (
+              <p>⏳ 불러오는 중...</p>
+            ) : (
+              <>
+                {/* 상품명 */}
+                <div style={fieldStyle}>
+                  <label>상품명</label>
+                  <input
+                    name="title"
+                    value={form.title || ""}
+                    onChange={handleChange}
+                    type="text"
+                    style={inputStyle}
+                  />
+                </div>
+                {/* 상품군 */}
+                <div style={fieldStyle}>
+                  <label>상품군</label>
+                  <select
+                    name="category"
+                    value={form.category || ""}
+                    onChange={handleChange}
+                    style={inputStyle}
+                  >
+                    <option value="">선택하세요</option>
+                    {Object.keys(categoryMap).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {/* 세부유형 */}
+                {form.category && (
+                  <div style={fieldStyle}>
+                    <label>세부유형</label>
+                    <select
+                      name="type"
+                      value={form.type || ""}
+                      onChange={handleChange}
+                      style={inputStyle}
+                    >
+                      <option value="">선택하세요</option>
+                      {categoryMap[form.category]?.map((subtype) => (
+                        <option key={subtype} value={subtype}>
+                          {subtype}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {/* 가격 */}
+                <div style={fieldStyle}>
+                  <label>가격</label>
+                  <input
+                    name="price"
+                    value={form.price}
+                    onChange={handleChange}
+                    type="number"
+                    min={0}
+                    style={inputStyle}
+                  />
+                </div>
+                {/* 간단 설명 */}
+                <div style={fieldStyle}>
+                  <label>간단 설명</label>
+                  <input
+                    name="description"
+                    value={form.description || ""}
+                    onChange={handleChange}
+                    type="text"
+                    style={inputStyle}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-.tiptap-editor img + img {
-  margin-top: 0;
-}
-
-          /* 👉 가로 드래그 커서 영역 (우측 border 선 위에서만) */
-          .tiptap-editor td::after,
-          .tiptap-editor th::after {
-            content: '';
-            position: absolute;
-            right: -2px;
-            top: 0;
-            width: 4px;
-            height: 100%;
-            cursor: col-resize;
-            z-index: 10;
-          }
-
-          .tiptap-editor td:hover::after,
-          .tiptap-editor th:hover::after {
-            background-color: #eee;
-          }
-        `}
-      </style>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "flex-start",
-          marginBottom: 12,
-        }}
-      >
-        {!sourceMode && (
-          <ToolbarButtons editor={editor} fileInputRef={fileInputRef} />
-        )}
-        <EditorModeButtons
-          sourceMode={sourceMode}
-          setSourceMode={setSourceMode}
-        />
-      </div>
-
-      {sourceMode ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            width: "100%",
-            minHeight: height,
-            border: "1px solid #ddd",
-            borderRadius: 6,
-            padding: 12,
-            fontFamily: "monospace",
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            position: "relative",
-            border: "1px solid #ddd",
-            borderRadius: 6,
-            padding: 12,
-            minHeight: height,
-            height: "100%",
-            background: "#fff",
-          }}
-        >
-          <EditorContent
-            editor={editor}
-            spellCheck={false}
-            style={{ width: "100%", minHeight: "100%" }}
+        {/* 상세 설명 */}
+        <div style={{ marginTop: 40 }}>
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
+            상세설명
+          </label>
+          <TiptapEditor
+            key={id || "new"}  // 라우트 전환 시 에디터 강제 리마운트
+            value={form.detail || ""}
+            onChange={(html) => setForm((prev) => ({ ...prev, detail: html }))}
+            height={280}
           />
         </div>
-      )}
 
-      <input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        onChange={handleImageUpload}
-        multiple // ✅ 다중 업로드 지원
-      />
-    </div>
+        {/* 하단 버튼 */}
+        <div style={buttonBarStyle}>
+          <button onClick={() => router.push("/admin/products")} style={grayButtonStyle}>
+            목록으로
+          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={handleReset} style={grayButtonStyle}>초기화</button>
+            {isEdit && (
+              <button onClick={handleDelete} style={redButtonStyle}>삭제</button>
+            )}
+            <button onClick={handleSave} style={blueButtonStyle}>저장</button>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
   );
 }
+
+// 스타일 상수
+const mainWrapStyle = {
+  maxWidth: 960,
+  margin: "0 auto",
+  padding: 32,
+  background: "#fff",
+  borderRadius: 12,
+  boxShadow: "0 0 12px rgba(0,0,0,0.05)",
+};
+
+const imageBoxStyle = {
+  width: 300,
+  height: 300,
+  border: "2px solid #999",
+  borderRadius: 8,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  position: "relative",
+  overflow: "hidden",
+  cursor: "pointer",
+};
+
+const imgStyle = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+};
+
+const fieldStyle = { marginBottom: 16 };
+
+const inputStyle = {
+  width: "100%",
+  padding: 10,
+  border: "1px solid #ccc",
+  borderRadius: 6,
+};
+
+const buttonBarStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 10,
+  marginTop: 32,
+  flexWrap: "wrap",
+};
+
+const grayButtonStyle = {
+  padding: "10px 16px",
+  backgroundColor: "#eee",
+  color: "#333",
+  border: "1px solid #ccc",
+  borderRadius: 6,
+};
+
+const blueButtonStyle = {
+  padding: "10px 16px",
+  backgroundColor: "#0070f3",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+};
+
+const redButtonStyle = {
+  padding: "10px 16px",
+  backgroundColor: "#e74c3c",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+};

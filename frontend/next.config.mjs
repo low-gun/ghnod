@@ -13,17 +13,37 @@ const nextConfig = {
   },
   async headers() {
     return [
+      // Next 정적 자산: 강력 캐시
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      // Next 이미지 최적화(사용 중일 때)
+      {
+        source: "/_next/image",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      // 업로드 이미지: 적당히 캐시 (파일명이 uuid/타임스탬프라 안전)
+      {
+        source: "/uploads/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, must-revalidate" },
+        ],
+      },
+      // 그 외(HTML 등): 캐시 금지
       {
         source: "/(.*)",
         headers: [
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
-          },
+          { key: "Cache-Control", value: "no-store, max-age=0" },
         ],
       },
     ];
   },
+  
   async rewrites() {
     if (isDev) {
       return [

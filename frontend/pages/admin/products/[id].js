@@ -2,19 +2,25 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
-import TiptapEditor from "@/components/editor/TiptapEditor";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import dynamic from "next/dynamic";
+const TiptapEditor = dynamic(
+  () => import("@/components/editor/TiptapEditor"),
+  { ssr: false, loading: () => <p>에디터 로딩중…</p> }
+);
+import { useGlobalAlert } from "@/stores/globalAlert";
 
 export default function ProductFormPage() {
   const router = useRouter();
   const { id } = router.query;
-  const isEdit = id !== "new";
+const pid = Array.isArray(id) ? id[0] : id; // ✅ id가 배열/undefined인 경우 대비
+const isEdit = !!pid && pid !== "new";      // ✅ 준비 완료 + new가 아닐 때만 편집모드
+
   const categoryMap = {
     교육: ["followup", "certification", "opencourse", "facilitation"],
     컨설팅: ["워크숍", "숙의토론", "조직개발"],
     진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
   };
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showAlert } = useGlobalAlert();
 
   const initialForm = {
     title: "",
@@ -29,21 +35,44 @@ export default function ProductFormPage() {
     updated_at: "",
   };
   const [form, setForm] = useState(initialForm);
-  const [loading, setLoading] = useState(false);
+const [detail, setDetail] = useState(""); // ✅ 추가
+const [loading, setLoading] = useState(false);
+
 
   // 상품 데이터 불러오기(수정일 때만)
   useEffect(() => {
-    if (!isEdit || !id) return;
+    if (!isEdit || !pid) return;
+  
+    const ctrl = new AbortController(); // ✅ 요청 취소용
+    let active = true;                  // ✅ 언마운트 가드
+  
     setLoading(true);
     api
-      .get(`/admin/products/${id}`)
+      .get(`/admin/products/${pid}`, { signal: ctrl.signal }) // ✅ signal 전달
       .then((res) => {
-        if (res.data.success) setForm(res.data.product);
-        else showAlert("상품 정보를 불러오지 못했습니다.");
+        if (!active) return;
+        if (res.data.success) {
+          setForm(res.data.product);
+          setDetail(res.data.product?.detail || "");
+        } else {
+          showAlert("상품 정보를 불러오지 못했습니다.");
+        }
       })
-      .catch(() => showAlert("상품 정보를 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [id, isEdit]);
+      .catch((err) => {
+        // ✅ 경로 변경/언마운트로 취소된 경우는 무시
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+        showAlert("상품 정보를 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+  
+    return () => {
+      active = false;
+      ctrl.abort(); // ✅ 언마운트 시 요청 중단
+    };
+  }, [pid, isEdit, showAlert]);
+  
 
   // 입력값 변경 핸들러
   const handleChange = (e) => {
@@ -54,7 +83,7 @@ export default function ProductFormPage() {
     }));
   };
 
-  // 이미지 업로드 핸들러
+  // 이미지 업로드 핸들러(썸네일)
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -79,8 +108,8 @@ export default function ProductFormPage() {
     if (error) return showAlert(error);
     try {
       const method = isEdit ? "put" : "post";
-      const url = isEdit ? `/admin/products/${id}` : "/admin/products";
-      const cleanForm = { ...form, type: String(form.type).trim() };
+      const url = isEdit ? `/admin/products/${pid}` : "/admin/products";
+      const cleanForm = { ...form, detail, type: String(form.type).trim() }; // ✅ detail 반영
       const res = await api[method](url, cleanForm);
       if (res.data.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
@@ -95,14 +124,13 @@ export default function ProductFormPage() {
 
   // 삭제
   const handleDelete = async () => {
-    if (!isEdit || !id) return;
-    const ok = await showConfirm("정말로 이 일정을 삭제하시겠습니까?");
-    if (!ok) return;
+    if (!isEdit || !pid) return;
+    if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) return;
     try {
-      const res = await api.delete(`admin/schedules/${id}`);
+      const res = await api.delete(`/admin/products/${pid}`);
       if (res.data.success) {
         showAlert("삭제완료");
-        router.push("/admin/schedules");
+        router.push("/admin/products");
       } else {
         showAlert("삭제실패: " + res.data.message);
       }
@@ -112,22 +140,22 @@ export default function ProductFormPage() {
   };
 
   // 입력값 초기화
-  const handleReset = () => setForm(initialForm);
-
+  const handleReset = () => {
+    setForm(initialForm);
+    setDetail(""); // ✅ 추가
+  };
   if (!router.isReady) return null;
 
   return (
     <AdminLayout pageTitle={isEdit ? "상품수정" : "상품등록"}>
       <div style={mainWrapStyle}>
-        <div style={{ display: "flex", gap: 32 }}>
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
           {/* 이미지 업로드 */}
           <label htmlFor="image-upload" style={imageBoxStyle}>
             {form.image_url ? (
               <img src={form.image_url} alt="상품 이미지" style={imgStyle} />
             ) : (
-              <span style={{ color: "#777", fontSize: 14 }}>
-                [이미지 업로드]
-              </span>
+              <span style={{ color: "#777", fontSize: 14 }}>[이미지 업로드]</span>
             )}
             <input
               id="image-upload"
@@ -137,8 +165,9 @@ export default function ProductFormPage() {
               onChange={handleImageUpload}
             />
           </label>
+
           {/* 입력 폼 */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
             {loading ? (
               <p>⏳ 불러오는 중...</p>
             ) : (
@@ -217,37 +246,35 @@ export default function ProductFormPage() {
             )}
           </div>
         </div>
+
         {/* 상세 설명 */}
         <div style={{ marginTop: 40 }}>
           <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
             상세설명
           </label>
-          <TiptapEditor
-            value={form.detail}
-            onChange={(html) => setForm((prev) => ({ ...prev, detail: html }))}
-            height={280}
-          />
+          {!loading && (
+            <TiptapEditor
+  key={pid || "new"} // 라우트 전환 시 에디터 강제 리마운트
+    value={detail}
+    onChange={(html) => setDetail(html)}
+    height={280}
+  />
+)}
+
+
         </div>
+
         {/* 하단 버튼 */}
         <div style={buttonBarStyle}>
-          <button
-            onClick={() => router.push("/admin/products")}
-            style={grayButtonStyle}
-          >
+          <button onClick={() => router.push("/admin/products")} style={grayButtonStyle}>
             목록으로
           </button>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handleReset} style={grayButtonStyle}>
-              초기화
-            </button>
+            <button onClick={handleReset} style={grayButtonStyle}>초기화</button>
             {isEdit && (
-              <button onClick={handleDelete} style={redButtonStyle}>
-                삭제
-              </button>
+              <button onClick={handleDelete} style={redButtonStyle}>삭제</button>
             )}
-            <button onClick={handleSave} style={blueButtonStyle}>
-              저장
-            </button>
+            <button onClick={handleSave} style={blueButtonStyle}>저장</button>
           </div>
         </div>
       </div>
@@ -255,10 +282,10 @@ export default function ProductFormPage() {
   );
 }
 
-// 스타일 상수 분리
+// 스타일 상수
 const mainWrapStyle = {
   maxWidth: 960,
-  margin: 0,
+  margin: "0 auto",
   padding: 32,
   background: "#fff",
   borderRadius: 12,
@@ -298,6 +325,7 @@ const buttonBarStyle = {
   justifyContent: "space-between",
   gap: 10,
   marginTop: 32,
+  flexWrap: "wrap",
 };
 
 const grayButtonStyle = {

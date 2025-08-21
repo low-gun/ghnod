@@ -525,9 +525,9 @@ function AlertItem({ title, value, onClick, highlight }) {
     <div
       onClick={onClick}
       style={{
-        border: highlight ? "2px solid #ef4444" : "1px solid #e5e7eb",
-        background: highlight ? "#fff1f2" : "#fff",
-        color: highlight ? "#b91c1c" : "#111827",
+        border: highlight ? "2px solid #3b82f6" : "1px solid #e5e7eb",
+        background: highlight ? "#f0f7ff" : "#fff",
+        color: highlight ? "#1e40af" : "#111827",
         borderRadius: 10,
         padding: "12px 14px",
         cursor: "pointer",

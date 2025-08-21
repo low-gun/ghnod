@@ -1,7 +1,7 @@
 // pages/_app.js
 import Head from "next/head"; // ✅ 추가
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react"; // ✅ useRef 추가
 import Script from "next/script";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
@@ -52,10 +52,12 @@ const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const showLoading = useGlobalLoading((state) => state.showLoading);
+const isAdmin = router.pathname.startsWith("/admin"); // ✅ 추가
+const showLoading = useGlobalLoading((state) => state.showLoading);
+
   const hideLoading = useGlobalLoading((state) => state.hideLoading);
-  let startTime = 0;
-  let maxTimeout = null;
+  const startRef = useRef(0);      // ✅ 변경
+const timeoutRef = useRef(null); // ✅ 변경
 
   useEffect(() => {
     console.log(
@@ -70,28 +72,30 @@ function MyApp({ Component, pageProps }) {
 
   useEffect(() => {
     const handleStart = () => {
-      startTime = Date.now();
+      startRef.current = Date.now(); // ✅ 변경
       showLoading();
-
-      maxTimeout = setTimeout(() => {
+    
+      if (timeoutRef.current) clearTimeout(timeoutRef.current); // ✅ 중복 타이머 방지
+      timeoutRef.current = setTimeout(() => {
         hideLoading();
         console.warn("⏱ 로딩이 30초 이상 지속되어 자동 종료되었습니다.");
       }, 30000);
     };
-
+    
     const handleEnd = () => {
-      clearTimeout(maxTimeout);
-      const elapsed = Date.now() - startTime;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current); // ✅ 변경
+      const elapsed = Date.now() - startRef.current;            // ✅ 변경
       const delay = Math.max(300 - elapsed, 0);
       setTimeout(hideLoading, delay);
     };
+    
 
     router.events.on("routeChangeStart", handleStart);
     router.events.on("routeChangeComplete", handleEnd);
     router.events.on("routeChangeError", handleEnd);
 
     return () => {
-      clearTimeout(maxTimeout);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current); // ✅ 변경
       router.events.off("routeChangeStart", handleStart);
       router.events.off("routeChangeComplete", handleEnd);
       router.events.off("routeChangeError", handleEnd);
@@ -113,36 +117,33 @@ function MyApp({ Component, pageProps }) {
       </Head>
 
       {/* ✅ Kakao JavaScript SDK 로드 및 초기화 보장 */}
-      <Script
-        id="kakao-sdk"
-        src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
-        strategy="beforeInteractive"
-        onLoad={() => {
-          console.log("[Kakao] script tag loaded, checking window.Kakao...");
-
-          const checkKakao = setInterval(() => {
-            if (window.Kakao) {
-              console.log("[Kakao] object found");
-              if (!window.Kakao.isInitialized()) {
-                if (!process.env.NEXT_PUBLIC_KAKAO_JS_KEY) {
-                  console.warn("[Kakao] NEXT_PUBLIC_KAKAO_JS_KEY missing");
-                }
-                window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
-                console.log(
-                  "[Kakao] initialized:",
-                  window.Kakao.isInitialized()
-                );
-              }
-              clearInterval(checkKakao);
+      {!isAdmin && (
+  <Script
+    id="kakao-sdk"
+    src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
+    strategy="afterInteractive" // ✅ 변경
+    onLoad={() => {
+      console.log("[Kakao] script tag loaded, checking window.Kakao...");
+      const checkKakao = setInterval(() => {
+        if (window.Kakao) {
+          console.log("[Kakao] object found");
+          if (!window.Kakao.isInitialized()) {
+            if (!process.env.NEXT_PUBLIC_KAKAO_JS_KEY) {
+              console.warn("[Kakao] NEXT_PUBLIC_KAKAO_JS_KEY missing");
             }
-          }, 200);
+            window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
+            console.log("[Kakao] initialized:", window.Kakao.isInitialized());
+          }
+          clearInterval(checkKakao);
+        }
+      }, 200);
+      setTimeout(() => clearInterval(checkKakao), 5000);
+    }}
+    onError={(e) => console.error("[Kakao] script load error", e)}
+    crossOrigin="anonymous"
+  />
+)}
 
-          // 5초 후 중단
-          setTimeout(() => clearInterval(checkKakao), 5000);
-        }}
-        onError={(e) => console.error("[Kakao] script load error", e)}
-        crossOrigin="anonymous"
-      />
 
       <QueryClientProvider client={queryClient}>
         <UserProvider>
