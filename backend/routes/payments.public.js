@@ -54,7 +54,7 @@ async function getCartItemsAndTotal({ userId, cartItemIds }) {
   }
   const placeholders = cartItemIds.map(() => "?").join(",");
   const [items] = await db.query(
-    `SELECT id, user_id, schedule_id, quantity, unit_price, discount_price, type
+    `SELECT id, user_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, type
        FROM cart_items
       WHERE id IN (${placeholders}) AND user_id = ?`,
     [...cartItemIds, userId]
@@ -64,8 +64,10 @@ async function getCartItemsAndTotal({ userId, cartItemIds }) {
   }
   const baseTotal = items.reduce((sum, it) => {
     const q = Number(it.quantity || 1);
-    const p = Number(it.unit_price || 0);
-    return sum + q * p;
+    const u = Number(it.unit_price || 0);
+    const d = Number(it.discount_price || 0);
+    const per = d > 0 && d < u ? d : u;
+    return sum + q * per;
   }, 0);
   return { items, baseTotal };
 }
@@ -164,22 +166,28 @@ router.post("/toss/prepare", authenticateToken, async (req, res) => {
 
       for (const it of items) {
         const q = Number(it.quantity || 1);
-        const p = Number(it.unit_price || 0);
-        const subtotal = q * p;
+        const u = Number(it.unit_price || 0);
+        const d = Number(it.discount_price || 0);
+        const per = d > 0 && d < u ? d : u;       // ✅ 할인가 우선
+        const subtotal = q * per;
+      
         await conn.query(
           `INSERT INTO order_items
-         (order_id, schedule_id, quantity, unit_price, discount_price, subtotal, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+             (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
             orderId,
             it.schedule_id,
+            it.schedule_session_id || null,        // ✅ 회차 FK 반영
             q,
-            p,
-            Number(it.discount_price || 0),
+            u,
+            d,
             subtotal,
           ]
         );
       }
+      
+      
 
       await conn.commit();
     } catch (e) {

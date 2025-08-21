@@ -2,65 +2,93 @@ import { formatPrice } from "@/lib/format";
 
 export default function CouponSelector({ couponList = [], onSelect, onClose }) {
   console.log("🔥 CouponSelector 렌더됨:", couponList); // ✅ 렌더 확인
+
   return (
-    <div style={overlayStyle}>
-      <div style={{ ...modalStyle, width: 320 }}>
+    <div style={overlayStyle} onClick={onClose}>
+      <div
+        style={{ ...modalStyle, width: 320 }}
+        onClick={(e) => e.stopPropagation()} // ✅ 내부 클릭은 전파 차단
+      >
         <div style={headerStyle}>
           <strong>쿠폰 선택</strong>
           <button onClick={onClose} style={closeBtnStyle}>
             ×
           </button>
         </div>
+
         <ul style={{ padding: 0, listStyle: "none", marginTop: 12 }}>
+          {/* 선택 안 함 */}
           <li
-            key={0}
+            key="none"
             tabIndex={0}
             role="button"
             onClick={() => {
-              console.log("🔥 쿠폰 선택: 없음");
               onSelect(null);
               onClose();
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                onSelect(null);
+                onClose();
+              }
+            }} // ✅ 키보드 활성화
             style={listItemStyle}
           >
             선택 안 함
           </li>
 
-          {couponList.map((c) => (
-            <li
-              key={c.id}
-              tabIndex={0}
-              role="button"
-              onClick={() => {
-                const matched = couponList.find((x) => x.id === c.id);
-                console.log("🔥 쿠폰 클릭됨:", matched);
-                if (!matched) {
-                  console.warn("❗ 쿠폰 매칭 실패, 원본:", c);
-                }
-                onSelect(matched);
-                onClose();
-              }}
-              style={listItemStyle}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{c.label || c.name || `쿠폰 #${c.id}`}</span>
-                <span
+          {/* 쿠폰 목록 */}
+          {couponList.map((c) => {
+            const label = c.label || c.name || `쿠폰 #${c.id}`;
+            const amount = c.amount ?? 0;
+            const expiry = c.expiry_date || c.expired_at;
+            const expiryText = expiry ? new Date(expiry).toLocaleDateString() : null;
+
+            return (
+              <li
+                key={c.id ?? label}
+                tabIndex={0}
+                role="button"
+                onClick={() => {
+                  onSelect(c);
+                  onClose();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    onSelect(c);
+                    onClose();
+                  }
+                }} // ✅ 키보드 활성화
+                style={listItemStyle}
+              >
+                <div
                   style={{
-                    color: "#3b82f6",
-                    fontWeight: "bold",
-                    fontSize: "13px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
                   }}
                 >
-                  {formatPrice(c.amount || 0)}
-                </span>
-              </div>
-              {c.expiry_date && (
-                <div style={{ fontSize: "12px", color: "#999", marginTop: 4 }}>
-                  유효기한: {new Date(c.expiry_date).toLocaleDateString()}
+                  <span>{label}</span>
+                  <span
+                    style={{
+                      color: "#3b82f6",
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                    }}
+                  >
+                    {formatPrice(amount)}원
+                  </span>
                 </div>
-              )}
-            </li>
-          ))}
+
+                {expiryText && (
+                  <div style={{ fontSize: "12px", color: "#999", marginTop: 4 }}>
+                    유효기한: {expiryText}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>
@@ -82,6 +110,8 @@ const modalStyle = {
   padding: 20,
   borderRadius: 8,
   width: 280,
+  maxHeight: "70vh", // ✅ 스크롤 높이 제한
+  overflowY: "auto", // ✅ 스크롤
   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
 };
 

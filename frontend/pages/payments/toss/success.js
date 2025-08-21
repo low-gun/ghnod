@@ -59,9 +59,11 @@ export default function TossSuccessPage() {
 
         if (res.data?.success) {
           setStatus("결제가 승인되었습니다. 주문 페이지로 이동합니다...");
-          // 주문 완료 페이지로 이동 (백틱 필요)
+          // ✅ buyNow로 담아둔 아이템 id 캐시 정리
+          try { sessionStorage.removeItem("BUY_NOW_IDS"); } catch {}
           router.replace(`/orders/${Number(orderIdQ)}/complete`);
-        } else {
+        }
+         else {
           console.error("[confirm error(body)]", res.data);
           setError(res.data?.error || "결제 승인에 실패했습니다.");
           setStatus("");

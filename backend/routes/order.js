@@ -117,18 +117,23 @@ router.get("/:id/items", authenticateToken, async (req, res) => {
   oi.unit_price,
   oi.discount_price,
   oi.subtotal,
-  s.title AS title,                      -- ✅ 프론트에서 기대하는 item.title
+  s.title AS title,
   s.id AS schedule_id,
-  s.image_url,
-  s.start_date,
-  s.end_date,
+  oi.schedule_session_id,                                  -- ✅ 회차 FK
+  COALESCE(s.image_url, p.image_url) AS image_url,
+  COALESCE(ss.start_date, s.start_date) AS start_date,     -- ✅ 회차 기간/시간 우선
+  COALESCE(ss.end_date,   s.end_date)   AS end_date,
+  ss.start_time,                                           -- ✅ 회차 시간
+  ss.end_time,
   p.type,
-  p.price AS price                      -- ✅ 프론트에서 기대하는 item.price
+  p.price AS price
 FROM order_items oi
 JOIN orders o ON oi.order_id = o.id
 LEFT JOIN schedules s ON oi.schedule_id = s.id
+LEFT JOIN schedule_sessions ss ON ss.id = oi.schedule_session_id   -- ✅ 회차 조인
 LEFT JOIN products p ON s.product_id = p.id
-WHERE oi.order_id = ?`,
+WHERE oi.order_id = ?
+`,
       [orderId]
     );
     console.log("🧾 주문 ID:", orderId);
@@ -182,11 +187,12 @@ router.post("/", authenticateToken, async (req, res) => {
 
     // 1) cart_items 조회
     const [cartItems] = await conn.query(
-      `SELECT id, schedule_id, quantity, unit_price, discount_price
+      `SELECT id, schedule_id, schedule_session_id, quantity, unit_price, discount_price
        FROM cart_items
        WHERE id IN (?) AND user_id = ?`,
       [cart_item_ids, userId]
     );
+    
 
     if (cartItems.length === 0) {
       return res
@@ -213,17 +219,19 @@ router.post("/", authenticateToken, async (req, res) => {
       orderTotal += subtotal;
 
       await conn.query(
-        `INSERT INTO order_items (order_id, schedule_id, quantity, unit_price, discount_price, subtotal, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+        `INSERT INTO order_items (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           orderId,
           item.schedule_id,
+          item.schedule_session_id || null, // ✅ 회차 없으면 NULL
           item.quantity,
           item.unit_price,
           discountAmt,
           subtotal,
         ]
       );
+      
     }
 
     // 4) 쿠폰 적용

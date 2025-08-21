@@ -17,12 +17,12 @@ export default function TossFailPage() {
           {message || "결제가 완료되지 않았습니다."}
         </p>
         {code && (
-          <p style={{ marginTop: 4, color: "#555" }}>
-            오류 코드: <strong>{code}</strong>
-          </p>
-        )}
-        300
-        {orderId && (
+  <p style={{ marginTop: 4, color: "#555" }}>
+    오류 코드: <strong>{code}</strong>
+  </p>
+)}
+{orderId && (
+
           <p style={{ marginTop: 4, color: "#555" }}>
             주문 번호: <strong>{orderId}</strong>
           </p>

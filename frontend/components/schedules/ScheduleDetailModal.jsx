@@ -91,15 +91,32 @@ export default function ScheduleDetailModal({
           }}
         >
           {mode === "admin" && (
-            <InfoRow label="상품명" value={schedule.product_title || "-"} />
-          )}
+  <InfoRow label="상품명" value={schedule.product_title || schedule.productTitle || "-"} />
+)}
+
           <InfoRow label="장소" value={schedule.location || "-"} />
           <InfoRow label="강사" value={schedule.instructor || "-"} />
           <InfoRow label="정원" value={schedule.total_spots ?? "-"} />
           <InfoRow
-            label="기간"
-            value={`${formatDateTime(schedule.start)} ~ ${formatDateTime(schedule.end)}`}
-          />
+  label="기간"
+  value={(() => {
+    const start = schedule.start ? moment(schedule.start) : null;
+    // dayGrid end는 배타 → 1일 보정
+    const rawEnd = schedule.end ? moment(schedule.end).clone().subtract(1, "day") : null;
+
+    // 회차 시간이 내려온 경우(선택 회차) 시간까지 표시
+    const st = schedule.start_time ? ` ${schedule.start_time?.slice(0,5)}` : "";
+    const et = schedule.end_time ? ` ${schedule.end_time?.slice(0,5)}` : "";
+
+    if (start && rawEnd) {
+      const a = start.format("YYYY.MM.DD") + st;
+      const b = rawEnd.format("YYYY.MM.DD") + et;
+      return `${a} ~ ${b}`;
+    }
+    return "-";
+  })()}
+/>
+
           {mode === "admin" && (
             <InfoRow label="가격" value={formatPrice(schedule.price)} />
           )}
@@ -145,16 +162,15 @@ export default function ScheduleDetailModal({
           )}
           {mode === "user" && (
             <button
-              onClick={() => {
-                if (schedule?.type) {
-                  window.open(
-                    `/education/${schedule.type}/${schedule.id}`,
-                    "_blank"
-                  );
-                } else {
-                  window.open(`/education/calendar/${schedule.id}`, "_blank");
-                }
-              }}
+            onClick={() => {
+              const sid = schedule.schedule_id || schedule.id; // ✅ 일정 id 우선
+              if (schedule?.type) {
+                window.open(`/education/${schedule.type}/${sid}`, "_blank");
+              } else {
+                window.open(`/education/calendar/${sid}`, "_blank");
+              }
+            }}
+            
               style={{
                 padding: "6px 12px",
                 background: "#3b82f6",

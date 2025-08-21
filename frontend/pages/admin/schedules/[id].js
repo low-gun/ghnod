@@ -13,18 +13,15 @@ export default function ScheduleFormPage() {
   const { showAlert } = useGlobalAlert(); // ✅ 추가
   const { showConfirm } = useGlobalConfirm(); // ✅ 추가
   const [form, setForm] = useState({
-    product_id: "",
-    title: "",
-    start_date: "",
-    end_date: "",
-    location: "",
-    instructor: "",
-    description: "",
-    total_spots: "",
-    price: "",
-    detail: "",
-    image_url: "",
+    product_id: "", title: "", start_date: "", end_date: "",
+    location: "", instructor: "", description: "",
+    total_spots: "", price: "", detail: "", image_url: "",
   });
+  const [sessions, setSessions] = useState([
+    { start_date: "", end_date: "", start_time: "", end_time: "" }, // 기간형 회차 1행
+  ]);
+  
+  
   const [products, setProducts] = useState([]);
   const [selectedType, setSelectedType] = useState(""); // ★ 추가
   const [loading, setLoading] = useState(false);
@@ -54,13 +51,42 @@ export default function ScheduleFormPage() {
           const data = res.data.schedule;
           setForm({
             ...data,
-            start_date: data.start_date?.replace(" ", "T")?.slice(0, 16) || "",
-            end_date: data.end_date?.replace(" ", "T")?.slice(0, 16) || "",
+            start_date: data.start_date?.replace(" ", "T")?.slice(0,16) || "",
+            end_date:   data.end_date?.replace(" ", "T")?.slice(0,16) || "",
             total_spots: data.total_spots ?? "",
             price: data.price ?? "",
             image_url: data.image_url || "",
           });
           setOriginalImageUrl(data.image_url || "");
+          
+          // ✅ 유형 동기화(편집 시 상품 선택 드롭다운 비활성 문제 해결)
+          setSelectedType(data.product_type || "");
+          
+          // 회차 세팅: 기간형 컬럼(start_date/end_date) 우선, 없으면 단일 date 보정
+if (Array.isArray(data.sessions) && data.sessions.length) {
+  setSessions(
+    data.sessions.map((s) => {
+      const sd = (s.start_date || s.session_date || "").slice(0, 10);
+      const ed = (s.end_date   || s.session_date || "").slice(0, 10);
+      return {
+        start_date: sd,
+        end_date: ed,
+        start_time: (s.start_time || "").slice(0, 5),
+        end_time: (s.end_time || "").slice(0, 5),
+      };
+    })
+  );
+} else if (data.start_date && data.end_date) {
+  const sd = (data.start_date || "").slice(0, 10);
+  const ed = (data.end_date   || "").slice(0, 10);
+  const st = (data.start_date || "").slice(11, 16);
+  const et = (data.end_date   || "").slice(11, 16);
+  setSessions([{ start_date: sd, end_date: ed, start_time: st, end_time: et }]);
+} else {
+  setSessions([{ start_date: "", end_date: "", start_time: "", end_time: "" }]);
+}
+
+          
         } else {
           showAlert("일정 정보를 불러오지 못했습니다.");
         }
@@ -89,8 +115,8 @@ export default function ScheduleFormPage() {
     }
 
     if (name === "product_id") {
-      // 상품 선택 시 관련 필드 자동 채움 (기존 로직 유지)
       const selected = products.find((p) => p.id === Number(value));
+      setSelectedType(selected?.type || ""); // ✅ 유형 자동선택 동기화
       setForm((prev) => ({
         ...prev,
         [name]: newValue,
@@ -103,6 +129,7 @@ export default function ScheduleFormPage() {
       setOriginalImageUrl(selected?.image_url || "");
       return;
     }
+    
 
     setForm((prev) => ({
       ...prev,
@@ -114,10 +141,18 @@ export default function ScheduleFormPage() {
   const validate = () => {
     if (!form.title) return "일정명을 입력하세요.";
     if (!form.product_id) return "상품을 선택하세요.";
-    if (!form.start_date || !form.end_date)
-      return "시작일과 종료일을 입력하세요.";
-    if (new Date(form.start_date) > new Date(form.end_date))
-      return "종료일은 시작일보다 늦어야 합니다.";
+    if (!sessions.length) return "회차를 1개 이상 추가하세요.";
+for (const [i, s] of sessions.entries()) {
+  if (!s.start_date || !s.end_date || !s.start_time || !s.end_time)
+    return `${i + 1}회차의 시작/종료일과 시간(시작·종료)을 모두 입력하세요.`;
+  if (s.start_date > s.end_date)
+    return `${i + 1}회차의 종료일이 시작일보다 빠릅니다.`;
+  // 같은 날짜인 경우에만 시간 비교
+  if (s.start_date === s.end_date && s.start_time >= s.end_time)
+    return `${i + 1}회차의 종료시간이 시작시간보다 늦어야 합니다.`;
+}
+
+
     if (form.price === "" || form.price === null || form.price === undefined)
       return "가격을 입력하세요.";
     return null;
@@ -130,8 +165,25 @@ export default function ScheduleFormPage() {
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `admin/schedules/${id}` : "admin/schedules";
-      const payload = { ...form };
-      const res = await api[method](url, payload);
+      // "YYYY-MM-DD HH:mm:ss" 포맷으로 합치기
+      const toDT = (d, t) => `${d} ${t}:00`;
+
+      // 시작/종료 자동 집계(가장 이른 시작, 가장 늦은 종료) — 기간형 우선
+      const starts = sessions.map((s) => toDT(s.start_date || s.date, s.start_time));
+      const ends   = sessions.map((s) => toDT(s.end_date   || s.date, s.end_time));
+      const minStart = starts.slice().sort()[0];
+      const maxEnd   = ends.slice().sort().slice(-1)[0];
+      
+      const payload = {
+        ...form,
+        start_date: minStart,
+        end_date: maxEnd,
+        sessions, // [{start_date, end_date, start_time, end_time}] 백엔드가 기간형도 수용
+      };
+      
+
+const res = await api[method](url, payload);
+
       if (res.data.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
         router.push("/admin/schedules");
@@ -407,36 +459,83 @@ export default function ScheduleFormPage() {
                   </div>
                 </div>
                 {/* 교육기간 */}
-                <div style={{ marginBottom: 16 }}>
-                  <label>교육기간</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      name="start_date"
-                      value={form.start_date}
-                      onChange={handleChange}
-                      type="datetime-local"
-                      style={{
-                        flex: 1,
-                        padding: 10,
-                        border: "1px solid #ccc",
-                        borderRadius: 6,
-                      }}
-                    />
-                    <span style={{ alignSelf: "center" }}>~</span>
-                    <input
-                      name="end_date"
-                      value={form.end_date}
-                      onChange={handleChange}
-                      type="datetime-local"
-                      style={{
-                        flex: 1,
-                        padding: 10,
-                        border: "1px solid #ccc",
-                        borderRadius: 6,
-                      }}
-                    />
-                  </div>
-                </div>
+                {/* 회차(복수 일정) 편집 */}
+<div style={{ marginBottom: 16 }}>
+<label>회차(날짜·시간)</label>
+{sessions.map((s, idx) => (
+  <div
+    key={idx}
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr 1fr 1fr auto", // 시작일, 종료일, 시작시간, 종료시간, 버튼
+      gap: 8, marginTop: 8
+    }}
+  >
+    <input
+      type="date"
+      value={s.start_date}
+      onChange={(e) => {
+        const v = e.target.value;
+        setSessions((prev) => prev.map((x, i) => (i === idx ? { ...x, start_date: v } : x)));
+      }}
+      style={{ padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
+    />
+    <input
+      type="date"
+      value={s.end_date}
+      onChange={(e) => {
+        const v = e.target.value;
+        setSessions((prev) => prev.map((x, i) => (i === idx ? { ...x, end_date: v } : x)));
+      }}
+      style={{ padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
+    />
+    <input
+      type="time"
+      value={s.start_time}
+      onChange={(e) => {
+        const v = e.target.value;
+        setSessions((prev) => prev.map((x, i) => (i === idx ? { ...x, start_time: v } : x)));
+      }}
+      style={{ padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
+    />
+    <input
+      type="time"
+      value={s.end_time}
+      onChange={(e) => {
+        const v = e.target.value;
+        setSessions((prev) => prev.map((x, i) => (i === idx ? { ...x, end_time: v } : x)));
+      }}
+      style={{ padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
+    />
+    <button
+      type="button"
+      onClick={() => setSessions((prev) => prev.filter((_, i) => i !== idx))}
+      style={{ padding: "10px 12px", border: "1px solid #ddd", borderRadius: 6, background: "#fff" }}
+      disabled={sessions.length === 1}
+      title={sessions.length === 1 ? "회차 1개는 최소 유지" : "삭제"}
+    >
+      삭제
+    </button>
+  </div>
+))}
+<div style={{ marginTop: 8 }}>
+  <button
+    type="button"
+    onClick={() =>
+      setSessions((prev) => [
+        ...prev,
+        { start_date: "", end_date: "", start_time: "", end_time: "" },
+      ])
+    }
+    style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 6, background: "#fff" }}
+  >
+    + 회차 추가
+  </button>
+</div>
+
+
+</div>
+
                 {/* 가격 */}
                 <div style={{ marginBottom: 16 }}>
                   <label>가격</label>

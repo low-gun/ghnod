@@ -151,13 +151,14 @@ export default function SchedulesTable({
     "상품명",
     "유형",
     "기간",
+    "회차",      // ✅ 추가
     "강사",
     "가격",
     "상태",
     "등록일시",
     "수정일시",
   ];
-
+  
   const excelRows = useMemo(
     () =>
       schedules.map((s) => ({
@@ -165,6 +166,7 @@ export default function SchedulesTable({
         상품명: s.product_title,
         유형: s.product_type,
         기간: `${formatDateOnly(s.start_date)} ~ ${formatDateOnly(s.end_date)}`,
+        회차: typeof s.sessions_count === "number" ? s.sessions_count : "", // ✅ 추가
         강사: s.instructor,
         가격: s.price != null ? `${Number(s.price).toLocaleString()}원` : "-",
         상태: s.is_active ? "활성" : "비활성",
@@ -173,6 +175,7 @@ export default function SchedulesTable({
       })),
     [schedules]
   );
+  
 
   const fetchSchedules = async () => {
     if (inFlightRef.current) return;
@@ -187,6 +190,7 @@ export default function SchedulesTable({
         sortDir: sortConfig.direction,
         searchField: effSearchField,
         searchQuery: effSearchQuery,
+        include_sessions: 1, // ✅ 회차수/최초일/최종일 포함 요청
       };
 
       if (effStartDate) params.start_date = effStartDate;
@@ -634,11 +638,14 @@ export default function SchedulesTable({
                         {s.product_type ?? "-"}
                       </td>
                       <td className="admin-td" style={{ width: "160px" }}>
-                        <div>
-                          {formatDateOnly(s.start_date)}
-                          <br />~ {formatDateOnly(s.end_date)}
-                        </div>
-                      </td>
+  <div>
+    {formatDateOnly(s.start_date)} ~ {formatDateOnly(s.end_date)}
+    {typeof s.sessions_count === "number" && s.sessions_count > 0
+      ? ` · ${s.sessions_count}회차`
+      : ""}
+  </div>
+</td>
+
                       <td className="admin-td" style={{ width: "110px" }}>
                         {s.instructor}
                       </td>
@@ -794,12 +801,15 @@ export default function SchedulesTable({
                         <span style={cardValue}>{s.product_type || "-"}</span>
                       </div>
                       <div style={cardRow}>
-                        <span style={cardLabel}>기간</span>
-                        <span style={cardValue}>
-                          {formatDateOnly(s.start_date)} ~{" "}
-                          {formatDateOnly(s.end_date)}
-                        </span>
-                      </div>
+  <span style={cardLabel}>기간</span>
+  <span style={cardValue}>
+    {formatDateOnly(s.start_date)} ~ {formatDateOnly(s.end_date)}
+    {typeof s.sessions_count === "number" && s.sessions_count > 0
+      ? ` · ${s.sessions_count}회차`
+      : ""}
+  </span>
+</div>
+
                       <div style={cardRow}>
                         <span style={cardLabel}>강사</span>
                         <span style={cardValue}>{s.instructor || "-"}</span>

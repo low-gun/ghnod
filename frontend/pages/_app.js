@@ -102,9 +102,9 @@ const timeoutRef = useRef(null); // ✅ 변경
     };
   }, [router]);
 
-  const LayoutWrapper = router.pathname.startsWith("/admin")
-    ? ({ children }) => <>{children}</>
-    : ({ children }) => <MainLayout>{children}</MainLayout>;
+  const LayoutWrapper = isAdmin
+  ? ({ children }) => <>{children}</>
+  : ({ children }) => <MainLayout>{children}</MainLayout>;
 
   return (
     <>
@@ -145,18 +145,23 @@ const timeoutRef = useRef(null); // ✅ 변경
 )}
 
 
-      <QueryClientProvider client={queryClient}>
-        <UserProvider>
-          <CartProvider>
-            <GlobalLoadingBar />
-            <GlobalAlert />
-            <GlobalConfirmModal />
-            <LayoutWrapper>
-              <Component {...pageProps} />
-            </LayoutWrapper>
-          </CartProvider>
-        </UserProvider>
-      </QueryClientProvider>
+<QueryClientProvider client={queryClient}>
+  <UserProvider>
+    <CartProvider>
+      <GlobalLoadingBar />
+      <GlobalAlert />
+      <GlobalConfirmModal />
+
+      {/* 🛒 장바구니 초기화는 쇼핑 맥락에서만 필요 → Admin 제외 */}
+      {!isAdmin && <CartInitializer />}
+
+      <LayoutWrapper>
+        <Component {...pageProps} />
+      </LayoutWrapper>
+    </CartProvider>
+  </UserProvider>
+</QueryClientProvider>
+
     </>
   );
 }

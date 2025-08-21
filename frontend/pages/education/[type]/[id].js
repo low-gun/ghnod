@@ -28,7 +28,9 @@ export default function EducationScheduleDetailPage() {
   const { user } = useUserContext();
   const { type, id } = router.query;
   const [schedule, setSchedule] = useState(null);
-  const [quantity, setQuantity] = useState(1);
+const [selectedSessionId, setSelectedSessionId] = useState(null); // ✅ 추가
+const [quantity, setQuantity] = useState(1);
+
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const isTabletOrBelow = useIsTabletOrBelow();
@@ -80,9 +82,18 @@ export default function EducationScheduleDetailPage() {
     api
       .get(`/education/schedules/${id}`)
       .then((res) => {
-        if (res.data.success) setSchedule(res.data.schedule);
-        else showAlert("일정 정보를 불러오지 못했습니다.");
+        if (res.data.success) {
+          const sc = res.data.schedule;
+          setSchedule(sc);
+          const sess = Array.isArray(sc.sessions) ? sc.sessions : [];
+          if (sess.length === 1 && (sess[0].id || sess[0].session_id)) {
+            setSelectedSessionId(sess[0].id || sess[0].session_id); // ✅ 1회차 자동선택
+          }
+        } else {
+          showAlert("일정 정보를 불러오지 못했습니다.");
+        }
       })
+      
       .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [id]);
@@ -107,6 +118,25 @@ export default function EducationScheduleDetailPage() {
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
     [schedule]
   );
+  
+  // ✅ 회차 배열 + 드롭다운 전환 조건(모바일이거나 5개 이상)
+  const sessionsArr = useMemo(
+    () => (Array.isArray(schedule?.sessions) ? schedule.sessions : []),
+    [schedule]
+  );
+  // 유효 회차만 카운트(빈 객체/누락값 제외)
+  const sessionsCount = useMemo(
+    () =>
+      sessionsArr.filter(
+        (s) => s && (s.id || s.session_id || s.start_date || s.end_date)
+      ).length,
+    [sessionsArr]
+  );
+  const useDropdown = useMemo(
+    () => isMobile || sessionsCount >= 5,
+    [isMobile, sessionsCount]
+  );
+  
 
   const handleBuyNow = useCallback(async () => {
     if (!user) {
@@ -125,12 +155,18 @@ export default function EducationScheduleDetailPage() {
 
     try {
       // 1) 지금 상품만 'buyNow' 타입으로 담기 (장바구니 기존 품목은 그대로)
+      if (sessionsCount > 1 && !selectedSessionId) {
+        showAlert("원하시는 회차를 선택해 주세요.");
+        return;
+      }
       const addRes = await api.post("/cart/items", {
         schedule_id: schedule.id,
+        schedule_session_id: selectedSessionId || null, // ✅ 회차 포함
         quantity,
         unit_price: unitPrice,
         type: "buyNow",
       });
+      
       const cartItemId = addRes?.data?.item?.id || addRes?.data?.id;
       if (!cartItemId) {
         showAlert("바로구매 준비에 실패했습니다. 다시 시도해 주세요.");
@@ -162,13 +198,20 @@ export default function EducationScheduleDetailPage() {
       return;
     }
     try {
-      const payload = {
-        schedule_id: schedule.id,
-        quantity,
-        unit_price: unitPrice,
-        type: "cart",
-      };
-      const res = await api.post("/cart/items", payload);
+      // 다회차인데 선택 안 했으면 안내
+if ((schedule.sessions || []).length > 1 && !selectedSessionId) {
+  showAlert("원하시는 회차를 선택해 주세요.");
+  return;
+}
+const payload = {
+  schedule_id: schedule.id,
+  schedule_session_id: selectedSessionId || null, // ✅ 회차 포함
+  quantity,
+  unit_price: unitPrice,
+  type: "cart",
+};
+const res = await api.post("/cart/items", payload);
+
       if (res.data.success) {
         showAlert("장바구니에 담았습니다!");
         await refreshCart();
@@ -407,65 +450,188 @@ export default function EducationScheduleDetailPage() {
           </div>
 
           <p
-            style={{
-              fontSize: 20,
-              fontWeight: "bold",
-              color: "#e60023",
-              margin: "4px 0 0",
-            }}
-          >
-            {Number(unitPrice * quantity).toLocaleString()}원
-          </p>
+  style={{
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#e60023",
+    margin: "4px 0 0",
+  }}
+>
+  {Number(unitPrice * quantity).toLocaleString()}원
+</p>
+{/* ✅ 회차 선택 (가격 아래, 정보 카드 위) */}
+{sessionsCount > 1 && (
+  <div
+    style={{
+      marginTop: 14,
+      border: "1px solid #eee",
+      borderRadius: 8,
+      padding: 12,
+      background: "#fff",
+    }}
+  >
+    <div
+  style={{
+    display: "flex", alignItems: "center", gap: 8,
+    fontWeight: 600, marginBottom: 8
+  }}
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M8 2v4"></path>
+    <path d="M16 2v4"></path>
+    <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+    <path d="M3 10h18"></path>
+  </svg>
+  <span>교육기간</span>
+</div>
 
-          {/* 정보 카드 */}
-          <div
-            style={{ marginTop: 20, background: "#f7f9fc", borderRadius: 8 }}
-          >
-            {[
-              {
-                label: "교육기간",
-                value: (() => {
-                  const start = new Date(schedule.start_date);
-                  const end = new Date(schedule.end_date);
-                  const sameDay = start.toDateString() === end.toDateString();
-                  return sameDay
-                    ? start.toLocaleDateString()
-                    : `${start.toLocaleDateString()} ~ ${end.toLocaleDateString()}`;
-                })(),
-                icon: <Calendar size={16} />,
-              },
-              {
-                label: "장소",
-                value: schedule.location || "-",
-                icon: <MapPin size={16} />,
-              },
-              {
-                label: "강사",
-                value: schedule.instructor || "-",
-                icon: <User size={16} />,
-              },
-              {
-                label: "정원",
-                value: `${schedule.total_spots ?? "-"}명`,
-                icon: <Users size={16} />,
-              },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 14px",
-                  borderBottom: idx < 3 ? "1px solid rgba(0,0,0,0.05)" : "none",
-                }}
-              >
-                {item.icon}
-                <strong style={{ minWidth: 60 }}>{item.label}</strong>
-                <span>{item.value}</span>
+    {useDropdown ? (
+      // ✅ 드롭다운(모바일 or 5개 이상)
+      <select
+        value={selectedSessionId ?? ""}
+        onChange={(e) => setSelectedSessionId(Number(e.target.value))}
+        style={{
+          width: "100%",
+          padding: 10,
+          border: "1px solid #ccc",
+          borderRadius: 6,
+        }}
+      >
+        {/* 다회차에서 미선택 상태 안내 */}
+        {sessionsCount > 1 && !selectedSessionId && (
+          <option value="">회차를 선택하세요</option>
+        )}
+        {sessionsArr.map((s, idx) => {
+          const sid = s.id || s.session_id;
+          const startStr = new Date(s.start_date).toLocaleDateString();
+          const endStr = new Date(s.end_date).toLocaleDateString();
+          const startDate = new Date(s.start_date);
+const endDate   = new Date(s.end_date);
+const sameDay   = startDate.toDateString() === endDate.toDateString();
+const dateLabel = sameDay ? startStr : `${startStr} ~ ${endStr}`;
+const label     = sessionsArr.length > 1
+  ? `(${idx + 1}회차) ${dateLabel}`
+  : dateLabel;
+
+          return (
+            <option key={sid ?? idx} value={sid}>
+              {label}
+            </option>
+          );
+        })}
+      </select>
+    ) : (
+      // ✅ 라디오(4개 이하 & 데스크톱)
+      <div style={{ display: "grid", gap: 8 }}>
+        {sessionsArr.map((s, idx) => {
+          const sid = s.id || s.session_id;
+          const startStr = new Date(s.start_date).toLocaleDateString();
+          const endStr = new Date(s.end_date).toLocaleDateString();
+          const isSelected = selectedSessionId === sid;
+          return (
+            <label
+              key={sid ?? idx}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                background: isSelected ? "#eef5ff" : "#fff",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="session"
+                checked={isSelected}
+                onChange={() => setSelectedSessionId(sid)}
+              />
+              <div style={{ lineHeight: 1.4 }}>
+              {sessionsCount > 1 && (
+                  <div style={{ color: "#555", fontSize: 12 }}>
+                    {`(${idx + 1}회차)`}
+                  </div>
+                )}
+{(() => {
+  const startDate = new Date(s.start_date);
+  const endDate   = new Date(s.end_date);
+  const sameDay   = startDate.toDateString() === endDate.toDateString();
+  return <div>{sameDay ? startStr : `${startStr} ~ ${endStr}`}</div>;
+})()}
               </div>
-            ))}
-          </div>
+            </label>
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
+          {/* 정보 카드 */}
+<div
+  style={{ marginTop: 20, background: "#f7f9fc", borderRadius: 8 }}
+>
+  {[
+    // ✅ 단일 회차일 때만 '교육기간' 표시
+    ...(sessionsCount > 1
+      ? []
+      : [
+          {
+            label: "교육기간",
+            value: (() => {
+              const sess = (schedule.sessions || []).find(
+                (s) => (s.id || s.session_id) === selectedSessionId
+              );
+              const sStart = new Date(sess?.start_date || schedule.start_date);
+              const sEnd   = new Date(sess?.end_date   || schedule.end_date);
+              const sameDay = sStart.toDateString() === sEnd.toDateString();
+              return sameDay
+                ? sStart.toLocaleDateString()
+                : `${sStart.toLocaleDateString()} ~ ${sEnd.toLocaleDateString()}`;
+            })(),
+            icon: <Calendar size={16} />,
+          },
+        ]),
+    {
+      label: "장소",
+      value: schedule.location || "-",
+      icon: <MapPin size={16} />,
+    },
+    {
+      label: "강사",
+      value: schedule.instructor || "-",
+      icon: <User size={16} />,
+    },
+    {
+      label: "정원",
+      value: `${schedule.total_spots ?? "-"}명`,
+      icon: <Users size={16} />,
+    },
+  ].map((item, idx, arr) => (
+    <div
+      key={`${item.label}-${idx}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "10px 14px",
+        // ✅ 마지막 아이템만 보더 제거(아이템 수가 변해도 안전)
+        borderBottom: idx < arr.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none",
+      }}
+    >
+      {item.icon}
+      <strong style={{ minWidth: 60 }}>{item.label}</strong>
+      <span>{item.value}</span>
+    </div>
+  ))}
+</div>
+
 
           {/* 수량 + 가격 */}
           <div style={{ marginTop: 20 }}>

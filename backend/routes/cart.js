@@ -112,53 +112,7 @@ router.delete(
   optionalAuthenticate,
   cartController.removeItem
 );
-exports.updateCartItem = async (req, res) => {
-  try {
-    const itemId = req.params.itemId;
-    const userId = req.user?.id || null;
-    const guestToken = req.headers["x-guest-token"] || null;
 
-    const { quantity, unit_price, discount_price } = req.body;
-
-    if (!itemId || !quantity || typeof unit_price !== "number") {
-      return res.status(400).json({ success: false, message: "잘못된 요청" });
-    }
-
-    if (!userId && !guestToken) {
-      return res
-        .status(403)
-        .json({ success: false, message: "인증 정보 없음" });
-    }
-
-    const [rows] = await pool.execute(
-      `SELECT * FROM cart_items WHERE id = ? AND ${userId ? "user_id = ?" : "guest_token = ?"}`,
-      [itemId, userId || guestToken]
-    );
-
-    if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "항목 없음 또는 권한 없음" });
-    }
-
-    const discount = discount_price ?? 0;
-    const subtotal = (unit_price - discount) * quantity;
-
-    await pool.execute(
-      `UPDATE cart_items
-       SET quantity = ?, unit_price = ?, discount_price = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [quantity, unit_price, discount, itemId]
-    );
-
-    return res.json({ success: true, message: "장바구니 항목 수정 완료" });
-  } catch (err) {
-    console.error("❌ 장바구니 항목 수정 실패:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "장바구니 항목 수정 실패" });
-  }
-};
 // ✅ 게스트 장바구니 → 로그인 유저로 이전
 router.post("/migrate", authenticateToken, async (req, res) => {
   const userId = req.user.id;

@@ -34,16 +34,21 @@ export default function CartItemCard({
   const {
     id,
     schedule_id,
+    schedule_session_id,   // ✅ 회차 FK (선택)
     schedule_title,
     title,
     start_date,
     end_date,
+    start_time,            // ✅ "HH:mm:ss" 또는 "HH:mm"
+    end_time,              // ✅ "
+    type,                  // ✅ 공개 상세 경로용 (예: 'facilitation')
     image_url,
     unit_price = 0,
     discount_price,
     quantity = 1,
     subtotal,
   } = item ?? {};
+  
 
   const start = start_date ? new Date(start_date) : null;
   const end = end_date ? new Date(end_date) : null;
@@ -123,10 +128,12 @@ export default function CartItemCard({
 
       {/* 썸네일 */}
       <div
-        onClick={() =>
-          schedule_id && router.push(`/education/facilitation/${schedule_id}`)
-        }
-        style={{
+  onClick={() => {
+    if (!schedule_id) return;
+    if (type) router.push(`/education/${type}/${schedule_id}`);       // ✅ 타입 경로
+    else router.push(`/education/calendar/${schedule_id}`);           // ✅ 폴백
+  }}
+  style={{
           width: isMobile ? 64 : 80,
           height: isMobile ? 64 : 80,
           flexShrink: 0,
@@ -175,17 +182,16 @@ export default function CartItemCard({
         </div>
 
         {/* 날짜 */}
-        <div
-          style={{
-            fontSize: isMobile ? 12 : 13,
-            color: "#6b7280",
-            marginBottom: 8,
-          }}
-        >
-          {start ? start.toLocaleDateString() : ""}
-          {start && end && !sameDay ? ` ~ ${end.toLocaleDateString()}` : ""}
-          {!start && !end ? "일정 미정" : ""}
-        </div>
+        <div style={{ fontSize: isMobile ? 12 : 13, color: "#6b7280", marginBottom: 8 }}>
+  {start ? start.toLocaleDateString() : ""}
+  {start && end && !sameDay ? ` ~ ${end.toLocaleDateString()}` : ""}
+  {!start && !end ? "일정 미정" : ""}
+  {/* 회차 시간이 내려오면 간단히 병기 */}
+  {(start_time || end_time) && (start || end) && (
+    <span>{`  ${String(start_time || "").slice(0,5)}~${String(end_time || "").slice(0,5)}`}</span>
+  )}
+</div>
+
 
         {/* 가격/수량 행 */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

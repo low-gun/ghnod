@@ -107,10 +107,21 @@ export default function CartSummary({
 
               return (
                 <div key={it.id} style={listRow}>
-                  <span style={listTitle} title={it.schedule_title || it.title}>
-                    {it.schedule_title || it.title || "선택 항목"}
-                  </span>
-                  <span style={listPrice}>{formatPrice(lineTotal)}원</span>
+                  <div style={{ display:"flex", flexDirection:"column", minWidth:0 }}>
+  <span style={listTitle} title={it.schedule_title || it.title}>
+    {it.schedule_title || it.title || "선택 항목"}
+  </span>
+  {/* 기간/시간 (있을 때만) */}
+  {(it.start_date || it.end_date) && (
+    <span style={{ fontSize:12, color:"#64748b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+      {new Date(it.start_date).toLocaleDateString()}
+      {it.end_date && ` ~ ${new Date(it.end_date).toLocaleDateString()}`}
+      {(it.start_time || it.end_time) && `  ${String(it.start_time||"").slice(0,5)}~${String(it.end_time||"").slice(0,5)}`}
+    </span>
+  )}
+</div>
+<span style={listPrice}>{formatPrice(lineTotal)}원</span>
+
                 </div>
               );
             })}

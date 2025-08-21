@@ -241,7 +241,7 @@ export default function OrderCompletePage() {
                     {item.thumbnail_url ? (
                       <>
                         <img
-                          src={item.thumbnail_url}
+                          src={item.image_url} 
                           alt="상품 썸네일"
                           className="oc-img"
                           loading="lazy"
@@ -271,12 +271,17 @@ export default function OrderCompletePage() {
                   </div>
 
                   <div className="oc-item-main">
-                    <div className="oc-item-title">{item.title}</div>
-                    {item.option_str ? (
-                      <div className="oc-item-option">{item.option_str}</div>
-                    ) : null}
-                    <div className="oc-item-qty">수량 : {item.quantity}</div>
-                  </div>
+  <div className="oc-item-title">{item.title}</div>
+  {/* ✅ 회차 기간+시간 */}
+  {(item.start_date || item.end_date) && (
+    <div className="oc-item-option" style={{ color: "#64748b" }}>
+      {formatDateRangeTime(item.start_date, item.end_date, item.start_time, item.end_time)}
+    </div>
+  )}
+  {item.option_str ? <div className="oc-item-option">{item.option_str}</div> : null}
+  <div className="oc-item-qty">수량 : {item.quantity}</div>
+</div>
+
                   <div className="oc-item-price">{formatPrice(lineTotal)}</div>
                 </div>
               );
@@ -371,6 +376,23 @@ const formatKSTDate = (input) => {
     return d.toISOString();
   }
 };
+function formatDateRangeTime(start, end, startTime, endTime) {
+  if (!start && !end) return "일정 미정";
+  const sDate = start ? new Date(start) : null;
+  const eDate = end ? new Date(end) : null;
+  const s = sDate ? sDate.toLocaleDateString("ko-KR") : "";
+  const e = eDate ? eDate.toLocaleDateString("ko-KR") : "";
+  const st = startTime ? String(startTime).slice(0, 5) : "";
+  const et = endTime ? String(endTime).slice(0, 5) : "";
+
+  if (!eDate || s === e) {
+    return st || et ? `${s} ${st}${et ? `~${et}` : ""}` : s;
+  }
+  const left = st ? `${s} ${st}` : s;
+  const right = et ? `${e} ${et}` : e;
+  return `${left} ~ ${right}`;
+}
+
 // PG 주문번호 후보를 다각도로 탐색
 function extractPgNo(o) {
   if (!o || typeof o !== "object") return null;

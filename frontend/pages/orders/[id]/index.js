@@ -3,10 +3,23 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 
-function formatDateRange(start, end) {
-  const s = new Date(start).toLocaleDateString("ko-KR");
-  const e = new Date(end).toLocaleDateString("ko-KR");
-  return s === e ? s : `${s} ~ ${e}`;
+function formatDateRange(start, end, startTime, endTime) {
+  if (!start && !end) return "일정 미정";
+  const sDate = start ? new Date(start) : null;
+  const eDate = end ? new Date(end) : null;
+  const s = sDate ? sDate.toLocaleDateString("ko-KR") : "";
+  const e = eDate ? eDate.toLocaleDateString("ko-KR") : "";
+  const st = startTime ? String(startTime).slice(0, 5) : "";
+  const et = endTime ? String(endTime).slice(0, 5) : "";
+
+  if (!eDate || s === e) {
+    // 단일일: YYYY.MM.DD HH:mm~HH:mm (시간이 있으면)
+    return st || et ? `${s} ${st}${et ? `~${et}` : ""}` : s;
+  }
+  // 기간: YYYY.MM.DD HH:mm ~ YYYY.MM.DD HH:mm (시간이 있으면)
+  const left = st ? `${s} ${st}` : s;
+  const right = et ? `${e} ${et}` : e;
+  return `${left} ~ ${right}`;
 }
 
 export default function OrderDetailPage() {
@@ -147,30 +160,30 @@ export default function OrderDetailPage() {
             </div>
 
             <div style={{ fontSize: 14, color: "#555" }}>
-              교육기간: {formatDateRange(item.start_date, item.end_date)}
-            </div>
+  교육기간: {formatDateRange(item.start_date, item.end_date, item.start_time, item.end_time)}
+</div>
+
 
             <div style={{ fontSize: 14, color: "#555" }}>
               수량: {item.quantity}
             </div>
 
             <div style={{ fontSize: 14, color: "#555" }}>
-              단가:{" "}
-              {item.discount_price && item.discount_price < item.price ? (
-                <>
-                  <span
-                    style={{ textDecoration: "line-through", marginRight: 8 }}
-                  >
-                    {formatPrice(item.price)}원
-                  </span>
-                  <span style={{ color: "#d32f2f" }}>
-                    {formatPrice(item.discount_price)}원
-                  </span>
-                </>
-              ) : (
-                `${formatPrice(item.unit_price)}원`
-              )}
-            </div>
+  단가:{" "}
+  {item.discount_price && item.discount_price < item.unit_price ? (
+    <>
+      <span style={{ textDecoration: "line-through", marginRight: 8 }}>
+        {formatPrice(item.unit_price)}원
+      </span>
+      <span style={{ color: "#d32f2f" }}>
+        {formatPrice(item.discount_price)}원
+      </span>
+    </>
+  ) : (
+    `${formatPrice(item.unit_price)}원`
+  )}
+</div>
+
 
             <div style={{ fontSize: 14, color: "#555" }}>
               합계: {formatPrice(item.subtotal)}원

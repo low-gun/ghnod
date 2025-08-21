@@ -36,19 +36,6 @@ export default function CartPage() {
     const fetchUserInfo = async () => {
       try {
         const res = await api.get("/user");
-        setAvailablePoint(res.data.point_balance || 0);
-        setAvailableCoupons(res.data.coupons || []);
-      } catch (err) {
-        console.error("유저 정보 불러오기 실패", err);
-      }
-    };
-    fetchUserInfo();
-  }, []);
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const res = await api.get("/user");
-
         const user = res.data.user || {};
         setAvailablePoint(user.point_balance || 0);
         setAvailableCoupons(user.coupons || []);
@@ -56,9 +43,9 @@ export default function CartPage() {
         console.error("유저 정보 불러오기 실패", err);
       }
     };
-
     fetchUserInfo();
   }, []);
+  
   // 파생값 메모
   const isAllChecked = useMemo(() => {
     if (cartItems.length === 0) return false;
@@ -271,12 +258,13 @@ export default function CartPage() {
                 router.push({
                   pathname: "/checkout",
                   query: {
-                    itemIds: selectedItems.join(","),
+                    ids: selectedItems.join(","),       // ✅ ids로 통일
                     couponId: selectedCoupon?.id,
                     point: pointUsed,
                   },
                 })
               }
+              
             />
           </div>
 

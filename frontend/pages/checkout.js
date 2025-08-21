@@ -53,15 +53,19 @@ export default function CheckoutPage() {
 
   /** 금액 계산 */
   function calcFinalAmount(items, couponAmount, pointUsedValue) {
-    const total = items.reduce(
-      (sum, it) => sum + it.unit_price * it.quantity,
-      0
-    );
-    const discount = Number(couponAmount || 0);
+    const total = items.reduce((sum, it) => {
+      const u = Number(it.unit_price || 0);
+      const d = Number(it.discount_price || 0);
+      const qty = Number(it.quantity || 0);
+      const per = d > 0 && d < u ? d : u;   // ✅ 할인가 우선
+      return sum + per * qty;
+    }, 0);
+  
+    const coupon = Number(couponAmount || 0);
     const points = Number(pointUsedValue || 0);
-    return Math.max(0, total - discount - points);
+    return Math.max(0, total - coupon - points);
   }
-
+  
   /** cartItems 로딩 (로그인 이후) */
   useEffect(() => {
     if (!router.isReady || !userInfo?.id) return;

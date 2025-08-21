@@ -273,7 +273,6 @@ exports.getUsers = async (req, res) => {
 };
 
 /** ======================= 사용자 요약(수강, 포인트, 결제 등) 조회 ======================= */
-/** ======================= 사용자 요약(수강, 포인트, 결제 등) 조회 ======================= */
 exports.getUserSummary = async (req, res) => {
   console.log("🔎 [Backend.getUserSummary] req.query =", req.query);
 
@@ -286,12 +285,13 @@ exports.getUserSummary = async (req, res) => {
       type = "all",
       search = "",
     } = req.query;
-
+    
     const { where, vals } = buildUserFilters(req.query);
-
-    const limit = Math.max(parseInt(page, 10) ? parseInt(pageSize, 10) : 20, 1);
+    
+    const limit = Math.max(parseInt(pageSize, 10) || 20, 1); // ✅ pageSize 기준으로 수정
     const offset = Math.max((parseInt(page, 10) - 1) * limit, 0);
     const sortOrder = String(order).toLowerCase() === "asc" ? "ASC" : "DESC";
+    
 
     // ORDER BY 허용 컬럼 (기본 + 요약 alias)
     const ORDER_COL_MAP = {
@@ -1640,17 +1640,23 @@ exports.deleteSchedules = async (req, res) => {
       });
     }
 
-    // 3) 실제 삭제
-    const [result] = await pool.query(
-      `DELETE FROM schedules WHERE id IN (${placeholders})`,
-      ids
-    );
+    // 3) 실제 삭제 (회차 먼저 정리: FK 미설정 환경 대비)  // ✅ 추가
+await pool.query(
+  `DELETE FROM schedule_sessions WHERE schedule_id IN (${placeholders})`,
+  ids
+);
 
-    return res.json({
-      success: true,
-      deletedCount: result.affectedRows || 0,
-      ids,
-    });
+const [result] = await pool.query(
+  `DELETE FROM schedules WHERE id IN (${placeholders})`,
+  ids
+);
+
+return res.json({
+  success: true,
+  deletedCount: result.affectedRows || 0,
+  ids,
+});
+
   } catch (err) {
     console.error("❌ deleteSchedules 오류:", err);
     return res.status(500).json({ success: false, message: "일정 삭제 실패" });

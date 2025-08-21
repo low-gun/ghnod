@@ -276,7 +276,13 @@ export default function ProductTable({
       const type = p.type ?? "-";
       const price = formatPrice(Number(p.price ?? 0));
       const isActive = Number(p.is_active) === 1;
-      const thumb = p.thumbnail_url || p.thumb_url || "";
+      const thumb =
+      p.image_url ||
+      p.thumbnail_url ||
+      p.thumb_url ||
+      (Array.isArray(p.images) ? p.images[0] : "") ||
+      "";
+    
 
       return (
         <SelectableCard
@@ -462,7 +468,12 @@ export default function ProductTable({
             const type = p.type ?? "-";
             const price = formatPrice(Number(p.price ?? 0));
             const isActive = Number(p.is_active) === 1;
-            const thumb = p.thumbnail_url || p.thumb_url || "";
+            const thumb =
+  p.image_url ||
+  p.thumbnail_url ||
+  p.thumb_url ||
+  (Array.isArray(p.images) ? p.images[0] : "") ||
+  "";
 
             return (
               <tr
@@ -501,17 +512,19 @@ export default function ProductTable({
                 <td className="admin-td">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumb}
-                      alt="thumbnail"
-                      width="48"
-                      height="48"
-                      style={{
-                        objectFit: "cover",
-                        borderRadius: 6,
-                        border: "1px solid #eee",
-                      }}
-                    />
+<img
+  src={thumb}
+  alt="thumbnail"
+  width="48"
+  height="48"
+  loading="lazy"
+  style={{
+    objectFit: "cover",
+    borderRadius: 6,
+    border: "1px solid #eee",
+  }}
+/>
+
                   ) : (
                     <div
                       style={{

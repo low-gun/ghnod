@@ -3,23 +3,8 @@ import { useRouter } from "next/router";
 import moment from "moment";
 import CustomCalendar from "../../components/schedules/CustomCalendar";
 import axios from "axios";
-import ScheduleDetailModal from "@/components/schedules/ScheduleDetailModal";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import SearchFilter from "@/components/common/SearchFilter";
-
-function formatYYYYMMDD(date) {
-  if (!(date instanceof Date)) return "";
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function parseYYYYMMDD(str) {
-  if (!str) return null;
-  const [y, m, d] = str.split("-");
-  return new Date(Number(y), Number(m) - 1, Number(d));
-}
 
 export async function getServerSideProps(context) {
   try {
@@ -83,10 +68,12 @@ export default function CalendarPage({ eventsData }) {
         showAlert("교육 타입 정보가 없습니다.");
         return;
       }
-      router.push(`/education/${event.type}/${event.id}`);
+      const sid = event.schedule_id || event.id; // ✅ 일정 id 우선
+      router.push(`/education/${event.type}/${sid}`);
     },
     [router, showAlert]
   );
+  
 
   useEffect(() => {
     if (searchType === "교육기간") setCalendarDate(moment(startDate));
@@ -143,15 +130,7 @@ export default function CalendarPage({ eventsData }) {
         shouldFilterInactive={false}
       />
 
-      {selectedEvent && (
-        <ScheduleDetailModal
-          schedule={selectedEvent}
-          onClose={() =>
-            router.push(router.pathname, undefined, { shallow: true })
-          }
-          mode="user"
-        />
-      )}
+      
     </div>
   );
 }

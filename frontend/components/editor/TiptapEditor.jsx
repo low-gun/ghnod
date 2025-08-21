@@ -1,318 +1,396 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+// frontend/components/editor/TiptapEditor.jsx
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
+import TextAlign from "@tiptap/extension-text-align";
 import api from "@/lib/api";
-import AdminLayout from "@/components/layout/AdminLayout";
-import TiptapEditor from "@/components/editor/TiptapEditor";
-import { useGlobalAlert } from "@/stores/globalAlert";
 
-export default function ProductFormPage() {
-  const router = useRouter();
-  const { id } = router.query;
-  const isEdit = id !== "new";
-  const categoryMap = {
-    교육: ["followup", "certification", "opencourse", "facilitation"],
-    컨설팅: ["워크숍", "숙의토론", "조직개발"],
-    진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
-  };
-  const { showAlert } = useGlobalAlert();
+export default function TiptapEditor({
+  value = "",
+  onChange,
+  height = 280,
+  disabled = false,
+  uploadEndpoint = "/upload/images",
+}) {
+  const fileRef = useRef(null);
+  const rafRef = useRef(null);
+  const [uploadInfo, setUploadInfo] = useState(null); // { idx, total, pct } | null
 
-  const initialForm = {
-    title: "",
-    category: "",
-    type: "",
-    image_url: "",
-    description: "",
-    detail: "",
-    price: "",
-    is_active: 1,
-    created_at: "",
-    updated_at: "",
-  };
-  const [form, setForm] = useState(initialForm);
-  const [loading, setLoading] = useState(false);
 
-  // 상품 데이터 불러오기(수정일 때만)
+  const editor = useEditor({
+    editable: !disabled,
+    immediatelyRender: false, // SSR 하이드레이션 불일치 방지
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        codeBlock: true,
+        blockquote: true,
+        horizontalRule: true,
+      }),
+      Underline,
+      Link.configure({
+        autolink: true,
+        openOnClick: true,
+        linkOnPaste: true,
+        protocols: ["http", "https", "mailto", "tel"],
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "tt-img",
+          // 상세페이지와 동일하게 가로맞춤(컨테이너 폭 기준)
+          style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;",
+        },
+      }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Placeholder.configure({ placeholder: "상세설명을 입력하세요…" }),
+    ],
+    content: value || "",
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => onChange?.(html));
+    },
+  });
+  const placeCursorAtEnd = useCallback(() => {
+    if (!editor) return;
+    const end = editor.state.doc.content.size;
+    editor.commands.setTextSelection(end);
+    editor.view.focus();
+  }, [editor]);
+  
+  // disabled ↔ 편집 가능 동기화
   useEffect(() => {
-    if (!isEdit || !id) return;
-    setLoading(true);
-    api
-      .get(`/admin/products/${id}`)
-      .then((res) => {
-        if (res.data.success) setForm(res.data.product);
-        else showAlert("상품 정보를 불러오지 못했습니다.");
-      })
-      .catch(() => showAlert("상품 정보를 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [id, isEdit, showAlert]);
+    if (!editor) return;
+    editor.setEditable(!disabled);
+  }, [editor, disabled]);
 
-  // 입력값 변경 핸들러
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
-    }));
-  };
+  // 외부 value ↔ 에디터 동기화
+  useEffect(() => {
+    if (!editor) return;
+    const current = editor.getHTML();
+    if ((value || "") !== current) editor.commands.setContent(value || "", false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, editor]);
 
-  // 이미지 업로드 핸들러(썸네일)
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm((prev) => ({ ...prev, image_url: reader.result }));
-    };
-    reader.readAsDataURL(file);
-  };
+    // 링크
+  const promptAndSetLink = useCallback(() => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href || "";
+    const url = window.prompt("링크 URL을 입력하세요.", prev || "https://");
+    if (url === null) return;
+    if (url === "") return editor.chain().focus().unsetLink().run();
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: url, target: "_blank", rel: "noopener noreferrer" })
+      .run();
+  }, [editor]);
 
-  // 유효성 검사
-  const validate = () => {
-    if (!form.title) return "상품명을 입력하세요.";
-    if (!form.category) return "상품군을 선택하세요.";
-    if (!form.type) return "세부유형을 입력하세요.";
-    return null;
-  };
+  // URL 이미지
+  const insertImageFromUrl = useCallback(() => {
+    if (!editor) return;
+    const url = window.prompt("이미지 URL을 입력하세요.", "https://");
+    if (!url) return;
+    placeCursorAtEnd();
+editor.chain().focus().insertContent({
+  type: "image",
+  attrs: {
+    src: url,
+    alt: "",
+    style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+  }
+}).run();
+  }, [editor]);
 
-  // 저장
-  const handleSave = async () => {
-    const error = validate();
-    if (error) return showAlert(error);
-    try {
-      const method = isEdit ? "put" : "post";
-      const url = isEdit ? `/admin/products/${id}` : "/admin/products";
-      const cleanForm = { ...form, type: String(form.type).trim() };
-      const res = await api[method](url, cleanForm);
-      if (res.data.success) {
-        showAlert(isEdit ? "수정 완료!" : "등록 완료!");
-        router.push("/admin/products");
-      } else {
-        showAlert("저장 실패: " + res.data.message);
+  // 파일창 열기(다중)
+  const openFileDialog = useCallback(() => fileRef.current?.click(), []);
+
+  // 업로드 전 다운스케일(최대 변 1600px)
+  const maybeDownscaleImage = useCallback((file, maxDim = 1600, quality = 0.85) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        const scale = Math.min(1, maxDim / Math.max(width, height));
+        if (scale >= 1) {
+          URL.revokeObjectURL(url);
+          return resolve(file);
+        }
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(url);
+          resolve(new File([blob], file.name, { type: blob.type || "image/jpeg" }));
+        }, file.type || "image/jpeg", quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }, []);
+
+  // 단일 업로드
+  const uploadImageFile = useCallback(
+    async (file, progressCb) => {
+      if (!file) return;
+      if (!/^image\//.test(file.type)) return alert("이미지 파일만 업로드 가능합니다.");
+      if (file.size > 10 * 1024 * 1024) return alert("이미지 용량이 10MB를 초과합니다.");
+
+      try {
+        const toUpload = await maybeDownscaleImage(file, 1600, 0.85);
+        const fd = new FormData();
+        fd.append("file", toUpload, toUpload.name || file.name);
+
+        const res = await api.post(uploadEndpoint, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (e) => {
+            if (!e.total) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            progressCb?.(pct);
+          },
+        });
+
+        const { success, url } = res?.data || {};
+        if (!success || !url) throw new Error("업로드 실패");
+
+        placeCursorAtEnd();
+editor?.chain().focus().insertContent({
+  type: "image",
+  attrs: {
+    src: url,
+    alt: toUpload.name,
+    style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+  }
+}).run();
+      } catch (e) {
+        console.error("[TiptapEditor] 이미지 업로드 실패:", e);
+        // 실패 시 Base64 임시 삽입
+        const reader = new FileReader();
+        reader.onload = () => {
+            placeCursorAtEnd();
+            editor?.chain().focus().insertContent({
+              type: "image",
+              attrs: {
+                src: String(reader.result),
+                alt: file.name,
+                style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+              }
+            }).run();
+          };
+   reader.readAsDataURL(file);
       }
-    } catch (err) {
-      showAlert("저장 중 오류 발생");
-    }
-  };
+    },
+    [editor, uploadEndpoint, maybeDownscaleImage]
+  );
 
-  // 삭제
-  const handleDelete = async () => {
-    if (!isEdit || !id) return;
-    if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) return;
-    try {
-      const res = await api.delete(`/admin/products/${id}`);
-      if (res.data.success) {
-        showAlert("삭제완료");
-        router.push("/admin/products");
-      } else {
-        showAlert("삭제실패: " + res.data.message);
+  // 다중 업로드(순차)
+  const uploadMany = useCallback(
+    async (files) => {
+      const imgs = Array.from(files).filter((f) => /^image\//.test(f.type));
+      if (!imgs.length) return;
+  
+      // 1) 배치 업로드 시도 (서버가 files[]와 urls[]를 지원할 때)
+      try {
+        setUploadInfo({ idx: 1, total: imgs.length, pct: 0 });
+  
+        // 다운스케일을 모두 적용한 뒤 한 번에 전송
+        const resized = [];
+        for (const f of imgs) resized.push(await maybeDownscaleImage(f, 1600, 0.85));
+  
+        const fd = new FormData();
+        resized.forEach((f) => fd.append("files", f, f.name)); // 서버가 files[] 받는 경우
+        const res = await api.post(uploadEndpoint, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (e) => {
+            if (!e.total) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setUploadInfo((info) => (info ? { ...info, pct } : { idx: 1, total: imgs.length, pct }));
+          },
+        });
+  
+        const { success, urls } = res?.data || {};
+        if (!success || !Array.isArray(urls) || urls.length === 0) throw new Error("batch unsupported");
+  
+        // 서버가 urls 배열을 준 경우: 전부 연속 삽입
+        for (const u of urls) {
+          placeCursorAtEnd();
+          editor?.chain().focus().insertContent({
+            type: "image",
+            attrs: {
+              src: u,
+              alt: "",
+              style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+            }
+          }).run();
+        }
+        setUploadInfo(null);
+        return;
+      } catch (_) {
+        // 2) 배치 미지원 또는 실패 → 개별 업로드 폴백
       }
-    } catch (err) {
-      showAlert("삭제 중 오류 발생");
+  
+      for (let i = 0; i < imgs.length; i++) {
+        setUploadInfo({ idx: i + 1, total: imgs.length, pct: 0 });
+        await uploadImageFile(imgs[i], (pct) => setUploadInfo({ idx: i + 1, total: imgs.length, pct }));
+      }
+      setUploadInfo(null);
+    },
+    [editor, uploadEndpoint, maybeDownscaleImage, uploadImageFile, placeCursorAtEnd]
+  );
+  
+
+  // 파일 선택/드롭/붙여넣기
+  const onFileChange = useCallback((e) => {
+    const files = e.target.files;
+    if (files?.length) uploadMany(files);
+    e.target.value = "";
+  }, [uploadMany]);
+
+  const onDragOver = useCallback((e) => e.preventDefault(), []);
+  const onDrop = useCallback((e) => {
+    if (!editor) return;
+    const dt = e.dataTransfer;
+    if (!dt || !dt.files?.length) return;
+    e.preventDefault();
+    uploadMany(dt.files);
+  }, [editor, uploadMany]);
+
+  const onPaste = useCallback((e) => {
+    if (!editor) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imgs = [];
+    for (const it of items) {
+      if (it.type?.startsWith("image/")) {
+        const f = it.getAsFile();
+        if (f) imgs.push(f);
+      }
     }
-  };
-
-  // 입력값 초기화
-  const handleReset = () => setForm(initialForm);
-
-  if (!router.isReady) return null;
+    if (imgs.length) {
+      e.preventDefault();
+      uploadMany(imgs);
+    }
+  }, [editor, uploadMany]);
+  
+if (!editor) return null;
 
   return (
-    <AdminLayout pageTitle={isEdit ? "상품수정" : "상품등록"}>
-      <div style={mainWrapStyle}>
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-          {/* 이미지 업로드 */}
-          <label htmlFor="image-upload" style={imageBoxStyle}>
-            {form.image_url ? (
-              <img src={form.image_url} alt="상품 이미지" style={imgStyle} />
-            ) : (
-              <span style={{ color: "#777", fontSize: 14 }}>[이미지 업로드]</span>
-            )}
-            <input
-              id="image-upload"
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={handleImageUpload}
-            />
-          </label>
-
-          {/* 입력 폼 */}
-          <div style={{ flex: 1, minWidth: 280 }}>
-            {loading ? (
-              <p>⏳ 불러오는 중...</p>
-            ) : (
-              <>
-                {/* 상품명 */}
-                <div style={fieldStyle}>
-                  <label>상품명</label>
-                  <input
-                    name="title"
-                    value={form.title || ""}
-                    onChange={handleChange}
-                    type="text"
-                    style={inputStyle}
-                  />
-                </div>
-                {/* 상품군 */}
-                <div style={fieldStyle}>
-                  <label>상품군</label>
-                  <select
-                    name="category"
-                    value={form.category || ""}
-                    onChange={handleChange}
-                    style={inputStyle}
-                  >
-                    <option value="">선택하세요</option>
-                    {Object.keys(categoryMap).map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* 세부유형 */}
-                {form.category && (
-                  <div style={fieldStyle}>
-                    <label>세부유형</label>
-                    <select
-                      name="type"
-                      value={form.type || ""}
-                      onChange={handleChange}
-                      style={inputStyle}
-                    >
-                      <option value="">선택하세요</option>
-                      {categoryMap[form.category]?.map((subtype) => (
-                        <option key={subtype} value={subtype}>
-                          {subtype}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {/* 가격 */}
-                <div style={fieldStyle}>
-                  <label>가격</label>
-                  <input
-                    name="price"
-                    value={form.price}
-                    onChange={handleChange}
-                    type="number"
-                    min={0}
-                    style={inputStyle}
-                  />
-                </div>
-                {/* 간단 설명 */}
-                <div style={fieldStyle}>
-                  <label>간단 설명</label>
-                  <input
-                    name="description"
-                    value={form.description || ""}
-                    onChange={handleChange}
-                    type="text"
-                    style={inputStyle}
-                  />
-                </div>
-              </>
-            )}
+    <div style={{ border: "1px solid #e5e5e5", borderRadius: 8 }}>
+      {/* 상단 바 */}
+      <div className="tt-toolbar" style={toolbarWrapStyle}>
+        <div style={toolbarRowStyle}>
+          {/* 글자 */}
+          <div className="grp">
+            <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive("bold") ? "on" : ""}>B</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive("italic") ? "on" : ""}>I</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive("underline") ? "on" : ""}>U</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive("strike") ? "on" : ""}>S</button>
+          </div>
+          {/* 제목/정렬 */}
+          <div className="grp">
+            <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editor.isActive("heading", { level: 1 }) ? "on" : ""}>H1</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive("heading", { level: 2 }) ? "on" : ""}>H2</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive("heading", { level: 3 }) ? "on" : ""}>H3</button>
+            <span className="sep" />
+            <button type="button" onClick={() => editor.chain().focus().setTextAlign("left").run()} className={editor.isActive({ textAlign: "left" }) ? "on" : ""}>좌</button>
+            <button type="button" onClick={() => editor.chain().focus().setTextAlign("center").run()} className={editor.isActive({ textAlign: "center" }) ? "on" : ""}>중</button>
+            <button type="button" onClick={() => editor.chain().focus().setTextAlign("right").run()} className={editor.isActive({ textAlign: "right" }) ? "on" : ""}>우</button>
+          </div>
+          {/* 목록/코드/인용 */}
+          <div className="grp">
+            <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive("bulletList") ? "on" : ""}>●</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={editor.isActive("orderedList") ? "on" : ""}>1.</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={editor.isActive("blockquote") ? "on" : ""}>❝</button>
+            <button type="button" onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={editor.isActive("codeBlock") ? "on" : ""}>{"</>"}</button>
+            <button type="button" onClick={() => editor.chain().focus().setHorizontalRule().run()}>─</button>
+          </div>
+          {/* 링크/이미지 */}
+          <div className="grp">
+            <button type="button" onClick={promptAndSetLink} className={editor.isActive("link") ? "on" : ""}>링크</button>
+            <button type="button" onClick={insertImageFromUrl}>이미지 URL</button>
+            <button type="button" onClick={openFileDialog}>이미지 업로드</button>
+            <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={onFileChange} />
           </div>
         </div>
 
-        {/* 상세 설명 */}
-        <div style={{ marginTop: 40 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
-            상세설명
-          </label>
-          <TiptapEditor
-            key={id || "new"}  // 라우트 전환 시 에디터 강제 리마운트
-            value={form.detail || ""}
-            onChange={(html) => setForm((prev) => ({ ...prev, detail: html }))}
-            height={280}
-          />
-        </div>
-
-        {/* 하단 버튼 */}
-        <div style={buttonBarStyle}>
-          <button onClick={() => router.push("/admin/products")} style={grayButtonStyle}>
-            목록으로
-          </button>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handleReset} style={grayButtonStyle}>초기화</button>
-            {isEdit && (
-              <button onClick={handleDelete} style={redButtonStyle}>삭제</button>
-            )}
-            <button onClick={handleSave} style={blueButtonStyle}>저장</button>
+                {/* 업로드 진행(다중) */}
+        {uploadInfo && (
+          <div style={{ padding: "6px 12px", fontSize: 12, color: "#555" }}>
+            업로드 중… {uploadInfo.idx}/{uploadInfo.total} ( {uploadInfo.pct}% )
           </div>
-        </div>
+        )}
       </div>
-    </AdminLayout>
+
+      {/* 에디터 영역 */}
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+        onPaste={onPaste}
+        style={{
+          minHeight: height,
+          maxHeight: 800,
+          overflowY: "auto",
+          padding: 12,
+          lineHeight: 1.7,
+        }}
+      >
+        <EditorContent editor={editor} suppressHydrationWarning />
+      </div>
+
+      <style jsx>{`
+        .on { background: #eef3ff; border-color: #a8c1ff !important; }
+        .sep { width: 1px; height: 20px; background: #ddd; margin: 0 6px; }
+      `}</style>
+
+      {/* ProseMirror 이미지 가로맞춤(상세페이지와 동일) */}
+      <style jsx global>{`
+        .ProseMirror img.tt-img {
+          width: 100%;
+          max-width: 100%;
+          height: auto;
+          display: block;
+          object-fit: contain;
+        }
+        .tt-toolbar button {
+          border: 1px solid #ddd;
+          background: #fff;
+          border-radius: 6px;
+          padding: 4px 8px;
+          font-size: 12px;
+        }
+        .tt-toolbar .grp { display: inline-flex; gap: 6px; align-items: center; }
+      `}</style>
+    </div>
   );
 }
 
-// 스타일 상수
-const mainWrapStyle = {
-  maxWidth: 960,
-  margin: "0 auto",
-  padding: 32,
-  background: "#fff",
-  borderRadius: 12,
-  boxShadow: "0 0 12px rgba(0,0,0,0.05)",
+/* ===== 상단바 스타일 ===== */
+const toolbarWrapStyle = {
+  position: "sticky",
+  top: 0,
+  zIndex: 5,
+  borderBottom: "1px solid #eee",
+  padding: 8,
+  background: "#fafafa",
+  borderTopLeftRadius: 8,
+  borderTopRightRadius: 8,
 };
 
-const imageBoxStyle = {
-  width: 300,
-  height: 300,
-  border: "2px solid #999",
-  borderRadius: 8,
+const toolbarRowStyle = {
   display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  position: "relative",
-  overflow: "hidden",
-  cursor: "pointer",
-};
-
-const imgStyle = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-};
-
-const fieldStyle = { marginBottom: 16 };
-
-const inputStyle = {
-  width: "100%",
-  padding: 10,
-  border: "1px solid #ccc",
-  borderRadius: 6,
-};
-
-const buttonBarStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 10,
-  marginTop: 32,
   flexWrap: "wrap",
-};
-
-const grayButtonStyle = {
-  padding: "10px 16px",
-  backgroundColor: "#eee",
-  color: "#333",
-  border: "1px solid #ccc",
-  borderRadius: 6,
-};
-
-const blueButtonStyle = {
-  padding: "10px 16px",
-  backgroundColor: "#0070f3",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-};
-
-const redButtonStyle = {
-  padding: "10px 16px",
-  backgroundColor: "#e74c3c",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
+  gap: 10,
+  alignItems: "center",
+  marginBottom: 6,
 };
