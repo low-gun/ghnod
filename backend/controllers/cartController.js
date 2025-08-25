@@ -44,19 +44,23 @@ exports.getCartItems = async (req, res) => {
 
     const query = `
       SELECT
-        ci.id,
-        ci.schedule_id,
-        ci.schedule_session_id,                               
-        s.title AS schedule_title,
-        COALESCE(ss.start_date, s.start_date) AS start_date,
-        COALESCE(ss.end_date,   s.end_date)   AS end_date,
-        ss.start_time,
-        ss.end_time,
-        COALESCE(s.image_url, p.image_url) AS image_url,
-        ci.quantity,
-        ci.unit_price,
-        ci.discount_price,
-        (ci.unit_price - ci.discount_price) * ci.quantity AS subtotal
+  ci.id,
+  ci.schedule_id,
+  ci.schedule_session_id,
+  s.title AS schedule_title,
+  COALESCE(ss.start_date, s.start_date) AS start_date,
+  COALESCE(ss.end_date,   s.end_date)   AS end_date,
+  ss.start_time,
+  ss.end_time,
+  p.type AS type,                                   -- ✅ 상세 경로용
+  ss.total_spots AS session_total_spots,            -- ✅ 회차 총원(표시/검증용)
+  ss.remaining_spots AS session_remaining_spots,    -- ✅ 회차 잔여(표시/검증용)
+  COALESCE(s.image_url, p.image_url) AS image_url,
+  ci.quantity,
+  ci.unit_price,
+  ci.discount_price,
+  (ci.unit_price - ci.discount_price) * ci.quantity AS subtotal
+
       FROM cart_items ci
       JOIN schedules s ON ci.schedule_id = s.id
       LEFT JOIN schedule_sessions ss ON ss.id = ci.schedule_session_id
@@ -120,7 +124,18 @@ exports.addToCart = async (req, res) => {
       if (sess[0].schedule_id !== Number(schedule_id)) {
         return res.status(400).json({ success: false, message: "회차가 해당 일정과 일치하지 않습니다." });
       }
+      
+      // 잔여 인원 확인
+      const [[spotRow]] = await pool.execute(
+        `SELECT remaining_spots FROM schedule_sessions WHERE id = ?`,
+        [sid]
+      );
+      if (!spotRow || spotRow.remaining_spots < quantity) {
+        return res.status(400).json({ success: false, message: "회차 잔여 인원이 부족합니다." });
+      }
+      
       sessionId = sid;
+      
     }
 
     // buyNow는 동일 schedule(+session)의 기존 항목 제거
@@ -305,7 +320,18 @@ exports.updateCartItem = async (req, res) => {
         if (sess[0].schedule_id !== current.schedule_id) {
           return res.status(400).json({ success: false, message: "회차가 해당 일정과 일치하지 않습니다." });
         }
+        
+        // 잔여 인원 확인
+        const [[spotRow]] = await pool.execute(
+          `SELECT remaining_spots FROM schedule_sessions WHERE id = ?`,
+          [sid]
+        );
+        if (!spotRow || spotRow.remaining_spots < quantity) {
+          return res.status(400).json({ success: false, message: "회차 잔여 인원이 부족합니다." });
+        }
+        
         nextSessionId = sid;
+        
       }
     }
 

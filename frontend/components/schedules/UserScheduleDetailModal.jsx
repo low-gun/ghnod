@@ -81,11 +81,40 @@ export default function UserScheduleDetailModal({ schedule, onClose }) {
         >
           <InfoRow label="장소" value={schedule.location || "-"} />
           <InfoRow label="강사" value={schedule.instructor || "-"} />
-          <InfoRow label="정원" value={schedule.total_spots ?? "-"} />
-          <InfoRow
-            label="기간"
-            value={`${formatDateTime(schedule.start)} ~ ${formatDateTime(schedule.end)}`}
-          />
+          {/* 회차별 모집 현황 */}
+{Array.isArray(schedule.sessions) && schedule.sessions.length > 0 ? (
+  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+    {schedule.sessions.map((s, idx) => (
+      <InfoRow
+        key={s.id || idx}
+        label={`(${idx + 1}회차)`}
+        value={`잔여 ${s.remaining_spots ?? "-"}명 / 정원 ${s.total_spots ?? "-"}`}
+      />
+    ))}
+  </div>
+) : (
+  <InfoRow label="정원" value={schedule.total_spots ?? "-"} />
+)}
+
+{/* 기간 */}
+<InfoRow
+  label="기간"
+  value={(() => {
+    const start = schedule.start ? moment(schedule.start) : null;
+    const rawEnd = schedule.end ? moment(schedule.end).clone().subtract(1, "day") : null;
+
+    const st = schedule.start_time ? ` ${schedule.start_time?.slice(0,5)}` : "";
+    const et = schedule.end_time ? ` ${schedule.end_time?.slice(0,5)}` : "";
+
+    if (start && rawEnd) {
+      const a = start.format("YYYY.MM.DD") + st;
+      const b = rawEnd.format("YYYY.MM.DD") + et;
+      return `${a} ~ ${b}`;
+    }
+    return "-";
+  })()}
+/>
+
           <InfoRow label="설명" value={schedule.description || "-"} />
         </div>
 

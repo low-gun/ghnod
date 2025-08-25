@@ -23,7 +23,6 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 // 📌 [PUT] /api/orders/:id - 주문 상태 '결제완료' 처리
-// 📌 [PUT] /api/orders/:id - 주문 상태 '결제완료' 처리
 router.put("/:id", authenticateToken, async (req, res) => {
   const orderId = req.params.id;
   const userId = req.user.id;
@@ -49,6 +48,42 @@ router.put("/:id", authenticateToken, async (req, res) => {
 
     await conn.beginTransaction();
 
+    // 📌 회차 잔여 좌석 확인 & 차감
+    const [orderItems] = await conn.query(
+      `SELECT schedule_session_id, quantity 
+         FROM order_items 
+        WHERE order_id = ?`,
+      [orderId]
+    );
+
+    for (const it of orderItems) {
+      if (it.schedule_session_id) {
+        // 회차 잠금
+        const [[sessionRow]] = await conn.query(
+          `SELECT remaining_spots 
+             FROM schedule_sessions 
+            WHERE id = ? 
+            FOR UPDATE`,
+          [it.schedule_session_id]
+        );
+
+        if (!sessionRow) {
+          throw new Error(`회차 ${it.schedule_session_id} 없음`);
+        }
+        if (sessionRow.remaining_spots < it.quantity) {
+          throw new Error(`회차 ${it.schedule_session_id} 잔여 부족`);
+        }
+
+        // 좌석 차감
+        await conn.query(
+          `UPDATE schedule_sessions 
+              SET remaining_spots = remaining_spots - ? 
+            WHERE id = ?`,
+          [it.quantity, it.schedule_session_id]
+        );
+      }
+    }
+
     // 📌 결제 정보 저장
     const [payRes] = await conn.query(
       `INSERT INTO payments 
@@ -58,7 +93,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
     );
     const paymentId = payRes.insertId;
 
-    // ✅ 주문 상태를 paid로 업데이트 (중요!)
+    // ✅ 주문 상태를 paid로 업데이트
     await conn.query(
       `UPDATE orders 
        SET order_status = 'paid',
@@ -104,6 +139,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
     conn.release();
   }
 });
+
 
 // 📌 [GET] /api/orders/:id/items - 특정 주문의 항목 목록 조회
 router.get("/:id/items", authenticateToken, async (req, res) => {
@@ -213,26 +249,53 @@ router.post("/", authenticateToken, async (req, res) => {
     let validatedCouponId = null;
 
     // 3) order_items 저장
-    for (const item of cartItems) {
-      const discountAmt = item.discount_price || 0;
-      const subtotal = (item.unit_price - discountAmt) * item.quantity;
-      orderTotal += subtotal;
+    // 3) order_items 저장 (+ 회차 좌석 검증 & 차감)
+for (const item of cartItems) {
+  const discountAmt = item.discount_price || 0;
+  const subtotal = (item.unit_price - discountAmt) * item.quantity;
+  orderTotal += subtotal;
 
-      await conn.query(
-        `INSERT INTO order_items (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [
-          orderId,
-          item.schedule_id,
-          item.schedule_session_id || null, // ✅ 회차 없으면 NULL
-          item.quantity,
-          item.unit_price,
-          discountAmt,
-          subtotal,
-        ]
-      );
-      
+  // ✅ 회차가 있으면 좌석 확인 + 차감
+  if (item.schedule_session_id) {
+    const [[sessionRow]] = await conn.query(
+      `SELECT remaining_spots 
+         FROM schedule_sessions 
+        WHERE id = ? 
+        FOR UPDATE`,
+      [item.schedule_session_id]
+    );
+
+    if (!sessionRow) {
+      throw new Error(`회차 ${item.schedule_session_id} 없음`);
     }
+    if (sessionRow.remaining_spots < item.quantity) {
+      throw new Error(`회차 ${item.schedule_session_id} 잔여 부족`);
+    }
+
+    await conn.query(
+      `UPDATE schedule_sessions 
+          SET remaining_spots = remaining_spots - ? 
+        WHERE id = ?`,
+      [item.quantity, item.schedule_session_id]
+    );
+  }
+
+  // ✅ order_items 저장
+  await conn.query(
+    `INSERT INTO order_items (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+    [
+      orderId,
+      item.schedule_id,
+      item.schedule_session_id || null,
+      item.quantity,
+      item.unit_price,
+      discountAmt,
+      subtotal,
+    ]
+  );
+}
+
 
     // 4) 쿠폰 적용
     if (coupon_id) {
@@ -312,6 +375,7 @@ router.post("/", authenticateToken, async (req, res) => {
 });
 
 // 📌 [PUT] /api/orders/:id/refund - 주문 환불 처리
+// 📌 [PUT] /api/orders/:id/refund - 주문 환불 처리
 router.put("/:id/refund", authenticateToken, async (req, res) => {
   const orderId = req.params.id;
   const userId = req.user.id;
@@ -320,18 +384,38 @@ router.put("/:id/refund", authenticateToken, async (req, res) => {
     const conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    // 1. 주문 상태를 refunded 로 업데이트
+    // 1. 환불 대상 order_items 불러오기
+    const [orderItems] = await conn.query(
+      `SELECT schedule_session_id, quantity 
+         FROM order_items 
+        WHERE order_id = ?`,
+      [orderId]
+    );
+
+    // 2. 회차 좌석 복구
+    for (const it of orderItems) {
+      if (it.schedule_session_id) {
+        await conn.query(
+          `UPDATE schedule_sessions 
+              SET remaining_spots = remaining_spots + ? 
+            WHERE id = ?`,
+          [it.quantity, it.schedule_session_id]
+        );
+      }
+    }
+
+    // 3. 주문 상태를 refunded 로 업데이트
     await conn.query(
       `UPDATE orders 
-       SET order_status = 'refunded', updated_at = NOW()
+         SET order_status = 'refunded', updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [orderId, userId]
     );
 
-    // 2. 연결된 결제건도 refunded 로 상태 변경
+    // 4. 연결된 결제건도 refunded 로 상태 변경
     await conn.query(
       `UPDATE payments 
-       SET status = 'refunded', updated_at = NOW()
+         SET status = 'refunded', updated_at = NOW()
        WHERE id = (
          SELECT payment_id FROM orders WHERE id = ?
        )`,
@@ -339,7 +423,7 @@ router.put("/:id/refund", authenticateToken, async (req, res) => {
     );
 
     await conn.commit();
-    res.json({ success: true, message: "환불 처리 완료" });
+    res.json({ success: true, message: "환불 처리 완료 (좌석 복구 포함)" });
   } catch (err) {
     console.error("❌ 환불 처리 실패:", err);
     res.status(500).json({ success: false, message: "환불 처리 실패" });

@@ -95,23 +95,39 @@ app.use((req, res, next) => {
 
 // ✅ API 라우터 등록
 console.log("✅ API 라우터 등록 시작");
-app.use("/api/admin/schedules", require("./routes/admin/schedules"));
-app.use("/api/admin/products", require("./routes/admin/products"));
-// app.use("/api/admin/payments", require("./routes/payment")); // 🔥 제거
-app.use("/api/admin", require("./routes/admin")); // ✅ admin.js가 /payments 처리
+// ▼ 추가: 라우터 로딩 유틸 (default export 섞였는지/타입 확인)
+function loadRouter(p) {
+  const mod = require(p);
+  const router = (mod && mod.default) ? mod.default : mod;
+  const type = typeof router;
+  const keys = mod && typeof mod === "object" ? Object.keys(mod) : [];
+  if (type !== "function") {
+    console.error(`❌ 라우터 로딩 실패: ${p} | type=${type} | keys=${keys.join(",")}`);
+  } else {
+    console.log(`✅ 라우터 OK: ${p}`);
+  }
+  return router;
+}
 
-app.use("/api/user", require("./routes/user"));
-app.use("/api/mypage", require("./routes/mypage"));
-app.use("/api/orders", require("./routes/order"));
-app.use("/api/cart", require("./routes/cart"));
-app.use("/api/education", require("./routes/userSchedules"));
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/education/schedules", require("./routes/public/schedules"));
-app.use("/api", require("./routes/productReviews"));
-app.use("/api/upload", require("./routes/upload"));
+// ✅ API 라우터 등록 시작
+app.use("/api/admin/schedules", loadRouter("./routes/admin/schedules"));
+app.use("/api/admin/products", loadRouter("./routes/admin/products"));
+// app.use("/api/admin/payments", loadRouter("./routes/payment")); // 🔥 제거 유지
+app.use("/api/admin", loadRouter("./routes/admin")); // ✅ admin.js가 /payments 처리
+
+app.use("/api/user", loadRouter("./routes/user"));
+app.use("/api/mypage", loadRouter("./routes/mypage"));
+app.use("/api/orders", loadRouter("./routes/order"));
+app.use("/api/cart", loadRouter("./routes/cart"));
+app.use("/api/education", loadRouter("./routes/userSchedules"));
+app.use("/api/auth", loadRouter("./routes/auth"));
+app.use("/api/education/schedules", loadRouter("./routes/public/schedules"));
+app.use("/api", loadRouter("./routes/productReviews"));
+app.use("/api/upload", loadRouter("./routes/upload"));
 console.log("✅ API 라우터 등록 완료");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/api/payments", require("./routes/payments.public"));
+app.use("/api/payments", loadRouter("./routes/payments.public"));
+
 
 // ✅ DB 연결 테스트용
 app.get("/test-db", async (req, res) => {

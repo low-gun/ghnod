@@ -1,9 +1,16 @@
+// frontend/pages/admin/products/[id].js
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/layout/AdminLayout";
 import api from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert";
+
+// 디자인 공용 컴포넌트 (schedules/[id].js와 동일 UI)
+import ImageUploader from "@/components/common/ImageUploader";
+import FormSection from "@/components/common/FormSection";
+import FormField from "@/components/common/FormField";
+import FormFooterBar from "@/components/common/FormFooterBar";
 
 const TiptapEditor = dynamic(
   () => import("@/components/editor/TiptapEditor"),
@@ -96,17 +103,6 @@ export default function ProductFormPage() {
     }));
   }, []);
 
-  const handleImageUpload = useCallback((e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return showAlert("이미지 용량이 5MB를 초과합니다.");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm((prev) => ({ ...prev, image_url: String(reader.result || "") }));
-    };
-    reader.readAsDataURL(file);
-  }, [showAlert]);
-
   const validate = useCallback(() => {
     if (!form.title?.trim()) return "상품명을 입력하세요.";
     if (!form.category) return "상품군을 선택하세요.";
@@ -165,220 +161,195 @@ export default function ProductFormPage() {
     setDetail("");
   }, []);
 
+  const isInvalid = !form.title?.trim() || !form.category || !form.type;
+
   if (!router.isReady) return null;
 
   return (
     <AdminLayout pageTitle={isEdit ? "상품수정" : "상품등록"}>
-      <div style={mainWrapStyle}>
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-          {/* 썸네일 업로드 */}
-          <label htmlFor="image-upload" style={imageBoxStyle}>
-            {form.image_url ? (
-              <img src={form.image_url} alt="상품 이미지" style={imgStyle} />
-            ) : (
-              <span style={{ color: "#777", fontSize: 14 }}>[이미지 업로드]</span>
-            )}
-            <input
-              id="image-upload"
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={handleImageUpload}
-              disabled={saving}
-            />
-          </label>
-
-          {/* 입력 폼 */}
-          <div style={{ flex: 1, minWidth: 280 }}>
-            {loading ? (
-              <p>⏳ 불러오는 중...</p>
-            ) : (
-              <>
-                <div style={fieldStyle}>
-                  <label>상품명</label>
-                  <input
-                    name="title"
-                    value={form.title}
-                    onChange={handleChange}
-                    type="text"
-                    style={inputStyle}
-                    disabled={saving}
-                  />
-                </div>
-
-                <div style={fieldStyle}>
-                  <label>상품군</label>
-                  <select
-  name="category"
-  value={form.category}
-  onChange={(e) => {
-    const next = e.target.value;
-    setForm((prev) => ({ ...prev, category: next, type: "" })); // ✅ 한 번에 반영
-  }}
-  style={inputStyle}
-  disabled={saving}
->
-
-                    <option value="">선택하세요</option>
-                    {Object.keys(CATEGORY_MAP).map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {form.category && (
-                  <div style={fieldStyle}>
-                    <label>세부유형</label>
-                    <select
-                      name="type"
-                      value={form.type}
+      <div className="container">
+        {loading ? (
+          <p>⏳ 불러오는 중...</p>
+        ) : (
+          <>
+            {/* 1단: 좌(상품 정보) | 우(썸네일) */}
+            <div className="topGrid">
+              <FormSection title="상품 정보" className="twoColSection">
+                <div className="stack">
+                  <FormField label="상품명">
+                    <input
+                      name="title"
+                      value={form.title}
                       onChange={handleChange}
-                      style={inputStyle}
+                      className="input"
+                      disabled={saving}
+                    />
+                  </FormField>
+
+                  <FormField label="상품군">
+                    <select
+                      name="category"
+                      value={form.category}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setForm((prev) => ({ ...prev, category: next, type: "" }));
+                      }}
+                      className="input"
                       disabled={saving}
                     >
                       <option value="">선택하세요</option>
-                      {subtypeOptions.map((sub) => (
-                        <option key={sub} value={sub}>
-                          {sub}
+                      {Object.keys(CATEGORY_MAP).map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
                         </option>
                       ))}
                     </select>
-                  </div>
-                )}
+                  </FormField>
 
-                <div style={fieldStyle}>
-                  <label>가격</label>
-                  <input
-                    name="price"
-                    value={form.price}
-                    onChange={handleChange}
-                    type="number"
-                    min={0}
-                    style={inputStyle}
+                  {form.category && (
+                    <FormField label="세부유형">
+                      <select
+                        name="type"
+                        value={form.type}
+                        onChange={handleChange}
+                        className="input"
+                        disabled={saving}
+                      >
+                        <option value="">선택하세요</option>
+                        {subtypeOptions.map((sub) => (
+                          <option key={sub} value={sub}>
+                            {sub}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                  )}
+
+                  <FormField label="가격">
+                    <input
+                      name="price"
+                      value={form.price}
+                      onChange={handleChange}
+                      type="number"
+                      min={0}
+                      className="input alignRight"
+                      disabled={saving}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="간단 설명"
+                    helper={`${String(form.description || "").length}/120`}
+                    helperAlign="right"
+                  >
+                    <input
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                      className="input"
+                      disabled={saving}
+                      maxLength={120}
+                      placeholder="목록/요약에 노출될 짧은 설명 (최대 120자)"
+                    />
+                  </FormField>
+                </div>
+              </FormSection>
+
+              <div className="thumbCol">
+                <FormSection title="썸네일">
+                  <ImageUploader
+                    value={form.image_url}
+                    aspectRatio="1/1"
+                    onChange={(dataUrl) =>
+                      setForm((prev) => ({ ...prev, image_url: String(dataUrl || "") }))
+                    }
+                    onReset={() => setForm((prev) => ({ ...prev, image_url: "" }))}
+                    maxSizeMB={5}
                     disabled={saving}
                   />
-                </div>
+                </FormSection>
+              </div>
+            </div>
 
-                <div style={fieldStyle}>
-                  <label>간단 설명</label>
-                  <input
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    type="text"
-                    style={inputStyle}
-                    disabled={saving}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+            {/* 2단: 상세 설명 */}
+            <FormSection title="상세 설명">
+              {!loading && (
+                <TiptapEditor
+                  key={pid || "new"}
+                  value={detail}
+                  onChange={setDetail}
+                  height={280}
+                  uploadEndpoint="/upload/images"
+                />
+              )}
+            </FormSection>
 
-        {/* 상세 설명(에디터) */}
-        <div style={{ marginTop: 40 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
-            상세설명
-          </label>
-          {!loading && (
-            <TiptapEditor
-              key={pid || "new"}
-              value={detail}
-              onChange={setDetail}
-              height={280}
-              uploadEndpoint="/upload/images" // 서버 업로드 경로에 맞게 조정 가능
+            {/* 하단 버튼 공용 바 (디자인 통일) */}
+            <FormFooterBar
+              onList={() => router.push("/admin/products")}
+              onDelete={handleDelete}
+              onSave={handleSave}
+              isEdit={isEdit}
+              saveDisabled={saving || isInvalid}
             />
-          )}
-        </div>
-
-        {/* 하단 버튼 */}
-        <div style={buttonBarStyle}>
-          <button onClick={() => router.push("/admin/products")} style={grayButtonStyle} disabled={saving}>
-            목록으로
-          </button>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handleReset} style={grayButtonStyle} disabled={saving}>초기화</button>
-            {isEdit && (
-              <button onClick={handleDelete} style={redButtonStyle} disabled={saving}>삭제</button>
-            )}
-            <button onClick={handleSave} style={blueButtonStyle} disabled={saving}>
-              {isEdit ? "수정" : "등록"}
-            </button>
-          </div>
-        </div>
+          </>
+        )}
       </div>
+
+      {/* ✅ schedules/[id].js와 동일 톤의 스타일 */}
+      <style jsx>{`
+        .container { max-width:1080px; margin:auto; padding:32px; background:#fff; border-radius:12px; }
+
+        /* 1단: 상품정보 | 썸네일 */
+        .topGrid{
+          display:grid;
+          grid-template-columns:1fr 360px; /* 우측 고정폭 */
+          gap:24px;
+          align-items:start;
+        }
+        .thumbCol{ width:100%; }
+
+        .sectionCard{ border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:0; background:#fff; }
+        .sectionTitle{ margin:0 0 12px 0; font-size:16px; font-weight:700; }
+        .helperText{ color:#666; font-size:12px; margin-top:4px; display:block; }
+
+        .field{ margin-bottom:16px; display:flex; flex-direction:column; gap:6px; }
+        .fieldGrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .fieldGrid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+        /* 라벨 타이포 통일 */
+        :global(.field > label){ color:#555; font-size:13px; line-height:1; }
+
+        /* 인풋 룩 통일 */
+        .input{
+          height:44px;
+          line-height:1.2;
+          padding:12px 14px;
+          border:1px solid #d0d5dd;
+          border-radius:10px;
+          font-size:14px;
+          background:#fff;
+          transition:border-color .15s ease, box-shadow .15s ease;
+        }
+        .input:focus{ outline:none; border-color:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.15); }
+        .alignRight{ text-align:right; }
+        .inputUnchanged{ color:#999; }
+
+        /* 상품정보/간격 통일: schedules와 동일 */
+        .twoColSection { --gapY:12px; }
+        .twoColSection .stack { display:grid; row-gap:var(--gapY); }
+        .twoColSection .stack :global(.field) { margin:0; gap:6px; }
+        .twoColSection :global(.helperText) { margin-top:0; }
+
+        /* 반응형 */
+        @media (min-width:1280px){
+          .topGrid{ grid-template-columns:1fr 380px; }
+        }
+        @media (max-width:900px){
+          .topGrid{ grid-template-columns:1fr; }
+          .fieldGrid2{ grid-template-columns:1fr; }
+        }
+      `}</style>
     </AdminLayout>
   );
 }
-
-/* ===== 스타일 ===== */
-const mainWrapStyle = {
-  maxWidth: 960,
-  margin: "0 auto",
-  padding: 32,
-  background: "#fff",
-  borderRadius: 12,
-  boxShadow: "0 0 12px rgba(0,0,0,0.05)",
-};
-
-const imageBoxStyle = {
-  width: 300,
-  height: 300,
-  border: "2px solid #999",
-  borderRadius: 8,
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  position: "relative",
-  overflow: "hidden",
-  cursor: "pointer",
-};
-
-const imgStyle = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-};
-
-const fieldStyle = { marginBottom: 16 };
-
-const inputStyle = {
-  width: "100%",
-  padding: 10,
-  border: "1px solid #ccc",
-  borderRadius: 6,
-};
-
-const buttonBarStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 10,
-  marginTop: 32,
-  flexWrap: "wrap",
-};
-
-const grayButtonStyle = {
-  padding: "10px 16px",
-  backgroundColor: "#eee",
-  color: "#333",
-  border: "1px solid #ccc",
-  borderRadius: 6,
-};
-
-const blueButtonStyle = {
-  padding: "10px 16px",
-  backgroundColor: "#0070f3",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-};
-
-const redButtonStyle = {
-  padding: "10px 16px",
-  backgroundColor: "#e74c3c",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-};

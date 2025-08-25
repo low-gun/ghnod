@@ -51,12 +51,13 @@ export default function PaymentHistory() {
   const columnDefs = [
     { key: "No", label: "No", sortable: false },
     { key: "order_id", label: "주문번호", sortable: true },
-    { key: "total_quantity", label: "수강인원", sortable: true },
+    { key: "quantity", label: "수강인원", sortable: true }, // ← 응답 필드와 일치
     { key: "amount", label: "결제금액", sortable: true },
     { key: "payment_method", label: "결제수단", sortable: true },
     { key: "created_at", label: "결제일", sortable: true },
     { key: "status", label: "상태", sortable: true },
   ];
+  
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -322,28 +323,39 @@ export default function PaymentHistory() {
                     {renderStatusBadge(getStatusLabel(item.status))}
                   </span>
                 </div>
-                {/* 결제일/인원/할인 */}
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 10,
-                    fontSize: 15,
-                    color: "#4e5560",
-                  }}
-                >
-                  <span>🗓 {formatKoreanDateTime(item.created_at)}</span>
-                  <span>👥 {item.quantity || 0}명</span>
-                  {(item.used_point || 0) + (item.coupon_discount || 0) > 0 && (
-                    <span>
-                      할인{" "}
-                      {formatPrice(
-                        (item.used_point || 0) + (item.coupon_discount || 0)
-                      )}
-                      원
-                    </span>
-                  )}
-                </div>
+               {/* 결제일/인원/할인 */}
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column", // ✅ 여러 회차일 경우 줄바꿈
+    gap: 6,
+    fontSize: 15,
+    color: "#4e5560",
+  }}
+>
+  <span>🗓 {formatKoreanDateTime(item.created_at)}</span>
+
+  {Array.isArray(item.items) && item.items.length > 0 ? (
+    item.items.map((it, idx) => (
+      <span key={idx}>
+        👥 {it.schedule_title || "일정"}: {it.quantity || 0}명
+      </span>
+    ))
+  ) : (
+    <span>👥 {item.quantity || 0}명</span>
+  )}
+
+  {(item.used_point || 0) + (item.coupon_discount || 0) > 0 && (
+    <span>
+      할인{" "}
+      {formatPrice(
+        (item.used_point || 0) + (item.coupon_discount || 0)
+      )}
+      원
+    </span>
+  )}
+</div>
+
                 {/* 결제수단 */}
                 <div
                   style={{
@@ -449,13 +461,17 @@ export default function PaymentHistory() {
                           </td>
                         );
                       }
-                      if (col.key === "total_quantity") {
+                      if (col.key === "quantity") {
+                        const sumQty = Array.isArray(item.items)
+                          ? item.items.reduce((acc, it) => acc + Number(it.quantity || 0), 0)
+                          : (item.quantity || 0);
                         return (
                           <td key={col.key} style={tdCenter}>
-                            {item.quantity || 0}명
+                            {sumQty}명
                           </td>
                         );
                       }
+                      
                       if (col.key === "payment_method") {
                         return (
                           <td key={col.key} style={tdCenter}>

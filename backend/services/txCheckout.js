@@ -54,17 +54,40 @@ async function finalizeCheckoutAtomic({
     const orderId = orderRes.insertId;
 
     // 2) 아이템 일괄 입력
-    const values = items.map((it) => [
-      orderId,
-      it.schedule_id,
-      it.quantity,
-      it.unit_price,
-    ]);
-    await conn.query(
-      `INSERT INTO order_items (order_id, schedule_id, quantity, unit_price)
-       VALUES ?`,
-      [values]
-    );
+    // 2) 아이템 처리 (회차별 재고 확인 및 차감 후 order_items 입력)
+for (const it of items) {
+  // (a) 잔여 좌석 확인 & 락
+  const [[sessionRow]] = await conn.query(
+    `SELECT remaining_spots 
+     FROM schedule_sessions 
+     WHERE id = ? 
+     FOR UPDATE`,
+    [it.schedule_session_id]
+  );
+  if (!sessionRow) {
+    throw new Error(`회차 ${it.schedule_session_id} 없음`);
+  }
+  if (sessionRow.remaining_spots < it.quantity) {
+    throw new Error(`회차 ${it.schedule_session_id} 잔여 부족`);
+  }
+
+  // (b) 차감
+  await conn.query(
+    `UPDATE schedule_sessions 
+     SET remaining_spots = remaining_spots - ? 
+     WHERE id = ?`,
+    [it.quantity, it.schedule_session_id]
+  );
+
+  // (c) order_items 추가
+  await conn.query(
+    `INSERT INTO order_items 
+     (order_id, schedule_id, schedule_session_id, quantity, unit_price) 
+     VALUES (?, ?, ?, ?, ?)`,
+    [orderId, it.schedule_id, it.schedule_session_id, it.quantity, it.unit_price]
+  );
+}
+
 
     // 3) 금액 계산
     const subtotal = items.reduce(

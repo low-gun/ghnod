@@ -74,8 +74,12 @@ const fetchSessionEvents = useCallback(async (startYmd, endYmd) => {
     const ok = await showConfirm("정말 삭제하시겠습니까?");
     if (!ok) return;
     try {
-      await api.delete(`admin/schedules/${targetId}`);
-      showAlert("삭제되었습니다.");
+      await api.request({
+        method: "delete",
+        url: "admin/schedules",
+        headers: { "Content-Type": "application/json" },
+        data: { ids: [targetId] },
+      });      showAlert("삭제되었습니다.");
       setSelectedSchedule(null);
       window.location.reload();
     } catch (err) {

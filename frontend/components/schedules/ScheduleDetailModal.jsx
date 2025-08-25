@@ -96,7 +96,20 @@ export default function ScheduleDetailModal({
 
           <InfoRow label="장소" value={schedule.location || "-"} />
           <InfoRow label="강사" value={schedule.instructor || "-"} />
-          <InfoRow label="정원" value={schedule.total_spots ?? "-"} />
+          {/* ✅ 회차 정보 표시 */}
+{Array.isArray(schedule.sessions) && schedule.sessions.length > 0 ? (
+  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+    {schedule.sessions.map((s, idx) => (
+      <InfoRow
+        key={s.id || idx}
+        label={`(${idx + 1}회차)`}
+        value={`잔여 ${s.remaining_spots ?? "-"}명 / 정원 ${s.total_spots ?? "-"}`}
+      />
+    ))}
+  </div>
+) : (
+  <InfoRow label="모집인원" value={schedule.total_spots ?? "-"} />
+)}
           <InfoRow
   label="기간"
   value={(() => {

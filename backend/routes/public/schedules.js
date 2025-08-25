@@ -208,12 +208,13 @@ router.get("/:id", async (req, res) => {
     
     // ✅ 기간형 회차 목록 동봉
     const [sess] = await pool.execute(
-      `SELECT id, start_date, end_date, start_time, end_time
+      `SELECT id, start_date, end_date, start_time, end_time, total_spots, remaining_spots
        FROM schedule_sessions
        WHERE schedule_id = ?
        ORDER BY start_date, start_time`,
       [id]
     );
+    
     
     return res.json({ success: true, schedule: { ...rows[0], sessions: sess } });
     

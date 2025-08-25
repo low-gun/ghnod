@@ -173,21 +173,20 @@ router.post("/toss/prepare", authenticateToken, async (req, res) => {
       
         await conn.query(
           `INSERT INTO order_items
-             (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [
-            orderId,
-            it.schedule_id,
-            it.schedule_session_id || null,        // ✅ 회차 FK 반영
-            q,
-            u,
-            d,
-            subtotal,
-          ]
+   (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
+ VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+[
+  orderId,
+  it.schedule_id,
+  it.schedule_session_id || null, // ✅ 회차 FK 반영
+  q,
+  p,
+  Number(it.discount_price || 0),
+  subtotal,
+]
+
         );
-      }
-      
-      
+      }   
 
       await conn.commit();
     } catch (e) {
@@ -309,51 +308,89 @@ router.post("/toss/confirm", authenticateToken, async (req, res) => {
       data.approvalNumber ??
       null;
 
-    // 3) DB 반영(트랜잭션)
-    const conn = await db.getConnection();
-    let paymentId;
-    try {
-      await conn.beginTransaction();
+   // 3) DB 반영(트랜잭션)
+const conn = await db.getConnection();
+let paymentId;
+try {
+  await conn.beginTransaction();
 
-      const [payIns] = await conn.query(
-        `INSERT INTO payments
-           (user_id, amount, currency, payment_method, status, approval_code, toss_payment_key, toss_order_id, created_at, updated_at)
-         VALUES (?, ?, 'KRW', ?, '완료', ?, ?, ?, NOW(), NOW())`,
-        [
-          order.user_id,
-          data.totalAmount,
-          payMethod,
-          approvalCode,
-          data.paymentKey,
-          orderIdStr,
-        ]
+  // (a) 주문 아이템 불러오기 (회차 포함)
+  const [items] = await conn.query(
+    `SELECT schedule_id, schedule_session_id, quantity, unit_price
+       FROM order_items
+      WHERE order_id = ?`,
+    [orderId]
+  );
+
+  // (b) 회차별 재고 확인 & 차감
+  for (const it of items) {
+    if (it.schedule_session_id) {
+      // 좌석 행을 잠금
+      const [[row]] = await conn.query(
+        `SELECT remaining_spots 
+           FROM schedule_sessions 
+          WHERE id = ? 
+          FOR UPDATE`,
+        [it.schedule_session_id]
       );
-      paymentId = payIns.insertId;
+      if (!row) throw new Error(`회차 ${it.schedule_session_id} 없음`);
+      if (row.remaining_spots < it.quantity) {
+        throw new Error(`회차 ${it.schedule_session_id} 잔여 부족`);
+      }
 
       await conn.query(
-        `UPDATE orders
-            SET payment_id = ?, order_status = 'paid', payment_method = ?, updated_at = NOW()
+        `UPDATE schedule_sessions
+            SET remaining_spots = remaining_spots - ?
           WHERE id = ?`,
-        [paymentId, payMethod, orderId]
+        [it.quantity, it.schedule_session_id]
       );
+    }
+  }
 
-      if (order.coupon_id) {
-        await conn.query(
-          `UPDATE coupons SET is_used = 1 WHERE id = ? AND user_id = ?`,
-          [order.coupon_id, order.user_id]
-        );
-      }
+  // (c) 결제 레코드 생성
+  const [payIns] = await conn.query(
+    `INSERT INTO payments
+       (user_id, amount, currency, payment_method, status, approval_code, toss_payment_key, toss_order_id, created_at, updated_at)
+     VALUES (?, ?, 'KRW', ?, '완료', ?, ?, ?, NOW(), NOW())`,
+    [
+      order.user_id,
+      data.totalAmount,
+      payMethod,
+      approvalCode,
+      data.paymentKey,
+      orderIdStr,
+    ]
+  );
+  paymentId = payIns.insertId;
 
-      const usedPoint = Number(order.used_point || 0);
-      if (usedPoint > 0) {
-        await conn.query(
-          `INSERT INTO points (user_id, change_type, amount, description, created_at)
-           VALUES (?, '사용', ?, '주문 결제 차감', NOW())`,
-          [order.user_id, usedPoint]
-        );
-      }
+  // (d) 주문 업데이트
+  await conn.query(
+    `UPDATE orders
+        SET payment_id = ?, order_status = 'paid', payment_method = ?, updated_at = NOW()
+      WHERE id = ?`,
+    [paymentId, payMethod, orderId]
+  );
 
-      await conn.commit();
+  // (e) 쿠폰 처리
+  if (order.coupon_id) {
+    await conn.query(
+      `UPDATE coupons SET is_used = 1 WHERE id = ? AND user_id = ?`,
+      [order.coupon_id, order.user_id]
+    );
+  }
+
+  // (f) 포인트 차감
+  const usedPoint = Number(order.used_point || 0);
+  if (usedPoint > 0) {
+    await conn.query(
+      `INSERT INTO points (user_id, change_type, amount, description, created_at)
+       VALUES (?, '사용', ?, '주문 결제 차감', NOW())`,
+      [order.user_id, usedPoint]
+    );
+  }
+
+  await conn.commit();
+
     } catch (e) {
       await conn.rollback();
       throw e;
@@ -445,24 +482,30 @@ router.post("/free-checkout", authenticateToken, async (req, res) => {
       );
       orderId = o.insertId;
 
-      for (const it of items) {
-        const q = Number(it.quantity || 1);
-        const p = Number(it.unit_price || 0);
-        const subtotal = q * p;
-        await conn.query(
-          `INSERT INTO order_items
-             (order_id, schedule_id, quantity, unit_price, discount_price, subtotal, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-          [
-            orderId,
-            it.schedule_id,
-            q,
-            p,
-            Number(it.discount_price || 0),
-            subtotal,
-          ]
-        );
-      }
+      // (A) 회차별 재고 확인 & 차감 (무료결제도 동일하게 처리)
+for (const it of items) {
+  const q = Number(it.quantity || 1);
+  if (it.schedule_session_id) {
+    const [[row]] = await conn.query(
+      `SELECT remaining_spots
+         FROM schedule_sessions
+        WHERE id = ?
+        FOR UPDATE`,
+      [it.schedule_session_id]
+    );
+    if (!row) throw new Error(`회차 ${it.schedule_session_id} 없음`);
+    if (Number(row.remaining_spots) < q) {
+      throw new Error(`회차 ${it.schedule_session_id} 잔여 부족`);
+    }
+    await conn.query(
+      `UPDATE schedule_sessions
+          SET remaining_spots = remaining_spots - ?
+        WHERE id = ?`,
+      [q, it.schedule_session_id]
+    );
+  }
+}
+
 
       const [pmt] = await conn.query(
         `INSERT INTO payments

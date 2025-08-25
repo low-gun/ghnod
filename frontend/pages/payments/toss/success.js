@@ -7,6 +7,20 @@ export default function TossSuccessPage() {
   const firedRef = useRef(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("결제 승인 중입니다...");
+// ✅ 결제 에러 메시지 가독화
+const prettyError = (raw) => {
+  const msg = String(raw || "");
+  if (/잔여\s*부족|좌석\s*부족/.test(msg)) {
+    return "해당 회차의 잔여 좌석이 부족합니다. 다른 회차를 선택하거나 수량을 줄여주세요.";
+  }
+  if (/이미\s*결제\s*완료/.test(msg)) {
+    return "이미 결제 완료된 주문입니다.";
+  }
+  if (/금액\s*불일치|금액\s*검증/.test(msg)) {
+    return "결제 금액 검증에 실패했습니다. 페이지 새로고침 후 다시 시도하세요.";
+  }
+  return msg || "결제 승인 중 오류가 발생했습니다.";
+};
 
   useEffect(() => {
     if (!router.isReady) return;

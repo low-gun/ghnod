@@ -1,4 +1,3 @@
-// ./frontend/components/admin/SchedulesTable.js
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import SearchFilter from "@/components/common/SearchFilter";
@@ -15,7 +14,7 @@ import AdminToolbar from "@/components/common/AdminToolbar";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
 import ToggleSwitch from "@/components/common/ToggleSwitch";
-import SelectableCard from "@/components/common/SelectableCard"; // ← 추가
+import SelectableCard from "@/components/common/SelectableCard";
 
 /** ✅ 로컬시간 포맷(UTC 표기 제거) */
 function formatDateLocal(iso) {
@@ -32,6 +31,56 @@ function formatDateLocal(iso) {
   return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 }
 const formatDateOnly = (iso) => (iso ? iso.slice(0, 10) : "-");
+// ✅ 회차별 모집인원 툴팁
+const buildSeatsTooltip = (s) => {
+  const arr = Array.isArray(s.sessions) ? s.sessions : [];
+  if (!arr || arr.length < 2) return ""; // 2회차 이상일 때만 표시
+
+  return arr.map((x, i) => {
+    const total = x.total_spots ?? "-";
+    const remaining = x.remaining_spots ?? "-";
+    return `(${i + 1}회차) 잔여 ${remaining} / 정원 ${total}`;
+  }).join("\n");
+};
+// ✅ 회차 상세 툴팁(2회차 이상일 때 title로 노출)
+const buildSessionsTooltip = (s) => {
+  // sessions_detail 우선 사용 (백엔드에서 내려주는 배열)
+  const arr = Array.isArray(s.sessions_detail)
+    ? s.sessions_detail
+    : (Array.isArray(s.sessions) ? s.sessions : []);
+  if (!arr || arr.length < 2) return ""; // 2회차 이상일 때만 표시
+
+  const fmt = (d) => {
+    if (!d) return "-";
+    const iso = d instanceof Date ? d.toISOString() : String(d);
+    return iso.slice(0, 10);
+  };
+
+  return arr.map((x, i) => {
+    const sd = fmt(x.start_date || x.session_date);
+    const ed = fmt(x.end_date || x.session_date);
+    return `(${i + 1}회차) ${sd} ~ ${ed}`;
+  }).join("\n");
+};
+
+// ✅ 모집인원(잔여/전체) 표기
+const seatsText = (s) => {
+  const total = (typeof s.total_spots === "number") ? s.total_spots : null;
+  const reserved = (typeof s.reserved_spots === "number")
+    ? s.reserved_spots
+    : (typeof s.booked_count === "number" ? s.booked_count : null);
+  const remaining = (typeof s.remaining_spots === "number")
+    ? s.remaining_spots
+    : (total != null && reserved != null ? Math.max(total - reserved, 0) : null);
+
+  if (total == null && reserved == null) return "-";
+  const a = (reserved != null)  ? reserved  : "-";   // 모집된 인원(이미 주문된 수량)
+  const b = (remaining != null) ? remaining : (total!=null && reserved!=null ? Math.max(total-reserved,0) : "-"); // 잔여
+  const c = (total != null)     ? total     : "-";   // 전체(등록 시 총 정원)
+  return `${a}(${b}/${c})`;
+};
+
+
 
 export default function SchedulesTable({
   useExternalToolbar = false,
@@ -39,7 +88,7 @@ export default function SchedulesTable({
   externalSearchQuery,
   externalStartDate,
   externalEndDate,
-  externalInProgress, // ← 추가
+  externalInProgress,
   searchSyncKey,
   onExcelData,
 }) {
@@ -69,11 +118,11 @@ export default function SchedulesTable({
   });
   const [searchField, setSearchField] = useState("title");
   const [searchQuery, setSearchQuery] = useState("");
-  const [tabType, setTabType] = useState("전체"); // (서버 파라미터용)
+  const [tabType, setTabType] = useState("전체"); // 서버 파라미터용
   const [typeOptions, setTypeOptions] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [startDate, setStartDate] = useState(null); // SearchFilter 시그니처 맞춤 (YYYY-MM-DD)
+  const [startDate, setStartDate] = useState(null); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(null);
   const [total, setTotal] = useState(0); // 서버 total
   const [isLoading, setIsLoading] = useState(false);
@@ -92,18 +141,19 @@ export default function SchedulesTable({
       .catch(() => {});
   }, []);
 
-  // ✅ 외부 검색 주입 시 사용할 유효값
+  // ✅ 외부 검색 주입값
   const effSearchField = useExternalToolbar
-    ? (externalSearchType ?? "title")
+    ? externalSearchType ?? "title"
     : searchField;
   const effSearchQuery = useExternalToolbar
-    ? (externalSearchQuery ?? "")
+    ? externalSearchQuery ?? ""
     : searchQuery;
   const effStartDate = useExternalToolbar
-    ? (externalStartDate ?? null)
+    ? externalStartDate ?? null
     : startDate;
-  const effEndDate = useExternalToolbar ? (externalEndDate ?? null) : endDate;
-  // ✅ fetch 트리거 키: 외부 검색이면 버튼 클릭 시 올리는 searchSyncKey만 반응
+  const effEndDate = useExternalToolbar ? externalEndDate ?? null : endDate;
+
+  // ✅ fetch 트리거
   const refreshKey = useMemo(() => {
     if (useExternalToolbar) {
       return [
@@ -112,12 +162,11 @@ export default function SchedulesTable({
         pageSize,
         sortConfig.key,
         sortConfig.direction,
-        searchSyncKey, // 🔑 버튼 클릭
-        externalInProgress, // ← 진행중 플래그 변화에도 반응
+        searchSyncKey, // 버튼 클릭
+        externalInProgress, // 진행중 플래그
       ].join("|");
     }
-
-    // 내부 검색 모드일 땐 기존대로 필드/쿼리/기간에 반응
+    // 내부 검색 모드
     return [
       tabType,
       page,
@@ -137,46 +186,15 @@ export default function SchedulesTable({
     sortConfig.key,
     sortConfig.direction,
     searchSyncKey,
-    // 내부 검색 모드용
+    // 내부 검색 모드
     searchField,
     searchQuery,
     startDate,
     endDate,
   ]);
-  // ✅ 목록 조회
-  const inFlightRef = useRef(false); // ✅ ref로 변경
-  // ✅ 엑셀 내보내기: 헤더/데이터 계산
-  const excelHeaders = [
-    "일정명",
-    "상품명",
-    "유형",
-    "기간",
-    "회차",      // ✅ 추가
-    "강사",
-    "가격",
-    "상태",
-    "등록일시",
-    "수정일시",
-  ];
-  
-  const excelRows = useMemo(
-    () =>
-      schedules.map((s) => ({
-        일정명: s.title,
-        상품명: s.product_title,
-        유형: s.product_type,
-        기간: `${formatDateOnly(s.start_date)} ~ ${formatDateOnly(s.end_date)}`,
-        회차: typeof s.sessions_count === "number" ? s.sessions_count : "", // ✅ 추가
-        강사: s.instructor,
-        가격: s.price != null ? `${Number(s.price).toLocaleString()}원` : "-",
-        상태: s.is_active ? "활성" : "비활성",
-        등록일시: formatDateLocal(s.created_at),
-        수정일시: s.updated_at ? formatDateLocal(s.updated_at) : "-",
-      })),
-    [schedules]
-  );
-  
 
+  // ✅ 목록 조회
+  const inFlightRef = useRef(false);
   const fetchSchedules = async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
@@ -190,15 +208,13 @@ export default function SchedulesTable({
         sortDir: sortConfig.direction,
         searchField: effSearchField,
         searchQuery: effSearchQuery,
-        include_sessions: 1, // ✅ 회차수/최초일/최종일 포함 요청
+        include_sessions: 1, // 회차수/최초/최종 포함
       };
-
       if (effStartDate) params.start_date = effStartDate;
       if (effEndDate) params.end_date = effEndDate;
-
       if (tabType && tabType !== "전체") params.type = tabType;
 
-      // 진행중: 날짜 파라미터 제거 + 서버에 in_progress=1 전달
+      // 진행중: 기간 파라미터 제거 + in_progress=1
       if (useExternalToolbar && externalInProgress) {
         delete params.start_date;
         delete params.end_date;
@@ -224,21 +240,52 @@ export default function SchedulesTable({
       inFlightRef.current = false;
     }
   };
-
   useEffect(() => {
     fetchSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]); // 🔑 외부: 버튼 클릭 시만, 내부: 필드/쿼리/기간 변경 시
-  // ✅ 외부 툴바(페이지 상단) 사용 시, 계산된 엑셀 데이터를 상향 전달
+  }, [refreshKey]);
+
+  // ✅ 엑셀 (원하시면 새 순서/모집인원 포함으로 바꿀 수 있음)
+  const excelHeaders = [
+    "일정명",
+    "상품명",
+    "유형",
+    "기간",
+    "모집인원(잔여/전체)", // ✅ 추가
+    "회차",
+    "강사",
+    "가격",
+    "상태",
+    "등록일시",
+    "수정일시",
+  ];
+  
+  const excelRows = useMemo(
+    () =>
+      schedules.map((s) => ({
+        일정명: s.title,
+        상품명: s.product_title,
+        유형: s.product_type,
+        기간: `${formatDateOnly(s.start_date)} ~ ${formatDateOnly(s.end_date)}`,
+        "모집인원(잔여/전체)": seatsText(s),                  // ✅ 추가 (n(n/n))
+        회차: typeof s.sessions_count === "number" ? s.sessions_count : "",
+        강사: s.instructor,
+        가격: s.price != null ? `${Number(s.price).toLocaleString()}원` : "-",
+        상태: s.is_active ? "활성" : "비활성",
+        등록일시: formatDateLocal(s.created_at),
+        수정일시: s.updated_at ? formatDateLocal(s.updated_at) : "-",
+      })),
+    [schedules]
+  );
+  
   useEffect(() => {
     if (useExternalToolbar && typeof onExcelData === "function") {
       onExcelData({ headers: excelHeaders, data: excelRows });
     }
-    // 🔑 onExcelData는 제외 (부모의 setState는 참조 변경되기 때문에 루프 원인)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useExternalToolbar, excelRows]);
 
-  // ✅ 정렬 (헤더 화살표 제거, 클릭 정렬은 유지)
+  // ✅ 정렬
   const handleSort = (key) => {
     setPage(1);
     setSortConfig((prev) => {
@@ -261,7 +308,11 @@ export default function SchedulesTable({
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    const ok = await showConfirm("정말로 선택한 일정을 삭제하시겠습니까?");
+    const ok = await useGlobalConfirm.getState
+      ? await useGlobalConfirm.getState().showConfirm?.(
+          "정말로 선택한 일정을 삭제하시겠습니까?"
+        )
+      : await showConfirm("정말로 선택한 일정을 삭제하시겠습니까?");
     if (!ok) return;
 
     const ids = Array.from(new Set(selectedIds.map(Number))).filter(
@@ -269,7 +320,7 @@ export default function SchedulesTable({
     );
 
     try {
-      // 1차: DELETE body 방식(백엔드 컨트롤러 deleteSchedules)
+      // 1차: DELETE body 방식
       await api.request({
         method: "delete",
         url: "admin/schedules",
@@ -281,7 +332,7 @@ export default function SchedulesTable({
       setSelectedIds([]);
       fetchSchedules();
     } catch (e1) {
-      // FK 차단(주문/수료증) → 409 + details 반환
+      // FK 차단 → 409 + details
       if (
         e1?.response?.status === 409 &&
         e1?.response?.data?.code === "HAS_DEPENDENCIES"
@@ -296,19 +347,17 @@ export default function SchedulesTable({
           0
         );
         const lines = ["삭제 불가: 연결된 데이터가 있습니다."];
-
-        // 줄마다 접두사 붙여 좌측정렬 느낌 강화
         if (Number(oc) > 0) lines.push(`• 주문내역: ${oc}건`);
         if (Number(cc) > 0) lines.push(`• 수료증: ${cc}건`);
-
         lines.push("관련 데이터를 먼저 정리한 후 삭제하세요.");
-
         showAlert(lines.join("\n"));
         return;
       }
-      // 폴백: 쿼리스트링 방식 (서버가 body 미수용일 경우)
+      // 2차: 쿼리스트링 방식
       try {
-        await api.delete("admin/schedules", { params: { ids: ids.join(",") } });
+        await api.delete("admin/schedules", {
+          params: { ids: ids.join(",") },
+        });
         showAlert("삭제되었습니다.");
         setSelectedIds([]);
         fetchSchedules();
@@ -318,11 +367,10 @@ export default function SchedulesTable({
     }
   };
 
-  // ✅ 상단 패널의 "- 삭제" 빠른 작업과 연동 (선택 항목이 있을 때만 동작)
+  // 상단 패널의 단축 삭제 이벤트
   useEffect(() => {
     const handler = () => {
       if (!selectedIds || selectedIds.length === 0) return;
-      // 기존 삭제 로직 재사용
       (async () => {
         await handleDeleteSelected();
       })();
@@ -335,8 +383,7 @@ export default function SchedulesTable({
         window.removeEventListener("schedules:deleteSelected", handler);
       }
     };
-    // selectedIds 변동 시 최신 선택 상태 반영
-  }, [selectedIds]);
+  }, [selectedIds]); // 최신 선택 상태 반영
 
   const handleToggleActive = async (id, currentValue) => {
     try {
@@ -360,7 +407,7 @@ export default function SchedulesTable({
     setTabType("전체");
   };
 
-  // ✅ 페이징 (서버 total 기준)
+  // ✅ 페이징
   const totalPages = useMemo(
     () => Math.ceil((total || 0) / pageSize),
     [total, pageSize]
@@ -369,7 +416,7 @@ export default function SchedulesTable({
   // ========== 렌더 ==========
   return (
     <div>
-      {/* 상단 툴바 (공통 컴포넌트) — 외부 툴바 사용 시 렌더링 생략 */}
+      {/* 상단 툴바 */}
       {!useExternalToolbar && (
         <AdminToolbar>
           <div className="toolbar-left">
@@ -500,9 +547,10 @@ export default function SchedulesTable({
                       checked={isAllChecked}
                     />
                   </th>
-                  <th className="admin-th" style={{ width: "70px" }}>
-                    No
-                  </th>
+                  <th className="admin-th" style={{ width: "70px" }}>No</th>
+
+                  {/* 순서: 썸네일 → 일정명 → 강사 → 기간 → 모집인원 → 가격 → 상품명 → 유형 → 등록일시 → 수정일시 → 상태 */}
+                  <th className="admin-th" style={{ width: "80px" }}>썸네일</th>
                   <th
                     className="admin-th"
                     style={{ width: "260px" }}
@@ -510,8 +558,34 @@ export default function SchedulesTable({
                   >
                     일정명
                   </th>
-                  <th className="admin-th" style={{ width: "80px" }}>
-                    썸네일
+                  <th
+                    className="admin-th"
+                    style={{ width: "110px" }}
+                    onClick={() => handleSort("instructor")}
+                  >
+                    강사
+                  </th>
+                  <th
+                    className="admin-th"
+                    style={{ width: "170px" }}
+                    onClick={() => handleSort("start_date")}
+                  >
+                    기간
+                  </th>
+                  <th
+  className="admin-th"
+  style={{ width: "130px", lineHeight: 1.2 }}
+  onClick={() => handleSort("seats_remaining")}   // ✅ 잔여 기준 정렬
+>
+  모집인원<br/>(잔여/전체)
+</th>
+
+                  <th
+                    className="admin-th"
+                    style={{ width: "110px" }}
+                    onClick={() => handleSort("price")}
+                  >
+                    가격
                   </th>
                   <th
                     className="admin-th"
@@ -529,27 +603,6 @@ export default function SchedulesTable({
                   </th>
                   <th
                     className="admin-th"
-                    style={{ width: "160px" }}
-                    onClick={() => handleSort("start_date")}
-                  >
-                    기간
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "110px" }}
-                    onClick={() => handleSort("instructor")}
-                  >
-                    강사
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "110px" }}
-                    onClick={() => handleSort("price")}
-                  >
-                    가격
-                  </th>
-                  <th
-                    className="admin-th"
                     style={{ width: "150px" }}
                     onClick={() => handleSort("created_at")}
                   >
@@ -562,15 +615,14 @@ export default function SchedulesTable({
                   >
                     수정일시
                   </th>
-                  <th className="admin-th" style={{ width: "90px" }}>
-                    상태
-                  </th>
+                  <th className="admin-th" style={{ width: "90px" }}>상태</th>
                 </tr>
               </thead>
 
               <tbody>
                 {schedules.map((s, idx) => {
                   const rowNo = (page - 1) * pageSize + (idx + 1);
+                  const sessionsCount = Number(s.sessions_count || 0);
                   return (
                     <tr
                       key={s.id}
@@ -578,9 +630,10 @@ export default function SchedulesTable({
                         backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
                         borderBottom: "1px solid #eee",
                         opacity: s.is_active ? 1 : 0.4,
-                        height: 80,
+                        height: "auto", // ✅ 고정 높이 해제
                       }}
                     >
+                      {/* 체크박스 / No */}
                       <td className="admin-td" style={{ width: "50px" }}>
                         <input
                           type="checkbox"
@@ -588,10 +641,35 @@ export default function SchedulesTable({
                           onChange={(e) => toggleOne(s.id, e.target.checked)}
                         />
                       </td>
-
                       <td className="admin-td" style={{ width: "70px" }}>
                         {rowNo}
                       </td>
+
+                      {/* 썸네일 */}
+                      <td className="admin-td" style={{ width: "80px" }}>
+                        {s.thumbnail || s.image_url || s.product_image ? (
+                          <img
+                            src={
+                              s.thumbnail || s.image_url || s.product_image
+                            }
+                            alt="일정 썸네일"
+                            style={{
+                              width: 60,
+                              height: 60,
+                              objectFit: "cover",
+                            }}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div style={thumbEmpty}>
+                            썸네일
+                            <br />
+                            없음
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 일정명 */}
                       <td
                         className="admin-td"
                         style={{ width: "260px", textAlign: "center" }}
@@ -611,49 +689,60 @@ export default function SchedulesTable({
                           {s.title}
                         </span>
                       </td>
-                      <td className="admin-td" style={{ width: "80px" }}>
-                        {s.thumbnail || s.image_url || s.product_image ? (
-                          <img
-                            src={s.thumbnail || s.image_url || s.product_image}
-                            alt="일정 썸네일"
-                            style={{
-                              width: 60,
-                              height: 60,
-                              objectFit: "cover",
-                            }}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div style={thumbEmpty}>
-                            썸네일
-                            <br />
-                            없음
-                          </div>
-                        )}
+
+                      {/* 강사 */}
+                      <td className="admin-td" style={{ width: "110px" }}>
+                        {s.instructor || "-"}
                       </td>
-                      <td className="admin-td" style={{ width: "160px" }}>
-                        {s.product_title ?? "-"}
-                      </td>
-                      <td className="admin-td" style={{ width: "120px" }}>
-                        {s.product_type ?? "-"}
-                      </td>
-                      <td className="admin-td" style={{ width: "160px" }}>
-  <div>
-    {formatDateOnly(s.start_date)} ~ {formatDateOnly(s.end_date)}
-    {typeof s.sessions_count === "number" && s.sessions_count > 0
-      ? ` · ${s.sessions_count}회차`
-      : ""}
-  </div>
+
+                      {/* 기간: 1회차 → 줄바꿈, 2회차 이상 → n회차 + 툴팁 */}
+                      {/* 기간: 1회차 → 줄바꿈, 2회차 이상 → n회차 + 툴팁 (동일) */}
+<td className="admin-td" style={{ width: "170px", whiteSpace: "normal" }}>
+  {sessionsCount <= 1 ? (
+    <div style={{ lineHeight: 1.3 }}>
+      {formatDateOnly(s.start_date)}
+      <br />~{formatDateOnly(s.end_date)}
+    </div>
+  ) : (
+    <span
+      title={buildSessionsTooltip(s) || ""}
+      style={{ display: "inline-block", cursor: "help" }}
+    >
+      {`${sessionsCount}회차`}
+    </span>
+  )}
 </td>
 
-                      <td className="admin-td" style={{ width: "110px" }}>
-                        {s.instructor}
-                      </td>
+{/* 모집인원(잔여/전체) → 2회차 이상이면 n회차 + 툴팁 */}
+<td className="admin-td" style={{ width: "130px" }}>
+  {sessionsCount > 1 ? (
+    <span title={buildSeatsTooltip(s) || ""} style={{ cursor: "help" }}>
+      {`${sessionsCount}회차`}
+    </span>
+  ) : (
+    seatsText(s)
+  )}
+</td>
+
+
+                      {/* 가격 */}
                       <td className="admin-td" style={{ width: "110px" }}>
                         {s.price != null
                           ? `${Number(s.price).toLocaleString()}원`
                           : "-"}
                       </td>
+
+                      {/* 상품명 */}
+                      <td className="admin-td" style={{ width: "160px" }}>
+                        {s.product_title ?? "-"}
+                      </td>
+
+                      {/* 유형 */}
+                      <td className="admin-td" style={{ width: "120px" }}>
+                        {s.product_type ?? "-"}
+                      </td>
+
+                      {/* 등록/수정/상태 */}
                       <td className="admin-td" style={{ width: "150px" }}>
                         {formatDateLocal(s.created_at)}
                       </td>
@@ -677,6 +766,7 @@ export default function SchedulesTable({
               </tbody>
             </table>
           </div>
+
           <PaginationControls
             page={page}
             totalPages={totalPages}
@@ -691,6 +781,7 @@ export default function SchedulesTable({
               const rowNo = (page - 1) * pageSize + (idx + 1);
               const isSelected = selectedIds.includes(s.id);
               const toggleSelected = () => toggleOne(s.id, !isSelected);
+              const sessionsCount = Number(s.sessions_count || 0);
 
               return (
                 <SelectableCard
@@ -718,7 +809,9 @@ export default function SchedulesTable({
                     <div style={{ fontSize: 13, color: "#666" }}>
                       No. {rowNo}
                     </div>
-                    <div style={{ fontSize: 13, color: "#999" }}>S-{s.id}</div>
+                    <div style={{ fontSize: 13, color: "#999" }}>
+                      S-{s.id}
+                    </div>
                   </div>
 
                   {/* 제목(텍스트 링크만 클릭) */}
@@ -731,7 +824,7 @@ export default function SchedulesTable({
                   >
                     <span
                       onClick={(e) => {
-                        e.stopPropagation(); // 카드 선택 토글 방지
+                        e.stopPropagation();
                         router.push(`/admin/schedules/${s.id}`);
                       }}
                       onKeyDown={(e) => {
@@ -746,7 +839,7 @@ export default function SchedulesTable({
                       style={{
                         color: "#0070f3",
                         textDecoration: "none",
-                        cursor: "pointer", // ← 텍스트만 클릭
+                        cursor: "pointer",
                         display: "inline",
                       }}
                     >
@@ -763,7 +856,8 @@ export default function SchedulesTable({
                     }}
                   >
                     {(() => {
-                      const src = s.thumbnail || s.image_url || s.product_image;
+                      const src =
+                        s.thumbnail || s.image_url || s.product_image;
                       const hasThumb = !!src;
                       return (
                         <div>
@@ -776,7 +870,7 @@ export default function SchedulesTable({
                                 height: 88,
                                 objectFit: "cover",
                                 borderRadius: 6,
-                                cursor: "default", // ← 클릭 아님
+                                cursor: "default",
                               }}
                               loading="lazy"
                             />
@@ -794,22 +888,47 @@ export default function SchedulesTable({
                     <div>
                       <div style={cardRow}>
                         <span style={cardLabel}>상품</span>
-                        <span style={cardValue}>{s.product_title || "-"}</span>
+                        <span style={cardValue}>
+                          {s.product_title || "-"}
+                        </span>
                       </div>
                       <div style={cardRow}>
                         <span style={cardLabel}>유형</span>
-                        <span style={cardValue}>{s.product_type || "-"}</span>
+                        <span style={cardValue}>
+                          {s.product_type || "-"}
+                        </span>
                       </div>
                       <div style={cardRow}>
-  <span style={cardLabel}>기간</span>
-  <span style={cardValue}>
-    {formatDateOnly(s.start_date)} ~ {formatDateOnly(s.end_date)}
-    {typeof s.sessions_count === "number" && s.sessions_count > 0
-      ? ` · ${s.sessions_count}회차`
-      : ""}
+                        <span style={cardLabel}>기간</span>
+                        <span
+                          style={cardValue}
+                          title={
+                            sessionsCount >= 2
+                              ? buildSessionsTooltip(s)
+                              : undefined
+                          }
+                        >
+                          {sessionsCount <= 1 ? (
+                            <>
+                              {formatDateOnly(s.start_date)}
+                              <br />~{formatDateOnly(s.end_date)}
+                            </>
+                          ) : (
+                            `${sessionsCount}회차`
+                          )}
+                        </span>
+                      </div>
+
+                      {/* 모집인원 */}
+                      <div style={cardRow}>
+  <span style={cardLabel}>모집</span>
+  <span
+    style={{ ...cardValue, cursor: sessionsCount > 1 ? "help" : "default" }}
+    title={sessionsCount > 1 ? buildSeatsTooltip(s) : undefined}
+  >
+    {sessionsCount > 1 ? `${sessionsCount}회차` : seatsText(s)}
   </span>
 </div>
-
                       <div style={cardRow}>
                         <span style={cardLabel}>강사</span>
                         <span style={cardValue}>{s.instructor || "-"}</span>
@@ -831,10 +950,15 @@ export default function SchedulesTable({
                       <div style={cardRow}>
                         <span style={cardLabel}>수정</span>
                         <span style={cardValue}>
-                          {s.updated_at ? formatDateLocal(s.updated_at) : "-"}
+                          {s.updated_at
+                            ? formatDateLocal(s.updated_at)
+                            : "-"}
                         </span>
                       </div>
-                      <div style={cardRow} onClick={(e) => e.stopPropagation()}>
+                      <div
+                        style={cardRow}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <span style={cardLabel}>상태</span>
                         <ToggleSwitch
                           checked={!!s.is_active}
