@@ -48,8 +48,9 @@ export default function FollowupPage() {
   const filteredSchedules = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     return schedules.filter((s) => {
-      const isPast = new Date(s.start_date) < today;
-      if (!showPast && isPast) return false;
+      const scheduleEnd = s.end_date ? new Date(s.end_date) : new Date(s.start_date);
+const isPast = scheduleEnd < today;
+if (!showPast && isPast) return false;
 
       if (searchType === "전체" || searchType === "교육명") {
         return s.title?.toLowerCase().includes(keyword);
@@ -58,9 +59,14 @@ export default function FollowupPage() {
         const selectedStart = dateRange.startDate.toDate?.() || dateRange.startDate;
         const selectedEndRaw = dateRange.endDate.toDate?.() || dateRange.endDate;
         const selectedEnd = new Date(selectedEndRaw.getTime() + 86400000 - 1);
+      
         const scheduleStart = new Date(s.start_date);
-        return scheduleStart >= selectedStart && scheduleStart <= selectedEnd;
+        const scheduleEnd = s.end_date ? new Date(s.end_date) : new Date(s.start_date);
+      
+        // 겹침 조건: 일정시작 <= 선택끝 && 일정끝 >= 선택시작
+        return scheduleStart <= selectedEnd && scheduleEnd >= selectedStart;
       }
+      
       return true;
     });
   }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);

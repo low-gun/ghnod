@@ -76,6 +76,10 @@ router.get(
   "/items",
   optionalAuthenticate,
   (req, res, next) => {
+    // 👇 진단용: 실제 서버가 받은 헤더 확인
+    console.log("📥 [GET /cart/items] headers.x-guest-token:", req.headers["x-guest-token"]);
+    console.log("📥 [GET /cart/items] authorization:", req.headers.authorization);
+
     if (req.query.excludeBuyNow === "true") {
       req.excludeBuyNow = true;
     }
@@ -83,6 +87,7 @@ router.get(
   },
   cartController.getCartItems
 );
+
 router.post("/items", optionalAuthenticate, (req, res, next) => {
   console.log("📥 [POST /cart/items] body:", req.body); // ✅ 요청 로그 추가
 

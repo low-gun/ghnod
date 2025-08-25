@@ -99,11 +99,10 @@ axiosInstance.interceptors.request.use(
         isGuest = true;
       }
 
-      if (guestToken && isGuest) {
-        config.headers["x-guest-token"] = guestToken;
-      } else {
-        delete config.headers["x-guest-token"];
+      if (guestToken) {
+        config.headers["x-guest-token"] = guestToken;  // 로그인 여부 관계없이 항상 보냄
       }
+      
     }
 
     // 전역 로딩바 (스킵 아닌 경우만)

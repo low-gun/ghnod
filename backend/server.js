@@ -119,10 +119,11 @@ app.use("/api/user", loadRouter("./routes/user"));
 app.use("/api/mypage", loadRouter("./routes/mypage"));
 app.use("/api/orders", loadRouter("./routes/order"));
 app.use("/api/cart", loadRouter("./routes/cart"));
+app.use("/api/education/schedules", loadRouter("./routes/public/schedules"));
 app.use("/api/education", loadRouter("./routes/userSchedules"));
 app.use("/api/auth", loadRouter("./routes/auth"));
-app.use("/api/education/schedules", loadRouter("./routes/public/schedules"));
 app.use("/api", loadRouter("./routes/productReviews"));
+
 app.use("/api/upload", loadRouter("./routes/upload"));
 console.log("✅ API 라우터 등록 완료");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

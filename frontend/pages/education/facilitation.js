@@ -25,14 +25,24 @@ export default function FacilitationPage() {
   ], []);
 
   // fetchSchedules useCallback
+  // (수정 후)
   const fetchSchedules = useCallback(async ({ queryKey }) => {
     const [_key, type, sort, order] = queryKey;
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${type}&sort=${sort}&order=${order}`,
-      { credentials: "include" }
-    );
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${encodeURIComponent(type)}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;
+    const res = await fetch(url, { credentials: "include" });
+  
+    if (res.status === 404) {
+      // 컨트롤러가 “결과 없음”을 404로 반환하는 현재 정책 대응
+      return { schedules: [] };
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`fetchSchedules failed: ${res.status} ${res.statusText} ${text}`);
+    }
     return res.json();
   }, []);
+  
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["schedules", type, sort, order],

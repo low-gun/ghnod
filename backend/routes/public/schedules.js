@@ -39,14 +39,15 @@ router.get("/public", serverTiming, async (req, res) => {
     // ✅ 필요한 컬럼만 SELECT (전송량↓)
     let query = `
       SELECT
-        s.id,
-        s.title,
-        s.start_date,
-        s.end_date,
-        p.type  AS type,
-        p.title AS product_title
-      FROM schedules s
-      JOIN products p ON s.product_id = p.id
+  s.id,
+  s.title,
+  s.start_date,
+  s.end_date,
+  COALESCE(s.image_url, p.image_url) AS image_url,  -- ✅ 추가
+  p.type  AS type,
+  p.title AS product_title
+FROM schedules s
+JOIN products p ON s.product_id = p.id
       WHERE p.category = '교육'
         AND s.status = 'open'
         AND s.is_active = 1

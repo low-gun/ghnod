@@ -21,6 +21,39 @@ import {
 import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import { useGlobalAlert } from "@/stores/globalAlert";
 
+function formatRangeWithWeekday(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameDay = start.toDateString() === end.toDateString();
+
+  const fmtYMD = new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const fmtMD = new Intl.DateTimeFormat("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+  });
+  const fmtW = new Intl.DateTimeFormat("ko-KR", { weekday: "short" });
+
+  const startYmd = fmtYMD.format(start); // "2025. 8. 18."
+  const startW = fmtW.format(start);     // "월"
+  const endW = fmtW.format(end);         // "수"
+
+  if (sameDay) {
+    return `${startYmd} (${startW})`;
+  }
+
+  const startStr = `${startYmd} (${startW})`;
+  const endStr = sameYear
+    ? `${fmtMD.format(end)} (${endW})`   // "8. 27. (수)"
+    : `${fmtYMD.format(end)} (${endW})`;  // "2026. 1. 5. (월)"
+
+  return `${startStr} ~ ${endStr}`;
+}
+
 export default function EducationScheduleDetailPage() {
   const router = useRouter();
   const { refreshCart } = useCartContext();
@@ -328,7 +361,7 @@ useEffect(() => {
           {type}
         </span>
       </div>
-
+  
       {/* ✅ 반응형 히어로 섹션 */}
       <div className="hero">
         {/* 썸네일 */}
@@ -341,7 +374,7 @@ useEffect(() => {
             />
           </div>
         </div>
-
+  
         {/* 우측 정보 패널 */}
         <div className="right">
           {/* 카테고리 + 상태 배지 */}
@@ -358,7 +391,7 @@ useEffect(() => {
               {schedule?.is_active ? "판매중" : "마감"}
             </span>
           </div>
-
+  
           {/* 타이틀 + 공유 */}
           <div className="titleRow">
             <h1 className="title">{schedule.title}</h1>
@@ -367,31 +400,29 @@ useEffect(() => {
                 <Share2 size={16} color="#555" />
               </button>
               <button
-  onClick={handleShareKakao}
-  aria-label="카카오톡 공유"
-  title="카카오톡 공유"
-  className="kakaoBtn"
->
-  {/* 말풍선 채움(다크브라운) */}
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      d="M12 3C7.03 3 3 6.2 3 10c0 2.47 1.76 4.63 4.4 5.78l-.47 3.22 3.05-2.02c.63.09 1.28.13 1.94.13 4.97 0 9-3.2 9-7s-4.03-7-9-7z"
-      fill="#3C1E1E"
-    />
-  </svg>
-</button>
-
+                onClick={handleShareKakao}
+                aria-label="카카오톡 공유"
+                title="카카오톡 공유"
+                className="kakaoBtn"
+              >
+                {/* 말풍선 채움(다크브라운) */}
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 3C7.03 3 3 6.2 3 10c0 2.47 1.76 4.63 4.4 5.78l-.47 3.22 3.05-2.02c.63.09 1.28.13 1.94.13 4.97 0 9-3.2 9-7s-4.03-7-9-7z"
+                    fill="#3C1E1E"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
-
+  
           {/* 가격 */}
           <p className="price">{Number(unitPrice * quantity).toLocaleString()}원</p>
-
+  
           {schedule?.description && (
-  <p className="desc lineClamp">{schedule.description}</p>
-)}
-
-
+            <p className="desc lineClamp">{schedule.description}</p>
+          )}
+  
           {/* 회차 선택 */}
           {sessionsCount > 1 && (
             <div className="sessionCard">
@@ -422,26 +453,24 @@ useEffect(() => {
                   </span>
                 </div>
               </div>
-
+  
               {useDropdown ? (
                 <select
                   value={selectedSessionId ?? ""}
-                  onChange={(e) => setSelectedSessionId(Number(e.target.value))}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSelectedSessionId(v === "" ? null : Number(v));
+                  }}
                   className="sessionSelect"
                 >
                   {sessionsCount > 1 && !selectedSessionId && <option value="">회차를 선택하세요</option>}
                   {sessionsArr.map((s, idx) => {
                     const sid = s.id || s.session_id || idx;
-                    const startStr = new Date(s.start_date).toLocaleDateString();
-                    const endStr = new Date(s.end_date).toLocaleDateString();
-                    const sameDay =
-                      new Date(s.start_date).toDateString() === new Date(s.end_date).toDateString();
-                    const dateLabel = sameDay ? startStr : `${startStr} ~ ${endStr}`;
+                    const dateLabel = formatRangeWithWeekday(s.start_date, s.end_date);
                     return (
                       <option key={sid} value={sid}>
-  {`(${idx + 1}회차) ${dateLabel} ─ ${s.remaining_spots ?? 0}명 남음 / 정원 ${s.total_spots ?? 0}명`}
-</option>
-
+                        {`(${idx + 1}회차) ${dateLabel} ─ 잔여 ${s.remaining_spots ?? 0}명(총원 ${s.total_spots ?? 0}명)`}
+                      </option>
                     );
                   })}
                 </select>
@@ -449,35 +478,31 @@ useEffect(() => {
                 <div className="sessionList">
                   {sessionsArr.map((s, idx) => {
                     const sid = s.id || s.session_id || idx;
-                    const startStr = new Date(s.start_date).toLocaleDateString();
-                    const endStr = new Date(s.end_date).toLocaleDateString();
-                    const sameDay =
-                      new Date(s.start_date).toDateString() === new Date(s.end_date).toDateString();
-                    const label = sameDay ? startStr : `${startStr} ~ ${endStr}`;
+                    const label = formatRangeWithWeekday(s.start_date, s.end_date);
                     const isSelected = selectedSessionId === sid;
+  
                     return (
                       <label key={sid} className={`sessionItem ${isSelected ? "selected" : ""}`}>
-  <input
-    type="radio"
-    name="session"
-    checked={isSelected}
-    onChange={() => setSelectedSessionId(sid)}
-  />
-  <span className="sessionIdx">{`(${idx + 1}회차)`}</span>
-  <span className="sessionDate">{label}</span>
-  {/* 모집 현황 아이콘 + 텍스트 */}
-  <span className="sessionSeats">
-    <Users size={14} style={{ marginRight: 4, color: "#555" }} />
-    {s.remaining_spots ?? 0}명 남음 / 정원 {s.total_spots ?? 0}명
-  </span>
-</label>
-
+                        <input
+                          type="radio"
+                          name="session"
+                          checked={isSelected}
+                          onChange={() => setSelectedSessionId(sid)}
+                        />
+                        <span className="sessionIdx">{`(${idx + 1}회차)`}</span>
+                        <span className="sessionDate">{label}</span>
+                        <span className="sessionSeats">
+                          <Users size={14} style={{ marginRight: 4, color: "#555" }} />
+                          잔여 {s.remaining_spots ?? 0}명(총원 {s.total_spots ?? 0}명)
+                        </span>
+                      </label>
                     );
                   })}
                 </div>
               )}
             </div>
           )}
+  
 
           {/* 정보 카드 */}
           <div className="infoCard">
@@ -491,17 +516,16 @@ useEffect(() => {
                         const sess = (schedule.sessions || []).find(
                           (s) => (s.id || s.session_id) === selectedSessionId
                         );
-                        const sStart = new Date(sess?.start_date || schedule.start_date);
-                        const sEnd = new Date(sess?.end_date || schedule.end_date);
-                        const sameDay = sStart.toDateString() === sEnd.toDateString();
-                        const base = sameDay
-                          ? sStart.toLocaleDateString()
-                          : `${sStart.toLocaleDateString()} ~ ${sEnd.toLocaleDateString()}`;
+                        const base = formatRangeWithWeekday(
+                          sess?.start_date || schedule.start_date,
+                          sess?.end_date || schedule.end_date
+                        );
                         const hours =
                           Number(schedule?.lecture_hours) > 0
                             ? ` (전체 ${Number(schedule.lecture_hours)}시간)`
                             : "";
                         return base + hours;
+                        
                       })(),
                       icon: <Calendar size={16} />,
                     },
@@ -509,28 +533,28 @@ useEffect(() => {
               { label: "장소", value: schedule.location || "-", icon: <MapPin size={16} /> },
               { label: "강사", value: schedule.instructor || "-", icon: <User size={16} /> },
               {
-                label: "모집",
-                value: (() => {
-                  // 선택된 회차 찾기 (다회차일 경우)
-                  const sess = (schedule.sessions || []).find(
-                    (s) => (s.id || s.session_id) === selectedSessionId
-                  );
-              
-                  if (sessionsCount > 1 && sess) {
-                    // 다회차 → 선택된 회차 기준
-                    const total = Number(sess.total_spots ?? 0);
-                    const remaining = Number(sess.remaining_spots ?? Math.max(total - (sess.reserved_spots ?? 0), 0));
-                    return `잔여 ${remaining}명(총원 ${total}명)`;
-                  } else {
-                    // 단회차 → schedule 단위 기준
-                    const total = Number(schedule.total_spots ?? 0);
-                    const remaining = Number(schedule.remaining_spots ?? Math.max(total - (schedule.reserved_spots ?? 0), 0));
-                    return `잔여 ${remaining}명(총원 ${total}명)`;
-                  }
-                })(),
-                icon: <Users size={16} />,
-              },
-              
+  label: "모집",
+  value: (() => {
+    // 선택된 회차 찾기 (다회차일 경우)
+    const sess = (schedule.sessions || []).find(
+      (s) => (s.id || s.session_id) === selectedSessionId
+    );
+
+    if (sessionsCount > 1 && sess) {
+      // 다회차 → 선택된 회차 기준
+      const total = Number(sess.total_spots ?? 0);
+      const remaining = Number(sess.remaining_spots ?? Math.max(total - (sess.reserved_spots ?? 0), 0));
+      return `잔여 ${remaining}명(총원 ${total}명)`;
+    } else {
+      // 단회차 → schedule 단위 기준
+      const total = Number(schedule.total_spots ?? 0);
+      const remaining = Number(schedule.remaining_spots ?? Math.max(total - (schedule.reserved_spots ?? 0), 0));
+      return `잔여 ${remaining}명(총원 ${total}명)`;
+    }
+  })(),
+  icon: <Users size={16} />,
+},
+
               
             ].map((item, idx, arr) => (
               <div className="infoRow" key={`${item.label}-${idx}`}>

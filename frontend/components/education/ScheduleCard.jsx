@@ -1,22 +1,106 @@
 import React from "react";
 import { useRouter } from "next/router";
 
+// 전체 회차 범위 계산
+function getScheduleRange(s) {
+  if (Array.isArray(s.sessions) && s.sessions.length > 0) {
+    const starts = s.sessions.map(x => new Date(x.start_date));
+    const ends = s.sessions.map(x => new Date(x.end_date || x.start_date));
+    return {
+      start: new Date(Math.min(...starts)),
+      end: new Date(Math.max(...ends)),
+    };
+  }
+  const start = new Date(s.start_date);
+  const end = new Date(s.end_date || s.start_date);
+  return { start, end };
+}
+
+// 날짜 포맷 (요일 포함, 동일 연도일 때 뒤쪽 연도 생략)
+function formatRangeWithWeekday(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameDay = start.toDateString() === end.toDateString();
+
+  const fmtYMD = new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const fmtMD = new Intl.DateTimeFormat("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+  });
+  const fmtW = new Intl.DateTimeFormat("ko-KR", { weekday: "short" });
+
+  const startYmd = fmtYMD.format(start);
+  const startW = fmtW.format(start);
+  const endW = fmtW.format(end);
+
+  if (sameDay) return `${startYmd} (${startW})`;
+
+  const startStr = `${startYmd} (${startW})`;
+  const endStr = sameYear
+    ? `${fmtMD.format(end)} (${endW})`
+    : `${fmtYMD.format(end)} (${endW})`;
+
+  return `${startStr} ~ ${endStr}`;
+}
+
+// 상태 계산
+function getScheduleStatus(start, end, now = new Date()) {
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+  const todayEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+  if (end < todayStart) return "ended";
+  if (start > todayEnd) return "upcoming";
+  return "ongoing";
+}
+
 export default function ScheduleCard({ schedule, type }) {
   const router = useRouter();
-  const isPast = new Date(schedule.start_date) < new Date();
+  const { start, end } = getScheduleRange(schedule);
+  const status = getScheduleStatus(start, end);
+
+  const badge = {
+    ended: {
+      text: "종료",
+      bg: "#F3F4F6",
+      color: "#6B7280",
+      border: "#E5E7EB",
+    },
+    ongoing: {
+      text: "진행중",
+      bg: "#ECFDF5",
+      color: "#065F46",
+      border: "#A7F3D0",
+    },
+    upcoming: {
+      text: "예정",
+      bg: "#EEF5FF",
+      color: "#1D4ED8",
+      border: "#BFDBFE",
+    },
+  }[status];
 
   const handleClick = () => {
     router.push(`/education/${type}/${schedule.id}`);
-  };
-
-  const formatScheduleDate = (start, end) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const format = (d) =>
-      `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`;
-    return startDate.toDateString() === endDate.toDateString()
-      ? format(startDate)
-      : `${format(startDate)} ~ ${format(endDate)}`;
   };
 
   return (
@@ -33,7 +117,7 @@ export default function ScheduleCard({ schedule, type }) {
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        filter: isPast ? "grayscale(0.1) brightness(0.8)" : "none",
+        filter: status === "ended" ? "grayscale(0.1) brightness(0.85)" : "none",
       }}
     >
       {/* 썸네일 */}
@@ -82,27 +166,26 @@ export default function ScheduleCard({ schedule, type }) {
           >
             {schedule.title}
           </h4>
-          {isPast && (
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: "bold",
-                backgroundColor: "#f3dcdc",
-                color: "#d9534f",
-                padding: "2px 6px",
-                borderRadius: 4,
-                marginLeft: 6,
-                whiteSpace: "nowrap",
-              }}
-            >
-              지난 일정
-            </span>
-          )}
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              backgroundColor: badge.bg,
+              color: badge.color,
+              border: `1px solid ${badge.border}`,
+              padding: "2px 6px",
+              borderRadius: 999,
+              marginLeft: 6,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {badge.text}
+          </span>
         </div>
         <p style={{ margin: "6px 0 0", fontSize: 13, color: "#666" }}>
-          {formatScheduleDate(schedule.start_date, schedule.end_date)}
+          {formatRangeWithWeekday(start, end)}
         </p>
-        {isPast && (
+        {status === "ended" && (
           <p
             style={{
               marginTop: 8,
