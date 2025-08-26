@@ -3,7 +3,6 @@ import { useRef, useState, useEffect } from "react";
 export default function TabProductDetail({ html }) {
   const contentRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
-  const [exceeds, setExceeds] = useState(false);
   const [limitHeight, setLimitHeight] = useState(1200);
 
   // img 태그에 lazy 속성 자동 추가
@@ -14,12 +13,6 @@ export default function TabProductDetail({ html }) {
   useEffect(() => {
     const h = window.innerHeight ? window.innerHeight * 2.5 : 1200;
     setLimitHeight(h);
-
-    if (contentRef.current && contentRef.current.scrollHeight > h) {
-      setExceeds(true);
-    } else {
-      setExceeds(false);
-    }
   }, [html]);
 
   const handleToggle = () => setExpanded((prev) => !prev);
@@ -48,25 +41,23 @@ export default function TabProductDetail({ html }) {
           dangerouslySetInnerHTML={{ __html: processedHtml }}
         />
 
-        {exceeds && (
-          <div style={{ textAlign: "center", marginTop: 36 }}>
-            <button
-              onClick={handleToggle}
-              style={{
-                padding: "8px 18px",
-                fontSize: 14,
-                backgroundColor: "#fff",
-                border: "1px solid #ccc",
-                borderRadius: 20,
-                cursor: "pointer",
-                marginTop: 12,
-                fontWeight: 500,
-              }}
-            >
-              {expanded ? "상품상세 접기 ▲" : "상품상세 더보기 ▼"}
-            </button>
-          </div>
-        )}
+        <div style={{ textAlign: "center", marginTop: 36 }}>
+          <button
+            onClick={handleToggle}
+            style={{
+              padding: "8px 18px",
+              fontSize: 14,
+              backgroundColor: "#fff",
+              border: "1px solid #ccc",
+              borderRadius: 20,
+              cursor: "pointer",
+              marginTop: 12,
+              fontWeight: 500,
+            }}
+          >
+            {expanded ? "상품상세 접기 ▲" : "상품상세 더보기 ▼"}
+          </button>
+        </div>
       </section>
 
       <style jsx global>{`
