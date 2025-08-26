@@ -1,9 +1,10 @@
+// frontend/components/register/RegisterStep2.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import AgreementModal from "@/components/AgreementModal";
 import { useGlobalAlert } from "@/stores/globalAlert";
-import api from "@/lib/api"; // ← 추가 (axios 인스턴스)
+import api from "@/lib/api";
 
 export default function RegisterStep2({
   socialMode = false,
@@ -45,9 +46,10 @@ export default function RegisterStep2({
   error,
   handleErrorClear,
   nameEditable = true,
+  phoneExists, // 📌 여기 추가
 }) {
   const [openModal, setOpenModal] = useState(null);
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showAlert } = useGlobalAlert();
 
   useEffect(() => {
     const saved = localStorage.getItem("registerStep2Form");
@@ -75,6 +77,12 @@ export default function RegisterStep2({
       setIsVerified(true);
     }
   }, [socialMode, phone, socialProvider, setIsVerified]);
+
+  const isSocialPhoneVerified =
+    socialMode &&
+    !!phone &&
+    (socialProvider === "kakao" || socialProvider === "naver");
+
   useEffect(() => {
     // 소셜 자동인증 케이스는 유지
     if (isSocialPhoneVerified) return;
@@ -89,10 +97,6 @@ export default function RegisterStep2({
     setTimeLeft(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phone]);
-  const isSocialPhoneVerified =
-    socialMode &&
-    !!phone &&
-    (socialProvider === "kakao" || socialProvider === "naver");
 
   const isDisabled =
     (phone || "").length < 10 || (hasRequestedCode && timeLeft > 0);
@@ -127,37 +131,60 @@ export default function RegisterStep2({
           required
           className={`login-input${!nameEditable ? " input-disabled" : ""}`}
         />
-        {nameEditable && (
+        {nameEditable && !((username || "").trim()) && (
           <div style={{ color: "#fa5252", fontSize: "12px", marginTop: "4px" }}>
             성함을 입력해 주세요.
           </div>
         )}
 
-        <div className="input-wrap">
-          <input
-            type="tel"
-            placeholder="휴대폰번호"
-            value={formatPhone(phone || "")}
-            onChange={(e) => {
-              if (isSocialPhoneVerified) return;
-              const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
-              setPhone(raw);
-              handleErrorClear();
-            }}
-            required
-            readOnly={isPhoneReadonly || isSocialPhoneVerified}
-            disabled={isVerified || isPhoneReadonly || isSocialPhoneVerified}
-            className={`login-input${isPhoneReadonly || isSocialPhoneVerified ? " input-disabled" : ""}`}
-            style={{ paddingRight: 100 }}
-          />
-          {!isSocialPhoneVerified && (
-            <button
-              type="button"
-              className="verify-btn"
-              onClick={async () => {
-                try {
-                  // 1) 백엔드로 전송 요청
-                  await api.post("/auth/phone/send-code", { phone });
+<div className="input-wrap">
+  <input
+    type="tel"
+    placeholder="휴대폰번호"
+    value={formatPhone(phone || "")}
+    onChange={(e) => {
+      if (isSocialPhoneVerified) return;
+      const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
+      setPhone(raw);
+      handleErrorClear();
+    }}
+    required
+    readOnly={isPhoneReadonly || isSocialPhoneVerified}
+    disabled={isVerified || isPhoneReadonly || isSocialPhoneVerified}
+    className={`login-input${
+      isPhoneReadonly || isSocialPhoneVerified ? " input-disabled" : ""
+    }`}
+    style={{ paddingRight: 100 }}
+  />
+  {/* 📌 추가: 중복된 휴대폰번호일 때 안내문구 */}
+  {phoneExists && (
+    <div
+      style={{
+        color: "#e51b1b",
+        fontSize: "13px",
+        marginTop: "4px",
+        fontWeight: 500,
+      }}
+    >
+      이미 가입된 휴대폰번호입니다.
+    </div>
+  )}
+
+  {!isSocialPhoneVerified && (
+    <button
+      type="button"
+      className="verify-btn"
+      onClick={async () => {
+        try {
+          const rawPhone = (phone || "").replace(/\D/g, "");
+          if (rawPhone.length < 10) {
+            setVerificationError("휴대폰 번호를 정확히 입력해 주세요.");
+            return;
+          }
+          // 1) 백엔드로 전송 요청
+          const { data } = await api.post("/auth/phone/send-code", {
+            phone: rawPhone,
+          });
 
                   // 2) 타이머 시작
                   setShowVerificationInput(true);
@@ -175,20 +202,25 @@ export default function RegisterStep2({
                   }, 1000);
 
                   setVerificationError("");
-                  showAlert("인증번호가 전송되었습니다.");
+                  const channel =
+                    data?.channel === "alimtalk"
+                      ? "알림톡"
+                      : data?.channel === "sms"
+                        ? "문자"
+                        : "알림톡";
+                  showAlert(`인증번호가 ${channel}으로 전송되었습니다.`);
                 } catch (e) {
                   setVerificationError(
                     e?.response?.data?.error || "인증번호 전송 실패"
                   );
                 }
               }}
-              disabled={isDisabled}
-            >
+              disabled={isDisabled || phoneExists}            >
               {!hasRequestedCode
                 ? "인증하기"
                 : timeLeft > 0
-                  ? "전송완료"
-                  : "재전송"}
+                ? "전송완료"
+                : "재전송"}
             </button>
           )}
         </div>
@@ -215,8 +247,9 @@ export default function RegisterStep2({
               className="confirm-btn"
               onClick={async () => {
                 try {
+                  const rawPhone = (phone || "").replace(/\D/g, "");
                   await api.post("/auth/phone/verify-code", {
-                    phone,
+                    phone: rawPhone,
                     code: verificationCode,
                   });
                   setIsVerified(true);
@@ -238,24 +271,23 @@ export default function RegisterStep2({
         )}
 
         {/* 인증 완료 메시지도 일반회원가입에서만 노출 (소셜은 숨김) */}
-        {!socialMode && isVerified && (
-          <div className="verified-message" style={{ marginTop: 8 }}>
-            ✅ 인증이 완료되었습니다.
-          </div>
-        )}
-        {!isSocialPhoneVerified &&
-          showVerificationInput &&
-          (isVerified ? (
-            <div className="verified-message">✅ 인증이 완료되었습니다.</div>
-          ) : verificationError ? (
-            <div className="register-error">{verificationError}</div>
-          ) : (
-            <div className="timer-message">
-              {timeLeft > 0
-                ? `남은 시간: ${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`
-                : "인증 시간이 만료되었습니다."}
-            </div>
-          ))}
+        {/* 인증 메시지: 한 곳에서만 표시 */}
+{!isSocialPhoneVerified &&
+  showVerificationInput &&
+  (isVerified ? (
+    <div className="verified-message" style={{ marginTop: 8 }}>
+      ✅ 인증이 완료되었습니다.
+    </div>
+  ) : verificationError ? (
+    <div className="register-error">{verificationError}</div>
+  ) : (
+    <div className="timer-message">
+      {timeLeft > 0
+        ? `남은 시간: ${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`
+        : "인증 시간이 만료되었습니다."}
+    </div>
+  ))}
+
 
         <input
           type="text"
@@ -354,9 +386,7 @@ export default function RegisterStep2({
             border: 1.5px solid #e3e9fa;
             font-size: 16.2px;
             background: #fafdff;
-            transition:
-              border 0.18s,
-              box-shadow 0.17s;
+            transition: border 0.18s, box-shadow 0.17s;
           }
           .login-input:focus {
             border: 1.8px solid #3577f1;
@@ -378,10 +408,9 @@ export default function RegisterStep2({
           .verify-btn,
           .confirm-btn {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
             top: 25px;
             right: 16px;
+            transform: translateY(-50%);
             font-size: 13px;
             padding: 6px 12px;
             border-radius: 4px;
@@ -389,10 +418,7 @@ export default function RegisterStep2({
             background: #fff;
             color: #3577f1;
             cursor: pointer;
-            transition:
-              background 0.14s,
-              color 0.14s,
-              border 0.14s;
+            transition: background 0.14s, color 0.14s, border 0.14s;
           }
           .verify-btn:disabled,
           .confirm-btn:disabled {
@@ -415,7 +441,7 @@ export default function RegisterStep2({
             color: #e51b1b;
             font-size: 13.5px;
             margin: -6px 0 10px 2px;
-            font-weight: 600;
+            font-weight: 400;
             line-height: 1.7;
           }
           .agreement-section {
@@ -512,7 +538,7 @@ export default function RegisterStep2({
         </button>
       </div>
 
-      {/* 모달: RegisterStep2 내부에서 직접 관리 */}
+      {/* 모달 */}
       {openModal === "terms" && (
         <AgreementModal
           openKey="terms"
