@@ -103,7 +103,7 @@ export default function SchedulesTable({
   const isNarrow = mounted && isTabletOrBelow;
 
 // ✅ 모바일 최초 진입에선 리스트 자동 로드 끔(외부 툴바 사용 시엔 자동 로드 유지)
-const [autoFetchEnabled, setAutoFetchEnabled] = useState(true);
+const [autoFetchEnabled, setAutoFetchEnabled] = useState(useExternalToolbar ? true : false);
 useEffect(() => {
   if (!mounted) return;
   setAutoFetchEnabled(useExternalToolbar ? true : !isTabletOrBelow);
@@ -179,11 +179,11 @@ const [selectedIds, setSelectedIds] = useState([]);
         pageSize,
         sortConfig.key,
         sortConfig.direction,
-        searchSyncKey, // 버튼 클릭
-        externalInProgress, // 진행중 플래그
+        searchSyncKey,
+        externalInProgress,
+        isNarrow,              // ← 추가: 화면 크기 변화 반영
       ].join("|");
     }
-    // 내부 검색 모드
     return [
       tabType,
       page,
@@ -194,6 +194,7 @@ const [selectedIds, setSelectedIds] = useState([]);
       searchQuery,
       startDate,
       endDate,
+      isNarrow,                // ← 추가: 화면 크기 변화 반영
     ].join("|");
   }, [
     useExternalToolbar,
@@ -203,66 +204,70 @@ const [selectedIds, setSelectedIds] = useState([]);
     sortConfig.key,
     sortConfig.direction,
     searchSyncKey,
-    // 내부 검색 모드
     searchField,
     searchQuery,
     startDate,
     endDate,
+    isNarrow,                  // ← 의존성에도 추가
   ]);
+  
 
   // ✅ 목록 조회
-  const inFlightRef = useRef(false);
-  const fetchSchedules = async () => {
-    if (inFlightRef.current) return;
-    inFlightRef.current = true;
-    try {
-      setIsLoading(true);
-      setLoadError("");
-      const params = {
-        pageSize,
-        page,
-        sortKey: sortConfig.key,
-        sortDir: sortConfig.direction,
-        searchField: effSearchField,
-        searchQuery: effSearchQuery,
-        include_sessions: !isNarrow ? 1 : 0, // 데스크톱만 세션 상세 포함
-      };
-      
-      if (effStartDate) params.start_date = effStartDate;
-      if (effEndDate) params.end_date = effEndDate;
-      if (tabType && tabType !== "전체") params.type = tabType;
+  const abortRef = useRef(null);
 
-      // 진행중: 기간 파라미터 제거 + in_progress=1
-      if (useExternalToolbar && externalInProgress) {
-        delete params.start_date;
-        delete params.end_date;
-        params.in_progress = 1;
-      }
+const fetchSchedules = async (signal) => {
+  try {
+    setIsLoading(true);
+    setLoadError("");
+    const params = {
+      pageSize,
+      page,
+      sortKey: sortConfig.key,
+      sortDir: sortConfig.direction,
+      searchField: effSearchField,
+      searchQuery: effSearchQuery,
+      include_sessions: !isNarrow ? 1 : 0, // 데스크톱만 세션 상세 포함
+    };
+    
+    if (effStartDate) params.start_date = effStartDate;
+    if (effEndDate) params.end_date = effEndDate;
+    if (tabType && tabType !== "전체") params.type = tabType;
 
-      const res = await api.get("admin/schedules", { params });
-      if (res.data?.success) {
-        setSchedules(res.data.schedules || []);
-        const t =
-          res.data.total ??
-          res.data.totalCount ??
-          res.data.pagination?.total ??
-          (Array.isArray(res.data.schedules) ? res.data.schedules.length : 0);
-        setTotal(Number(t) || 0);
-      } else {
-        setLoadError("일정 목록을 불러오지 못했습니다.");
-      }
-    } catch {
-      setLoadError("일정 목록 조회 실패");
-    } finally {
-      setIsLoading(false);
-      inFlightRef.current = false;
+    // 진행중: 기간 파라미터 제거 + in_progress=1
+    if (useExternalToolbar && externalInProgress) {
+      delete params.start_date;
+      delete params.end_date;
+      params.in_progress = 1;
     }
-  };
+
+    const res = await api.get("admin/schedules", { params, signal });
+    if (res.data?.success) {
+      setSchedules(res.data.schedules || []);
+      const t =
+        res.data.total ??
+        res.data.totalCount ??
+        res.data.pagination?.total ??
+        (Array.isArray(res.data.schedules) ? res.data.schedules.length : 0);
+      setTotal(Number(t) || 0);
+    } else {
+      setLoadError("일정 목록을 불러오지 못했습니다.");
+    }
+  } catch (e) {
+    if (e?.name === "CanceledError" || e?.name === "AbortError") return;
+    setLoadError("일정 목록 조회 실패");
+  } finally {
+    setIsLoading(false);
+  }
+};
   useEffect(() => {
-    if (!autoFetchEnabled) return;   // ✅ 자동 로드가 아닐 땐 대기
-    fetchSchedules();
+    if (!mounted || !autoFetchEnabled) return;
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    fetchSchedules(controller.signal);
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, autoFetchEnabled]);
+  }, [mounted, refreshKey, autoFetchEnabled]);
   // ✅ 엑셀 (원하시면 새 순서/모집인원 포함으로 바꿀 수 있음)
   const excelHeaders = [
     "일정명",
@@ -327,12 +332,8 @@ const [selectedIds, setSelectedIds] = useState([]);
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    const ok = await useGlobalConfirm.getState
-      ? await useGlobalConfirm.getState().showConfirm?.(
-          "정말로 선택한 일정을 삭제하시겠습니까?"
-        )
-      : await showConfirm("정말로 선택한 일정을 삭제하시겠습니까?");
-    if (!ok) return;
+    const ok = await showConfirm("정말로 선택한 일정을 삭제하시겠습니까?");
+if (!ok) return;
 
     const ids = Array.from(new Set(selectedIds.map(Number))).filter(
       (n) => n > 0
