@@ -30,6 +30,8 @@ export default function TiptapEditor({
         codeBlock: true,
         blockquote: true,
         horizontalRule: true,
+        underline: false,
+        link: false,
       }),
       Underline,
       Link.configure({

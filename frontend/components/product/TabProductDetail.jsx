@@ -4,19 +4,25 @@ export default function TabProductDetail({ html }) {
   const contentRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
   const [exceeds, setExceeds] = useState(false);
+  const [limitHeight, setLimitHeight] = useState(1200);
 
-  // img 태그에 loading="lazy" 자동 추가
+  // img 태그에 lazy 속성 자동 추가
   const processedHtml = (html || "<p>상세 설명이 없습니다.</p>")
-    // img: loading/decoding 없을 때만 추가
     .replace(/<img\b(?![^>]*\bloading=)/g, '<img loading="lazy" decoding="async" ')
-    // a: target/rel 없을 때 새 창 + 보안 속성
     .replace(/<a\b(?![^>]*\btarget=)/g, '<a target="_blank" rel="noopener noreferrer" ');
 
   useEffect(() => {
-    if (contentRef.current && contentRef.current.scrollHeight > 1200) {
+    const h = window.innerHeight ? window.innerHeight * 2.5 : 1200;
+    setLimitHeight(h);
+
+    if (contentRef.current && contentRef.current.scrollHeight > h) {
       setExceeds(true);
+    } else {
+      setExceeds(false);
     }
   }, [html]);
+
+  const handleToggle = () => setExpanded((prev) => !prev);
 
   return (
     <>
@@ -35,28 +41,29 @@ export default function TabProductDetail({ html }) {
           ref={contentRef}
           className="detail-box"
           style={{
-            maxHeight: expanded ? "none" : 1200,
+            maxHeight: expanded ? "none" : limitHeight,
             overflow: expanded ? "visible" : "hidden",
             transition: "max-height 0.3s ease",
           }}
           dangerouslySetInnerHTML={{ __html: processedHtml }}
         />
 
-        {!expanded && exceeds && (
+        {exceeds && (
           <div style={{ textAlign: "center", marginTop: 36 }}>
             <button
-              onClick={() => setExpanded(true)}
+              onClick={handleToggle}
               style={{
-                padding: "6px 12px",
-                fontSize: 13,
+                padding: "8px 18px",
+                fontSize: 14,
                 backgroundColor: "#fff",
                 border: "1px solid #ccc",
-                borderRadius: 4,
+                borderRadius: 20,
                 cursor: "pointer",
                 marginTop: 12,
+                fontWeight: 500,
               }}
             >
-              더보기 ▼
+              {expanded ? "상품상세 접기 ▲" : "상품상세 더보기 ▼"}
             </button>
           </div>
         )}

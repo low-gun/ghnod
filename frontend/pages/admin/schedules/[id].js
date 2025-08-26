@@ -152,9 +152,9 @@ export default function ScheduleFormPage() {
         title: selected?.title || "",
         price: selected?.price ?? "",
         description: selected?.description || "",
-        detail: selected?.detail || "",
-        image_url: selected?.image_url || "",
+        // detail, image_url 은 기존 값 유지
       }));
+      
       setPriceInput(fmtKRW(selected?.price ?? ""));
       return;
     }
