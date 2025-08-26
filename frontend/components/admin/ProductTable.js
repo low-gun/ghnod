@@ -9,7 +9,11 @@ import { formatPrice } from "@/lib/format";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
-import ProductSchedulesModal from "@/components/admin/ProductSchedulesModal";
+import dynamic from "next/dynamic";
+const ProductSchedulesModal = dynamic(
+  () => import("@/components/admin/ProductSchedulesModal"),
+  { ssr: false }
+);
 import SelectableCard from "@/components/common/SelectableCard"; // ← 추가
 
 /** 로컬시간 포맷 (YYYY-MM-DD HH:mm:ss) */
@@ -46,9 +50,26 @@ export default function ProductTable({
 }) {
   const isTabletOrBelow = useIsTabletOrBelow();
   const mounted = true; // CSR 환경에서만 사용하면 충분
+// ✅ rows를 먼저 선언(아래에서 참조하므로)
+const rows = useMemo(() => products || [], [products]);
 
-  // ✅ rows를 먼저 선언(아래에서 참조하므로)
-  const rows = useMemo(() => products || [], [products]);
+// ✅ 파생값 캐싱: 코드/제목/유형/가격문구/활성여부/썸네일
+const processedRows = useMemo(() => {
+  return rows.map((p) => {
+    const code = p.code || `P-${p.id}`;
+    const title = p.title ?? p.name ?? "(제목 없음)";
+    const type = p.type ?? "-";
+    const priceText = `${formatPrice(Number(p.price ?? 0))}원`;
+    const isActive = Number(p.is_active) === 1;
+    const thumb =
+      p.image_url ||
+      p.thumbnail_url ||
+      p.thumb_url ||
+      (Array.isArray(p.images) ? p.images[0] : "") ||
+      "";
+    return { ...p, code, title, type, priceText, isActive, thumb };
+  });
+}, [rows]);
   // ✅ 엑셀 헤더/데이터 구성
   // ✅ excelHeaders는 불변 객체(useMemo로 고정)
   const excelHeaders = useMemo(
@@ -270,32 +291,20 @@ export default function ProductTable({
 
   // 🔹 모바일/태블릿 카드 렌더러
   const renderCards = () =>
-    rows.map((p, idx) => {
-      const code = p.code || `P-${p.id}`;
-      const title = p.title ?? p.name ?? "(제목 없음)";
-      const type = p.type ?? "-";
-      const price = formatPrice(Number(p.price ?? 0));
-      const isActive = Number(p.is_active) === 1;
-      const thumb =
-      p.image_url ||
-      p.thumbnail_url ||
-      p.thumb_url ||
-      (Array.isArray(p.images) ? p.images[0] : "") ||
-      "";
-    
-
+    processedRows.map((p, idx) => {
+      const isSelected = selectedIds.includes(p.id);
       return (
         <SelectableCard
           key={p.id}
-          selected={selectedIds.includes(p.id)}
-          onToggle={() => toggleOne(p.id, !selectedIds.includes(p.id))}
+          selected={isSelected}
+          onToggle={() => toggleOne(p.id, !isSelected)}
           style={{
             border: "1px solid #eee",
             borderRadius: 10,
             padding: 12,
             background: "#fff",
             boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-            opacity: isActive ? 1 : 0.6,
+            opacity: p.isActive ? 1 : 0.6,
           }}
         >
           {/* 상단 체크 + 코드 + 토글 */}
@@ -310,26 +319,26 @@ export default function ProductTable({
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <input
                 type="checkbox"
-                checked={selectedIds.includes(p.id)}
+                checked={isSelected}
                 onChange={(e) => toggleOne(p.id, e.target.checked)}
                 onClick={(e) => e.stopPropagation()} // 카드 토글 방지
               />
               <div style={{ fontSize: 13, color: "#666" }}>
-                #{idx + 1} · {code}
+                #{idx + 1} · {p.code}
               </div>
             </div>
-
+  
             <div onClick={(e) => e.stopPropagation()}>
               <ToggleSwitch
                 size="sm"
-                checked={isActive}
+                checked={p.isActive}
                 onChange={() => handleToggleActive(p)}
                 onLabel="ON"
                 offLabel="OFF"
               />
             </div>
           </div>
-
+  
           {/* 제목(텍스트만 클릭) */}
           <div style={{ marginTop: 6, color: "#222", cursor: "default" }}>
             <span
@@ -352,10 +361,10 @@ export default function ProductTable({
                 textDecoration: "none",
               }}
             >
-              {title}
+              {p.title}
             </span>
           </div>
-
+  
           {/* 썸네일 + 라벨/값 */}
           <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
             <div
@@ -366,9 +375,9 @@ export default function ProductTable({
                 flex: "0 0 72px",
               }}
             >
-              {thumb ? (
+              {p.thumb ? (
                 <Image
-                  src={thumb}
+                  src={p.thumb}
                   alt="thumbnail"
                   fill
                   style={{
@@ -395,15 +404,15 @@ export default function ProductTable({
                 </div>
               )}
             </div>
-
+  
             <div style={{ flex: 1, fontSize: 14, color: "#374151" }}>
-              <Row label="유형" value={type} />
-              <Row label="가격" value={`${price}원`} />
+              <Row label="유형" value={p.type} />
+              <Row label="가격" value={p.priceText} />
               <Row label="등록일시" value={formatDateLocal(p.created_at)} />
               <Row label="수정일시" value={formatDateLocal(p.updated_at)} />
             </div>
           </div>
-
+  
           {/* 액션 */}
           <div
             style={{
@@ -415,10 +424,7 @@ export default function ProductTable({
             }}
           >
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => setScheduleProductId(p.id)}
-                style={ghostBtn}
-              >
+              <button onClick={() => setScheduleProductId(p.id)} style={ghostBtn}>
                 일정
               </button>
               <button onClick={() => onEdit?.(p)} style={primaryBtn}>
@@ -429,6 +435,7 @@ export default function ProductTable({
         </SelectableCard>
       );
     });
+  
 
   // 🔹 데스크톱 테이블 렌더러
   const renderTable = () => (
@@ -462,142 +469,77 @@ export default function ProductTable({
         </thead>
 
         <tbody>
-          {rows.map((p, idx) => {
-            const code = p.code || `P-${p.id}`;
-            const title = p.title ?? p.name ?? "(제목 없음)";
-            const type = p.type ?? "-";
-            const price = formatPrice(Number(p.price ?? 0));
-            const isActive = Number(p.is_active) === 1;
-            const thumb =
-  p.image_url ||
-  p.thumbnail_url ||
-  p.thumb_url ||
-  (Array.isArray(p.images) ? p.images[0] : "") ||
-  "";
+  {processedRows.map((p, idx) => {
+    return (
+      <tr
+        key={p.id}
+        style={{
+          backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+          opacity: p.isActive ? 1 : 0.6,
+        }}
+      >
+        {/* 체크박스/No/코드 */}
+        <td className="admin-td">
+          <input
+            type="checkbox"
+            checked={selectedIds.includes(p.id)}
+            onChange={(e) => toggleOne(p.id, e.target.checked)}
+          />
+        </td>
+        <td className="admin-td">{idx + 1}</td>
+        <td className="admin-td" title={p.code} style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+          {p.code}
+        </td>
 
-            return (
-              <tr
-                key={p.id}
-                style={{
-                  backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                  opacity: isActive ? 1 : 0.6,
-                }}
-              >
-                {/* 체크박스(개별) */}
-                <td className="admin-td">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(p.id)}
-                    onChange={(e) => toggleOne(p.id, e.target.checked)}
-                  />
-                </td>
+        {/* 썸네일 */}
+        <td className="admin-td">
+  {p.thumb ? (
+    <div style={{ position:"relative", width:48, height:48 }}>
+      <Image
+        src={p.thumb}
+        alt="thumbnail"
+        fill
+        sizes="48px"
+        priority={false}
+        style={{ objectFit:"cover", borderRadius:6, border:"1px solid #eee" }}
+      />
+    </div>
+  ) : (
+    <div style={{ width:48, height:48, borderRadius:6, border:"1px dashed #ddd",
+                  display:"inline-flex", alignItems:"center", justifyContent:"center",
+                  color:"#aaa", fontSize:12 }}>
+      썸네일<br/>없음
+    </div>
+  )}
+</td>
 
-                {/* No */}
-                <td className="admin-td">{idx + 1}</td>
 
-                {/* 코드 */}
-                <td
-                  className="admin-td"
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                  title={code}
-                >
-                  {code}
-                </td>
+        {/* 상품명/유형/가격/등록/수정 */}
+        <td className="admin-td" title={p.title} style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+          <span role="link" tabIndex={0} onClick={() => onEdit?.(p)}
+            onKeyDown={(e)=>{ if(e.key==="Enter"||e.key===" ") onEdit?.(p); }}
+            style={{ color:"#0070f3", cursor:"pointer", textDecoration:"none" }}>
+            {p.title}
+          </span>
+        </td>
+        <td className="admin-td">{p.type}</td>
+        <td className="admin-td">{p.priceText}</td>
+        <td className="admin-td">{formatDateLocal(p.created_at)}</td>
+        <td className="admin-td">{formatDateLocal(p.updated_at)}</td>
+        <td className="admin-td">
+          <button style={ghostBtn} onClick={() => setScheduleProductId(p.id)}>일정</button>
+        </td>
 
-                {/* 썸네일 */}
-                <td className="admin-td">
-                  {thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-<img
-  src={thumb}
-  alt="thumbnail"
-  width="48"
-  height="48"
-  loading="lazy"
-  style={{
-    objectFit: "cover",
-    borderRadius: 6,
-    border: "1px solid #eee",
-  }}
-/>
+        {/* 상태 토글 */}
+        <td className="admin-td">
+          <ToggleSwitch size="sm" checked={p.isActive}
+            onChange={() => handleToggleActive(p)} onLabel="ON" offLabel="OFF" />
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
 
-                  ) : (
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 6,
-                        border: "1px dashed #ddd",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#aaa",
-                        fontSize: 12,
-                      }}
-                    >
-                      썸네일<br></br>없음
-                    </div>
-                  )}
-                </td>
-
-                <td
-                  className="admin-td"
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                  title={title}
-                >
-                  <span
-                    role="link"
-                    tabIndex={0}
-                    onClick={() => onEdit?.(p)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") onEdit?.(p);
-                    }}
-                    style={{
-                      color: "#0070f3",
-                      cursor: "pointer",
-                      textDecoration: "none",
-                    }} // 텍스트만 클릭
-                  >
-                    {title}
-                  </span>
-                </td>
-
-                {/* 유형 / 가격 / 등록/수정 / 일정 */}
-                <td className="admin-td">{type}</td>
-                <td className="admin-td">{price}원</td>
-                <td className="admin-td">{formatDateLocal(p.created_at)}</td>
-                <td className="admin-td">{formatDateLocal(p.updated_at)}</td>
-                <td className="admin-td">
-                  <button
-                    style={ghostBtn}
-                    onClick={() => setScheduleProductId(p.id)}
-                  >
-                    일정
-                  </button>
-                </td>
-
-                {/* 상태 토글 */}
-                <td className="admin-td">
-                  <ToggleSwitch
-                    size="sm"
-                    checked={isActive}
-                    onChange={() => handleToggleActive(p)}
-                    onLabel="ON"
-                    offLabel="OFF"
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
       </table>
     </div>
   );

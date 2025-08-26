@@ -13,12 +13,33 @@ import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
 import ToggleSwitch from "@/components/common/ToggleSwitch";
 import SelectableCard from "@/components/common/SelectableCard"; // ← 추가
-import UserPointModal from "@/components/admin/UserPointModal";
-import UserCouponModal from "@/components/admin/UserCouponModal";
-import UserInquiryModal from "@/components/admin/UserInquiryModal";
-import CouponTemplateModal from "@/components/admin/CouponTemplateModal";
-import UserPointGrantModal from "@/components/admin/UserPointGrantModal";
-import UserCouponGrantModal from "@/components/admin/UserCouponGrantModal";
+import dynamic from "next/dynamic";
+
+const UserPointModal = dynamic(
+  () => import("@/components/admin/UserPointModal"),
+  { ssr: false }
+);
+const UserCouponModal = dynamic(
+  () => import("@/components/admin/UserCouponModal"),
+  { ssr: false }
+);
+const UserInquiryModal = dynamic(
+  () => import("@/components/admin/UserInquiryModal"),
+  { ssr: false }
+);
+const CouponTemplateModal = dynamic(
+  () => import("@/components/admin/CouponTemplateModal"),
+  { ssr: false }
+);
+const UserPointGrantModal = dynamic(
+  () => import("@/components/admin/UserPointGrantModal"),
+  { ssr: false }
+);
+const UserCouponGrantModal = dynamic(
+  () => import("@/components/admin/UserCouponGrantModal"),
+  { ssr: false }
+);
+
 
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
@@ -373,45 +394,18 @@ export default function UserTable({
       );
       setSummariesMap(summaryMap);
 
-      // 동일 조건으로 목록도 호출해서 phone 등 보강 (여기도 같은 params!)
-      const listRes = await api.get("admin/users", { params, signal });
-      if (!listRes.data?.success)
-        throw new Error("list fetch for phone failed");
-
-      const phoneMap = Object.fromEntries(
-        (listRes.data.users || []).map((u) => [Number(u.id), u.phone])
-      );
-      const roleMap = Object.fromEntries(
-        (listRes.data.users || []).map((u) => [Number(u.id), u.role])
-      );
-      const createdMap = Object.fromEntries(
-        (listRes.data.users || []).map((u) => [Number(u.id), u.created_at])
-      );
-      const updatedMap = Object.fromEntries(
-        (listRes.data.users || []).map((u) => [Number(u.id), u.updated_at])
-      );
-
-      setUsers((prev) => {
-        const prevMap = Object.fromEntries(prev.map((u) => [u.id, u]));
-        return summaries.map((s) => ({
+      setUsers(() =>
+        summaries.map((s) => ({
           id: s.id,
           username: s.username,
           email: s.email,
-          phone: s.phone ?? phoneMap[s.id] ?? prevMap[s.id]?.phone ?? "",
-          role: roleMap[s.id] ?? prevMap[s.id]?.role ?? "", // 🔧 보강
+          phone: s.phone ?? "",
+          role: s.role ?? "",
           is_deleted: s.is_deleted,
-          created_at:
-            s.created_at ??
-            createdMap[s.id] ??
-            prevMap[s.id]?.created_at ??
-            null, // 🔧 보강
-          updated_at:
-            s.updated_at ??
-            updatedMap[s.id] ??
-            prevMap[s.id]?.updated_at ??
-            null, // 🔧 보강
-        }));
-      });
+          created_at: s.created_at ?? null,
+          updated_at: s.updated_at ?? null,
+        }))
+      );
 
       const tc =
         typeof res.data.totalCount === "number"

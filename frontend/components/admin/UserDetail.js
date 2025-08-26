@@ -64,13 +64,14 @@ export default function UserDetail({ user, onClose, onUpdate }) {
         if (data.success) {
           showAlert("수정이 완료되었습니다.");
           setTimeout(() => {
-            onUpdate({ ...user, ...formData });
-            onClose();
-            window.location.reload();
+            onUpdate({ ...user, ...formData });  // ✅ 부모(UserTable) 상태 업데이트
+            onClose();                           // ✅ 모달 닫기
+            // ✂️ window.location.reload() 제거
           }, 2000);
         } else {
           showAlert("수정에 실패했습니다.");
         }
+        
       })
       .catch(() => showAlert("서버와 연결할 수 없습니다."));
   };

@@ -1,7 +1,8 @@
 // frontend/components/admin/PaymentsTable.js
 import { useState, useMemo, useEffect } from "react";
 import api from "@/lib/api";
-import PaymentDetailModal from "./PaymentDetailModal";
+import dynamic from "next/dynamic";
+const PaymentDetailModal = dynamic(() => import("./PaymentDetailModal"), { ssr: false });
 import { formatPrice } from "@/lib/format";
 import "react-datepicker/dist/react-datepicker.css";
 import PaginationControls from "@/components/common/PaginationControls";
@@ -228,23 +229,40 @@ export default function PaymentsTable({
     () => Math.ceil(totalCount / itemsPerPage),
     [totalCount, itemsPerPage]
   );
-  const pagedPayments = payments;
+
+  // ① 계산 캐싱: 렌더링에서 반복 호출되는 계산을 한 번만 수행
+  const processedPayments = useMemo(() => {
+    return payments.map((p) => {
+      const { coupon, point, total } = getDiscountParts(p);
+      const statusKey = getStatusKey(p);
+      return {
+        ...p,
+        coupon,
+        point,
+        discountTotal: total,
+        statusKey,
+        statusLabel: getStatusLabel(p),
+        integrity: getIntegrityStatus(p),
+        methodLabel: getMethodLabel(p),
+        canRefund: statusKey === "paid",
+      };
+    });
+  }, [payments]);
+
+  // ② 렌더에서 사용할 현재 페이지 데이터 (서버 페이징이므로 그대로 사용)
+  const pagedPayments = processedPayments;
 
   // 체크박스
   const isAllChecked =
     pagedPayments.length > 0 &&
-    pagedPayments.every(
-      (p) =>
-        (p.payment_id ?? p.id) && selectedIds.includes(p.payment_id ?? p.id)
-    );
+    pagedPayments.every((p) => {
+      const id = p.payment_id ?? p.id;
+      return id && selectedIds.includes(id);
+    });
   const toggleAll = (checked) =>
-    setSelectedIds(
-      checked ? pagedPayments.map((p) => p.payment_id ?? p.id) : []
-    );
+    setSelectedIds(checked ? pagedPayments.map((p) => p.payment_id ?? p.id) : []);
   const toggleOne = (id, checked) =>
-    setSelectedIds((prev) =>
-      checked ? [...prev, id] : prev.filter((x) => x !== id)
-    );
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
 
   // 데이터 호출
   const fetchPayments = async () => {
@@ -269,33 +287,28 @@ export default function PaymentsTable({
 
       // 날짜 검색이면 start_date / end_date도 전송
       const rangeParams = {};
-      if (
-        externalSearchType === "created_at" &&
-        typeof externalSearchQuery === "string"
-      ) {
+      if (externalSearchType === "created_at" && typeof externalSearchQuery === "string") {
         const [start, end] = externalSearchQuery.split("|");
         if (start) rangeParams.start_date = start; // "YYYY-MM-DD"
         if (end) rangeParams.end_date = end; // "YYYY-MM-DD"
       }
 
       const params = { ...baseParams, ...compatParams, ...rangeParams };
-      console.log("🔎[PaymentsTable] fetch params:", JSON.stringify(params));
+      // ✅ 상세 로그 제거 → 필요한 경우만 간단히 확인
+      console.log("🔎[PaymentsTable] fetch params", params);
 
       const res = await api.get("admin/payments", { params });
 
-      console.log(
-        "✅[PaymentsTable] result:",
-        JSON.stringify({
-          success: res?.data?.success,
-          totalCount: res?.data?.totalCount,
-          received: Array.isArray(res?.data?.payments)
-            ? res.data.payments.length
-            : 0,
-        })
-      );
+      // ✅ 결과 요약만 출력
+      console.log("✅[PaymentsTable] result:", {
+        success: res?.data?.success,
+        totalCount: res?.data?.totalCount,
+        received: Array.isArray(res?.data?.payments) ? res.data.payments.length : 0,
+      });
 
       if (res.data?.success) {
-        setPayments(res.data.payments || []);
+        const list = res.data.payments || [];
+        setPayments(list);
         setTotalCount(res.data.totalCount || 0);
 
         // 상단 카드 동기화
@@ -306,8 +319,23 @@ export default function PaymentsTable({
           });
         }
 
-        // 엑셀
+        // 엑셀: 동일 로직으로 현 응답 기준의 가공 데이터를 만들어 전달
         if (typeof onExcelData === "function") {
+          const processedRows = list.map((p) => {
+            const { coupon, point, total } = getDiscountParts(p);
+            const statusKey = getStatusKey(p);
+            return {
+              ...p,
+              coupon,
+              point,
+              discountTotal: total,
+              statusLabel: getStatusLabel(p),
+              integrity: getIntegrityStatus(p),
+              methodLabel: getMethodLabel(p),
+              canRefund: statusKey === "paid",
+            };
+          });
+
           onExcelData({
             headers: [
               "주문번호",
@@ -318,18 +346,18 @@ export default function PaymentsTable({
               "결제수단",
               "결제일시",
               "상태",
-              "정합성", // ✅ 추가
+              "정합성",
             ],
-            data: (res.data.payments || []).map((p) => ({
+            data: processedRows.map((p) => ({
               주문번호: `pay-${p.payment_id ?? p.id}`,
               사용자: p.username || "",
               수량: p.total_quantity ?? 0,
               결제금액: p.amount ?? 0,
-              할인적용: getDiscountParts(p).total,
-              결제수단: getMethodLabel(p),
+              할인적용: p.discountTotal,
+              결제수단: p.methodLabel,
               결제일시: formatDateLocal(p.created_at),
-              상태: getStatusLabel(p),
-              정합성: getIntegrityStatus(p), // ✅ 추가
+              상태: p.statusLabel,
+              정합성: p.integrity,
             })),
           });
         }
@@ -379,10 +407,6 @@ export default function PaymentsTable({
           <div style={{ display: "grid", gap: 12 }}>
             {pagedPayments.map((p) => {
               const id = p.payment_id ?? p.id;
-              const { coupon, point, total } = getDiscountParts(p);
-              const statusKey = getStatusKey(p);
-              const statusLabel = getStatusLabel(p);
-              const canRefund = statusKey === "paid";
               return (
                 <div
                   key={id}
@@ -394,9 +418,7 @@ export default function PaymentsTable({
                     boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
                   }}
                 >
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 10 }}
-                  >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(id)}
@@ -410,20 +432,22 @@ export default function PaymentsTable({
                     <span
                       style={cardValue}
                       title={
-                        total > 0
-                          ? `쿠폰할인 ${formatPrice(coupon)}원\n포인트 ${formatPrice(point)}원`
+                        p.discountTotal > 0
+                          ? `쿠폰할인 ${formatPrice(p.coupon)}원\n포인트 ${formatPrice(p.point)}원`
                           : ""
                       }
                       onClick={() =>
                         setOpenDiscountId((prev) => (prev === id ? null : id))
                       }
                     >
-                      {total > 0 ? `-${formatPrice(total)}원` : "미적용"}
+                      {p.discountTotal > 0
+                        ? `-${formatPrice(p.discountTotal)}원`
+                        : "미적용"}
                     </span>
                   </div>
 
                   {/* 클릭 시에만 분해 내역 노출 */}
-                  {openDiscountId === id && total > 0 && (
+                  {openDiscountId === id && p.discountTotal > 0 && (
                     <div
                       style={{
                         marginTop: 6,
@@ -433,10 +457,8 @@ export default function PaymentsTable({
                         lineHeight: 1.4,
                       }}
                     >
-                      {coupon > 0 && (
-                        <div>쿠폰할인 {formatPrice(coupon)}원</div>
-                      )}
-                      {point > 0 && <div>포인트 {formatPrice(point)}원</div>}
+                      {p.coupon > 0 && <div>쿠폰할인 {formatPrice(p.coupon)}원</div>}
+                      {p.point > 0 && <div>포인트 {formatPrice(p.point)}원</div>}
                     </div>
                   )}
 
@@ -445,22 +467,22 @@ export default function PaymentsTable({
                     <span
                       style={{
                         ...cardValue,
-                        ...(getIntegrityStatus(p) !== "OK"
-                          ? { color: "#b91c1c", fontWeight: 600 } // 빨간 강조
+                        ...(p.integrity !== "OK"
+                          ? { color: "#b91c1c", fontWeight: 600 }
                           : {}),
                       }}
                       title={
-                        getIntegrityStatus(p) !== "OK"
-                          ? getIntegrityStatus(p) === "NO_ORDER"
+                        p.integrity !== "OK"
+                          ? p.integrity === "NO_ORDER"
                             ? "결제는 있으나 연결된 주문 없음 (NO_ORDER)"
                             : "주문은 있으나 아이템 없음 (NO_ITEMS)"
                           : ""
                       }
                     >
                       {p.total_quantity ?? 0}개
-                      {getIntegrityStatus(p) !== "OK" && (
+                      {p.integrity !== "OK" && (
                         <span style={{ marginLeft: 6, fontSize: 12 }}>
-                          ({getIntegrityStatus(p)})
+                          ({p.integrity})
                         </span>
                       )}
                     </span>
@@ -473,32 +495,25 @@ export default function PaymentsTable({
 
                   <div style={cardRow}>
                     <span style={cardLabel}>결제수단</span>
-                    <span style={cardValue}>{getMethodLabel(p)}</span>
+                    <span style={cardValue}>{p.methodLabel}</span>
                   </div>
                   <div style={cardRow}>
                     <span style={cardLabel}>결제일시</span>
-                    <span style={cardValue}>
-                      {formatDateLocal(p.created_at)}
-                    </span>
+                    <span style={cardValue}>{formatDateLocal(p.created_at)}</span>
                   </div>
 
                   <div style={cardRow}>
                     <span style={cardLabel}>상태</span>
                     <span style={cardValue}>
-                      <StatusBadge status={statusKey}>
-                        {statusLabel}
-                      </StatusBadge>
+                      <StatusBadge status={p.statusKey}>{p.statusLabel}</StatusBadge>
                     </span>
                   </div>
 
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <button
-                      onClick={() => setModalPaymentId(id)}
-                      style={primaryBtn}
-                    >
+                    <button onClick={() => setModalPaymentId(id)} style={primaryBtn}>
                       상세
                     </button>
-                    {canRefund && (
+                    {p.canRefund && (
                       <button
                         onClick={() => handleRefund(p.order_id)}
                         style={dangerBtn}
@@ -597,10 +612,6 @@ export default function PaymentsTable({
               <tbody>
                 {pagedPayments.map((p, idx) => {
                   const id = p.payment_id ?? p.id;
-                  const { coupon, point, total } = getDiscountParts(p);
-                  const statusKey = getStatusKey(p);
-                  const statusLabel = getStatusLabel(p);
-                  const canRefund = statusKey === "paid";
                   return (
                     <tr
                       key={id}
@@ -626,22 +637,22 @@ export default function PaymentsTable({
                       <td className="admin-td">
                         <span
                           style={{
-                            ...(getIntegrityStatus(p) !== "OK"
+                            ...(p.integrity !== "OK"
                               ? { color: "#b91c1c", fontWeight: 600 }
                               : {}),
                           }}
                           title={
-                            getIntegrityStatus(p) !== "OK"
-                              ? getIntegrityStatus(p) === "NO_ORDER"
+                            p.integrity !== "OK"
+                              ? p.integrity === "NO_ORDER"
                                 ? "결제는 있으나 연결된 주문 없음 (NO_ORDER)"
                                 : "주문은 있으나 아이템 없음 (NO_ITEMS)"
                               : ""
                           }
                         >
                           {p.total_quantity ?? 0}개
-                          {getIntegrityStatus(p) !== "OK" && (
+                          {p.integrity !== "OK" && (
                             <span style={{ marginLeft: 6, fontSize: 12 }}>
-                              ({getIntegrityStatus(p)})
+                              ({p.integrity})
                             </span>
                           )}
                         </span>
@@ -650,8 +661,8 @@ export default function PaymentsTable({
                       <td className="admin-td">
                         <div
                           title={
-                            total > 0
-                              ? `쿠폰할인 ${formatPrice(coupon)}원\n포인트 ${formatPrice(point)}원`
+                            p.discountTotal > 0
+                              ? `쿠폰할인 ${formatPrice(p.coupon)}원\n포인트 ${formatPrice(p.point)}원`
                               : ""
                           }
                           onClick={() =>
@@ -659,12 +670,14 @@ export default function PaymentsTable({
                               prev === id ? null : id
                             )
                           }
-                          style={{ cursor: total > 0 ? "pointer" : "default" }}
+                          style={{ cursor: p.discountTotal > 0 ? "pointer" : "default" }}
                         >
-                          {total > 0 ? `-${formatPrice(total)}원` : "미적용"}
+                          {p.discountTotal > 0
+                            ? `-${formatPrice(p.discountTotal)}원`
+                            : "미적용"}
                         </div>
 
-                        {openDiscountId === id && total > 0 && (
+                        {openDiscountId === id && p.discountTotal > 0 && (
                           <div
                             style={{
                               marginTop: 6,
@@ -673,24 +686,20 @@ export default function PaymentsTable({
                               lineHeight: 1.4,
                             }}
                           >
-                            {coupon > 0 && (
-                              <div>쿠폰할인 {formatPrice(coupon)}원</div>
+                            {p.coupon > 0 && (
+                              <div>쿠폰할인 {formatPrice(p.coupon)}원</div>
                             )}
-                            {point > 0 && (
-                              <div>포인트 {formatPrice(point)}원</div>
+                            {p.point > 0 && (
+                              <div>포인트 {formatPrice(p.point)}원</div>
                             )}
                           </div>
                         )}
                       </td>
-                      <td className="admin-td">{getMethodLabel(p)}</td>
-                      <td className="admin-td">
-                        {formatDateLocal(p.created_at)}
-                      </td>
+                      <td className="admin-td">{p.methodLabel}</td>
+                      <td className="admin-td">{formatDateLocal(p.created_at)}</td>
 
                       <td className="admin-td">
-                        <StatusBadge status={statusKey}>
-                          {statusLabel}
-                        </StatusBadge>
+                        <StatusBadge status={p.statusKey}>{p.statusLabel}</StatusBadge>
                       </td>
                     </tr>
                   );

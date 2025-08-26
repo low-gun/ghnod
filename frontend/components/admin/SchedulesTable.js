@@ -102,6 +102,12 @@ export default function SchedulesTable({
   useEffect(() => setMounted(true), []);
   const isNarrow = mounted && isTabletOrBelow;
 
+// ✅ 모바일 최초 진입에선 리스트 자동 로드 끔(외부 툴바 사용 시엔 자동 로드 유지)
+const [autoFetchEnabled, setAutoFetchEnabled] = useState(true);
+useEffect(() => {
+  if (!mounted) return;
+  setAutoFetchEnabled(useExternalToolbar ? true : !isTabletOrBelow);
+}, [mounted, isTabletOrBelow, useExternalToolbar]);
   // ✅ 모바일에서 필터 접기/펼치기 (SSR 안정 초기값)
   const [showFilter, setShowFilter] = useState(false);
   useEffect(() => {
@@ -120,8 +126,19 @@ export default function SchedulesTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [tabType, setTabType] = useState("전체"); // 서버 파라미터용
   const [typeOptions, setTypeOptions] = useState([]);
-  const [schedules, setSchedules] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
+  // schedules 상태 선언부 주변
+const [schedules, setSchedules] = useState([]);
+
+// ✅ 파생표시값 캐싱: 렌더마다 seats/tooltip 재계산 방지
+const viewRows = useMemo(() => {
+  return (Array.isArray(schedules) ? schedules : []).map((s) => ({
+    ...s,
+    __seatsText: seatsText(s),               // 예: "3(7/10)" 형태
+    __seatsTooltip: buildSeatsTooltip(s),    // 회차별 잔여/정원 tooltip
+    __sessionsTooltip: buildSessionsTooltip(s), // 회차별 날짜 tooltip
+  }));
+}, [schedules]);
+const [selectedIds, setSelectedIds] = useState([]);
   const [startDate, setStartDate] = useState(null); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(null);
   const [total, setTotal] = useState(0); // 서버 total
@@ -208,8 +225,9 @@ export default function SchedulesTable({
         sortDir: sortConfig.direction,
         searchField: effSearchField,
         searchQuery: effSearchQuery,
-        include_sessions: 1, // 회차수/최초/최종 포함
+        include_sessions: !isNarrow ? 1 : 0, // 데스크톱만 세션 상세 포함
       };
+      
       if (effStartDate) params.start_date = effStartDate;
       if (effEndDate) params.end_date = effEndDate;
       if (tabType && tabType !== "전체") params.type = tabType;
@@ -241,10 +259,10 @@ export default function SchedulesTable({
     }
   };
   useEffect(() => {
+    if (!autoFetchEnabled) return;   // ✅ 자동 로드가 아닐 땐 대기
     fetchSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
-
+  }, [refreshKey, autoFetchEnabled]);
   // ✅ 엑셀 (원하시면 새 순서/모집인원 포함으로 바꿀 수 있음)
   const excelHeaders = [
     "일정명",
@@ -262,12 +280,12 @@ export default function SchedulesTable({
   
   const excelRows = useMemo(
     () =>
-      schedules.map((s) => ({
+      viewRows.map((s) => ({
         일정명: s.title,
         상품명: s.product_title,
         유형: s.product_type,
         기간: `${formatDateOnly(s.start_date)} ~ ${formatDateOnly(s.end_date)}`,
-        "모집인원(잔여/전체)": seatsText(s),                  // ✅ 추가 (n(n/n))
+        "모집인원(잔여/전체)": s.__seatsText,                 // ✅ 캐싱값 사용
         회차: typeof s.sessions_count === "number" ? s.sessions_count : "",
         강사: s.instructor,
         가격: s.price != null ? `${Number(s.price).toLocaleString()}원` : "-",
@@ -275,8 +293,9 @@ export default function SchedulesTable({
         등록일시: formatDateLocal(s.created_at),
         수정일시: s.updated_at ? formatDateLocal(s.updated_at) : "-",
       })),
-    [schedules]
+    [viewRows]
   );
+  
   
   useEffect(() => {
     if (useExternalToolbar && typeof onExcelData === "function") {
@@ -434,6 +453,7 @@ export default function SchedulesTable({
                   setSearchField(field);
                   setSearchQuery(query);
                   setPage(1);
+                  setAutoFetchEnabled(true);  // ✅ 검색 버튼 누르면 그때부터 로드
                 }}
                 searchOptions={[
                   { value: "title", label: "일정명", type: "text" },
@@ -526,11 +546,24 @@ export default function SchedulesTable({
             다시 시도
           </button>
         </div>
-      ) : total === 0 && schedules.length === 0 ? (
-        <div style={emptyBox}>
-          일정이 없습니다. 필터를 변경하거나 검색어를 조정해 보세요.
-        </div>
-      ) : !isNarrow ? (
+) : !autoFetchEnabled ? (
+  // ✅ 모바일 최초 진입: 사용자 요청 시 로드
+  <div style={emptyBox}>
+    목록을 불러오려면 아래 버튼을 누르세요.
+    <div style={{ marginTop: 10 }}>
+      <button
+        style={primaryBtn}
+        onClick={() => setAutoFetchEnabled(true)}
+      >
+        데이터 불러오기
+      </button>
+    </div>
+  </div>
+) : total === 0 && schedules.length === 0 ? (
+  <div style={emptyBox}>
+    일정이 없습니다. 필터를 변경하거나 검색어를 조정해 보세요.
+  </div>
+) : !isNarrow ? (
         // 데스크톱: 테이블
         <>
           <div className="admin-table-wrap" style={{ overflowX: "auto" }}>
@@ -620,7 +653,7 @@ export default function SchedulesTable({
               </thead>
 
               <tbody>
-                {schedules.map((s, idx) => {
+              {viewRows.map((s, idx) => {
                   const rowNo = (page - 1) * pageSize + (idx + 1);
                   const sessionsCount = Number(s.sessions_count || 0);
                   return (
@@ -697,7 +730,7 @@ export default function SchedulesTable({
 
                       {/* 기간: 1회차 → 줄바꿈, 2회차 이상 → n회차 + 툴팁 */}
                       {/* 기간: 1회차 → 줄바꿈, 2회차 이상 → n회차 + 툴팁 (동일) */}
-<td className="admin-td" style={{ width: "170px", whiteSpace: "normal" }}>
+                      <td className="admin-td" style={{ width: "170px", whiteSpace: "normal" }}>
   {sessionsCount <= 1 ? (
     <div style={{ lineHeight: 1.3 }}>
       {formatDateOnly(s.start_date)}
@@ -705,7 +738,7 @@ export default function SchedulesTable({
     </div>
   ) : (
     <span
-      title={buildSessionsTooltip(s) || ""}
+      title={s.__sessionsTooltip || ""}
       style={{ display: "inline-block", cursor: "help" }}
     >
       {`${sessionsCount}회차`}
@@ -713,18 +746,17 @@ export default function SchedulesTable({
   )}
 </td>
 
+
 {/* 모집인원(잔여/전체) → 2회차 이상이면 n회차 + 툴팁 */}
 <td className="admin-td" style={{ width: "130px" }}>
   {sessionsCount > 1 ? (
-    <span title={buildSeatsTooltip(s) || ""} style={{ cursor: "help" }}>
+    <span title={s.__seatsTooltip || ""} style={{ cursor: "help" }}>
       {`${sessionsCount}회차`}
     </span>
   ) : (
-    seatsText(s)
+    s.__seatsText
   )}
 </td>
-
-
                       {/* 가격 */}
                       <td className="admin-td" style={{ width: "110px" }}>
                         {s.price != null
@@ -777,7 +809,7 @@ export default function SchedulesTable({
         // 모바일/태블릿: 카드형
         <>
           <div style={{ display: "grid", gap: 12 }}>
-            {schedules.map((s, idx) => {
+          {viewRows.map((s, idx) => {
               const rowNo = (page - 1) * pageSize + (idx + 1);
               const isSelected = selectedIds.includes(s.id);
               const toggleSelected = () => toggleOne(s.id, !isSelected);
@@ -901,22 +933,19 @@ export default function SchedulesTable({
                       <div style={cardRow}>
                         <span style={cardLabel}>기간</span>
                         <span
-                          style={cardValue}
-                          title={
-                            sessionsCount >= 2
-                              ? buildSessionsTooltip(s)
-                              : undefined
-                          }
-                        >
-                          {sessionsCount <= 1 ? (
-                            <>
-                              {formatDateOnly(s.start_date)}
-                              <br />~{formatDateOnly(s.end_date)}
-                            </>
-                          ) : (
-                            `${sessionsCount}회차`
-                          )}
-                        </span>
+  style={cardValue}
+  title={sessionsCount >= 2 ? s.__sessionsTooltip : undefined}
+>
+  {sessionsCount <= 1 ? (
+    <>
+      {formatDateOnly(s.start_date)}
+      <br />~{formatDateOnly(s.end_date)}
+    </>
+  ) : (
+    `${sessionsCount}회차`
+  )}
+</span>
+
                       </div>
 
                       {/* 모집인원 */}
@@ -924,11 +953,12 @@ export default function SchedulesTable({
   <span style={cardLabel}>모집</span>
   <span
     style={{ ...cardValue, cursor: sessionsCount > 1 ? "help" : "default" }}
-    title={sessionsCount > 1 ? buildSeatsTooltip(s) : undefined}
+    title={sessionsCount > 1 ? s.__seatsTooltip : undefined}
   >
-    {sessionsCount > 1 ? `${sessionsCount}회차` : seatsText(s)}
+    {sessionsCount > 1 ? `${sessionsCount}회차` : s.__seatsText}
   </span>
 </div>
+
                       <div style={cardRow}>
                         <span style={cardLabel}>강사</span>
                         <span style={cardValue}>{s.instructor || "-"}</span>
