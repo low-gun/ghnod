@@ -54,11 +54,21 @@ export default function ProductTable({
 const rows = useMemo(() => products || [], [products]);
 
 // ✅ 파생값 캐싱: 코드/제목/유형/가격문구/활성여부/썸네일
+// ✅ 파생값 캐싱: 코드/제목/유형/가격문구/활성여부/썸네일 (객체 → 문자열 안전화)
 const processedRows = useMemo(() => {
+  const toText = (v, fallback = "-") =>
+    v == null
+      ? fallback
+      : typeof v === "string"
+      ? v
+      : typeof v === "number"
+      ? String(v)
+      : (v?.label ?? v?.name ?? fallback); // 흔한 객체 케이스(label/name) 우선
+
   return rows.map((p) => {
-    const code = p.code || `P-${p.id}`;
-    const title = p.title ?? p.name ?? "(제목 없음)";
-    const type = p.type ?? "-";
+    const code = toText(p.code, `P-${p.id}`);
+    const title = toText(p.title, toText(p.name, "(제목 없음)"));
+    const type = toText(p.type, "-");
     const priceText = `${formatPrice(Number(p.price ?? 0))}원`;
     const isActive = Number(p.is_active) === 1;
     const thumb =
@@ -67,9 +77,11 @@ const processedRows = useMemo(() => {
       p.thumb_url ||
       (Array.isArray(p.images) ? p.images[0] : "") ||
       "";
+
     return { ...p, code, title, type, priceText, isActive, thumb };
   });
 }, [rows]);
+
   // ✅ 엑셀 헤더/데이터 구성
   // ✅ excelHeaders는 불변 객체(useMemo로 고정)
   const excelHeaders = useMemo(
@@ -568,6 +580,13 @@ const processedRows = useMemo(() => {
 
 /* 공통 카드 라벨/값 한 줄 */
 function Row({ label, value }) {
+  const toText = (v) =>
+    v == null
+      ? "-"
+      : typeof v === "string" || typeof v === "number"
+      ? String(v)
+      : v?.label ?? v?.name ?? "-";
+
   return (
     <div
       style={{
@@ -578,13 +597,14 @@ function Row({ label, value }) {
         borderBottom: "1px dashed #f0f0f0",
       }}
     >
-      <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>{label}</span>
+      <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>{toText(label)}</span>
       <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>
-        {value}
+        {toText(value)}
       </span>
     </div>
   );
 }
+
 
 /* 버튼 스타일 */
 const primaryBtn = {
