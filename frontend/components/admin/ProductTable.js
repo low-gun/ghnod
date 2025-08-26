@@ -376,16 +376,18 @@ const processedRows = useMemo(() => {
               }}
             >
               {p.thumb ? (
-                <Image
-                  src={p.thumb}
-                  alt="thumbnail"
-                  fill
-                  style={{
-                    objectFit: "cover",
-                    borderRadius: 8,
-                    border: "1px solid #eee",
-                  }}
-                />
+               <Image
+               src={p.thumb}
+               alt="thumbnail"
+               fill
+               unoptimized
+               style={{
+                 objectFit: "cover",
+                 borderRadius: 8,
+                 border: "1px solid #eee",
+               }}
+             />
+             
               ) : (
                 <div
                   style={{
@@ -496,13 +498,15 @@ const processedRows = useMemo(() => {
   {p.thumb ? (
     <div style={{ position:"relative", width:48, height:48 }}>
       <Image
-        src={p.thumb}
-        alt="thumbnail"
-        fill
-        sizes="48px"
-        priority={false}
-        style={{ objectFit:"cover", borderRadius:6, border:"1px solid #eee" }}
-      />
+  src={p.thumb}
+  alt="thumbnail"
+  fill
+  sizes="48px"
+  priority={false}
+  unoptimized
+  style={{ objectFit:"cover", borderRadius:6, border:"1px solid #eee" }}
+/>
+
     </div>
   ) : (
     <div style={{ width:48, height:48, borderRadius:6, border:"1px dashed #ddd",
