@@ -34,12 +34,28 @@ export default function RegisterStep1({
   }, [password, passwordConfirm, setPasswordConfirmError]);
   return (
     <>
-      <form
-        onSubmit={handleNext}
-        autoComplete="off"
-        className="login-form"
-        id="register-step1-form"
-      >
+    <form
+  onSubmit={(e) => {
+    e.preventDefault();
+    // 기존 값 불러오기
+    const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
+
+    // Step1 값 병합해서 저장
+    const merged = {
+      ...prev,
+      email,
+      password,
+    };
+    localStorage.setItem("registerStep2Form", JSON.stringify(merged));
+
+    // 원래 handleNext 실행
+    handleNext(e);
+  }}
+  autoComplete="off"
+  className="login-form"
+  id="register-step1-form"
+>
+
         <input
           type="text"
           name="fake_email"

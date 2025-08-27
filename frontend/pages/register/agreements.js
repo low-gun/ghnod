@@ -103,13 +103,23 @@ export default function AgreementsPage() {
   type="button"
   className="prev-btn"
   onClick={() => {
-    // 동의값 모두 false로 저장(초기화) 후 step2로 이동
-    localStorage.setItem("registerStep2Form", JSON.stringify({
+    // 기존 값 불러오기
+    const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
+
+    // Step1 값은 유지, Step2 값 초기화 + 약관 false 처리
+    const merged = {
+      ...prev,
+      username: "",    // 이름 초기화
+      phone: "",       // 휴대폰 초기화
+      company: "",
+      department: "",
+      position: "",
       termsAgree: false,
       privacyAgree: false,
       marketingAgree: false,
-      // 필요시 입력값 등 추가
-    }));
+    };
+
+    localStorage.setItem("registerStep2Form", JSON.stringify(merged));
     router.push("/register?step=2");
   }}
 >
@@ -120,19 +130,26 @@ export default function AgreementsPage() {
   type="button"
   className="next-btn"
   onClick={() => {
-    // 체크한 값만 true로 저장 후 step2로 이동
-    localStorage.setItem("registerStep2Form", JSON.stringify({
+    // 기존 값 불러오기
+    const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
+
+    // 기존 입력값은 유지하고, 약관 동의 값만 병합
+    const merged = {
+      ...prev,
       termsAgree: termsChecked,
       privacyAgree: privacyChecked,
       marketingAgree: marketingChecked,
-      // 필요시 입력값 등 추가
-    }));
+    };
+
+    localStorage.setItem("registerStep2Form", JSON.stringify(merged));
     router.push("/register?step=2");
   }}
   disabled={!(termsChecked && privacyChecked)}
 >
   다음
 </button>
+
+
 
 </div>
 
