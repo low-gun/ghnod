@@ -19,8 +19,6 @@ import { useRouter } from "next/router";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import { useContext } from "react";
 import { UserContext } from "@/context/UserContext";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
-
 const MENUS = [
   { label: "내 정보", icon: <User size={18} /> },
   { label: "수강정보", icon: <BookOpen size={18} /> },
@@ -29,7 +27,17 @@ const MENUS = [
   { label: "포인트", icon: <Star size={18} /> },
   { label: "1:1문의", icon: <MessageCircle size={18} /> },
 ];
+const siteUrl =
+  (typeof window !== "undefined" && window.location.origin) ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://ghnod.vercel.app";
 
+const rememberAfterLogout = () => {
+  try {
+    const here = window.location.pathname + window.location.search;
+    sessionStorage.setItem("AFTER_LOGOUT_GO", here);
+  } catch {}
+};
 export default function MyPageMenuDrawer({
   open,
   setOpen,
@@ -39,34 +47,41 @@ export default function MyPageMenuDrawer({
   const isTabletOrBelow = useIsTabletOrBelow();
   const router = useRouter();
   const { logout, user } = useContext(UserContext);
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   if (!isTabletOrBelow) return null;
 
   // 소셜 로그아웃 분기 + 일반 로그아웃
   const handleLogout = async () => {
-    const KAKAO_LOGOUT_URL = `https://kauth.kakao.com/oauth/logout?client_id=${process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY}&logout_redirect_uri=https://YOUR_DOMAIN/logout/callback`;
-    const NAVER_LOGOUT_URL = `https://nid.naver.com/nidlogin.logout?returl=https://ghnod.vercel.app/logout/callback`;
-
+    // 이전 위치 기억
+    rememberAfterLogout();
+  
+    // 소셜 로그아웃 분기
     if (user?.socialProvider === "kakao") {
-      window.location.href = KAKAO_LOGOUT_URL;
+      const restKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+      if (!restKey) {
+        // REST 키 없으면 일반 로그아웃으로 폴백
+        await logout();
+        return;
+      }
+      const redirectUri = `${siteUrl}/logout/callback`;
+      window.location.href =
+        `https://kauth.kakao.com/oauth/logout` +
+        `?client_id=${encodeURIComponent(restKey)}` +
+        `&logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
       return;
     }
+  
     if (user?.socialProvider === "naver") {
-      window.location.href = NAVER_LOGOUT_URL;
+      const returl = `${siteUrl}/logout/callback`;
+      window.location.href =
+        `https://nid.naver.com/nidlogin.logout?returl=${encodeURIComponent(returl)}`;
       return;
     }
-
-    try {
-      await logout();
-      showAlert("로그아웃 되었습니다.");
-      setTimeout(() => {
-        router.push("/login");
-      }, 1000);
-    } catch (error) {
-      showAlert("로그아웃에 실패했습니다.");
-    }
+  
+    // 일반 로그아웃: UserContext.logout 내부에서 서버호출+이동 처리
+    await logout();
   };
+  
 
   return (
     <Drawer anchor="left" open={open} onClose={() => setOpen(false)}>

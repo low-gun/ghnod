@@ -1,13 +1,21 @@
+// frontend/pages/auth/google/callback.js
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert";
+
+// 안전 경로 유틸
+const getSafePath = (p) => {
+  if (!p || typeof p !== "string") return "/";
+  if (p.startsWith("http://") || p.startsWith("https://")) return "/";
+  return p.startsWith("/") ? p : `/${p}`;
+};
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
   const { login } = useUserContext();
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showAlert } = useGlobalAlert();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -15,48 +23,49 @@ export default function GoogleCallbackPage() {
 
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+    if (!code) {
+      router.replace("/login?error=no_code");
+      return;
+    }
 
-    if (!code) return;
+    const autoLogin = localStorage.getItem("autoLogin") === "true";
 
     window.__google_callback_requested = true;
+    // 주소창 정리(쿼리 제거)
     window.history.replaceState({}, document.title, window.location.pathname);
 
-    const autoLogin = localStorage.getItem("autoLogin") === "true"; // 값 읽기
     api
       .post("/auth/google/callback", { code, autoLogin })
       .then((res) => {
         const { accessToken, user, tempToken } = res.data;
-        console.log("[callback] res.data:", res.data);
 
         if (accessToken && user) {
-          console.log("[callback] 기존 유저, 홈 이동");
           login(user, accessToken);
-          if (user.role === "admin") {
-            router.replace("/admin");
+
+          const redirect = getSafePath(router.query.redirect);
+          if (redirect && redirect !== "/") {
+            router.replace(redirect);
+          } else if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back();
           } else {
             router.replace("/");
           }
           return;
         }
+
         if (tempToken) {
-          console.log("[callback] 신규 유저 tempToken:", tempToken);
           router.replace(`/register/social?token=${tempToken}`);
           return;
         }
-        console.log("[callback] 토큰 없음, /login 이동");
+
         router.replace("/login?error=token-missing");
       })
       .catch((err) => {
         const serverMsg = err?.response?.data?.error;
-        console.log("[callback] catch 에러:", err, serverMsg);
-        if (serverMsg) {
-          showAlert(serverMsg);
-          router.replace("/login");
-          return;
-        }
+        if (serverMsg) showAlert(serverMsg);
         router.replace("/login?error=google-fail");
       });
-  }, []);
+  }, []); // 의도적으로 빈 deps
 
-  return null; //
+  return null; // 표시 없음 (자동 처리)
 }

@@ -49,11 +49,23 @@ const getSafePath = (p) => {
 
   // ✅ accessToken 복구 및 자동 요청
   useEffect(() => {
-    if (router.pathname === "/login") return;
-
+    // ✅ refresh-token 시도를 건너뛸 경로(콜백/로그인/로그아웃 콜백)
+    const skipRefresh = [
+      "/login",
+      "/logout/callback",
+      "/auth/google/callback",
+      "/auth/kakao/callback",
+      "/auth/naver/callback",
+    ];
+    if (skipRefresh.some((p) => router.pathname.startsWith(p))) {
+      // 최초 렌더에서 user가 undefined면 최소 null로 초기화
+      setUser((u) => (u === undefined ? null : u));
+      return;
+    }
+  
     const storedToken = sessionStorage.getItem("accessToken");
     const cookieToken = getCookie("accessToken");
-
+  
     if (storedToken) {
       setAccessToken(storedToken);
       applyAccessTokenToAxios(storedToken);
@@ -70,12 +82,12 @@ const getSafePath = (p) => {
       const hasRefresh =
         typeof document !== "undefined" &&
         document.cookie.includes("refreshToken=");
-
+  
       if (!hasRefresh) {
         setUser(null);
         return;
       }
-
+  
       const sessionId = getClientSessionId();
       api
         .post(
@@ -115,6 +127,7 @@ const getSafePath = (p) => {
         });
     }
   }, [router.pathname]);
+  
 
   // ✅ accessToken 변경 시 유저 정보 요청
   useEffect(() => {

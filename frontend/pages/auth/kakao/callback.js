@@ -1,13 +1,21 @@
+// frontend/pages/auth/kakao/callback.js
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert";
+
+// 안전 경로 유틸
+const getSafePath = (p) => {
+  if (!p || typeof p !== "string") return "/";
+  if (p.startsWith("http://") || p.startsWith("https://")) return "/";
+  return p.startsWith("/") ? p : `/${p}`;
+};
 
 export default function KakaoCallbackPage() {
   const router = useRouter();
   const { login } = useUserContext();
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
+  const { showAlert } = useGlobalAlert();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -20,37 +28,44 @@ export default function KakaoCallbackPage() {
       return;
     }
 
-    // ✅ autoLogin 값 읽어서 같이 넘김
     const autoLogin = localStorage.getItem("autoLogin") === "true";
 
     window.__kakao_callback_requested = true;
+    // 주소창 정리(쿼리 제거)
     window.history.replaceState({}, document.title, window.location.pathname);
 
     api
       .post("/auth/kakao/callback", { code, autoLogin })
       .then((res) => {
         const { accessToken, user, tempToken } = res.data;
+
         if (accessToken && user) {
           login(user, accessToken);
-          if (user.role === "admin") {
-            router.replace("/admin");
+
+          const redirect = getSafePath(router.query.redirect);
+          if (redirect && redirect !== "/") {
+            router.replace(redirect);
+          } else if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back();
           } else {
             router.replace("/");
           }
-        } else if (tempToken) {
-          router.replace(`/register/social?token=${tempToken}`);
-        } else {
-          router.replace("/login?error=token-missing");
+          return;
         }
+
+        if (tempToken) {
+          router.replace(`/register/social?token=${tempToken}`);
+          return;
+        }
+
+        router.replace("/login?error=token-missing");
       })
       .catch((err) => {
         const serverMsg = err?.response?.data?.error;
-        if (serverMsg) {
-          showAlert(serverMsg);
-        }
+        if (serverMsg) showAlert(serverMsg);
         router.replace("/login?error=kakao-fail");
       });
-  }, []);
+  }, []); // 의도적으로 빈 deps
 
   return null; // 처리 중에는 아무것도 표시하지 않음
 }

@@ -1,26 +1,14 @@
+// frontend/pages/logout/callback.js
 import { useEffect } from "react";
-import { useRouter } from "next/router";
-import api from "@/lib/api";
-import { useContext } from "react";
-import { UserContext } from "@/context/UserContext";
+import { useUserContext } from "@/context/UserContext";
 
 export default function LogoutCallback() {
-  const router = useRouter();
-  const { logout } = useContext(UserContext);
+  const { logout } = useUserContext();
 
   useEffect(() => {
-    api.post("/auth/logout", {
-      clientSessionId: typeof window !== "undefined" ? sessionStorage.getItem("clientSessionId") : undefined,
-    })
-      .catch(() => {}) // 실패 무시
-      .finally(() => {
-        logout && logout();
-        sessionStorage.removeItem("accessToken");
-        sessionStorage.removeItem("clientSessionId");
-        localStorage.removeItem("autoLogin");
-        router.replace("/login");
-      });
-  }, [logout, router]);
+    // UserContext.logout() 안에 서버 호출 + 세션정리 + 이동(이전 페이지 복귀)이 모두 포함됨
+    logout?.();
+  }, [logout]);
 
-  return null; // 아무것도 렌더링하지 않음
+  return null;
 }

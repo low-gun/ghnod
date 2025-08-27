@@ -1,56 +1,52 @@
 import React, { useState, useContext } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { UserContext } from "../../context/UserContext";
 import { leftGroup, centerGroup, getRightGroup } from "../../data/menuData";
 import ProfileDropdown from "../ProfileDropdown";
-import LogoutButton from "@/components/common/LogoutButton";
 import { useCartContext } from "@/context/CartContext";
 import MyPageMenuDrawer from "@/components/mypage/MyPageMenuDrawer";
 import {
   useIsTabletOrBelow980, // <=980: 모바일 UI
-  useIsTabletWide,
 } from "@/lib/hooks/useIsDeviceSize";
 import MobileMenuDrawer from "@/components/common/MobileMenuDrawer";
 import { Menu, LogIn, User, ShoppingCart } from "lucide-react";
 
 const HEADER_HEIGHT_DESKTOP = 80;
 const HEADER_HEIGHT_MOBILE = 48;
-
+const rememberAfterLogout = () => {
+  try {
+    const here = window.location.pathname + window.location.search;
+    sessionStorage.setItem("AFTER_LOGOUT_GO", here);
+  } catch {}
+};
 export default function Header({
   showProfile,
   setShowProfile,
   activeMenu,
   setActiveMenu,
 }) {
-  const { user } = useContext(UserContext);
-  const router = useRouter();
-  const { cartItems, cartReady } = useCartContext();
+  const { user, logout } = useContext(UserContext);
+    const { cartItems, cartReady } = useCartContext();
   const [myDrawerOpen, setMyDrawerOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(null);
 
   // ✅ 레이아웃 기준: 768px (모바일/태블릿)
   const isCompactNav = useIsTabletOrBelow980();
-  const isTabletWide = useIsTabletWide();
-
+  
   const headerHeight = isCompactNav
     ? HEADER_HEIGHT_MOBILE
     : HEADER_HEIGHT_DESKTOP;
 
-  let closeTimer = null;
-  function handleMouseEnter(idx) {
-    if (closeTimer) {
-      clearTimeout(closeTimer);
-      closeTimer = null;
+    const closeTimerRef = useRef(null);
+    function handleMouseEnter(idx) {
+      if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+      setHoverIndex(idx);
     }
-    setHoverIndex(idx);
-  }
-  function handleMouseLeave() {
-    closeTimer = setTimeout(() => {
-      setHoverIndex(null);
-    }, 300);
-  }
+    function handleMouseLeave() {
+      closeTimerRef.current = setTimeout(() => setHoverIndex(null), 300);
+    }
+    
 
   function renderLeftGroup() {
     return (
@@ -315,11 +311,27 @@ export default function Header({
                   style={{ display: "block", position: "relative", top: "1px" }}
                 />
                 <ProfileDropdown
-                  user={user}
-                  showProfile={showProfile}
-                  setShowProfile={setShowProfile}
-                  customLogout={<LogoutButton />}
-                />
+  user={user}
+  showProfile={showProfile}
+  setShowProfile={setShowProfile}
+  customLogout={
+    <button
+      onClick={() => { rememberAfterLogout(); logout(); }}
+      style={{
+        width: "100%",
+        padding: "8px 10px",
+        border: "1px solid #e5e7eb",
+        borderRadius: 6,
+        background: "#fff",
+        cursor: "pointer",
+        fontSize: 14,
+      }}
+    >
+      로그아웃
+    </button>
+  }
+/>
+
               </div>
             );
           }
