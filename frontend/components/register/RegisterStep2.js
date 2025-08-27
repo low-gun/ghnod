@@ -182,10 +182,10 @@ export default function RegisterStep2({
             return;
           }
           // 1) 백엔드로 전송 요청
-          const { data } = await api.post("/auth/phone/send-code", {
+          const { data } = await api.post("/auth/phone/send-code/register", {
             phone: rawPhone,
-            username: (username || "").trim(),  // 이름 같이 전달
           });
+          
 
                   // 2) 타이머 시작
                   setShowVerificationInput(true);
@@ -249,10 +249,11 @@ export default function RegisterStep2({
               onClick={async () => {
                 try {
                   const rawPhone = (phone || "").replace(/\D/g, "");
-                  await api.post("/auth/phone/verify-code", {
+                  await api.post("/auth/phone/verify-code/register", {
                     phone: rawPhone,
                     code: verificationCode,
                   });
+                  
                   setIsVerified(true);
                   setVerificationError("");
                   showAlert("인증 성공");

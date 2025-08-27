@@ -929,61 +929,27 @@ router.get(
 );
 
 // 인증번호 전송
-router.post("/phone/send-code", async (req, res) => {
-  const { phone, email, username } = req.body;
-  const rawPhone = normalizePhone(phone); // 숫자만 + 82 → 0 변환 + 11자리 제한
+// ====================== 회원가입: 휴대폰 인증번호 전송 ======================
+// ====================== 회원가입: 휴대폰 인증번호 전송 ======================
+router.post("/phone/send-code/register", async (req, res) => {
+  const { phone } = req.body;
+  const rawPhone = normalizePhone(phone);
   if (!rawPhone) {
     return res.status(400).json({ error: "휴대폰번호가 필요합니다." });
   }
 
-  // ✅ 안전망: 대상 정보 누락 시 차단 (무조건 username 또는 email 중 하나 필요)
-  if (!username && !email) {
-    return res.status(400).json({ error: "인증 대상 정보가 필요합니다." });
-  }
-
-  // 이메일 찾기: username + phone 일치 여부 확인 (공백 제거)
-  if (username) {
-    const name = String(username || "").trim();
-    const [rows] = await db.query(
-      "SELECT id FROM users WHERE TRIM(LOWER(username)) = TRIM(LOWER(?)) AND phone = ?",
-      [name, rawPhone]
-    );
-    if (!rows.length) {
-      return res.status(400).json({ error: "이름과 휴대폰번호가 일치하지 않습니다." });
-    }
-  }
-  
-
-  // ✅ 비밀번호 찾기: email + phone 일치 여부 확인
-  if (email) {
-    const [rows] = await db.query(
-      "SELECT id FROM users WHERE email = ? AND phone = ?",
-      [email, rawPhone]
-    );
-    if (!rows.length) {
-      return res.status(400).json({ error: "이메일과 휴대폰번호가 일치하지 않습니다." });
-    }
-  }
-
   try {
-    // 1) 6자리 코드 생성
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // 2) 알림톡 발송 시도 (실패 시 SMS 대체 — nhnAlimtalk.js 내부 설정)
     const result = await sendAlimtalkVerify(rawPhone, code);
-    const channel = result?.channel || "alimtalk"; // 요청 기준 채널
-    const requestId = result?.requestId || "-";
-    console.log(
-      `[send-code] channel=${channel}, to=${rawPhone}, reqId=${requestId}`
-    );
 
-    // 3) 코드 저장(해시) + 유효기간(5분)
     const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    // 기존 레코드 있으면 UPDATE, 없으면 INSERT
     const [exists] = await db.query(
       "SELECT id FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
       [rawPhone]
     );
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5분
 
     if (exists.length > 0) {
       await db.query(
@@ -997,67 +963,91 @@ router.post("/phone/send-code", async (req, res) => {
       );
     }
 
-    return res.json({
-      success: true,
-      message: "인증번호를 발송했습니다.",
-      channel,
-      requestId,
-    });
+    return res.json({ success: true, message: "인증번호를 발송했습니다." });
   } catch (err) {
-    const providerData = err?.response?.data;
-    console.error("❌ 인증번호 발송 오류:", err.message, providerData || "");
-    return res.status(500).json({
-      error: "인증번호 발송 실패",
-      detail: err?.message || null,
-      provider: err?.response?.data || null,
-    });
+    return res.status(500).json({ error: "인증번호 발송 실패" });
+  }
+});
+
+// ====================== 계정찾기: 휴대폰 인증번호 전송 ======================
+router.post("/phone/send-code/recover", async (req, res) => {
+  const { phone, email, username } = req.body;
+  const rawPhone = normalizePhone(phone);
+  if (!rawPhone) {
+    return res.status(400).json({ error: "휴대폰번호가 필요합니다." });
+  }
+
+  if (!username && !email) {
+    return res.status(400).json({ error: "인증 대상 정보가 필요합니다." });
+  }
+
+  if (username) {
+    const [rows] = await db.query(
+      "SELECT id FROM users WHERE TRIM(LOWER(username)) = TRIM(LOWER(?)) AND phone = ?",
+      [username.trim(), rawPhone]
+    );
+    if (!rows.length) {
+      return res.status(400).json({ error: "이름과 휴대폰번호가 일치하지 않습니다." });
+    }
+  }
+
+  if (email) {
+    const [rows] = await db.query(
+      "SELECT id FROM users WHERE email = ? AND phone = ?",
+      [email.trim(), rawPhone]
+    );
+    if (!rows.length) {
+      return res.status(400).json({ error: "이메일과 휴대폰번호가 일치하지 않습니다." });
+    }
+  }
+
+  try {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const result = await sendAlimtalkVerify(rawPhone, code);
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    const [exists] = await db.query(
+      "SELECT id FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
+      [rawPhone]
+    );
+
+    if (exists.length > 0) {
+      await db.query(
+        "UPDATE phone_verifications SET code_hash=?, verified=0, attempts=0, expires_at=? WHERE id=?",
+        [codeHash, expiresAt, exists[0].id]
+      );
+    } else {
+      await db.query(
+        "INSERT INTO phone_verifications (phone, code_hash, expires_at) VALUES (?, ?, ?)",
+        [rawPhone, codeHash, expiresAt]
+      );
+    }
+
+    return res.json({ success: true, message: "인증번호를 발송했습니다." });
+  } catch (err) {
+    return res.status(500).json({ error: "인증번호 발송 실패" });
   }
 });
 
 // 휴대폰 인증번호 검증
-router.post("/phone/verify-code", async (req, res) => {
+// ====================== 회원가입: 휴대폰 인증번호 검증 ======================
+router.post("/phone/verify-code/register", async (req, res) => {
   const rawPhone = normalizePhone(req.body.phone);
   const code = String(req.body.code || "").trim();
-  const { email, username } = req.body; // ✅ 추가
+
   if (!rawPhone || !code) {
-    return res
-      .status(400)
-      .json({ error: "휴대폰번호와 인증번호가 필요합니다." });
+    return res.status(400).json({ error: "휴대폰번호와 인증번호가 필요합니다." });
   }
-
-// ✅ 이메일 찾기: username + phone 확인 (공백/대소문자 무시)
-if (username) {
-  const name = String(username || "").trim();
-  const [rows] = await db.query(
-    "SELECT id FROM users WHERE TRIM(LOWER(username)) = TRIM(LOWER(?)) AND phone = ?",
-    [name, rawPhone]
-  );
-  if (!rows.length) {
-    return res.status(400).json({ error: "이름과 휴대폰번호가 일치하지 않습니다." });
-  }
-}
-
-
- // ✅ 비밀번호 찾기: email + phone 확인 (이메일 공백 제거)
-if (email) {
-  const mail = String(email || "").trim();
-  const [rows] = await db.query(
-    "SELECT id FROM users WHERE email = ? AND phone = ?",
-    [mail, rawPhone]
-  );
-  if (!rows.length) {
-    return res.status(400).json({ error: "이메일과 휴대폰번호가 일치하지 않습니다." });
-  }
-}
-
 
   try {
     const [rows] = await db.query(
       "SELECT * FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
       [rawPhone]
     );
-    if (rows.length === 0)
+    if (rows.length === 0) {
       return res.status(400).json({ error: "인증 요청이 없습니다." });
+    }
 
     const rec = rows[0];
     if (new Date(rec.expires_at).getTime() < Date.now()) {
@@ -1075,15 +1065,86 @@ if (email) {
       [isMatch ? 1 : 0, rec.id]
     );
 
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ error: "인증번호가 일치하지 않습니다." });
+    }
 
     return res.json({ success: true, message: "인증 완료" });
   } catch (err) {
-    console.error("❌ 인증번호 검증 오류:", err.message);
+    console.error("❌ 회원가입 인증번호 검증 오류:", err.message);
     return res.status(500).json({ error: "인증번호 검증 실패" });
   }
 });
+// ====================== 계정찾기: 휴대폰 인증번호 검증 ======================
+router.post("/phone/verify-code/recover", async (req, res) => {
+  const rawPhone = normalizePhone(req.body.phone);
+  const code = String(req.body.code || "").trim();
+  const { email, username } = req.body;
+
+  if (!rawPhone || !code) {
+    return res.status(400).json({ error: "휴대폰번호와 인증번호가 필요합니다." });
+  }
+
+  // 이름 + 휴대폰 검증
+  if (username) {
+    const name = String(username || "").trim();
+    const [rows] = await db.query(
+      "SELECT id FROM users WHERE TRIM(LOWER(username)) = TRIM(LOWER(?)) AND phone = ?",
+      [name, rawPhone]
+    );
+    if (!rows.length) {
+      return res.status(400).json({ error: "이름과 휴대폰번호가 일치하지 않습니다." });
+    }
+  }
+
+  // 이메일 + 휴대폰 검증
+  if (email) {
+    const mail = String(email || "").trim();
+    const [rows] = await db.query(
+      "SELECT id FROM users WHERE email = ? AND phone = ?",
+      [mail, rawPhone]
+    );
+    if (!rows.length) {
+      return res.status(400).json({ error: "이메일과 휴대폰번호가 일치하지 않습니다." });
+    }
+  }
+
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
+      [rawPhone]
+    );
+    if (rows.length === 0) {
+      return res.status(400).json({ error: "인증 요청이 없습니다." });
+    }
+
+    const rec = rows[0];
+    if (new Date(rec.expires_at).getTime() < Date.now()) {
+      return res.status(400).json({ error: "인증번호가 만료되었습니다." });
+    }
+    if (rec.attempts >= 5) {
+      return res.status(429).json({ error: "시도 횟수를 초과했습니다." });
+    }
+
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const isMatch = codeHash === rec.code_hash;
+
+    await db.query(
+      "UPDATE phone_verifications SET attempts = attempts + 1, verified = ? WHERE id = ?",
+      [isMatch ? 1 : 0, rec.id]
+    );
+
+    if (!isMatch) {
+      return res.status(400).json({ error: "인증번호가 일치하지 않습니다." });
+    }
+
+    return res.json({ success: true, message: "인증 완료" });
+  } catch (err) {
+    console.error("❌ 계정찾기 인증번호 검증 오류:", err.message);
+    return res.status(500).json({ error: "인증번호 검증 실패" });
+  }
+});
+
 // ====================== 이메일 찾기 ======================
 router.post("/find-email", async (req, res) => {
   try {
