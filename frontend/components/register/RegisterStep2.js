@@ -1,8 +1,6 @@
 // frontend/components/register/RegisterStep2.js
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/router";
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
-import AgreementModal from "@/components/AgreementModal";
+import { useGlobalAgreements } from "@/stores/globalAgreements";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import api from "@/lib/api";
 
@@ -48,10 +46,11 @@ export default function RegisterStep2({
   nameEditable = true,
   phoneExists, // 📌 여기 추가
 }) {
-  const [openModal, setOpenModal] = useState(null);
   const { showAlert } = useGlobalAlert();
+const { open: openAgreements } = useGlobalAgreements(); // 추가
 
   // 최초 1회만, 그리고 각 필드가 비어있을 때만 localStorage로 보충
+// 최초 1회만, 그리고 각 필드가 비어있을 때만 localStorage로 보충 (+인증 상태 복원)
 const didHydrateRef = useRef(false);
 useEffect(() => {
   if (didHydrateRef.current) return;
@@ -63,7 +62,6 @@ useEffect(() => {
   try {
     const data = JSON.parse(saved) || {};
 
-    // ✅ email도 비어 있을 때만 복원
     if (!email && data.email) setEmail(data.email);
 
     if (!username) setUsername(data.username || "");
@@ -72,10 +70,24 @@ useEffect(() => {
     if (!department) setDepartment(data.department || "");
     if (!position) setPosition(data.position || "");
 
-    // 동의값은 명시적으로 true/false가 저장되어 있을 때만 반영
+    // 동의값
     if (typeof data.termsAgree === "boolean") setTermsAgree(data.termsAgree);
     if (typeof data.privacyAgree === "boolean") setPrivacyAgree(data.privacyAgree);
     if (typeof data.marketingAgree === "boolean") setMarketingAgree(data.marketingAgree);
+
+    // ✅ 인증 상태 복원
+if (typeof data.isVerified === "boolean") setIsVerified(data.isVerified);
+if (typeof data.verificationCode === "string") setVerificationCode(data.verificationCode);
+if (typeof data.hasRequestedCode === "boolean") setHasRequestedCode(data.hasRequestedCode);
+if (typeof data.timeLeft === "number") setTimeLeft(data.timeLeft);
+
+// ✅ 입력창 표시 상태도 복원
+if (typeof data.showVerificationInput === "boolean") {
+  setShowVerificationInput(data.showVerificationInput);
+} else if (data.hasRequestedCode && data.timeLeft > 0) {
+  setShowVerificationInput(true);
+}
+
   } catch {}
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,7 +132,7 @@ useEffect(() => {
 useEffect(() => {
   const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
   const merged = {
-    ...prev, // (Step1의 email/password 등 유지)
+    ...prev,
     username,
     phone,
     company,
@@ -129,6 +141,12 @@ useEffect(() => {
     termsAgree,
     privacyAgree,
     marketingAgree,
+    // ✅ 인증 상태 + 표시 상태까지 저장
+    isVerified,
+    verificationCode,
+    hasRequestedCode,
+    timeLeft,
+    showVerificationInput,
   };
   localStorage.setItem("registerStep2Form", JSON.stringify(merged));
 }, [
@@ -140,8 +158,12 @@ useEffect(() => {
   termsAgree,
   privacyAgree,
   marketingAgree,
+  isVerified,
+  verificationCode,
+  hasRequestedCode,
+  timeLeft,
+  showVerificationInput,
 ]);
-
   return (
     <>
       <form
@@ -354,52 +376,61 @@ useEffect(() => {
 
         {/* 약관 동의 */}
         <div className="agreement-section">
-          <AgreementItem
-            checked={termsAgree}
-            setAgree={setTermsAgree}
-            setOpenModal={setOpenModal}
-            openKey="terms"
-            label="(필수) 이용약관 동의"
-            username={username}
-            phone={phone}
-            company={company}
-            department={department}
-            position={position}
-            termsAgree={termsAgree}
-            privacyAgree={privacyAgree}
-            marketingAgree={marketingAgree}
-          />
-          <AgreementItem
-            checked={privacyAgree}
-            setAgree={setPrivacyAgree}
-            setOpenModal={setOpenModal}
-            openKey="privacy"
-            label="(필수) 개인정보 수집 및 이용 동의"
-            username={username}
-            phone={phone}
-            company={company}
-            department={department}
-            position={position}
-            termsAgree={termsAgree}
-            privacyAgree={privacyAgree}
-            marketingAgree={marketingAgree}
-          />
-          <AgreementItem
-            checked={marketingAgree}
-            setAgree={setMarketingAgree}
-            setOpenModal={setOpenModal}
-            openKey="marketing"
-            label="(선택) 마케팅 정보 수신 동의"
-            isOptional
-            username={username}
-            phone={phone}
-            company={company}
-            department={department}
-            position={position}
-            termsAgree={termsAgree}
-            privacyAgree={privacyAgree}
-            marketingAgree={marketingAgree}
-          />
+        <AgreementItem
+  checked={termsAgree}
+  setAgree={setTermsAgree}
+  openAgreements={openAgreements} // 추가
+  label="(필수) 이용약관 동의"
+  username={username}
+  phone={phone}
+  company={company}
+  department={department}
+  position={position}
+  termsAgree={termsAgree}
+  privacyAgree={privacyAgree}
+  marketingAgree={marketingAgree}
+  setTermsAgree={setTermsAgree}           // 추가
+  setPrivacyAgree={setPrivacyAgree}       // 추가
+  setMarketingAgree={setMarketingAgree}   // 추가
+/>
+
+<AgreementItem
+  checked={privacyAgree}
+  setAgree={setPrivacyAgree}
+  openAgreements={openAgreements}
+  label="(필수) 개인정보 수집 및 이용 동의"
+  username={username}
+  phone={phone}
+  company={company}
+  department={department}
+  position={position}
+  termsAgree={termsAgree}
+  privacyAgree={privacyAgree}
+  marketingAgree={marketingAgree}
+  setTermsAgree={setTermsAgree}
+  setPrivacyAgree={setPrivacyAgree}
+  setMarketingAgree={setMarketingAgree}
+/>
+
+<AgreementItem
+  checked={marketingAgree}
+  setAgree={setMarketingAgree}
+  openAgreements={openAgreements}
+  label="(선택) 마케팅 정보 수신 동의"
+  isOptional
+  username={username}
+  phone={phone}
+  company={company}
+  department={department}
+  position={position}
+  termsAgree={termsAgree}
+  privacyAgree={privacyAgree}
+  marketingAgree={marketingAgree}
+  setTermsAgree={setTermsAgree}
+  setPrivacyAgree={setPrivacyAgree}
+  setMarketingAgree={setMarketingAgree}
+/>
+
         </div>
         <button
           type="submit"
@@ -579,31 +610,7 @@ useEffect(() => {
         </button>
       </div>
 
-      {/* 모달 */}
-      {openModal === "terms" && (
-        <AgreementModal
-          openKey="terms"
-          openModal={openModal}
-          setOpenModal={setOpenModal}
-          setTermsAgree={setTermsAgree}
-        />
-      )}
-      {openModal === "privacy" && (
-        <AgreementModal
-          openKey="privacy"
-          openModal={openModal}
-          setOpenModal={setOpenModal}
-          setPrivacyAgree={setPrivacyAgree}
-        />
-      )}
-      {openModal === "marketing" && (
-        <AgreementModal
-          openKey="marketing"
-          openModal={openModal}
-          setOpenModal={setOpenModal}
-          setMarketingAgree={setMarketingAgree}
-        />
-      )}
+     
     </>
   );
 }
@@ -612,8 +619,7 @@ useEffect(() => {
 function AgreementItem({
   checked,
   setAgree,
-  setOpenModal,
-  openKey,
+  openAgreements,         // 추가
   label,
   username,
   phone,
@@ -623,35 +629,37 @@ function AgreementItem({
   termsAgree,
   privacyAgree,
   marketingAgree,
+  setTermsAgree,          // 추가
+  setPrivacyAgree,        // 추가
+  setMarketingAgree,      // 추가
 }) {
-  const isMobile = useIsMobile();
-  const router = useRouter();
 
   const goToAgreements = () => {
-    if (isMobile) {
-      // ✅ 기존 저장값 불러오기
-      const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
-  
-      // ✅ 기존 Step1 값(email, password 등)은 유지, Step2 값만 덮어쓰기
-      localStorage.setItem(
-        "registerStep2Form",
-        JSON.stringify({
-          ...prev,
-          username,
-          phone,
-          company,
-          department,
-          position,
-          termsAgree: !!termsAgree,
-          privacyAgree: !!privacyAgree,
-          marketingAgree: !!marketingAgree,
-        })
-      );
-      router.push("/register/agreements");
-    } else {
-      setOpenModal(openKey);
-    }
+    openAgreements({
+      initial: {
+        terms: !!termsAgree,
+        privacy: !!privacyAgree,
+        marketing: !!marketingAgree,
+        // 필요 시 사용자 정보 표시용
+        username,
+        phone,
+        company,
+        department,
+        position,
+      },
+      onConfirm: ({ terms, privacy, marketing }) => {
+        // 모달/토스트에서 확정된 동의값을 Step2 상태에 반영
+        setTermsAgree(!!terms);
+        setPrivacyAgree(!!privacy);
+        setMarketingAgree(!!marketing);
+        // Step2의 useEffect가 자동으로 localStorage에 동기 저장함
+      },
+      onCancel: () => {
+        // 별도 처리 없음(그대로 유지)
+      },
+    });
   };
+  
   
 
   return (

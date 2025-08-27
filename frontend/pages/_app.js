@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import GlobalConfirmModal from "@/components/common/GlobalConfirmModal";
 import GlobalAlert from "@/components/common/GlobalAlert";
+import GlobalAgreements from "@/components/common/GlobalAgreements"; // ✅ 추가
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../styles/adminTable.css"; // ✅ 추가
@@ -148,11 +149,11 @@ const timeoutRef = useRef(null); // ✅ 변경
 <QueryClientProvider client={queryClient}>
   <UserProvider>
     <CartProvider>
-      <GlobalLoadingBar />
-      <GlobalAlert />
-      <GlobalConfirmModal />
+    <GlobalLoadingBar />
+<GlobalAlert />
+<GlobalConfirmModal />
+<GlobalAgreements /> {/* 데스크탑=모달, 모바일=토스트 */}
 
-      {/* 🛒 장바구니 초기화는 쇼핑 맥락에서만 필요 → Admin 제외 */}
       {!isAdmin && <CartInitializer />}
 
       <LayoutWrapper>

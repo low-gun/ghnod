@@ -59,31 +59,49 @@ async function sendAlimtalkVerify(phone, verifyCode) {
     });
 
     // NHN 응답 처리 (요청 수락 여부)
-    const isOk = !!(response?.data?.header?.isSuccessful);
-    const requestId =
-      response?.data?.header?.transactionId ||
-      response?.data?.header?.resultCode ||
-      "";
+    // NHN 응답 처리 (요청 수락 여부)
+const isOk = !!(response?.data?.header?.isSuccessful);
+const requestId =
+  response?.data?.header?.transactionId ||
+  response?.data?.header?.resultCode ||
+  "";
 
-    if (!isOk) {
-      console.error("❌ 알림톡 발송 실패:", response?.data);
-      throw new Error("NHN 알림톡 발송 실패");
-    }
+if (!isOk) {
+  console.error("❌ 알림톡 발송 실패:", response?.data);
+  throw new Error("NHN 알림톡 발송 실패");
+}
 
-    console.log("✅ 알림톡 발송 요청 성공:", {
-      requestId,
-      templateCode,
-      templateParamName,
-      recipient: phone,
-      altSendType: "SMS",
-    });
+// ✅ 실제 발송 채널 판별 (body.data[0] 참고)
+const item = Array.isArray(response?.data?.body?.data)
+  ? response.data.body.data[0]
+  : null;
 
-    // 요청 기준 채널은 alimtalk (NHN이 내부적으로 실패 시 SMS 대체)
-    return {
-      channel: "alimtalk",
-      requestId,
-      providerResponse: response.data,
-    };
+let channel = "alimtalk";
+const sendResult = (item?.sendResult || "").toString().toUpperCase();
+const resultMessage = (item?.resultMessage || "").toString().toUpperCase();
+
+// 조건: NHN이 내부적으로 SMS 대체 발송했는지 판별
+if (sendResult.includes("SMS") || resultMessage.includes("SMS")) {
+  channel = "sms";
+}
+
+console.log("✅ 인증번호 발송 요청 성공:", {
+  requestId,
+  templateCode,
+  templateParamName,
+  recipient: phone,
+  resolvedChannel: channel,
+  rawSendResult: item?.sendResult,
+  rawResultMessage: item?.resultMessage,
+  altSendTypeRequested: "SMS",
+});
+
+return {
+  channel,            // "alimtalk" | "sms"
+  requestId,
+  providerResponse: response.data,
+};
+
   } catch (err) {
     const status = err?.response?.status;
     const data = err?.response?.data;

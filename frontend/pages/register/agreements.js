@@ -124,83 +124,58 @@ export default function AgreementsPage() {
 
       <div className="agree-btns">
         {/* 이전 버튼: 약관 상태만 병합 저장 + 로그 */}
-        <button
-          type="button"
-          className="prev-btn"
-          onClick={() => {
-            const ua = navigator.userAgent;
-            const isMobile =
-              /Android|iPhone|iPad|iPod/i.test(ua) || window.innerWidth <= 500;
-            const beforeRaw = localStorage.getItem("registerStep2Form");
-            const before = parseJSON(beforeRaw);
+       {/* 이전 버튼: 값 건드리지 않고 단순 이동 */}
+<button
+  type="button"
+  className="prev-btn"
+  onClick={() => {
+    console.log("[AGREEMENTS][PREV] just go back to step2 (no changes)");
+    router.push("/register?step=2");
+  }}
+>
+  이전
+</button>
 
-            console.log("[AGREEMENTS][PREV] click", {
-              isMobile,
-              ua,
-              termsChecked,
-              privacyChecked,
-              marketingChecked,
-              beforeParsed: before,
-            });
+          {/* 다음 버튼: 동의 상태만 반영 후 이동 */}
+          <button
+  type="button"
+  className="next-btn"
+  onClick={() => {
+    const beforeRaw = localStorage.getItem("registerStep2Form");
+    const before = parseJSON(beforeRaw);
 
-            const merged = {
-              ...before,
-              termsAgree: termsChecked,
-              privacyAgree: privacyChecked,
-              marketingAgree: marketingChecked,
-            };
-            localStorage.setItem("registerStep2Form", JSON.stringify(merged));
+    console.log("[AGREEMENTS][NEXT] click", {
+      termsChecked,
+      privacyChecked,
+      marketingChecked,
+      beforeParsed: before,
+    });
 
-            const afterRaw = localStorage.getItem("registerStep2Form");
-            console.log("[AGREEMENTS][PREV] after set LS", {
-              afterParsed: parseJSON(afterRaw),
-            });
+    const merged = {
+      ...before,
+      termsAgree: termsChecked,
+      privacyAgree: privacyChecked,
+      marketingAgree: marketingChecked,
+      // ✅ 인증 관련 값 유지
+      isVerified: before.isVerified,
+      verificationCode: before.verificationCode,
+      hasRequestedCode: before.hasRequestedCode,
+      timeLeft: before.timeLeft,
+    };
+    localStorage.setItem("registerStep2Form", JSON.stringify(merged));
 
-            router.push("/register?step=2");
-          }}
-        >
-          이전
-        </button>
+    const afterRaw = localStorage.getItem("registerStep2Form");
+    console.log("[AGREEMENTS][NEXT] after set LS", {
+      afterParsed: parseJSON(afterRaw),
+    });
 
-        {/* 다음 버튼: 약관 상태만 병합 저장 + 로그 */}
-        <button
-          type="button"
-          className="next-btn"
-          onClick={() => {
-            const ua = navigator.userAgent;
-            const isMobile =
-              /Android|iPhone|iPad|iPod/i.test(ua) || window.innerWidth <= 500;
-            const beforeRaw = localStorage.getItem("registerStep2Form");
-            const before = parseJSON(beforeRaw);
+    router.push("/register?step=2");
+  }}
+  disabled={!(termsChecked && privacyChecked)}
+>
+  다음
+</button>
 
-            console.log("[AGREEMENTS][NEXT] click", {
-              isMobile,
-              ua,
-              termsChecked,
-              privacyChecked,
-              marketingChecked,
-              beforeParsed: before,
-            });
-
-            const merged = {
-              ...before,
-              termsAgree: termsChecked,
-              privacyAgree: privacyChecked,
-              marketingAgree: marketingChecked,
-            };
-            localStorage.setItem("registerStep2Form", JSON.stringify(merged));
-
-            const afterRaw = localStorage.getItem("registerStep2Form");
-            console.log("[AGREEMENTS][NEXT] after set LS", {
-              afterParsed: parseJSON(afterRaw),
-            });
-
-            router.push("/register?step=2");
-          }}
-          disabled={!(termsChecked && privacyChecked)}
-        >
-          다음
-        </button>
       </div>
 
       <style jsx>{`
