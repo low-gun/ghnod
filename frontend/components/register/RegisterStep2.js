@@ -184,6 +184,7 @@ export default function RegisterStep2({
           // 1) 백엔드로 전송 요청
           const { data } = await api.post("/auth/phone/send-code", {
             phone: rawPhone,
+            username: (username || "").trim(),  // 이름 같이 전달
           });
 
                   // 2) 타이머 시작
