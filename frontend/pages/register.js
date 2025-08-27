@@ -11,9 +11,32 @@ export default function RegisterPage() {
   const { step, setStep } = form;
 
   // 페이지 진입 시 localStorage 초기화
-  useEffect(() => {
+// 페이지 진입 시 localStorage 초기화 (모바일 referrer 미제공 대비)
+useEffect(() => {
+  const before = localStorage.getItem("registerStep2Form");
+  const shouldReset = router.query.reset === "1";
+  const stepParam = String(router.query.step || "");
+  const isInternalNav = stepParam === "1" || stepParam === "2"; // 약관/등록 내부 이동
+
+  const action = shouldReset ? "reset=1" : (!isInternalNav ? "external-init" : "keep");
+  console.log("[REGISTER] init", {
+    stepParam,
+    isInternalNav,
+    shouldReset,
+    action,
+    beforeParsed: (() => { try { return JSON.parse(before || "{}"); } catch { return {}; } })(),
+  });
+
+  if (action !== "keep") {
     localStorage.removeItem("registerStep2Form");
-  }, []);
+    console.log("[REGISTER] cleared LS due to:", action);
+  } else {
+    console.log("[REGISTER] kept LS");
+  }
+}, [router.query.reset, router.query.step]);
+
+
+  
 
   // 쿼리 파라미터에서 step 읽어와서 반영
   useEffect(() => {
