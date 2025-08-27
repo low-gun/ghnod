@@ -590,9 +590,14 @@ function AgreementItem({
 
   const goToAgreements = () => {
     if (isMobile) {
+      // ✅ 기존 저장값 불러오기
+      const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
+  
+      // ✅ 기존 Step1 값(email, password 등)은 유지, Step2 값만 덮어쓰기
       localStorage.setItem(
         "registerStep2Form",
         JSON.stringify({
+          ...prev,
           username,
           phone,
           company,
@@ -608,6 +613,7 @@ function AgreementItem({
       setOpenModal(openKey);
     }
   };
+  
 
   return (
     <div className="agreement-item">

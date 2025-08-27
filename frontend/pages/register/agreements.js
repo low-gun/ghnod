@@ -108,9 +108,10 @@ export default function AgreementsPage() {
 
     // Step1 값은 유지, Step2 값 초기화 + 약관 false 처리
     const merged = {
-      ...prev,
-      username: "",    // 이름 초기화
-      phone: "",       // 휴대폰 초기화
+      email: prev.email || "",     // Step1 값 유지
+      password: prev.password || "", // Step1 값 유지
+      username: "",                // Step2 값 초기화
+      phone: "",
       company: "",
       department: "",
       position: "",
@@ -118,6 +119,7 @@ export default function AgreementsPage() {
       privacyAgree: false,
       marketingAgree: false,
     };
+    
 
     localStorage.setItem("registerStep2Form", JSON.stringify(merged));
     router.push("/register?step=2");
