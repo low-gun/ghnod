@@ -26,6 +26,7 @@ export default function CartItemCard({
   onCheck,
   onDelete,
   onQuantityChange,
+  hideTime = false, // ← 추가
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -186,11 +187,11 @@ export default function CartItemCard({
   {start ? start.toLocaleDateString() : ""}
   {start && end && !sameDay ? ` ~ ${end.toLocaleDateString()}` : ""}
   {!start && !end ? "일정 미정" : ""}
-  {/* 회차 시간이 내려오면 간단히 병기 */}
-  {(start_time || end_time) && (start || end) && (
+  {!hideTime && (start_time || end_time) && (start || end) && (
     <span>{`  ${String(start_time || "").slice(0,5)}~${String(end_time || "").slice(0,5)}`}</span>
   )}
 </div>
+
 
 
         {/* 가격/수량 행 */}
