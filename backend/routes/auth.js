@@ -349,7 +349,15 @@ router.post("/check-email", async (req, res) => {
 
 // ====================== 회원가입 ======================
 router.post("/register", async (req, res) => {
-  console.log("📌 회원가입 요청 데이터:", req.body);
+  const safeLog = {
+    email: req.body?.email,
+    username: req.body?.username,
+    phone: String(req.body?.phone || "").replace(/\d(?=\d{4})/g, "*"), // 뒤4자리만 보이게
+    terms_agree: req.body?.terms_agree,
+    privacy_agree: req.body?.privacy_agree,
+    marketing_agree: req.body?.marketing_agree,
+  };
+  console.log("[/auth/register] body(check):", safeLog);
 
   const {
     username,
@@ -363,6 +371,7 @@ router.post("/register", async (req, res) => {
     terms_agree,
     privacy_agree,
   } = req.body;
+
 
   if (!username || !email || !password || !phone) {
     return res.status(400).json({ error: "모든 필드를 입력하세요." });
@@ -381,29 +390,29 @@ router.post("/register", async (req, res) => {
   }
 
   try {
-    // 이메일 중복 확인
-    const [existingUsers] = await db.query(
-      "SELECT id FROM users WHERE email = ?",
-      [email]
-    );
-    if (existingUsers.length > 0) {
-      return res.status(409).json({ error: "이미 사용 중인 이메일입니다." });
-    }
-    
-    // 휴대폰 중복 확인
-    const [existingPhones] = await db.query(
-      "SELECT id FROM users WHERE phone = ?",
-      [rawPhone]
-    );
-    if (existingPhones.length > 0) {
-      return res.status(409).json({ error: "이미 사용 중인 휴대폰번호입니다." });
-    }
+   // 이메일 중복 확인
+const [existingUsers] = await db.query(
+  "SELECT id FROM users WHERE email = ?",
+  [email]
+);
+if (existingUsers.length > 0) {
+  return res.status(409).json({ error: "이미 사용 중인 이메일입니다." });
+}
+
+// ✅ 휴대폰 중복 확인 추가
+const rawPhone = String(phone || "").replace(/\D/g, "");
+const [existingPhones] = await db.query(
+  "SELECT id FROM users WHERE phone = ?",
+  [rawPhone]
+);
+if (existingPhones.length > 0) {
+  return res.status(409).json({ error: "이미 사용 중인 휴대폰번호입니다." });
+}
 
     // 비밀번호 해싱
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // ✅ 휴대폰 인증 여부 확인 (최근 인증 성공 기록 필수)
-    const rawPhone = String(phone || "").replace(/\D/g, "");
     const [pv] = await db.query(
       "SELECT verified, expires_at FROM phone_verifications WHERE phone = ? ORDER BY id DESC LIMIT 1",
       [rawPhone]
@@ -421,7 +430,7 @@ router.post("/register", async (req, res) => {
         username,
         email,
         hashedPassword,
-        rawPhone,
+        rawPhone, // ← 꼭 정규화된 번호 사용
         company || "",
         department || "",
         position || "",
@@ -434,9 +443,25 @@ router.post("/register", async (req, res) => {
     console.log("✅ 회원가입 성공!", email);
     res.status(200).json({ message: "✅ 회원가입 성공!" });
   } catch (error) {
-    console.error("❌ 회원가입 오류:", error);
-    res.status(500).json({ error: "회원가입 실패" });
+    console.error("❌ 회원가입 오류:", { code: error?.code, sqlMessage: error?.sqlMessage });
+  
+    // ✅ 중복키 오류를 409로 변환
+    if (error?.code === "ER_DUP_ENTRY") {
+      // 어떤 컬럼인지 메시지로 식별(환경에 맞게 보완 가능)
+      const msg = String(error?.sqlMessage || "").toLowerCase();
+      if (msg.includes("users.email") || msg.includes("for key 'email'")) {
+        return res.status(409).json({ error: "이미 사용 중인 이메일입니다." });
+      }
+      if (msg.includes("users.phone") || msg.includes("for key 'phone'")) {
+        return res.status(409).json({ error: "이미 사용 중인 휴대폰번호입니다." });
+      }
+      return res.status(409).json({ error: "이미 사용 중인 계정 정보입니다." });
+    }
+  
+    // 그 외 일반 오류
+    return res.status(500).json({ error: "회원가입 실패" });
   }
+  
 });
 
 router.post("/register-social", async (req, res) => {
@@ -476,27 +501,20 @@ router.post("/register-social", async (req, res) => {
       [email]
     );
     const rawPhone = String(phone || "").replace(/\D/g, "");
-    const [userByPhone] = await db.query(
+    const [userByPhone] = await db.query(             // ← 변수명 통일
       "SELECT id, social_provider FROM users WHERE phone = ?",
-      [rawPhone]
+      [rawPhone]                                      // ← social_provider도 함께 조회
     );
-
+    
     if (userByEmail.length > 0) {
       const provider = userByEmail[0].social_provider || "local";
-      return res.status(409).json({
-        error: "이미 사용 중인 이메일입니다.",
-        errorType: "email",
-        provider,
-      });
+      return res.status(409).json({ error: "이미 사용 중인 이메일입니다.", errorType: "email", provider });
     }
-    if (userByPhone.length > 0) {
+    if (userByPhone.length > 0) {                     // ← 정상 동작
       const provider = userByPhone[0].social_provider || "local";
-      return res.status(409).json({
-        error: "이미 사용 중인 휴대폰번호입니다.",
-        errorType: "phone",
-        provider,
-      });
+      return res.status(409).json({ error: "이미 사용 중인 휴대폰번호입니다.", errorType: "phone", provider });
     }
+    
 
     const hashedPassword = await bcrypt.hash("social_oauth_dummy", 10);
 
