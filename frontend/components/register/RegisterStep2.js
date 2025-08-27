@@ -87,12 +87,9 @@ if (typeof data.showVerificationInput === "boolean") {
 } else if (data.hasRequestedCode && data.timeLeft > 0) {
   setShowVerificationInput(true);
 }
-
   } catch {}
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
-
 
   useEffect(() => {
     if (
@@ -109,23 +106,29 @@ if (typeof data.showVerificationInput === "boolean") {
     !!phone &&
     (socialProvider === "kakao" || socialProvider === "naver");
 
-  useEffect(() => {
-    // 소셜 자동인증 케이스는 유지
-    if (isSocialPhoneVerified) return;
-
-    // 번호가 바뀌면 인증 흐름 초기화
-    setIsVerified(false);
-    setVerificationCode("");
-    setVerificationError("");
-    setShowVerificationInput(false);
-    setHasRequestedCode(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimeLeft(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phone]);
-
-  const isDisabled =
-    (phone || "").length < 10 || (hasRequestedCode && timeLeft > 0);
+    useEffect(() => {
+      // 번호가 바뀌면 인증 흐름 초기화
+      if (isSocialPhoneVerified) return;
+      setIsVerified(false);
+      setVerificationCode("");
+      setVerificationError("");
+      setShowVerificationInput(false);
+      setHasRequestedCode(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setTimeLeft(0);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [phone]);
+    
+    // ✅ 컴포넌트 언마운트 시 타이머 정리
+    useEffect(() => {
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
+    }, []);
+    
+    const isDisabled =
+      (phone || "").length < 10 || (hasRequestedCode && timeLeft > 0);
+    
   const isPhoneReadonly =
     socialMode && (socialProvider === "kakao" || socialProvider === "naver");
 // Step2 값이 바뀔 때마다 병합 저장
@@ -320,6 +323,7 @@ useEffect(() => {
                   showAlert("인증 성공");
                   if (timerRef.current) clearInterval(timerRef.current);
                   setTimeLeft(0);
+                  setShowVerificationInput(false); // ← 선택: 입력창 닫기
                 } catch (e) {
                   const msg =
                     e?.response?.data?.error || "인증번호가 일치하지 않습니다.";
