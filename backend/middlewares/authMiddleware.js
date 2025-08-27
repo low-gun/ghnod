@@ -22,19 +22,28 @@ const optionalAuthenticate = (req, res, next) => {
     return next();
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ optionalAuthenticate - 토큰 검증 성공:", decoded);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.log(
-      "❌ optionalAuthenticate - 토큰 검증 실패, 비로그인 간주:",
-      error.message
-    );
-    req.user = null;
-    next();
-  }
+  // (optionalAuthenticate 내부)
+try {
+  const header = jwt.decode(token, { complete: true })?.header;
+  const now = Math.floor(Date.now() / 1000);
+  console.log("🔎 optionalAuthenticate - JWT header:", header);
+  console.log("🔎 optionalAuthenticate - JWT_SECRET set?:", !!process.env.JWT_SECRET, "len:", process.env.JWT_SECRET?.length);
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  console.log("✅ optionalAuthenticate - 검증 성공 payload:", {
+    sub: decoded.sub, id: decoded.id, role: decoded.role,
+    iss: decoded.iss, aud: decoded.aud, iat: decoded.iat, exp: decoded.exp, now
+  });
+  req.user = decoded;
+  next();
+} catch (error) {
+  console.log("❌ optionalAuthenticate - 검증 실패:", {
+    name: error.name, message: error.message, expiredAt: error.expiredAt
+  });
+  req.user = null;
+  next();
+}
+
 };
 
 /**
@@ -55,15 +64,27 @@ const authenticateToken = (req, res, next) => {
       .json({ error: "토큰이 없습니다. 접근이 거부되었습니다." });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ authenticateToken - 토큰 검증 성공:", decoded);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.log("❌ authenticateToken - 토큰 검증 실패:", error.message);
-    return res.status(403).json({ error: "유효하지 않은 토큰입니다." });
-  }
+ // (authenticateToken 내부)
+try {
+  const header = jwt.decode(token, { complete: true })?.header;
+  const now = Math.floor(Date.now() / 1000);
+  console.log("🔎 authenticateToken - JWT header:", header);
+  console.log("🔎 authenticateToken - JWT_SECRET set?:", !!process.env.JWT_SECRET, "len:", process.env.JWT_SECRET?.length);
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  console.log("✅ authenticateToken - 검증 성공 payload:", {
+    sub: decoded.sub, id: decoded.id, role: decoded.role,
+    iss: decoded.iss, aud: decoded.aud, iat: decoded.iat, exp: decoded.exp, now
+  });
+  req.user = decoded;
+  next();
+} catch (error) {
+  console.log("❌ authenticateToken - 검증 실패 상세:", {
+    name: error.name, message: error.message, expiredAt: error.expiredAt
+  });
+  return res.status(403).json({ error: "유효하지 않은 토큰입니다." });
+}
+
 };
 
 /**

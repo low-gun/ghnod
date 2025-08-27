@@ -366,32 +366,27 @@ const formatKSTDate = (input) => {
       month: "long",
       day: "numeric",
       weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
     });
-    return fmt.format(d); // 예: 2025년 8월 13일 (수) 14:07
+    return fmt.format(d); // 예: 2025년 8월 13일 (수)
+    
   } catch (e) {
     console.warn("날짜 포맷 실패:", e);
     return d.toISOString();
   }
 };
-function formatDateRangeTime(start, end, startTime, endTime) {
+function formatDateRangeTime(start, end) {
   if (!start && !end) return "일정 미정";
   const sDate = start ? new Date(start) : null;
   const eDate = end ? new Date(end) : null;
   const s = sDate ? sDate.toLocaleDateString("ko-KR") : "";
   const e = eDate ? eDate.toLocaleDateString("ko-KR") : "";
-  const st = startTime ? String(startTime).slice(0, 5) : "";
-  const et = endTime ? String(endTime).slice(0, 5) : "";
 
   if (!eDate || s === e) {
-    return st || et ? `${s} ${st}${et ? `~${et}` : ""}` : s;
+    return s;
   }
-  const left = st ? `${s} ${st}` : s;
-  const right = et ? `${e} ${et}` : e;
-  return `${left} ~ ${right}`;
+  return `${s} ~ ${e}`;
 }
+
 
 // PG 주문번호 후보를 다각도로 탐색
 function extractPgNo(o) {

@@ -263,28 +263,29 @@ export default function Header({
               aria-label="장바구니"
             >
               <ShoppingCart size={26} />
-              {cartReady && cartItems.length > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 3,
-                    right: 3,
-                    backgroundColor: "#ef4444",
-                    color: "#fff",
-                    fontSize: "10px",
-                    fontWeight: "bold",
-                    width: 16,
-                    height: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "50%",
-                    boxShadow: "0 0 0 1px #fff",
-                  }}
-                >
-                  {cartItems.length}
-                </span>
-              )}
+              {user && cartReady && Array.isArray(cartItems) && cartItems.length > 0 && (
+  <span
+    style={{
+      position: "absolute",
+      top: 3,
+      right: 3,
+      backgroundColor: "#ef4444",
+      color: "#fff",
+      fontSize: "10px",
+      fontWeight: "bold",
+      width: 16,
+      height: 16,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "50%",
+      boxShadow: "0 0 0 1px #fff",
+    }}
+  >
+    {cartItems.length}
+  </span>
+)}
+
             </Link>
           </div>
         )}
@@ -447,28 +448,29 @@ export default function Header({
                     aria-label="장바구니"
                   >
                     <ShoppingCart size={26} />
-                    {cartReady && cartItems.length > 0 && (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: 3,
-                          right: 3,
-                          backgroundColor: "#ef4444",
-                          color: "#fff",
-                          fontSize: "10px",
-                          fontWeight: "bold",
-                          width: 16,
-                          height: 16,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: "50%",
-                          boxShadow: "0 0 0 1px #fff",
-                        }}
-                      >
-                        {cartItems.length}
-                      </span>
-                    )}
+                    {user && cartReady && Array.isArray(cartItems) && cartItems.length > 0 && (
+  <span
+    style={{
+      position: "absolute",
+      top: 3,
+      right: 3,
+      backgroundColor: "#ef4444",
+      color: "#fff",
+      fontSize: "10px",
+      fontWeight: "bold",
+      width: 16,
+      height: 16,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "50%",
+      boxShadow: "0 0 0 1px #fff",
+    }}
+  >
+    {cartItems.length}
+  </span>
+)}
+
                   </Link>
                   <button
                     onClick={() => setMyDrawerOpen(true)}
