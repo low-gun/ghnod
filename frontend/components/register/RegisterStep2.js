@@ -49,8 +49,7 @@ export default function RegisterStep2({
   const { showAlert } = useGlobalAlert();
 const { open: openAgreements } = useGlobalAgreements(); // 추가
 
-  // 최초 1회만, 그리고 각 필드가 비어있을 때만 localStorage로 보충
-// 최초 1회만, 그리고 각 필드가 비어있을 때만 localStorage로 보충 (+인증 상태 복원)
+ 
 const didHydrateRef = useRef(false);
 useEffect(() => {
   if (didHydrateRef.current) return;
@@ -131,6 +130,14 @@ if (typeof data.showVerificationInput === "boolean") {
     
   const isPhoneReadonly =
     socialMode && (socialProvider === "kakao" || socialProvider === "naver");
+    // ⏱ 타이머 만료 시 입력란 닫기 + 상태 리셋
+useEffect(() => {
+  if (timeLeft === 0 && hasRequestedCode && !isVerified) {
+    setShowVerificationInput(false);
+    setVerificationCode("");
+    setHasRequestedCode(false);
+  }
+}, [timeLeft, hasRequestedCode, isVerified]);
 // Step2 값이 바뀔 때마다 병합 저장
 useEffect(() => {
   const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
@@ -234,11 +241,11 @@ useEffect(() => {
     </div>
   )}
 
-  {!isSocialPhoneVerified && (
-    <button
-      type="button"
-      className="verify-btn"
-      onClick={async () => {
+{!isSocialPhoneVerified && !isVerified && (
+  <button
+    type="button"
+    className="verify-btn"
+    onClick={async () => {
         try {
           const rawPhone = (phone || "").replace(/\D/g, "");
           if (rawPhone.length < 10) {
@@ -250,13 +257,17 @@ useEffect(() => {
             phone: rawPhone,
           });
           
-
-                  // 2) 타이머 시작
-                  setShowVerificationInput(true);
-                  setHasRequestedCode(true);
-                  setTimeLeft(180);
-                  if (timerRef.current) clearInterval(timerRef.current);
-                  timerRef.current = setInterval(() => {
+          // ✅ 재전송 대비: 인증/입력 초기화
+          setIsVerified(false);
+          setVerificationCode("");
+          setVerificationError("");
+          
+          // 2) 타이머 시작
+          setShowVerificationInput(true);
+          setHasRequestedCode(true);
+          setTimeLeft(180);
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = setInterval(() => {
                     setTimeLeft((prev) => {
                       if (prev <= 1) {
                         clearInterval(timerRef.current);
@@ -266,8 +277,7 @@ useEffect(() => {
                     });
                   }, 1000);
 
-                  setVerificationError("");
-                  const channel =
+                 const channel =
                     data?.channel === "alimtalk"
                       ? "알림톡"
                       : data?.channel === "sms"
@@ -275,7 +285,7 @@ useEffect(() => {
                         : "알림톡";
                   showAlert(`인증번호가 ${channel}으로 전송되었습니다.`);
                 } catch (e) {
-                  setVerificationError(
+                  setVerificationError(   
                     e?.response?.data?.error || "인증번호 전송 실패"
                   );
                 }
@@ -323,14 +333,19 @@ useEffect(() => {
                   showAlert("인증 성공");
                   if (timerRef.current) clearInterval(timerRef.current);
                   setTimeLeft(0);
-                  setShowVerificationInput(false); // ← 선택: 입력창 닫기
+                  
+                  // ✅ 입력/버튼 감추기 & 입력값 초기화
+                  setShowVerificationInput(false);
+                  setHasRequestedCode(false);
+                  setVerificationCode("");
+                  
                 } catch (e) {
                   const msg =
                     e?.response?.data?.error || "인증번호가 일치하지 않습니다.";
                   setVerificationError(msg);
                 }
               }}
-              disabled={!verificationCode || isVerified}
+              disabled={!verificationCode || isVerified || timeLeft === 0}
             >
               확인
             </button>

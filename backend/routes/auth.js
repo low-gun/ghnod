@@ -937,8 +937,6 @@ router.get(
   }
 );
 
-// 인증번호 전송
-// ====================== 회원가입: 휴대폰 인증번호 전송 ======================
 // ====================== 회원가입: 휴대폰 인증번호 전송 ======================
 router.post("/phone/send-code/register", async (req, res) => {
   const { phone } = req.body;
@@ -949,7 +947,7 @@ router.post("/phone/send-code/register", async (req, res) => {
 
   try {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const result = await sendAlimtalkVerify(rawPhone, code);
+    const result = await sendAlimtalkVerify(rawPhone, code); // result.channel 존재
 
     const codeHash = crypto.createHash("sha256").update(code).digest("hex");
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -972,7 +970,11 @@ router.post("/phone/send-code/register", async (req, res) => {
       );
     }
 
-    return res.json({ success: true, message: "인증번호를 발송했습니다." });
+    return res.json({
+      success: true,
+      channel: result.channel, // 👈 핵심
+      message: "인증번호를 발송했습니다.",
+    });
   } catch (err) {
     return res.status(500).json({ error: "인증번호 발송 실패" });
   }
