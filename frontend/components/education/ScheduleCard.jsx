@@ -1,5 +1,7 @@
 import React from "react";
 import { useRouter } from "next/router";
+import Image from "next/image";
+const EMPTY_PX = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 // 전체 회차 범위 계산
 function getScheduleRange(s) {
@@ -78,6 +80,10 @@ export default function ScheduleCard({ schedule, type }) {
   const { start, end } = getScheduleRange(schedule);
   const status = getScheduleStatus(start, end);
 
+// 이미지 소스(없으면 투명 픽셀)와 보유 여부
+const imgSrc = schedule.image_url || schedule.product_image || EMPTY_PX;
+const hasImg = imgSrc !== EMPTY_PX;
+
   const badge = {
     ended: {
       text: "종료",
@@ -121,28 +127,42 @@ export default function ScheduleCard({ schedule, type }) {
       }}
     >
       {/* 썸네일 */}
-      {schedule.image_url || schedule.product_image ? (
-        <img
-          src={schedule.image_url || schedule.product_image}
-          alt={schedule.title}
-          style={{ width: "100%", height: 200, objectFit: "contain" }}
-        />
-      ) : (
-        <div
-          style={{
-            width: "100%",
-            height: 200,
-            background: "#f2f2f2",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#999",
-            fontSize: 13,
-          }}
-        >
-          썸네일 없음
-        </div>
-      )}
+      {/* 썸네일 (항상 같은 트리 유지) */}
+<div
+  style={{
+    position: "relative",
+    width: "100%",
+    aspectRatio: "16 / 9",
+    background: hasImg ? "#fff" : "#f2f2f2",
+  }}
+>
+  <Image
+    src={imgSrc}
+    alt={schedule.title}
+    fill
+    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
+    placeholder={hasImg ? "blur" : undefined}
+    blurDataURL={hasImg ? "/images/blur-placeholder.png" : undefined}
+    style={{ objectFit: "contain" }}
+  />
+  {!hasImg && (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#999",
+        fontSize: 13,
+      }}
+    >
+      썸네일 없음
+    </div>
+  )}
+</div>
+
+
 
       {/* 본문 */}
       <div style={{ padding: 12, flex: 1 }}>

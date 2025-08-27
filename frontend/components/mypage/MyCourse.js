@@ -387,15 +387,27 @@ export default function MyCourse() {
         // PC(테이블형)
         <div style={{ minHeight: 340 }}>
           <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                fontSize: "15px",
-                borderCollapse: "collapse",
-                marginBottom: 0,
-              }}
-            >
-              <thead style={{ background: "#f9f9f9" }}>
+          <table
+  style={{
+    width: "100%",
+    fontSize: "15px",
+    borderCollapse: "collapse",
+    marginBottom: 0,
+    tableLayout: "fixed",              // ⬅ 고정 레이아웃
+  }}
+>
+  {/* ⬇ 열 너비 고정 */}
+  <colgroup>
+    <col style={{ width: "6%" }} />    {/* No */}
+    <col style={{ width: "32%" }} />   {/* 강의명 */}
+    <col style={{ width: "18%" }} />   {/* 일정 */}
+    <col style={{ width: "18%" }} />   {/* 장소 */}
+    <col style={{ width: "12%" }} />   {/* 강사 */}
+    <col style={{ width: "7%" }} />    {/* 상태 */}
+    <col style={{ width: "7%" }} />    {/* 후기 */}
+  </colgroup>
+  <thead style={{ background: "#f9f9f9" }}>
+
                 <tr>
                   {[
                     "No",
@@ -459,20 +471,33 @@ export default function MyCourse() {
                         {(currentPage - 1) * pageSize + idx + 1}
                       </td>
                       <td
-                        style={{
-                          ...tdCenter,
-                          cursor: "pointer",
-                          color: "#0070f3",
-                        }}
-                        onClick={() =>
-                          router.push(
-                            `/education/${item.type}/${item.schedule_id}`
-                          )
-                        }
-                      >
-                        {item.title}
-                        {item.category ? ` (${item.category})` : ""}
-                      </td>
+  style={{
+    ...tdCenter,
+    cursor: "pointer",
+    color: "#0070f3",
+  }}
+  onClick={() =>
+    router.push(
+      `/education/${item.type}/${item.schedule_id}`
+    )
+  }
+  title={`${item.title}${item.category ? ` (${item.category})` : ""}`} // ⬅ 전체 제목 툴팁
+>
+  <span
+    style={{
+      display: "inline-block",
+      maxWidth: "100%",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      verticalAlign: "middle",
+    }}
+  >
+    {item.title}
+    {item.category ? ` (${item.category})` : ""}
+  </span>
+</td>
+
                       <td style={tdCenter}>
                         {new Date(item.start_date)
                           .toISOString()
