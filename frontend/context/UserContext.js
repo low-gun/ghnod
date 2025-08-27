@@ -22,7 +22,14 @@ export function UserProvider({ children }) {
 
   const [user, setUser] = useState(undefined);
   const [accessToken, setAccessToken] = useState(null);
-
+// 안전한 경로 유틸 (외부 URL 차단)
+const getSafePath = (p) => {
+  try {
+    if (!p || typeof p !== "string") return "/";
+    if (p.startsWith("http://") || p.startsWith("https://")) return "/";
+    return p.startsWith("/") ? p : `/${p}`;
+  } catch { return "/"; }
+};
   // ✅ guest 장바구니 → 유저로 이전
   const migrateGuestCart = async (token) => {
     const guestToken = localStorage.getItem("guest_token");
@@ -161,34 +168,61 @@ export function UserProvider({ children }) {
   };
 
   // 로그아웃 시 호출
-  const logout = async () => {
-    const clientSessionId = getClientSessionId();
-    if (!clientSessionId) {
-      console.warn("❗ 로그아웃 중단: clientSessionId 없음");
+  // 로그아웃 시 호출
+const logout = async () => {
+  const clientSessionId = getClientSessionId();
+  if (!clientSessionId) {
+    console.warn("❗ 로그아웃 중단: clientSessionId 없음");
+    return;
+  }
+
+  // 1) 현재 위치 기억
+  let backTo = "/";
+  try {
+    const here = typeof window !== "undefined"
+      ? (window.location.pathname + window.location.search)
+      : "/";
+    backTo = getSafePath(here);
+    sessionStorage.setItem("AFTER_LOGOUT_GO", backTo);
+  } catch {}
+
+  // 2) 서버 로그아웃
+  try {
+    await api.post("/auth/logout", { clientSessionId });
+  } catch (err) {
+    console.warn("❌ 서버 로그아웃 실패:", err.message);
+  }
+
+  // 3) 클라이언트 세션 정리
+  setUser(null);
+  setAccessToken(null);
+  applyAccessTokenToAxios(null);
+  delete api.defaults.headers.common["Authorization"];
+
+  localStorage.removeItem("user");
+  sessionStorage.removeItem("accessToken");
+
+  const newGuestToken = crypto.randomUUID();
+  localStorage.setItem("guest_token", newGuestToken);
+
+  // 4) 이동: 저장된 페이지로(기본은 현재 페이지), 없으면 back, 최후 / 
+  try {
+    const saved = sessionStorage.getItem("AFTER_LOGOUT_GO");
+    sessionStorage.removeItem("AFTER_LOGOUT_GO");
+    const go = getSafePath(saved || backTo || "/");
+
+    if (go && go !== "/login") {
+      router.replace(go);
       return;
     }
-
-    try {
-      await api.post("/auth/logout", { clientSessionId });
-    } catch (err) {
-      console.warn("❌ 서버 로그아웃 실패:", err.message);
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
     }
+  } catch {}
+  router.replace("/");
+};
 
-    setUser(null);
-    setAccessToken(null);
-    applyAccessTokenToAxios(null);
-    delete api.defaults.headers.common["Authorization"];
-
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("accessToken");
-
-    const newGuestToken = crypto.randomUUID();
-    localStorage.setItem("guest_token", newGuestToken);
-
-    // 장바구니 상태는 CartContext가 user 변경을 감지해 자동 초기화
-
-    router.push("/login");
-  };
 
   return (
     <UserContext.Provider

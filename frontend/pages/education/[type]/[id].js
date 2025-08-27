@@ -9,16 +9,9 @@ import TabProductDetail from "@/components/product/TabProductDetail";
 import TabProductReviews from "@/components/product/TabProductReviews";
 import TabProductInquiry from "@/components/product/TabProductInquiry";
 import TabRefundPolicy from "@/components/product/TabRefundPolicy";
-import {
-  ShoppingCart,
-  Calendar,
-  MapPin,
-  User,
-  Users,
-  Share2,
-  MessageCircle,
-} from "lucide-react";
-import { useIsMobile, useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import { ShoppingCart, Calendar, MapPin, User, Users, Share2 } from "lucide-react";
+
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import { useGlobalAlert } from "@/stores/globalAlert";
 
 function formatRangeWithWeekday(startDate, endDate) {
@@ -66,7 +59,6 @@ export default function EducationScheduleDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
-  const isTabletOrBelow = useIsTabletOrBelow();
   const { showAlert } = useGlobalAlert();
  // ✅ 동적 헤더 높이
 const [headerTop, setHeaderTop] = useState(80);
@@ -88,39 +80,7 @@ useEffect(() => {
   const tabsRef = useRef(null);
   const [stuck, setStuck] = useState(false);
 
-  // Toss 결제 스크립트 준비
-  const tossPaymentsRef = useRef(null);
-  const [tossReady, setTossReady] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const init = () => {
-      if (window.TossPayments && !tossPaymentsRef.current) {
-        try {
-          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-          if (!clientKey) {
-            console.error("NEXT_PUBLIC_TOSS_CLIENT_KEY 누락");
-            return;
-          }
-          tossPaymentsRef.current = window.TossPayments(clientKey);
-          setTossReady(true);
-        } catch (e) {
-          console.error("TossPayments 초기화 실패", e);
-        }
-      }
-    };
-
-    if (!window.TossPayments) {
-      const s = document.createElement("script");
-      s.src = "https://js.tosspayments.com/v1/payment";
-      s.async = true;
-      s.onload = init;
-      document.head.appendChild(s);
-    } else {
-      init();
-    }
-  }, []);
-
+  
   // 데이터 로드
   useEffect(() => {
     if (!id) return;
@@ -176,6 +136,10 @@ useEffect(() => {
       ).length,
     [sessionsArr]
   );
+  const useDropdown = useMemo(
+    () => isMobile || sessionsCount >= 5,
+    [isMobile, sessionsCount]
+  );
   
   // ✅ 현재 선택(또는 단일 일정)의 잔여 좌석 계산
 const remainingForSelection = useMemo(() => {
@@ -193,18 +157,21 @@ const remainingForSelection = useMemo(() => {
 
 const isSoldOut = remainingForSelection <= 0;
 
-  const seats = useMemo(() => {
-    const total = Number(schedule?.total_spots ?? 0) || 0;
-    const reserved =
-      Number(schedule?.reserved_spots ?? schedule?.booked_count ?? 0) || 0;
-    const remaining = Math.max(total - reserved, 0);
-    return { total, reserved, remaining };
-  }, [schedule]);
+  // ✅ 액션 버튼 비활성화/툴팁 판단
+const disableActions = useMemo(() => {
+  if (sessionsCount > 1) {
+    return selectedSessionId ? isSoldOut : false; // 회차 미선택이면 활성화
+  }
+  return isSoldOut; // 단일 회차는 기존 로직
+}, [sessionsCount, selectedSessionId, isSoldOut]);
 
-  const useDropdown = useMemo(
-    () => isMobile || sessionsCount >= 5,
-    [isMobile, sessionsCount]
-  );
+const disableTitle = useMemo(() => {
+  if (sessionsCount > 1) {
+    if (!selectedSessionId) return "회차를 먼저 선택하세요.";
+    return isSoldOut ? "마감된 회차입니다." : undefined;
+  }
+  return isSoldOut ? "마감된 일정입니다." : undefined;
+}, [sessionsCount, selectedSessionId, isSoldOut]);
 
   // 장바구니/바로구매
   const handleBuyNow = useCallback(async () => {
@@ -601,6 +568,7 @@ const isSoldOut = remainingForSelection <= 0;
                 icon: <Users size={16} />,
               },
               
+              
 
               
             ].map((item, idx, arr) => (
@@ -630,8 +598,8 @@ const isSoldOut = remainingForSelection <= 0;
           <button
   onClick={handleAddToCart}
   style={actionBtnStyle(false)}
-  disabled={isSoldOut}
-  title={isSoldOut ? "마감된 일정입니다." : undefined}
+  disabled={disableActions}
+  title={disableTitle}
 >
   <ShoppingCart size={16} style={{ marginRight: 4 }} />
   장바구니
@@ -639,11 +607,12 @@ const isSoldOut = remainingForSelection <= 0;
 <button
   onClick={handleBuyNow}
   style={actionBtnStyle(true)}
-  disabled={isSoldOut}
-  title={isSoldOut ? "마감된 일정입니다." : undefined}
+  disabled={disableActions}
+  title={disableTitle}
 >
   바로 구매
 </button>
+
 
           </div>
         </div>
