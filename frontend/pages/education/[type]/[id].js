@@ -164,6 +164,22 @@ useEffect(() => {
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
     [schedule]
   );
+  // ✅ 현재 선택(또는 단일 일정)의 잔여 좌석 계산
+const remainingForSelection = useMemo(() => {
+  if (sessionsCount > 1) {
+    const sess = (schedule.sessions || []).find(
+      (s) => (s.id || s.session_id) === selectedSessionId
+    );
+    if (!sess) return 0;
+    const tot = Number(sess.total_spots ?? 0);
+    return Number(sess.remaining_spots ?? Math.max(tot - (sess.reserved_spots ?? 0), 0));
+  }
+  const tot = Number(schedule.total_spots ?? 0);
+  return Number(schedule.remaining_spots ?? Math.max(tot - (schedule.reserved_spots ?? 0), 0));
+}, [sessionsCount, selectedSessionId, schedule]);
+
+const isSoldOut = remainingForSelection <= 0;
+
   const seats = useMemo(() => {
     const total = Number(schedule?.total_spots ?? 0) || 0;
     const reserved =
@@ -210,6 +226,10 @@ useEffect(() => {
         showAlert("원하시는 회차를 선택해 주세요.");
         return;
       }
+      if (isSoldOut) {
+        showAlert(sessionsCount > 1 ? "마감된 회차입니다. 다른 회차를 선택해 주세요." : "마감된 일정입니다.");
+        return;
+      }
       const addRes = await api.post("/cart/items", {
         schedule_id: schedule.id,
         schedule_session_id: selectedSessionId || null,
@@ -217,6 +237,7 @@ useEffect(() => {
         unit_price: unitPrice,
         type: "buyNow",
       });
+      
       const cartItemId = addRes?.data?.item?.id || addRes?.data?.id;
       if (!cartItemId) {
         showAlert("바로구매 준비에 실패했습니다. 다시 시도해 주세요.");
@@ -245,6 +266,10 @@ useEffect(() => {
     try {
       if ((schedule.sessions || []).length > 1 && !selectedSessionId) {
         showAlert("원하시는 회차를 선택해 주세요.");
+        return;
+      }
+      if (isSoldOut) {
+        showAlert((schedule.sessions || []).length > 1 ? "마감된 회차입니다. 다른 회차를 선택해 주세요." : "마감된 일정입니다.");
         return;
       }
       const payload = {
@@ -465,14 +490,18 @@ useEffect(() => {
                 >
                   {sessionsCount > 1 && !selectedSessionId && <option value="">회차를 선택하세요</option>}
                   {sessionsArr.map((s, idx) => {
-                    const sid = s.id || s.session_id || idx;
-                    const dateLabel = formatRangeWithWeekday(s.start_date, s.end_date);
-                    return (
-                      <option key={sid} value={sid}>
-                        {`(${idx + 1}회차) ${dateLabel} ─ 잔여 ${s.remaining_spots ?? 0}명(총원 ${s.total_spots ?? 0}명)`}
-                      </option>
-                    );
-                  })}
+  const sid = s.id || s.session_id || idx;
+  const dateLabel = formatRangeWithWeekday(s.start_date, s.end_date);
+  const rem = Number(s.remaining_spots ?? 0);
+  const tot = Number(s.total_spots ?? 0);
+  const seatText = rem === 0 ? "마감" : `잔여 ${rem}명(총원 ${tot}명)`;
+  return (
+    <option key={sid} value={sid}>
+      {`(${idx + 1}회차) ${dateLabel} ─ ${seatText}`}
+    </option>
+  );
+})}
+
                 </select>
               ) : (
                 <div className="sessionList">
@@ -491,10 +520,21 @@ useEffect(() => {
                         />
                         <span className="sessionIdx">{`(${idx + 1}회차)`}</span>
                         <span className="sessionDate">{label}</span>
-                        <span className="sessionSeats">
-                          <Users size={14} style={{ marginRight: 4, color: "#555" }} />
-                          잔여 {s.remaining_spots ?? 0}명(총원 {s.total_spots ?? 0}명)
-                        </span>
+                        {(() => {
+  const rem = Number(s.remaining_spots ?? 0);
+  const tot = Number(s.total_spots ?? 0);
+  return rem === 0 ? (
+    <span className="sessionSeats" style={{ color: "#e11d48", fontWeight: 700 }}>
+      마감
+    </span>
+  ) : (
+    <span className="sessionSeats">
+      <Users size={14} style={{ marginRight: 4, color: "#555" }} />
+      {`잔여 ${rem}명(총원 ${tot}명)`}
+    </span>
+  );
+})()}
+
                       </label>
                     );
                   })}
@@ -533,27 +573,24 @@ useEffect(() => {
               { label: "장소", value: schedule.location || "-", icon: <MapPin size={16} /> },
               { label: "강사", value: schedule.instructor || "-", icon: <User size={16} /> },
               {
-  label: "모집",
-  value: (() => {
-    // 선택된 회차 찾기 (다회차일 경우)
-    const sess = (schedule.sessions || []).find(
-      (s) => (s.id || s.session_id) === selectedSessionId
-    );
-
-    if (sessionsCount > 1 && sess) {
-      // 다회차 → 선택된 회차 기준
-      const total = Number(sess.total_spots ?? 0);
-      const remaining = Number(sess.remaining_spots ?? Math.max(total - (sess.reserved_spots ?? 0), 0));
-      return `잔여 ${remaining}명(총원 ${total}명)`;
-    } else {
-      // 단회차 → schedule 단위 기준
-      const total = Number(schedule.total_spots ?? 0);
-      const remaining = Number(schedule.remaining_spots ?? Math.max(total - (schedule.reserved_spots ?? 0), 0));
-      return `잔여 ${remaining}명(총원 ${total}명)`;
-    }
-  })(),
-  icon: <Users size={16} />,
-},
+                label: "모집",
+                value: (() => {
+                  const sess = (schedule.sessions || []).find(
+                    (s) => (s.id || s.session_id) === selectedSessionId
+                  );
+              
+                  if (sessionsCount > 1 && sess) {
+                    const total = Number(sess.total_spots ?? 0);
+                    const remaining = Number(sess.remaining_spots ?? Math.max(total - (sess.reserved_spots ?? 0), 0));
+                    return `잔여 ${remaining}명(총원 ${total}명)`;
+                  } else {
+                    const total = Number(schedule.total_spots ?? 0);
+                    const remaining = Number(schedule.remaining_spots ?? Math.max(total - (schedule.reserved_spots ?? 0), 0));
+                    return `잔여 ${remaining}명(총원 ${total}명)`;
+                  }
+                })(),
+                icon: <Users size={16} />,
+              },
 
               
             ].map((item, idx, arr) => (
@@ -580,13 +617,24 @@ useEffect(() => {
           </div>
 
           <div className="ctaRow">
-            <button onClick={handleAddToCart} style={actionBtnStyle(false)}>
-              <ShoppingCart size={16} style={{ marginRight: 4 }} />
-              장바구니
-            </button>
-            <button onClick={handleBuyNow} style={actionBtnStyle(true)}>
-              바로 구매
-            </button>
+          <button
+  onClick={handleAddToCart}
+  style={actionBtnStyle(false)}
+  disabled={isSoldOut}
+  title={isSoldOut ? "마감된 일정입니다." : undefined}
+>
+  <ShoppingCart size={16} style={{ marginRight: 4 }} />
+  장바구니
+</button>
+<button
+  onClick={handleBuyNow}
+  style={actionBtnStyle(true)}
+  disabled={isSoldOut}
+  title={isSoldOut ? "마감된 일정입니다." : undefined}
+>
+  바로 구매
+</button>
+
           </div>
         </div>
       </div>
