@@ -164,6 +164,19 @@ useEffect(() => {
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
     [schedule]
   );
+  // 회차/선택
+  const sessionsArr = useMemo(
+    () => (Array.isArray(schedule?.sessions) ? schedule.sessions : []),
+    [schedule]
+  );
+  const sessionsCount = useMemo(
+    () =>
+      sessionsArr.filter(
+        (s) => s && (s.id || s.session_id || s.start_date || s.end_date)
+      ).length,
+    [sessionsArr]
+  );
+  
   // ✅ 현재 선택(또는 단일 일정)의 잔여 좌석 계산
 const remainingForSelection = useMemo(() => {
   if (sessionsCount > 1) {
@@ -188,18 +201,6 @@ const isSoldOut = remainingForSelection <= 0;
     return { total, reserved, remaining };
   }, [schedule]);
 
-  // 회차/선택
-  const sessionsArr = useMemo(
-    () => (Array.isArray(schedule?.sessions) ? schedule.sessions : []),
-    [schedule]
-  );
-  const sessionsCount = useMemo(
-    () =>
-      sessionsArr.filter(
-        (s) => s && (s.id || s.session_id || s.start_date || s.end_date)
-      ).length,
-    [sessionsArr]
-  );
   const useDropdown = useMemo(
     () => isMobile || sessionsCount >= 5,
     [isMobile, sessionsCount]
@@ -581,16 +582,25 @@ const isSoldOut = remainingForSelection <= 0;
               
                   if (sessionsCount > 1 && sess) {
                     const total = Number(sess.total_spots ?? 0);
-                    const remaining = Number(sess.remaining_spots ?? Math.max(total - (sess.reserved_spots ?? 0), 0));
-                    return `잔여 ${remaining}명(총원 ${total}명)`;
+                    const remaining = Number(
+                      sess.remaining_spots ?? Math.max(total - (sess.reserved_spots ?? 0), 0)
+                    );
+                    return remaining === 0
+                      ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
+                      : `잔여 ${remaining}명(총원 ${total}명)`;
                   } else {
                     const total = Number(schedule.total_spots ?? 0);
-                    const remaining = Number(schedule.remaining_spots ?? Math.max(total - (schedule.reserved_spots ?? 0), 0));
-                    return `잔여 ${remaining}명(총원 ${total}명)`;
+                    const remaining = Number(
+                      schedule.remaining_spots ?? Math.max(total - (schedule.reserved_spots ?? 0), 0)
+                    );
+                    return remaining === 0
+                      ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
+                      : `잔여 ${remaining}명(총원 ${total}명)`;
                   }
                 })(),
                 icon: <Users size={16} />,
               },
+              
 
               
             ].map((item, idx, arr) => (
