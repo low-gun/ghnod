@@ -106,6 +106,7 @@
 ./frontend/components/common/FormField.jsx
 ./frontend/components/common/FormFooterBar.jsx
 ./frontend/components/common/FormSection.jsx
+./frontend/components/common/GlobalAgreements.js
 ./frontend/components/common/GlobalAlert.js
 ./frontend/components/common/GlobalConfirmModal.jsx
 ./frontend/components/common/GlobalLoadingBar.js
@@ -272,6 +273,7 @@
 ./frontend/public
 ./frontend/public/images
 ./frontend/stores
+./frontend/stores/globalAgreements.js
 ./frontend/stores/globalAlert.js
 ./frontend/stores/globalConfirm.js
 ./frontend/stores/globalLoading.js

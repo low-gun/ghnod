@@ -338,11 +338,18 @@ export default function CheckoutPage() {
         <div className="checkout-main">
           {/* 좌측: 주문 목록 + 안내/결제수단 */}
           <div className="checkout-left">
-            {cartItems
-              .filter((it) => it && typeof it === "object" && it.schedule_id)
-              .map((it) => (
-                <CartItemCard key={it.id} item={it} variant="checkout" />
-              ))}
+          {cartItems
+  .filter((it) => it && typeof it === "object" && it.schedule_id)
+  .map((it) => (
+    <CartItemCard
+      key={it.id}
+      item={it}
+      variant="checkout"
+      hideTime   // ← 시간 비노출
+      showTime={false} // ← 혹시 showTime 사용 중이면 대비
+    />
+  ))}
+
 
             <div style={{ marginTop: 20 }}>
               <p style={{ fontSize: 13, color: "#555", marginBottom: 12 }}>

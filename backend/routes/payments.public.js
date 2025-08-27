@@ -169,23 +169,23 @@ router.post("/toss/prepare", authenticateToken, async (req, res) => {
         const u = Number(it.unit_price || 0);
         const d = Number(it.discount_price || 0);
         const per = d > 0 && d < u ? d : u;       // ✅ 할인가 우선
-        const subtotal = q * per;
-      
-        await conn.query(
-          `INSERT INTO order_items
+const subtotal = q * per;
+
+await conn.query(
+  `INSERT INTO order_items
    (order_id, schedule_id, schedule_session_id, quantity, unit_price, discount_price, subtotal, updated_at)
  VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
 [
   orderId,
   it.schedule_id,
-  it.schedule_session_id || null, // ✅ 회차 FK 반영
+  it.schedule_session_id || null,
   q,
-  p,
+  per,                            // ✅ 오타 수정
   Number(it.discount_price || 0),
   subtotal,
 ]
+);
 
-        );
       }   
 
       await conn.commit();
