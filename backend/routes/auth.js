@@ -389,6 +389,15 @@ router.post("/register", async (req, res) => {
     if (existingUsers.length > 0) {
       return res.status(409).json({ error: "이미 사용 중인 이메일입니다." });
     }
+    
+    // 휴대폰 중복 확인
+    const [existingPhones] = await db.query(
+      "SELECT id FROM users WHERE phone = ?",
+      [rawPhone]
+    );
+    if (existingPhones.length > 0) {
+      return res.status(409).json({ error: "이미 사용 중인 휴대폰번호입니다." });
+    }
 
     // 비밀번호 해싱
     const hashedPassword = await bcrypt.hash(password, 10);

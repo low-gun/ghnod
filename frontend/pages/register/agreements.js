@@ -34,7 +34,12 @@ export default function AgreementsPage() {
     if (window.history.length > 1) router.back();
     else router.push("/register");
   };
-
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
+    if (typeof saved.termsAgree === "boolean") setTermsChecked(saved.termsAgree);
+    if (typeof saved.privacyAgree === "boolean") setPrivacyChecked(saved.privacyAgree);
+    if (typeof saved.marketingAgree === "boolean") setMarketingChecked(saved.marketingAgree);
+  }, []);
   return (
     <div className="agreements-root">
       <div className="agreements-header">

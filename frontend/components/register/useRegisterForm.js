@@ -46,11 +46,10 @@ export default function useRegisterForm() {
       setVerificationError("");
       setIsVerified(false);
       setHasRequestedCode(false);
-      setTermsAgree(false);
-      setPrivacyAgree(false);
-      setMarketingAgree(false);
+      // ❌ 약관 동의는 사용자가 체크한 상태를 유지해야 하므로 초기화하지 않음
     };
   }, []);
+  
 
   useEffect(() => {
     if (timeLeft === 0 && !isVerified) {

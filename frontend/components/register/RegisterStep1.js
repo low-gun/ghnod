@@ -69,30 +69,32 @@ export default function RegisterStep1({
           style={{ display: "none" }}
         />
 
-        <input
-          type="email"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="off"
-          className={`login-input ${error && (error.includes("이메일") || error.includes("형식")) ? "input-error" : ""}`}
-        />
+<input
+  type="email"
+  placeholder="이메일"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  onBlur={handleEmailCheck}
+  required
+  autoComplete="off"
+  className={`login-input ${error && (error.includes("이메일") || error.includes("형식")) ? "input-error" : ""}`}
+/>
+
         {error && error.includes("이메일") && (
           <p className="register-error">{error}</p>
         )}
 
         <div className="input-wrap">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="비밀번호"
-            value={password}
-            onFocus={handleEmailCheck}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            className="login-input"
-          />
+        <input
+  type={showPassword ? "text" : "password"}
+  placeholder="비밀번호"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  required
+  autoComplete="new-password"
+  className="login-input"
+/>
+
           <button
             type="button"
             tabIndex={-1}

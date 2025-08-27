@@ -8,11 +8,12 @@ import useRegisterForm from "@/components/register/useRegisterForm";
 export default function RegisterPage() {
   const form = useRegisterForm();
   const router = useRouter();
-  const {
-    step,
-    setStep,
-    // 모달 관련 state는 더이상 꺼내지 않음
-  } = form;
+  const { step, setStep } = form;
+
+  // 페이지 진입 시 localStorage 초기화
+  useEffect(() => {
+    localStorage.removeItem("registerStep2Form");
+  }, []);
 
   // 쿼리 파라미터에서 step 읽어와서 반영
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function RegisterPage() {
     const qsStep = Number(router.query.step);
     if (qsStep === 1 || qsStep === 2) setStep(qsStep);
   }, [router.isReady, router.query.step, setStep]);
+
 
   return (
     <div className="login-root">

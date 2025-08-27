@@ -1,5 +1,5 @@
 // frontend/components/register/RegisterStep2.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import AgreementModal from "@/components/AgreementModal";
@@ -51,22 +51,36 @@ export default function RegisterStep2({
   const [openModal, setOpenModal] = useState(null);
   const { showAlert } = useGlobalAlert();
 
-  useEffect(() => {
-    const saved = localStorage.getItem("registerStep2Form");
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        setUsername(data.username || "");
-        setPhone(data.phone || "");
-        setCompany(data.company || "");
-        setDepartment(data.department || "");
-        setPosition(data.position || "");
-        setTermsAgree(!!data.termsAgree);
-        setPrivacyAgree(!!data.privacyAgree);
-        setMarketingAgree(!!data.marketingAgree);
-      } catch {}
-    }
-  }, []);
+  // 최초 1회만, 그리고 각 필드가 비어있을 때만 localStorage로 보충
+const didHydrateRef = useRef(false);
+useEffect(() => {
+  if (didHydrateRef.current) return;
+  didHydrateRef.current = true;
+
+  const saved = localStorage.getItem("registerStep2Form");
+  if (!saved) return;
+
+  try {
+    const data = JSON.parse(saved) || {};
+
+    // ✅ email도 비어 있을 때만 복원
+    if (!email && data.email) setEmail(data.email);
+
+    if (!username) setUsername(data.username || "");
+    if (!phone) setPhone(data.phone || "");
+    if (!company) setCompany(data.company || "");
+    if (!department) setDepartment(data.department || "");
+    if (!position) setPosition(data.position || "");
+
+    // 동의값은 명시적으로 true/false가 저장되어 있을 때만 반영
+    if (typeof data.termsAgree === "boolean") setTermsAgree(data.termsAgree);
+    if (typeof data.privacyAgree === "boolean") setPrivacyAgree(data.privacyAgree);
+    if (typeof data.marketingAgree === "boolean") setMarketingAgree(data.marketingAgree);
+  } catch {}
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
 
   useEffect(() => {
     if (
@@ -102,6 +116,31 @@ export default function RegisterStep2({
     (phone || "").length < 10 || (hasRequestedCode && timeLeft > 0);
   const isPhoneReadonly =
     socialMode && (socialProvider === "kakao" || socialProvider === "naver");
+// Step2 값이 바뀔 때마다 병합 저장
+useEffect(() => {
+  const prev = JSON.parse(localStorage.getItem("registerStep2Form") || "{}");
+  const merged = {
+    ...prev, // (Step1의 email/password 등 유지)
+    username,
+    phone,
+    company,
+    department,
+    position,
+    termsAgree,
+    privacyAgree,
+    marketingAgree,
+  };
+  localStorage.setItem("registerStep2Form", JSON.stringify(merged));
+}, [
+  username,
+  phone,
+  company,
+  department,
+  position,
+  termsAgree,
+  privacyAgree,
+  marketingAgree,
+]);
 
   return (
     <>
