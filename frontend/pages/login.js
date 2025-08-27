@@ -19,7 +19,8 @@ const getSafePath = (p) => {
   } catch { return "/"; }
 };
 
-export default function LoginPage() {  const [email, setEmail] = useState("");
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -33,27 +34,23 @@ export default function LoginPage() {  const [email, setEmail] = useState("");
   useEffect(() => {
     if (user?.id && !alreadyRedirected.current) {
       alreadyRedirected.current = true;
-  
+
       const redirect = getSafePath(router.query.redirect);
       const hasRedirect = redirect && redirect !== "/";
-      const adminDefault = user.role === "admin" ? "/admin" : "/";
-  
-      // redirect가 있으면 우선
+
+      // ✅ 우선순위: redirect > admin > history back > /
       if (hasRedirect) {
         router.replace(redirect);
-        return;
-      }
-      // redirect 없고 히스토리가 있으면 이전 페이지로
-      if (typeof window !== "undefined" && window.history.length > 1) {
+      } else if (user.role === "admin") {
+        router.replace("/admin");
+      } else if (typeof window !== "undefined" && window.history.length > 1) {
         router.back();
-        return;
+      } else {
+        router.replace("/");
       }
-      // 기본 이동 (admin이면 /admin)
-      router.replace(adminDefault);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, router.isReady]);
-  
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -68,6 +65,7 @@ export default function LoginPage() {  const [email, setEmail] = useState("");
 
       if (data.success) {
         showAlert("로그인 성공! 환영합니다 😊");
+
         if (data.user?.needsPasswordReset) {
           setUserId(data.user.id);
           setShowPasswordResetModal(true);
@@ -81,30 +79,30 @@ export default function LoginPage() {  const [email, setEmail] = useState("");
           role: data.user.role,
         };
         setAccessToken(data.accessToken);
-      
+
         let finalCartItems = [];
         try {
           const cartRes = await api.get("/cart/items");
           if (cartRes.data.success) finalCartItems = cartRes.data.items;
         } catch {}
-      
+
         login(userData, data.accessToken, finalCartItems);
         setCartItems(finalCartItems);
         setCartReady(true);
-      
+
         localStorage.removeItem("guest_token");
         delete api.defaults.headers.common["x-guest-token"];
-      
-        // ✅ 이동 규칙: redirect > (히스토리 back) > admin 기본(/admin) > 홈
+
+        // ✅ 우선순위: redirect > admin > history back > /
         const redirect = getSafePath(router.query.redirect);
         const hasRedirect = redirect && redirect !== "/";
-      
+
         if (hasRedirect) {
           router.replace(redirect);
-        } else if (typeof window !== "undefined" && window.history.length > 1) {
-          router.back();
         } else if (userData.role === "admin") {
           router.replace("/admin");
+        } else if (typeof window !== "undefined" && window.history.length > 1) {
+          router.back();
         } else {
           router.replace("/");
         }
