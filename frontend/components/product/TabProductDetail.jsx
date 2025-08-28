@@ -62,10 +62,16 @@ export default function TabProductDetail({ html }) {
 
       <style jsx global>{`
         .detail-box img {
-          max-width: 100%;
-          height: auto;
-          display: block;
-        }
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0;      /* ✅ 이미지 기본 마진 제거 */
+  padding: 0;     /* ✅ 혹시 모를 패딩 제거 */
+}
+
+.detail-box p {
+  margin: 0;
+}
         .detail-box table {
           width: 100%;
           border-collapse: collapse;

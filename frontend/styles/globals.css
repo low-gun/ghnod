@@ -32,8 +32,10 @@ main {
 }
 a {
   text-decoration: none;
-  color: inherit;
+  color: inherit;        /* ✅ 기본 파란색 링크 제거 */
+  -webkit-tap-highlight-color: transparent; /* ✅ 모바일 터치 하이라이트 제거 */
 }
+
 a:hover,
 a:focus,
 a:active {
@@ -59,13 +61,21 @@ button {
   background: none;
   border: none;
   outline: none;
+  color: inherit;             /* ✅ 텍스트 파란색 제거 */
+  -webkit-appearance: none;   /* ✅ iOS 기본 파란 버튼 제거 */
+  appearance: none;
 }
+
 input,
 select,
 textarea {
   font-family: inherit;
   font-size: inherit;
+  color: inherit;             /* ✅ 기본 파란 글자 제거 */
+  -webkit-appearance: none;   /* ✅ iOS 기본 스타일 제거 */
+  appearance: none;
 }
+
 input,
 select,
 textarea {

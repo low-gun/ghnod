@@ -789,11 +789,19 @@ const disableTitle = useMemo(() => {
 
   .infoCard { margin-top: 20px; background: #f7f9fc; border-radius: 8px; }
   .infoRow {
-    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  }
-  .infoRow:last-child { border-bottom: none; }
-  .infoLabel { min-width: 60px; }
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+.infoRow:last-child { border-bottom: none; }
+.infoLabel { 
+  min-width: 60px; 
+  font-size: 14px;          /* 라벨도 살짝 줄이고 싶으면 */
+}
+.infoValue {
+  font-size: 14px;          /* ✅ 장소/모집/강사 값 글자 크기 */
+  color: #444;              /* ✅ 색상도 살짝 톤 다운 */
+}
+
 
   .qtyRow { margin-top: 20px; display: flex; align-items: center; gap: 8px; }
   .qtyLabel { font-weight: 500; }
