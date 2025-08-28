@@ -324,17 +324,29 @@ export default function MyCourse() {
             >
               {/* 카드 상단: 강의명, 상태 */}
               <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 5,
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: "1.08rem", flex: 1 }}>
-                  {item.title}
-                </span>
-                {renderStatusBadge(item.status)}
-              </div>
+  style={{
+    display: "flex",
+    alignItems: "center",
+    marginBottom: 5,
+    minWidth: 0, // ⬅ flex 자식 말줄임 허용
+  }}
+>
+  <span
+    style={{
+      fontWeight: 600,
+      fontSize: "1.08rem",
+      flex: 1,
+      minWidth: 0,                // ⬅ 말줄임에 필요
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {item.title}
+  </span>
+  {renderStatusBadge(item.status)}
+</div>
+
               {/* 일정 */}
               <div
                 style={{ color: "#455", fontSize: "0.98rem", marginBottom: 2 }}
@@ -347,16 +359,38 @@ export default function MyCourse() {
               </div>
               {/* 장소/강사 */}
               <div
-                style={{
-                  color: "#5a5a5a",
-                  fontSize: "0.98rem",
-                  display: "flex",
-                  gap: 14,
-                }}
-              >
-                <span>📍 {item.location}</span>
-                <span>👤 {item.instructor}</span>
-              </div>
+  style={{
+    color: "#5a5a5a",
+    fontSize: "0.98rem",
+    display: "flex",
+    gap: 14,
+    minWidth: 0, // ⬅ 말줄임 허용
+  }}
+>
+  <span
+    style={{
+      flex: 1,
+      minWidth: 0,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+  >
+    📍 {item.location}
+  </span>
+  <span
+    style={{
+      flex: 1,
+      minWidth: 0,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+  >
+    👤 {item.instructor}
+  </span>
+</div>
+
               {/* 후기 버튼(오른쪽 하단) */}
               <div
                 style={{
@@ -511,8 +545,33 @@ export default function MyCourse() {
                           </>
                         )}
                       </td>
-                      <td style={tdCenter}>{item.location}</td>
-                      <td style={tdCenter}>{item.instructor}</td>
+                      <td style={tdCenter} title={item.location || ""}>
+  <span
+    style={{
+      display: "inline-block",
+      maxWidth: "100%",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      verticalAlign: "middle",
+    }}
+  >
+    {item.location}
+  </span>
+</td>                      <td style={tdCenter} title={item.instructor || ""}>
+  <span
+    style={{
+      display: "inline-block",
+      maxWidth: "100%",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      verticalAlign: "middle",
+    }}
+  >
+    {item.instructor}
+  </span>
+</td>
                       <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
                       <td style={tdCenter}>
                         {item.status === "완료" ? (

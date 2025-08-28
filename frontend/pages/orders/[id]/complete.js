@@ -238,37 +238,38 @@ export default function OrderCompletePage() {
               return (
                 <div key={item.id} className="oc-item">
                   <div className="oc-thumb">
-                    {item.thumbnail_url ? (
-                      <>
-                        <img
-                          src={item.image_url} 
-                          alt="상품 썸네일"
-                          className="oc-img"
-                          loading="lazy"
-                          decoding="async"
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            const fb =
-                              e.currentTarget.parentElement?.querySelector(
-                                ".oc-thumb-fallback"
-                              );
-                            if (fb) fb.style.display = "flex";
-                          }}
-                        />
-                        <span
-                          className="oc-thumb-fallback"
-                          style={{ display: "none" }}
-                        >
-                          이미지 없음
-                        </span>
-                      </>
-                    ) : (
-                      <span className="oc-thumb-fallback">
-                        이미지{"\n"}없음
-                      </span>
-                    )}
-                  </div>
+  {item.thumbnail_url ? (
+    <>
+      <img
+        src={item.thumbnail_url}
+        alt="상품 썸네일"
+        className="oc-img"
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+          const fb =
+            e.currentTarget.parentElement?.querySelector(
+              ".oc-thumb-fallback"
+            );
+          if (fb) fb.style.display = "flex";
+        }}
+      />
+      <span
+        className="oc-thumb-fallback"
+        style={{ display: "none" }}
+      >
+        이미지 없음
+      </span>
+    </>
+  ) : (
+    <span className="oc-thumb-fallback">
+      이미지{"\n"}없음
+    </span>
+  )}
+</div>
+
 
                   <div className="oc-item-main">
   <div className="oc-item-title">{item.title}</div>
