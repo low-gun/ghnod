@@ -60,25 +60,36 @@ export default function EducationScheduleDetailPage() {
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const { showAlert } = useGlobalAlert();
- // ✅ 동적 헤더 높이
+// ✅ 동적 헤더 높이
 const [headerTop, setHeaderTop] = useState(80);
+const rafRef = useRef(0);
+
 useEffect(() => {
   const measure = () => {
-    const h = document.querySelector("header")?.offsetHeight;
-    setHeaderTop(h || (isMobile ? 56 : 80));
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const h = document.querySelector("header")?.offsetHeight;
+      setHeaderTop(h || (isMobile ? 56 : 80));
+    });
   };
+
   measure();
   window.addEventListener("resize", measure);
   window.addEventListener("orientationchange", measure);
+  // ⬇️ 모바일 주소창 접힘/펼침 등으로 헤더 높이가 변해도 즉시 반영
+  window.addEventListener("scroll", measure, { passive: true });
+
   return () => {
     window.removeEventListener("resize", measure);
     window.removeEventListener("orientationchange", measure);
+    window.removeEventListener("scroll", measure);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
   };
 }, [isMobile]);
 
 
+
   const tabsRef = useRef(null);
-  const [stuck, setStuck] = useState(false);
 
   
   // 데이터 로드
@@ -103,22 +114,7 @@ useEffect(() => {
       .finally(() => setLoading(false));
   }, [id, showAlert]);
 
-  // sticky 폴백
-  useEffect(() => {
-    const el = tabsRef.current;
-    if (!el) return;
   
-    const onScroll = () => {
-      const rect = el.getBoundingClientRect();
-      setStuck(rect.top <= headerTop);
-    };
-  
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [headerTop]);
-  
-
   // 가격/모집현황 계산
   const unitPrice = useMemo(
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
@@ -327,7 +323,7 @@ const disableTitle = useMemo(() => {
   if (loading) return null;
   if (!schedule) return <p style={{ padding: 40 }}>일정 정보를 찾을 수 없습니다.</p>;
 
-  const actionBtnStyle = (main) => ({
+  const actionBtnStyle = (main, disabled) => ({
     flex: 1,
     minWidth: isMobile ? undefined : "40%",
     padding: isMobile ? "14px 0" : "12px 16px",
@@ -336,9 +332,11 @@ const disableTitle = useMemo(() => {
     color: main ? "#fff" : "#0070f3",
     borderRadius: 6,
     fontWeight: 600,
-    cursor: "pointer",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
     fontSize: 15,
   });
+  
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 20, color: "#333" }}>
@@ -593,26 +591,49 @@ const disableTitle = useMemo(() => {
           </div>
 
           <div className="ctaRow">
-          <button
-  onClick={handleAddToCart}
-  style={actionBtnStyle(false)}
-  disabled={disableActions}
-  title={disableTitle}
->
-  <ShoppingCart size={16} style={{ marginRight: 4 }} />
-  장바구니
-</button>
-<button
-  onClick={handleBuyNow}
-  style={actionBtnStyle(true)}
-  disabled={disableActions}
-  title={disableTitle}
->
-  바로 구매
-</button>
+          {disableActions ? (
+  <button
+    type="button"
+    style={{
+      flex: 1,
+      minWidth: isMobile ? undefined : "40%",
+      padding: isMobile ? "14px 0" : "12px 16px",
+      border: "none",
+      backgroundColor: "#d1d5db",   // ✅ 회색 배경
+      color: "#6b7280",             // ✅ 글씨도 어두운 회색
+      borderRadius: 6,
+      fontWeight: 600,
+      cursor: "not-allowed",
+      fontSize: 15,
+    }}
+    disabled
+    aria-disabled="true"
+    title={disableTitle || "마감된 일정입니다."}
+  >
+    마감
+  </button>
+) : (
+  <>
+      <button
+        onClick={handleAddToCart}
+        style={actionBtnStyle(false, false)}
+        title={disableTitle}
+      >
+        <ShoppingCart size={16} style={{ marginRight: 4 }} />
+        장바구니
+      </button>
+      <button
+        onClick={handleBuyNow}
+        style={actionBtnStyle(true, false)}
+        title={disableTitle}
+      >
+        바로 구매
+      </button>
+    </>
+  )}
+</div>
 
 
-          </div>
         </div>
       </div>
 
@@ -620,16 +641,18 @@ const disableTitle = useMemo(() => {
       <div
   ref={tabsRef}
   style={{
-    position: stuck ? "fixed" : "sticky",
-    top: headerTop,   // ✅ 동적 헤더 높이 적용
-    left: 0,
-    right: 0,
+    position: "sticky",
+    top: headerTop,
     zIndex: 100,
     background: "#fff",
     borderBottom: "1px solid #eee",
     padding: "8px 0",
+    width: "100%",            // ✅ 폭 고정
+    boxSizing: "border-box",  // ✅ 박스계산 안정화
   }}
 >
+
+
 
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
           <ProductTabs
