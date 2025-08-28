@@ -642,15 +642,16 @@ const disableTitle = useMemo(() => {
   ref={tabsRef}
   style={{
     position: "sticky",
-    top: headerTop,
+    top: 0,           // ✅ 항상 header 바로 밑에 붙음
     zIndex: 100,
     background: "#fff",
     borderBottom: "1px solid #eee",
     padding: "8px 0",
-    width: "100%",            // ✅ 폭 고정
-    boxSizing: "border-box",  // ✅ 박스계산 안정화
+    width: "100%",
+    boxSizing: "border-box",
   }}
 >
+
 
 
 

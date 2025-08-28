@@ -90,6 +90,18 @@ body,
   overflow-x: hidden !important;
 }
 
+/* ✅ header 높이만큼 본문 padding 보정 */
+#__next {
+  padding-top: 80px;  /* PC header 높이 */
+}
+
+@media (max-width: 980px) {
+  #__next {
+    padding-top: 48px;  /* 모바일 header 높이 */
+  }
+}
+
+
 /* ===== PC/모바일 분기 ===== */
 .desktop-only {
   display: block;

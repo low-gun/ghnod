@@ -369,18 +369,20 @@ export default function Header({
 
   return (
     <>
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          width: "100%",
-          height: `${headerHeight}px`,
-          backgroundColor: "#fff",
-          zIndex: 999,
-          boxShadow: isCompactNav ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
-          transition: "height 0.2s",
-        }}
-      >
+<header
+  style={{
+    position: "fixed",
+    top: 0,
+    width: "100%",
+    height: `${headerHeight}px`,
+    backgroundColor: "#fff",
+    zIndex: 999,
+    boxShadow: isCompactNav ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
+    transition: "height 0.2s",
+  }}
+>
+
+
         <div
           style={{
             width: "100%",
