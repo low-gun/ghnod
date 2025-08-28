@@ -91,7 +91,7 @@ useEffect(() => {
 
 
 
-  const tabsRef = useRef(null);
+const tabsRef = useRef(null);
 
   
   // 데이터 로드
@@ -116,8 +116,7 @@ useEffect(() => {
       .finally(() => setLoading(false));
   }, [id, showAlert]);
 
-  
-  // 가격/모집현황 계산
+    // 가격/모집현황 계산
   const unitPrice = useMemo(
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
     [schedule]
@@ -639,13 +638,12 @@ const disableTitle = useMemo(() => {
         </div>
       </div>
 
-      {/* 탭 영역 */}
-      <div
+ {/* 탭 영역 */}
+<div
   ref={tabsRef}
   style={{
     position: "sticky",
-    top: isTabOrBelow980 ? 48 : 80,
-   // ✅ 헤더 높이만큼 띄우기
+    top: isTabOrBelow980 ? 48 : 80,  // ✅ 980 기준 고정
     zIndex: 100,
     background: "#fff",
     borderBottom: "1px solid #eee",
@@ -654,7 +652,8 @@ const disableTitle = useMemo(() => {
     boxSizing: "border-box",
   }}
 >
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
+
+  <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
           <ProductTabs
             tabs={[
               { id: "detail", label: "상품상세" },

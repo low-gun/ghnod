@@ -23,8 +23,12 @@ export default function MainLayout({ children }) {
 
   // 헤더 높이 변수 통일
   const headerHeight = isTabletOrBelow
-    ? HEADER_HEIGHT_MOBILE
-    : HEADER_HEIGHT_DESKTOP;
+  ? HEADER_HEIGHT_MOBILE
+  : HEADER_HEIGHT_DESKTOP;
+
+// ✅ 상세 페이지(education/[type]/[id])에선 헤더 오프셋을 주지 않음
+const noHeaderOffsetRoutes = ["/education/[type]/[id]"];
+const noHeaderOffset = noHeaderOffsetRoutes.includes(router.pathname);
 
   return (
     <div
@@ -41,17 +45,17 @@ export default function MainLayout({ children }) {
         activeMenu={activeMenu}
         setActiveMenu={setActiveMenu}
       />
-      <main
-        style={{
-          flex: 1, // ✅ 그대로 유지
-          marginTop: headerHeight,
-          maxWidth: "1200px",
-          marginLeft: "auto",
-          marginRight: "auto",
-          width: "100%",
-          position: "relative",
-        }}
-      >
+     <main
+  style={{
+    flex: 1,
+    marginTop: noHeaderOffset ? 0 : headerHeight,  // ✅ 조건부 적용
+    maxWidth: "1200px",
+    marginLeft: "auto",
+    marginRight: "auto",
+    width: "100%",
+    position: "relative",
+  }}
+>
         {children}
       </main>
       {!hideFooter && <Footer showProfile={showProfile} />}
