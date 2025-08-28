@@ -11,7 +11,7 @@ import TabProductInquiry from "@/components/product/TabProductInquiry";
 import TabRefundPolicy from "@/components/product/TabRefundPolicy";
 import { ShoppingCart, Calendar, MapPin, User, Users, Share2 } from "lucide-react";
 
-import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
+import { useIsMobile, useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 import { useGlobalAlert } from "@/stores/globalAlert";
 
 function formatRangeWithWeekday(startDate, endDate) {
@@ -59,6 +59,8 @@ export default function EducationScheduleDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+const isTabOrBelow980 = useIsTabletOrBelow980();
+
   const { showAlert } = useGlobalAlert();
 // ✅ 동적 헤더 높이
 const [headerTop, setHeaderTop] = useState(80);
@@ -642,7 +644,8 @@ const disableTitle = useMemo(() => {
   ref={tabsRef}
   style={{
     position: "sticky",
-    top: 0,           // ✅ 항상 header 바로 밑에 붙음
+    top: isTabOrBelow980 ? 48 : 80,
+   // ✅ 헤더 높이만큼 띄우기
     zIndex: 100,
     background: "#fff",
     borderBottom: "1px solid #eee",
@@ -651,10 +654,6 @@ const disableTitle = useMemo(() => {
     boxSizing: "border-box",
   }}
 >
-
-
-
-
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
           <ProductTabs
             tabs={[
