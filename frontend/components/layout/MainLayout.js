@@ -4,7 +4,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import { useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 
-const HEADER_HEIGHT_DESKTOP = 80;
+const HEADER_HEIGHT_DESKTOP = 0;
 const HEADER_HEIGHT_MOBILE = 48;
 
 export default function MainLayout({ children }) {
