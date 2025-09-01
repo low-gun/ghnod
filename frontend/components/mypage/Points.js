@@ -2,7 +2,18 @@ import React, { useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
-// 사용 탭에서 보여줄 구매/수강 내역 문구
+// 사용 탭 전용 주문번호
+function getOrderNo(p) {
+  return p.order_no || p.order_id || "-";
+}
+// 서버에서 used_at_display 내려오면 우선 사용, 없으면 used_at
+function getUsedAtDisplay(p) {
+  return p.used_at_display || p.used_at || null;
+}
+
+
+
+// 사용 탭에서 보여줄 구매/수강 내역 문구(적립 등에서 계속 사용)
 function getUsageText(p) {
   const title =
     p.order_title ||
@@ -19,8 +30,7 @@ function getUsageText(p) {
 
 export default function Points({ data }) {
   const [tab, setTab] = useState("적립");
-  const [detail, setDetail] = useState(null);
-  const isMobile = useIsMobile();
+const isMobile = useIsMobile();
 
   // 포인트 누적(적립-사용)
   const availablePoints = data.reduce((acc, cur) => {
@@ -31,8 +41,7 @@ export default function Points({ data }) {
 
   // 탭별 필터링
   const filtered = data.filter((point) => point.change_type === tab);
-
-  // 스타일
+// 스타일
   const containerStyle = { padding: isMobile ? 0 : 20 };
   const cardStyle = {
     display: "flex",
@@ -70,7 +79,9 @@ export default function Points({ data }) {
     borderCollapse: "collapse",
     fontSize: isMobile ? 14 : 15,
     minWidth: 580,
+    tableLayout: "fixed",   // ✅ 열 너비 고정 반영
   };
+  
   const theadStyle = {
     backgroundColor: "#f9f9f9",
     borderBottom: "1px solid #eee",
@@ -102,87 +113,6 @@ export default function Points({ data }) {
     display: "inline-block",
     minWidth: 45,
   });
-
-  // 상세 모달
-  const renderDetailModal = () =>
-    detail && (
-      <div
-        style={{
-          position: "fixed",
-          left: 0,
-          top: 0,
-          zIndex: 99999,
-          width: "100vw",
-          height: "100vh",
-          background: "rgba(20, 28, 49, 0.18)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        onClick={() => setDetail(null)}
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 12,
-            boxShadow: "0 6px 32px 0 rgba(0,0,0,0.14)",
-            padding: isMobile ? "20px 14px" : "34px 38px",
-            width: isMobile ? "90vw" : 400,
-            maxWidth: "95vw",
-            fontSize: isMobile ? 15 : 16,
-            position: "relative",
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 12 }}>
-            포인트 상세내역
-          </div>
-          <div style={{ marginBottom: 7 }}>
-            <b>구분:</b>{" "}
-            <span style={badgeStyle(detail.change_type)}>
-              {detail.change_type}
-            </span>
-          </div>
-          <div style={{ marginBottom: 7 }}>
-            <b>금액:</b> {formatPrice(detail.amount)}P
-          </div>
-          <div style={{ marginBottom: 7 }}>
-            <b>설명:</b> {detail.description || "-"}
-          </div>
-          <div style={{ marginBottom: 7 }}>
-            <b>적립일시:</b>{" "}
-            {detail.created_at
-              ? new Date(detail.created_at).toLocaleString("ko-KR")
-              : "-"}
-          </div>
-          {detail.change_type === "사용" && (
-            <div style={{ marginBottom: 7 }}>
-              <b>사용일시:</b>{" "}
-              {detail.used_at
-                ? new Date(detail.used_at).toLocaleString("ko-KR")
-                : "-"}
-            </div>
-          )}
-          <button
-            onClick={() => setDetail(null)}
-            style={{
-              marginTop: 18,
-              padding: "8px 22px",
-              background: "#0070f3",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontSize: isMobile ? 15 : 16,
-              width: "100%",
-            }}
-          >
-            닫기
-          </button>
-        </div>
-      </div>
-    );
 
   // 본문
   return (
@@ -271,52 +201,59 @@ export default function Points({ data }) {
             </span>
           </div>
 
-          {/* 설명 (말줄임) */}
-          <div
+        {/* 설명/날짜 영역 */}
+{tab === "사용" ? (
+  <div style={{ display: "grid", rowGap: 4 }}>
+    <div
   style={{
     fontSize: 14,
     color: "#333",
-    marginBottom: 4,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   }}
 >
-  {tab === "사용" ? getUsageText(point) : (point.description || "-")}
+  <b style={{ color: "#444" }}>주문번호:</b>{" "}
+  {getOrderNo(point) !== "-" ? (
+    <a
+      href={`/orders/${getOrderNo(point)}`}
+      style={{ color: "#0070f3", textDecoration: "underline" }}
+    >
+      {getOrderNo(point)}
+    </a>
+  ) : (
+    "-"
+  )}
 </div>
 
-
-          {/* 날짜들 */}
-          <div style={{ fontSize: 13, color: "#666", display: "grid", rowGap: 2 }}>
-            <div>
-              <b style={{ color: "#444" }}>적립:</b>{" "}
-              {point.created_at ? new Date(point.created_at).toLocaleString("ko-KR") : "-"}
-            </div>
-            {tab === "사용" && (
-              <div>
-                <b style={{ color: "#444" }}>사용:</b>{" "}
-                {point.used_at ? new Date(point.used_at).toLocaleString("ko-KR") : "-"}
-              </div>
-            )}
-          </div>
-
-          {/* 상세 버튼 */}
-          <div style={{ textAlign: "right", marginTop: 10 }}>
-            <button
-              style={{
-                background: "#eee",
-                color: "#0070f3",
-                border: "none",
-                borderRadius: 7,
-                padding: "6px 12px",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-              onClick={() => setDetail(point)}
-            >
-              상세
-            </button>
-          </div>
+    <div style={{ fontSize: 13, color: "#666" }}>
+      <b style={{ color: "#444" }}>사용:</b>{" "}
+      {getUsedAtDisplay(point)
+        ? new Date(getUsedAtDisplay(point)).toLocaleString("ko-KR")
+        : "-"}
+    </div>
+  </div>
+) : (
+  <div style={{ display: "grid", rowGap: 4 }}>
+    <div
+      style={{
+        fontSize: 14,
+        color: "#333",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {point.description || "-"}
+    </div>
+    <div style={{ fontSize: 13, color: "#666" }}>
+      <b style={{ color: "#444" }}>적립:</b>{" "}
+      {point.created_at
+        ? new Date(point.created_at).toLocaleString("ko-KR")
+        : "-"}
+    </div>
+  </div>
+)}
         </div>
       ))
     )}
@@ -325,77 +262,72 @@ export default function Points({ data }) {
   // 💻 PC: 기존 테이블 유지
   <div style={tableWrapperStyle}>
     <table style={tableStyle}>
-    <thead style={theadStyle}>
-  <tr>
-    <th style={thStyle}>구분</th>
-    <th style={thStyle}>금액</th>
-    <th style={thStyle}>{tab === "사용" ? "사용내역" : "설명"}</th>
-    <th style={thStyle}>적립일시</th>
-    {tab === "사용" && <th style={thStyle}>사용일시</th>}
-    <th style={thStyle}></th>
-  </tr>
-</thead>
+  <colgroup>{
+    // 1열(구분) 14% / 2열(금액) 16% / 3열 40% / 4열 30%
+    ["14%","16%","40%","30%"].map((w,i) => <col key={i} style={{ width: w }} />)
+  }</colgroup>
+  <thead style={theadStyle}>
+    <tr>
+      <th style={thStyle}>구분</th>
+      <th style={thStyle}>금액</th>
+      {tab === "사용" ? (
+        <>
+          <th style={thStyle}>주문번호</th>
+          <th style={thStyle}>사용일시</th>
+        </>
+      ) : (
+        <>
+          <th style={thStyle}>설명</th>
+          <th style={thStyle}>적립일시</th>
+        </>
+      )}
+    </tr>
+  </thead>
+  <tbody>
+  {filtered.map((point, idx) => (
+    <tr key={point.point_id || idx} style={idx % 2 === 0 ? rowEven : rowOdd}>
+      <td style={tdStyle}>
+        <span style={badgeStyle(point.change_type)}>{point.change_type}</span>
+      </td>
+      <td style={tdStyle}>{formatPrice(point.amount)}P</td>
+      {tab === "사용" ? (
+  <>
+    <td style={tdStyle}>
+      {getOrderNo(point) !== "-" ? (
+        <a
+          href={`/orders/${getOrderNo(point)}`}
+          style={{ color: "#0070f3", textDecoration: "underline" }}
+        >
+          {getOrderNo(point)}
+        </a>
+      ) : (
+        "-"
+      )}
+    </td>
+    <td style={tdStyle}>
+      {getUsedAtDisplay(point)
+        ? new Date(getUsedAtDisplay(point)).toLocaleString("ko-KR")
+        : "-"}
+    </td>
+  </>
+) : (
 
-      <tbody>
-        {filtered.length === 0 ? (
-          <tr>
-            <td
-              colSpan={tab === "사용" ? 6 : 5}
-              style={{
-                color: "#666",
-                fontSize: 15,
-                textAlign: "center",
-                background: "#f8f9fa",
-                height: "68px",
-              }}
-            >
-              포인트 내역이 없습니다.
-            </td>
-          </tr>
-        ) : (
-          filtered.map((point, idx) => (
-            <tr key={point.point_id || idx} style={idx % 2 === 0 ? rowEven : rowOdd}>
-              <td style={tdStyle}>
-                <span style={badgeStyle(point.change_type)}>{point.change_type}</span>
-              </td>
-              <td style={tdStyle}>{formatPrice(point.amount)}P</td>
-              <td style={tdStyle}>
-  {tab === "사용" ? getUsageText(point) : (point.description || "-")}
-</td>
-              <td style={tdStyle}>
-                {point.created_at ? new Date(point.created_at).toLocaleString("ko-KR") : "-"}
-              </td>
-              {tab === "사용" && (
-                <td style={tdStyle}>
-                  {point.used_at ? new Date(point.used_at).toLocaleString("ko-KR") : "-"}
-                </td>
-              )}
-              <td style={tdStyle}>
-                <button
-                  style={{
-                    background: "#eee",
-                    color: "#0070f3",
-                    border: "none",
-                    borderRadius: 7,
-                    padding: "4px 12px",
-                    fontSize: 14,
-                    cursor: "pointer",
-                    fontWeight: 500,
-                  }}
-                  onClick={() => setDetail(point)}
-                >
-                  상세
-                </button>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
+  <>
+    <td style={tdStyle}>{point.description || "-"}</td>
+    <td style={tdStyle}>
+      {point.created_at ? new Date(point.created_at).toLocaleString("ko-KR") : "-"}
+    </td>
+  </>
+)}
+
+
+    </tr>
+  ))}
+</tbody>
+
     </table>
   </div>
 )}
-
-      {renderDetailModal()}
     </div>
   );
 }

@@ -21,38 +21,52 @@ export default function SessionRow({
     <div className="sessionRow" aria-invalid={err.missing || err.invalidDate}>
       {/* 시작일 */}
       <div className="cell">
-        <input
-          type="date"
-          value={s.start_date}
-          onChange={(e) =>
-            onChange(index, { ...s, start_date: e.target.value })
-          }
-          className="input dateInput"
-        />
-        {missingStart && (
-          <small className="fieldError">시작일을 입력하세요.</small>
-        )}
+        <div className="inputWrap">
+          <input
+            type="date"
+            value={s.start_date}
+            onChange={(e) => {
+              const start = e.target.value;
+              const end = s.end_date;
+              const nextEnd = !end ? start : (end < start ? start : end);
+              onChange(index, { ...s, start_date: start, end_date: nextEnd });
+            }}
+            className="input dateInput"
+          />
+          <small
+            className="fieldError"
+            style={{ visibility: missingStart ? "visible" : "hidden" }}
+          >
+            시작일을 입력하세요.
+          </small>
+        </div>
       </div>
 
       <span className="tilde">~</span>
 
       {/* 종료일 */}
       <div className="cell">
-        <input
-          type="date"
-          value={s.end_date}
-          onChange={(e) =>
-            onChange(index, { ...s, end_date: e.target.value })
-          }
-          className="input dateInput"
-        />
-        {(missingEnd || err.invalidDate) && (
-          <small className="fieldError">
+        <div className="inputWrap">
+          <input
+            type="date"
+            value={s.end_date}
+            onChange={(e) => {
+              const end = e.target.value;
+              const start = s.start_date;
+              const safeEnd = start && end < start ? start : end;
+              onChange(index, { ...s, end_date: safeEnd });
+            }}
+            className="input dateInput"
+          />
+          <small
+            className="fieldError"
+            style={{ visibility: (missingEnd || err.invalidDate) ? "visible" : "hidden" }}
+          >
             {missingEnd
               ? "종료일을 입력하세요."
               : "종료일은 시작일 이후여야 합니다."}
           </small>
-        )}
+        </div>
       </div>
 
       {/* ✅ 회차 모집인원 입력 */}
@@ -89,18 +103,40 @@ export default function SessionRow({
         .cell {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+        }
+        .inputWrap {
+          position: relative;
+          display: inline-flex;
+          flex-direction: column;
+        }
+        .inputWrap input {
+          height: 44px;
         }
         .fieldError {
-          color: #e74c3c;
-          font-size: 12px;
-          line-height: 1.2;
-        }
+  position: absolute;
+  top: 100%;
+  left: 0;
+  font-size: 12px;
+  color: #e74c3c;
+  line-height: 1.2;
+  margin-top: 6px;  /* ✅ 간격 넉넉히 */
+}
+
         .tilde {
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           color: #9aa0a6;
           user-select: none;
-          padding: 0 2px;
-          align-self: center;
+          padding: 0 4px;
+        }
+        .btnIcon {
+          height: 44px;
+          width: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .sessionInput {
           height: 44px;

@@ -7,8 +7,8 @@ node_modules/
 .env
 .env.*
 !.env.example
-!frontend/.env.production
-!backend/.env.production
+# !frontend/.env.production
+# !backend/.env.production
 frontend/.env.local
 backend/.env.local
 

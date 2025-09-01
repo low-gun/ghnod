@@ -112,10 +112,15 @@ export default function ScheduleFormPage() {
           setSessions(
             data.sessions.map((s) => ({
               start_date: (s.start_date || s.session_date || "").slice(0, 10),
-              end_date: (s.end_date || s.session_date || "").slice(0, 10),
-              total_spots: s.total_spots ?? "",
+              end_date:   (s.end_date   || s.session_date || "").slice(0, 10),
+              // ✅ null/undefined만 빈칸으로. 숫자 0은 0, 20은 20 그대로. 문자열로 고정해 입력값 흔들림 방지
+              total_spots:
+                s.total_spots === null || s.total_spots === undefined
+                  ? ""
+                  : String(s.total_spots),
             }))
           );
+          
         }
       })
       .finally(() => setLoading(false));
@@ -174,19 +179,35 @@ export default function ScheduleFormPage() {
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `admin/schedules/${id}` : "admin/schedules";
-      const payload = {
-        ...form,
-        sessions: sessions.map((s) => ({
-          start_date: s.start_date,
-          end_date: s.end_date,
-          start_time: "00:00",
-          end_time: "00:00",
-          total_spots: Number.isFinite(Number(s.total_spots))
-            ? Number(s.total_spots)
-            : (Number.isFinite(Number(form.total_spots)) ? Number(form.total_spots) : 0),
-        })),
-      };
+      // 빈문자열은 null로 취급하도록 엄격 변환
+const toIntOrNull = (v) => {
+  if (v === undefined || v === null) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const payload = {
+  ...form,
+  sessions: sessions.map((s) => {
+    const rowSpots = toIntOrNull(s.total_spots);
+    const defaultSpots = toIntOrNull(form.total_spots);
+    return {
+      start_date: s.start_date,
+      end_date: s.end_date,
+      start_time: "00:00",
+      end_time: "00:00",
+      // 우선순위: 회차 입력값 → 상단 모집인원 → null (절대 0으로 강제하지 않음)
+      total_spots: rowSpots ?? defaultSpots ?? null,
+    };
+  }),
+};
+
+console.log("[DEBUG save payload] form.total_spots:", form.total_spots);
+console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, null, 2));
+
       const res = await api[method](url, payload);
+      
 
       if (res.data.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
@@ -352,10 +373,10 @@ export default function ScheduleFormPage() {
                           <h4 className="modalTitle">스케줄 편집</h4>
 
                           <div className="scheduleGrid">
-                            <div className="hdr">시작일</div><div className="tilde">~</div>
-                            <div className="hdr">종료일</div>
-                            <div className="hdr">모집인원</div>
-                            <div></div>
+  <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
+  <div className="hdr">종료일</div>
+  <div className="hdr">모집인원</div>
+  <div></div>
 
                             {sessions.map((s, idx) => (
                               <SessionRow
@@ -404,11 +425,11 @@ export default function ScheduleFormPage() {
                   </>
                 ) : (
                   <>
-                    <div className="scheduleGrid">
-                      <div className="hdr">시작일</div><div className="tilde">~</div>
-                      <div className="hdr">종료일</div>
-                      <div className="hdr">모집인원</div>
-                      <div></div>
+<div className="scheduleGrid">
+  <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
+  <div className="hdr">종료일</div>
+  <div className="hdr">모집인원</div>
+  <div></div>
 
                       {sessions.map((s, idx) => (
                         <SessionRow
@@ -482,184 +503,160 @@ export default function ScheduleFormPage() {
       </div>
 
       <style jsx>{`
-        .container { max-width:1240px; margin:auto; padding:32px; background:#fff; border-radius:12px; }
+  .container { max-width:1240px; margin:auto; padding:32px; background:#fff; border-radius:12px; }
 
-        /* 1단: 상품정보 | 썸네일, 2단: 일정정보 | 스케줄 */
-        .topGrid{
-          display:grid;
-          /* 고정폭 대신 유연폭으로 변경: 우측 컬럼이 줄어들며 줄바꿈 방지 */
-          grid-template-columns:minmax(0,1fr) minmax(360px, 520px);
-          gap:24px;
-          align-items:stretch;
-        }
-        /* 980px 이하(태블릿 세로 등)에서는 단일 컬럼 전환 */
-        @media (max-width:980px){
-          .topGrid{ grid-template-columns:1fr; gap:12px; }
-          .thumbCol{ order:2; } /* 썸네일을 아래로 */
-        }
+  /* 1단: 상품정보 | 썸네일, 2단: 일정정보 | 스케줄 */
+.topGrid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr)); /* ✅ 2등분 */
+  gap:24px;
+  align-items:stretch;
+}
+  @media (max-width:980px){
+    .topGrid{ grid-template-columns:1fr; gap:12px; }
+    .thumbCol{ order:2; }
+  }
 
-        .thumbCol{ width:100%; }
+  .thumbCol{ width:100%; }
+  .thumbCol :global(.sectionCard){
+    height:auto; display:flex; flex-direction:column; align-items:flex-start;
+  }
+  .thumbCol :global(.sectionTitle){ text-align:left; width:100%; }
+  .thumbBox{ width:clamp(160px, 26vw, 260px); max-width:100%; }
 
-        /* 썸네일 FormSection 카드 */
-        .thumbCol :global(.sectionCard){
-          height:auto;
-          display:flex;
-          flex-direction:column;
-          align-items:flex-start;
-        }
-        .thumbCol :global(.sectionTitle){
-          text-align:left;
-          width:100%;
-        }
-        /* 썸네일 폭: clamp로 반응형 */
-        .thumbBox{
-          width:clamp(160px, 26vw, 260px);
-          max-width:100%;
-        }
+  .addSessionBtn {
+    margin-top:14px;
+    background:#0070f3; color:#fff;
+    border:none; border-radius:8px;
+    padding:10px 16px;
+    font-weight:500; cursor:pointer;
+    transition:background 0.2s ease;
+  }
+  .addSessionBtn:hover { background:#0059c1; }
 
-        .addSessionBtn {
-          margin-top:14px;
-          background:#0070f3;
-          color:#fff;
-          border:none;
-          border-radius:8px;
-          padding:10px 16px;
-          font-weight:500;
-          cursor:pointer;
-          transition:background 0.2s ease;
-        }
-        .addSessionBtn:hover { background:#0059c1; }
+  .sectionCard{ border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:0; background:#fff; }
+  .sectionTitle{ margin:0 0 12px 0; font-size:16px; font-weight:700; }
+  .helperText{ color:#666; font-size:12px; margin-top:4px; display:block; }
 
-        .sectionCard{ border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:0; background:#fff; }
-        .sectionTitle{ margin:0 0 12px 0; font-size:16px; font-weight:700; }
-        .helperText{ color:#666; font-size:12px; margin-top:4px; display:block; }
+  .field{ margin-bottom:16px; display:flex; flex-direction:column; gap:6px; }
+  .fieldGrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .fieldGrid2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+  @media (max-width:980px){ .fieldGrid2{ grid-template-columns:1fr; gap:12px; } }
 
-        .field{ margin-bottom:16px; display:flex; flex-direction:column; gap:6px; }
-        .fieldGrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-        .fieldGrid2{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
-        @media (max-width:980px){
-          .fieldGrid2{ grid-template-columns:1fr; gap:12px; }
-        }
+  .scheduleGrid .hdr{ color:#555; font-size:13px; line-height:1; }
 
-        /* 라벨 타이포(스케줄 헤더와 동일) */
-        .scheduleGrid .hdr{ color:#555; font-size:13px; line-height:1; }
+  .input{
+    width:100%; box-sizing:border-box;
+    height:44px; line-height:1.2;
+    padding:12px 14px;
+    border:1px solid #d0d5dd; border-radius:10px;
+    font-size:14px; background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .input:focus{ outline:none; border-color:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.15); }
+  .alignRight{ text-align:right; }
+  .inputUnchanged{ color:#999; }
 
-        /* 공통 인풋 */
-        .input{
-          width:100%;
-          box-sizing:border-box;
-          height:44px;
-          line-height:1.2;
-          padding:12px 14px;
-          border:1px solid #d0d5dd;
-          border-radius:10px;
-          font-size:14px;
-          background:#fff;
-          transition:border-color .15s ease, box-shadow .15s ease;
-        }
-        .input:focus{ outline:none; border-color:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.15); }
-        .alignRight{ text-align:right; }
-        .inputUnchanged{ color:#999; }
+  /* 스케줄: 헤더/행 그리드 (데스크톱 기본) */
+  .scheduleGrid{
+    display:grid;
+    grid-template-columns:
+      minmax(140px,1fr) 20px minmax(140px,1fr) minmax(100px,140px) 32px;
+    column-gap:12px; row-gap:24px;
+    align-items:start; margin-bottom:8px;
+  }
+  .spacer{ width:20px; }
 
-        /* 스케줄: 헤더/행 그리드(데스크톱 기본) */
-        .scheduleGrid{
-          display:grid;
-          grid-template-columns:
-            minmax(0,1fr) 20px minmax(0,1fr) minmax(110px,140px) 32px; /* 시작 | ~ | 종료 | 모집인원 | 삭제 */
-          column-gap:8px;
-          row-gap:14px;
-          align-items:center;
-          margin-bottom:8px;
-        }
-        /* 1100px 이하: 모집인원 칸 폭 축소 */
-        @media (max-width:1100px){
-          .scheduleGrid{
-            grid-template-columns:
-              minmax(0,1fr) 16px minmax(0,1fr) minmax(96px,120px) 32px;
-          }
-        }
-        /* 980px 이하(태블릿 세로 등): 틸드(~) 제거, 4열로 재배치 → 넘침 방지 */
-        @media (max-width:980px){
-          .scheduleGrid{
-            grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(96px,120px) 32px; /* 시작 | 종료 | 인원 | 삭제 */
-            column-gap:8px;
-            row-gap:12px;
-          }
-          .tilde{ display:none; }
-        }
+  @media (max-width:1100px){
+    .scheduleGrid{
+      grid-template-columns:
+        minmax(120px,1fr) 16px minmax(120px,1fr) minmax(80px,120px) 32px;
+    }
+    .spacer{ width:16px; }
+  }
 
-        .sessionRow{ display:contents; }
-        .sessionRow .cell{ display:flex; flex-direction:column; gap:6px; }
-        .sessionRow .fieldError{ color:#e74c3c; font-size:12px; line-height:1.2; }
-        .tilde{ color:#9aa0a6; user-select:none; padding:0 2px; align-self:center; }
+  @media (max-width:980px){
+    .scheduleGrid{
+      grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(80px,120px) 32px;
+      column-gap:8px; row-gap:12px;
+    }
+    .tilde{ display:none; }
+    .spacer{ display:none; }
+  }
 
-        /* date 인풋 */
-        .scheduleGrid :global(input[type="date"].input){
-          min-width:0;
-          height:44px;
-          padding:10px 12px;
-          font-size:13px;
-          border:1px solid #d0d5dd;
-          border-radius:10px;
-          box-sizing:border-box;
-          background:#fff;
-        }
-        .scheduleGrid :global(input[type="date"].input:focus){
-          outline:0; border-color:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.15);
-        }
-        :global(input[type="date"].input::-webkit-datetime-edit-fields-wrapper){ padding:0; }
-        :global(input[type="date"].input::-webkit-datetime-edit){ padding:0 2px; }
-        :global(input[type="date"].input::-webkit-calendar-picker-indicator){ opacity:.8; cursor:pointer; filter:grayscale(1); }
-        :global(input[type="date"].input::-webkit-clear-button),
-        :global(input[type="date"].input::-webkit-inner-spin-button){ display:none; }
+  .sessionRow{ display:contents; }
+  .sessionRow .cell{ display:flex; flex-direction:column; gap:6px; }
+  .sessionRow .fieldError{
+    color:#e74c3c; font-size:12px; line-height:1.2;
+    min-height:18px; display:block;
+  }
+  /* 입력 높이(44px)만큼의 상자 안에서 정확히 중앙 정렬 */
+.tilde{
+  color:#9aa0a6;
+  user-select:none;
+  align-self:start;         /* 셀 맨 위에 배치 */
+  height:44px;              /* 입력과 동일 높이 */
+  display:flex;             /* 박스 중앙정렬 */
+  align-items:center;
+  justify-content:center;
+  padding:0 4px;
+  line-height:1;
+}
+  .scheduleGrid :global(input[type="date"].input){
+    min-width:0; height:44px;
+    padding:10px 12px; font-size:13px;
+    border:1px solid #d0d5dd; border-radius:10px;
+    box-sizing:border-box; background:#fff;
+  }
+  .scheduleGrid :global(input[type="date"].input:focus){
+    outline:0; border-color:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.15);
+  }
+  :global(input[type="date"].input::-webkit-datetime-edit-fields-wrapper){ padding:0; }
+  :global(input[type="date"].input::-webkit-datetime-edit){ padding:0 2px; }
+  :global(input[type="date"].input::-webkit-calendar-picker-indicator){ opacity:.8; cursor:pointer; filter:grayscale(1); }
+  :global(input[type="date"].input::-webkit-clear-button),
+  :global(input[type="date"].input::-webkit-inner-spin-button){ display:none; }
 
-        .btnGhost{ padding:10px 14px; background:#fff; border:1px solid #ccc; border-radius:8px; cursor:pointer; }
-        .btnPrimary{ padding:12px 18px; background:#0070f3; color:#fff; border:none; border-radius:8px; cursor:pointer; }
-        .btnPrimary:disabled{ opacity:.5; cursor:not-allowed; }
-        .btnDanger{ padding:12px 18px; background:#e74c3c; color:#fff; border:none; border-radius:8px; cursor:pointer; margin-left:8px; }
-        .btnIcon{ background:#fff; border:1px solid #ccc; border-radius:8px; cursor:pointer; height:44px; width:28px; display:inline-flex; align-items:center; justify-content:center; }
+  .btnGhost{ padding:10px 14px; background:#fff; border:1px solid #ccc; border-radius:8px; cursor:pointer; }
+  .btnPrimary{ padding:12px 18px; background:#0070f3; color:#fff; border:none; border-radius:8px; cursor:pointer; }
+  .btnPrimary:disabled{ opacity:.5; cursor:not-allowed; }
+  .btnDanger{ padding:12px 18px; background:#e74c3c; color:#fff; border:none; border-radius:8px; cursor:pointer; margin-left:8px; }
+/* 입력과 같은 높이의 박스를 셀 맨 위에 붙이고 그 안에서 중앙정렬 */
+.btnIcon{
+  background:#fff; border:1px solid #ccc; border-radius:8px; cursor:pointer;
+  height:44px; width:28px;
+  display:flex; align-items:center; justify-content:center;
+  align-self:start;         /* 셀 맨 위에 붙임(입력과 수평선 일치) */
+}
 
-        .footerBar{ margin-top:28px; display:flex; justify-content:space-between; gap:12px; }
 
-        /* 데스크톱 상향 */
-        @media (min-width:1280px){
-          .topGrid{ grid-template-columns:minmax(0,0.75fr) minmax(420px, 560px); }
-        }
+  .footerBar{ margin-top:28px; display:flex; justify-content:space-between; gap:12px; }
+.topGrid > :global(.sectionCard) { width:100%; }
+  
+  @media (max-width:640px){
+    .container{ padding:0; border-radius:0; }
+    .topGrid{ gap:8px; }
+    .sectionCard{ border:none; border-radius:0; padding:12px; margin:0; box-shadow:none; }
+    .addSessionBtn{ width:100%; }
 
-        /* 모바일 최적화: 카드형태 제거 + 좌우 여백 제거 + 스케줄 모달 */
-        @media (max-width:640px){
-          .container{ padding:0; border-radius:0; }
-          .topGrid{ gap:8px; }
-          .sectionCard{
-            border:none;
-            border-radius:0;
-            padding:12px;
-            margin:0;
-            box-shadow:none;
-          }
-          .addSessionBtn{ width:100%; }
+    .modalBackdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.4);
+      display:flex; align-items:center; justify-content:center; z-index:1000;
+    }
+    .modalPanel{
+      width:min(92vw,560px); max-height:86vh;
+      background:#fff; border-radius:12px; padding:16px; overflow:auto;
+    }
+    .modalTitle{ margin:0 0 12px; font-size:16px; font-weight:700; }
+    .modalActions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
 
-          /* 모달 */
-          .modalBackdrop{
-            position:fixed; inset:0; background:rgba(0,0,0,.4);
-            display:flex; align-items:center; justify-content:center; z-index:1000;
-          }
-          .modalPanel{
-            width: min(92vw, 560px);
-            max-height: 86vh;
-            background:#fff; border-radius:12px; padding:16px;
-            overflow:auto;
-          }
-          .modalTitle{ margin:0 0 12px; font-size:16px; font-weight:700; }
-          .modalActions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+    .scheduleGrid{
+      grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(80px,120px) 32px;
+      row-gap:10px;
+    }
+  }
+`}</style>
 
-          /* 스케줄 그리드가 너무 빽빽하면 두 줄 배치 */
-          .scheduleGrid{
-            grid-template-columns:minmax(0,1fr) auto;
-            row-gap:10px;
-          }
-        }
-      `}</style>
     </AdminLayout>
   );
 }

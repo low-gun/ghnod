@@ -1,7 +1,14 @@
 import React from "react";
 import ScheduleCard from "./ScheduleCard";
+import ResponsiveGrid from "@/components/common/ResponsiveGrid";
 
-export default function ScheduleCardGrid({ schedules, type }) {
+export default function ScheduleCardGrid({
+  schedules,
+  type,
+  hideEndMessage = false,
+  hideBadge = false,
+  showDetailButton = false,
+}) {
   if (!schedules || schedules.length === 0) {
     return (
       <p style={{ textAlign: "center", padding: "40px 0" }}>
@@ -11,17 +18,18 @@ export default function ScheduleCardGrid({ schedules, type }) {
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-        gap: 24,
-        justifyItems: "center",
-      }}
-    >
+    <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 4 }} gap={24} centerItems>
       {schedules.map((s) => (
-        <ScheduleCard key={s.id} schedule={s} type={type} />
+        <ScheduleCard
+          key={s.id}
+          schedule={s}
+          type={type}
+          hideEndMessage={hideEndMessage}
+          hideBadge={hideBadge}
+          showDetailButton={showDetailButton}
+        />
       ))}
-    </div>
+    </ResponsiveGrid>
   );
 }
+

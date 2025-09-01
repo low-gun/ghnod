@@ -177,7 +177,8 @@ WHERE oi.order_id = ?
       `
       SELECT 
         o.total_amount,
-
+        o.payment_method,        -- ✅ 추가
+        o.order_status,          -- ✅ 추가
         o.used_point,
         o.created_at,
         (
@@ -197,6 +198,7 @@ WHERE oi.order_id = ?
       `,
       [orderId]
     );
+    
     console.log("📄 주문 정보:", orderInfoRows);
     console.log("📦 order_items 결과:", items);
     console.log("📄 orderInfoRows 결과:", orderInfoRows);

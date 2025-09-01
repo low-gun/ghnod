@@ -26,22 +26,30 @@ function normalizeSessions(sessions) {
     const hasSingle = s?.date;
     return (hasRange || hasSingle) && s?.start_time && s?.end_time;
   });
+
+  const toIntOrNull = (v) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v === "string" && v.trim() === "") return null; // ""는 null 처리
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
   return valid.map((s, idx) => {
     const sd = s.start_date || s.date;
     const ed = s.end_date || s.date;
+    const ts = toIntOrNull(s.total_spots);  // ← 강제 0 금지
     return {
       start_date: sd,
       end_date: ed,
       start_time: s.start_time,
       end_time: s.end_time,
-      total_spots: s.total_spots ?? 0,   // ✅ 추가
+      total_spots: ts,           // null 허용
       session_date: sd,
       _idx: idx,
     };
   });
-  
-  
 }
+
 const toDT = (d, t) => `${d} ${t}:00`;
 
 /* ===== 목록 ===== */
@@ -314,14 +322,18 @@ exports.getScheduleById = async (req, res) => {
       return res.status(404).json({ success: false, message: "일정 없음" });
     }
     const [sess] = await pool.execute(
-      `SELECT start_date, end_date, start_time, end_time, total_spots, remaining_spots
+      `SELECT id, start_date, end_date, start_time, end_time, total_spots, remaining_spots
          FROM schedule_sessions
         WHERE schedule_id = ?
         ORDER BY start_date, start_time`,
       [id]
     );
     
+    // ✅ 임시 로그로 실제 내려가는 값 확인
+    console.log('[DEBUG getScheduleById]', id, JSON.stringify(sess, null, 2));
+    
     return res.json({ success: true, schedule: { ...rows[0], sessions: sess } });
+    
   } catch (err) {
     console.error("일정 조회 오류:", err);
     return res.status(500).json({ success: false, message: "서버 오류" });
@@ -366,21 +378,23 @@ exports.createSchedule = async (req, res) => {
     if (normSessions.length) {
         for (const s of normSessions) {
           console.log("🟢 inserting session", s); // ✅ 로그 추가
-          await conn.execute(
-            `INSERT INTO schedule_sessions
-               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              newId,   // ✅ 새로 생성된 스케줄 ID 사용
-              s.session_date || s.start_date,
-              s.start_date,
-              s.end_date,
-              s.start_time,
-              s.end_time,
-              s.total_spots,
-              s.total_spots,   // 초기 remaining_spots = total_spots
-            ]
-          );
+          const ts = s.total_spots; // normalizeSessions에서 이미 숫자 또는 null
+await conn.execute(
+  `INSERT INTO schedule_sessions
+     (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    newId,
+    s.session_date || s.start_date,
+    s.start_date,
+    s.end_date,
+    s.start_time,
+    s.end_time,
+    ts,         // 숫자 또는 null
+    ts,         // 남은좌석도 동일 기준
+  ]
+);
+
         }
       }
       
@@ -436,22 +450,23 @@ exports.updateSchedule = async (req, res) => {
     if (normSessions.length) {
         for (const s of normSessions) {
           console.log("🟢 updating session", s); // ✅ 로그 추가
-          await conn.execute(
-            `INSERT INTO schedule_sessions
-               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              id,
-              s.session_date || s.start_date,
-              s.start_date,
-              s.end_date,
-              s.start_time,
-              s.end_time,
-              s.total_spots,
-              s.total_spots   // ✅ 수정 시에도 remaining_spots 초기화
-            ]
-          );
-          
+          const ts = s.total_spots; // 숫자 또는 null
+await conn.execute(
+  `INSERT INTO schedule_sessions
+     (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    id,
+    s.session_date || s.start_date,
+    s.start_date,
+    s.end_date,
+    s.start_time,
+    s.end_time,
+    ts,
+    ts
+  ]
+);
+     
         }
       }
       

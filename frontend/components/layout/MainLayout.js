@@ -5,7 +5,7 @@ import Footer from "./Footer";
 import { useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 
 const HEADER_HEIGHT_DESKTOP = 0;
-const HEADER_HEIGHT_MOBILE = 48;
+const HEADER_HEIGHT_MOBILE = 0; // ✅ 전역 48px 패딩만 사용
 
 export default function MainLayout({ children }) {
   const [showProfile, setShowProfile] = useState(false);

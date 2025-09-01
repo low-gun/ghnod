@@ -53,8 +53,15 @@ const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-const isAdmin = router.pathname.startsWith("/admin"); // ✅ 추가
-const showLoading = useGlobalLoading((state) => state.showLoading);
+  const isAdmin = router.pathname.startsWith("/admin"); // ✅ 추가
+  const showLoading = useGlobalLoading((state) => state.showLoading);
+
+  // ✅ 어드민 경로일 때 body에 클래스 토글
+  useEffect(() => {
+    document.body.classList.toggle("admin-page", isAdmin);
+    return () => document.body.classList.remove("admin-page");
+  }, [isAdmin]);
+
 
   const hideLoading = useGlobalLoading((state) => state.hideLoading);
   const startRef = useRef(0);      // ✅ 변경

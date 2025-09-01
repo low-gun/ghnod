@@ -84,7 +84,9 @@ export default function FacilitationPage() {
   const imgStyle = {
     width: "100%",
     maxWidth: 1200,
-    height: "auto",
+    height: "clamp(220px, 28vw, 360px)",  // ✅ 뷰포트에 따라 높이 커짐(모바일~데스크톱)
+    objectFit: "cover",                    // ✅ 비율 유지 + 영역 꽉 채움(필요 시 크롭)
+    objectPosition: "center",
     borderRadius: 8,
     display: "block",
     margin: "0 auto",

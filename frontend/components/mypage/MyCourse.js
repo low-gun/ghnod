@@ -421,192 +421,167 @@ export default function MyCourse() {
         // PC(테이블형)
         <div style={{ minHeight: 340 }}>
           <div style={{ overflowX: "auto" }}>
-          <table
-  style={{
-    width: "100%",
-    fontSize: "15px",
-    borderCollapse: "collapse",
-    marginBottom: 0,
-    tableLayout: "fixed",              // ⬅ 고정 레이아웃
-  }}
->
-  {/* ⬇ 열 너비 고정 */}
-  <colgroup>
-    <col style={{ width: "6%" }} />    {/* No */}
-    <col style={{ width: "32%" }} />   {/* 강의명 */}
-    <col style={{ width: "18%" }} />   {/* 일정 */}
-    <col style={{ width: "18%" }} />   {/* 장소 */}
-    <col style={{ width: "12%" }} />   {/* 강사 */}
-    <col style={{ width: "7%" }} />    {/* 상태 */}
-    <col style={{ width: "7%" }} />    {/* 후기 */}
-  </colgroup>
-  <thead style={{ background: "#f9f9f9" }}>
+          <table style={{ width:"100%", fontSize:"15px", borderCollapse:"collapse", marginBottom:0, tableLayout:"fixed" }}>
+  {/* ⬇ 열 너비 고정 (whitespace 방지: map으로 렌더링) */}
+  <colgroup>{
+    ["6%","30%","18%","18%","12%","9%","7%"].map((w, i) => <col key={i} style={{ width: w }} />)
+  }</colgroup><thead style={{ background: "#f9f9f9" }}>
+    <tr>
+      {[
+        "No",
+        "title",
+        "date",
+        "location",
+        "instructor",
+        "status",
+        "review",
+      ].map((key) => {
+        const sortKey =
+          key === "No" ? null : key === "date" ? "start_date" : key;
+        const isSortable = !["No", "certificate"].includes(key);
+        const isActive = sortConfig.key === sortKey;
+        return (
+          <th
+            key={key}
+            onClick={() => {
+              if (isSortable) handleSort(sortKey);
+            }}
+            style={thCenter}
+          >
+            {columnMap[key]}{" "}
+            {isSortable && isActive && (
+              <span
+                style={{
+                  ...sortArrowStyle,
+                  color: "#000",
+                }}
+              >
+                {sortConfig.direction === "asc" ? "▲" : "▼"}
+              </span>
+            )}
+          </th>
+        );
+      })}
+    </tr>
+  </thead>
+  <tbody>
+    {courses.length === 0 ? (
+      <tr>
+        <td colSpan={8} style={tdCenter}>
+          {renderEmpty("아직 수강내역이 없습니다")}
+        </td>
+      </tr>
+    ) : sortedCourses.length === 0 ? (
+      <tr>
+        <td colSpan={8} style={tdCenter}>
+          {renderEmpty("해당되는 내용이 없습니다")}
+        </td>
+      </tr>
+    ) : (
+      pagedCourses.map((item, idx) => (
+        <tr
+          key={item.order_item_id}
+          style={{
+            backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+          }}
+        >
+          <td style={tdCenter}>
+            {(currentPage - 1) * pageSize + idx + 1}
+          </td>
+          <td
+            style={{ ...tdCenter, cursor: "pointer", color: "#0070f3" }}
+            onClick={() =>
+              router.push(`/education/${item.type}/${item.schedule_id}`)
+            }
+            title={`${item.title}${item.category ? ` (${item.category})` : ""}`}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                verticalAlign: "middle",
+              }}
+            >
+              {item.title}
+              {item.category ? ` (${item.category})` : ""}
+            </span>
+          </td>
+          <td style={tdCenter}>
+            {new Date(item.start_date).toISOString().slice(0, 10) ===
+            new Date(item.end_date).toISOString().slice(0, 10) ? (
+              formatKoreanDate(item.start_date)
+            ) : (
+              <>
+                {formatKoreanDate(item.start_date)} <br />~{" "}
+                {formatKoreanDate(item.end_date)}
+              </>
+            )}
+          </td>
+          <td style={tdCenter} title={item.location || ""}>
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                verticalAlign: "middle",
+              }}
+            >
+              {item.location}
+            </span>
+          </td>
+          <td style={tdCenter} title={item.instructor || ""}>
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                verticalAlign: "middle",
+              }}
+            >
+              {item.instructor}
+            </span>
+          </td>
+          <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
+          <td style={tdCenter}>
+            {item.status === "완료" ? (
+              <button
+                style={{
+                  ...reviewButtonStyle,
+                  backgroundColor: item.is_reviewed ? "#999" : "#0070f3",
+                }}
+                onClick={() =>
+                  handleOpenReviewModal({
+                    ...item,
+                    reviewId: item.review_id,
+                    initialData: {
+                      rating: item.review_rating,
+                      comment: item.review_comment,
+                      title: item.title,
+                      created_at: item.review_created_at,
+                      updated_at: item.review_updated_at,
+                    },
+                  })
+                }
+              >
+                {item.is_reviewed ? "수정" : "작성"}
+              </button>
+            ) : (
+              "-"
+            )}
+          </td>
+        </tr>
+      ))
+    )}
+  </tbody>
+</table>
 
-                <tr>
-                  {[
-                    "No",
-                    "title",
-                    "date",
-                    "location",
-                    "instructor",
-                    "status",
-                    "review",
-                  ].map((key) => {
-                    const sortKey =
-                      key === "No" ? null : key === "date" ? "start_date" : key;
-                    const isSortable = !["No", "certificate"].includes(key);
-                    const isActive = sortConfig.key === sortKey;
-                    return (
-                      <th
-                        key={key}
-                        onClick={() => {
-                          if (isSortable) handleSort(sortKey);
-                        }}
-                        style={thCenter}
-                      >
-                        {columnMap[key]}{" "}
-                        {isSortable && isActive && (
-                          <span
-                            style={{
-                              ...sortArrowStyle,
-                              color: "#000",
-                            }}
-                          >
-                            {sortConfig.direction === "asc" ? "▲" : "▼"}
-                          </span>
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {courses.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={tdCenter}>
-                      {renderEmpty("아직 수강내역이 없습니다")}
-                    </td>
-                  </tr>
-                ) : sortedCourses.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={tdCenter}>
-                      {renderEmpty("해당되는 내용이 없습니다")}
-                    </td>
-                  </tr>
-                ) : (
-                  pagedCourses.map((item, idx) => (
-                    <tr
-                      key={item.order_item_id}
-                      style={{
-                        backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                      }}
-                    >
-                      <td style={tdCenter}>
-                        {(currentPage - 1) * pageSize + idx + 1}
-                      </td>
-                      <td
-  style={{
-    ...tdCenter,
-    cursor: "pointer",
-    color: "#0070f3",
-  }}
-  onClick={() =>
-    router.push(
-      `/education/${item.type}/${item.schedule_id}`
-    )
-  }
-  title={`${item.title}${item.category ? ` (${item.category})` : ""}`} // ⬅ 전체 제목 툴팁
->
-  <span
-    style={{
-      display: "inline-block",
-      maxWidth: "100%",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      verticalAlign: "middle",
-    }}
-  >
-    {item.title}
-    {item.category ? ` (${item.category})` : ""}
-  </span>
-</td>
-
-                      <td style={tdCenter}>
-                        {new Date(item.start_date)
-                          .toISOString()
-                          .slice(0, 10) ===
-                        new Date(item.end_date).toISOString().slice(0, 10) ? (
-                          formatKoreanDate(item.start_date)
-                        ) : (
-                          <>
-                            {formatKoreanDate(item.start_date)} <br />~{" "}
-                            {formatKoreanDate(item.end_date)}
-                          </>
-                        )}
-                      </td>
-                      <td style={tdCenter} title={item.location || ""}>
-  <span
-    style={{
-      display: "inline-block",
-      maxWidth: "100%",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      verticalAlign: "middle",
-    }}
-  >
-    {item.location}
-  </span>
-</td>                      <td style={tdCenter} title={item.instructor || ""}>
-  <span
-    style={{
-      display: "inline-block",
-      maxWidth: "100%",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      verticalAlign: "middle",
-    }}
-  >
-    {item.instructor}
-  </span>
-</td>
-                      <td style={tdCenter}>{renderStatusBadge(item.status)}</td>
-                      <td style={tdCenter}>
-                        {item.status === "완료" ? (
-                          <button
-                            style={{
-                              ...reviewButtonStyle,
-                              backgroundColor: item.is_reviewed
-                                ? "#999"
-                                : "#0070f3",
-                            }}
-                            onClick={() =>
-                              handleOpenReviewModal({
-                                ...item,
-                                reviewId: item.review_id,
-                                initialData: {
-                                  rating: item.review_rating,
-                                  comment: item.review_comment,
-                                  title: item.title,
-                                  created_at: item.review_created_at,
-                                  updated_at: item.review_updated_at,
-                                },
-                              })
-                            }
-                          >
-                            {item.is_reviewed ? "수정" : "작성"}
-                          </button>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
           </div>
           {/* ⏩ 페이지네이션 */}
           {pagedCourses.length !== 0 && (

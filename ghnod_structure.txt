@@ -109,6 +109,7 @@
 ./frontend/components/common/GlobalAgreements.js
 ./frontend/components/common/GlobalAlert.js
 ./frontend/components/common/GlobalConfirmModal.jsx
+./frontend/components/common/GlobalDialog.jsx
 ./frontend/components/common/GlobalLoadingBar.js
 ./frontend/components/common/ImageUploader.jsx
 ./frontend/components/common/InfiniteCardList.jsx

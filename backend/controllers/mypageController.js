@@ -288,13 +288,58 @@ exports.getPoints = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "로그인 필요" });
 
-    const points = await pointModel.getPointsByUser(userId);
-    return res.status(200).json({ success: true, points });
+    // ✅ used_at이 NULL이면 주문 생성시각으로 대체 표시(used_at_display)
+    // ✅ 주문번호 매칭을 ±2시간으로 확대. 없으면 NULL 유지.
+    const [rows] = await pool.execute(
+      `
+      SELECT
+        p.id          AS point_id,
+        p.user_id,
+        p.change_type,
+        p.amount,
+        p.description,
+        p.created_at,
+        p.used_at,
+        /* 근접 'paid' 주문번호(orders.id) */
+        (
+          SELECT CAST(o.id AS CHAR)
+          FROM orders o
+          WHERE o.user_id = p.user_id
+            AND o.order_status = 'paid'
+            AND ABS(TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(p.used_at, p.created_at))) <= 7200
+          ORDER BY ABS(TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(p.used_at, p.created_at))) ASC,
+                   o.created_at DESC
+          LIMIT 1
+        ) AS order_no,
+        /* 표시용 사용일시: 포인트 used_at이 없으면 매칭된 주문시간 */
+        COALESCE(
+          p.used_at,
+          (
+            SELECT o.created_at
+            FROM orders o
+            WHERE o.user_id = p.user_id
+              AND o.order_status = 'paid'
+              AND ABS(TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(p.used_at, p.created_at))) <= 7200
+            ORDER BY ABS(TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(p.used_at, p.created_at))) ASC,
+                     o.created_at DESC
+            LIMIT 1
+          )
+        ) AS used_at_display
+      FROM points p
+      WHERE p.user_id = ?
+      ORDER BY p.created_at DESC
+      `,
+      [userId]
+    );
+
+    return res.status(200).json({ success: true, points: rows });
   } catch (error) {
     console.error("❌ 포인트 조회 오류:", error);
     return res.status(500).json({ message: "포인트 조회 실패" });
   }
 };
+
+
 
 exports.createInquiry = async (req, res) => {
   try {

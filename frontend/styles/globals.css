@@ -71,9 +71,16 @@ select,
 textarea {
   font-family: inherit;
   font-size: inherit;
-  color: inherit;             /* ✅ 기본 파란 글자 제거 */
-  -webkit-appearance: none;   /* ✅ iOS 기본 스타일 제거 */
+  color: inherit;
+  -webkit-appearance: none;
   appearance: none;
+}
+
+/* ✅ 체크박스, 라디오만 기본 UI 복원 */
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-appearance: auto;
+  appearance: auto;
 }
 
 input,
@@ -90,18 +97,25 @@ body,
   overflow-x: hidden !important;
 }
 
-/* ✅ header 높이만큼 본문 padding 보정 */
+/* 기본값 */
 #__next {
   padding-top: 80px;  /* PC header 높이 */
+}
+
+/* ✅ 어드민에서는 헤더 패딩 제거 */
+body.admin-page #__next {
+  padding-top: 0 !important;
 }
 
 @media (max-width: 980px) {
   #__next {
     padding-top: 48px;  /* 모바일 header 높이 */
   }
+  /* ✅ 어드민 모바일도 패딩 제거 */
+  body.admin-page #__next {
+    padding-top: 0 !important;
+  }
 }
-
-
 /* ===== PC/모바일 분기 ===== */
 .desktop-only {
   display: block;

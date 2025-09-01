@@ -1,26 +1,60 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
+import { useGlobalAlert } from "@/stores/globalAlert";
+import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
 
-function formatDateRange(start, end, startTime, endTime) {
+// 날짜 범위 포맷
+function formatDateRange(start, end) {
   if (!start && !end) return "일정 미정";
-  const sDate = start ? new Date(start) : null;
-  const eDate = end ? new Date(end) : null;
-  const s = sDate ? sDate.toLocaleDateString("ko-KR") : "";
-  const e = eDate ? eDate.toLocaleDateString("ko-KR") : "";
-  const st = startTime ? String(startTime).slice(0, 5) : "";
-  const et = endTime ? String(endTime).slice(0, 5) : "";
+  const dayKo = ["일", "월", "화", "수", "목", "금", "토"];
 
-  if (!eDate || s === e) {
-    // 단일일: YYYY.MM.DD HH:mm~HH:mm (시간이 있으면)
-    return st || et ? `${s} ${st}${et ? `~${et}` : ""}` : s;
-  }
-  // 기간: YYYY.MM.DD HH:mm ~ YYYY.MM.DD HH:mm (시간이 있으면)
-  const left = st ? `${s} ${st}` : s;
-  const right = et ? `${e} ${et}` : e;
+  const s = start ? new Date(start) : null;
+  const e = end ? new Date(end) : null;
+
+  const fmt = (d, opts = { year: true }) => {
+    if (!d) return "";
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const dd = d.getDate();
+    const wk = dayKo[d.getDay()];
+    return `${opts.year ? `${y}. ` : ""}${m}. ${dd}. (${wk})`;
+  };
+
+  if (!e) return fmt(s, { year: true });
+  const sameYear = s && e && s.getFullYear() === e.getFullYear();
+  const left = fmt(s, { year: true });
+  const right = fmt(e, { year: !sameYear });
   return `${left} ~ ${right}`;
 }
+
+// 상태 배지
+const statusBadge = (status) => {
+  const map = {
+    paid: { text: "결제완료", bg: "#ECFDF5", color: "#065F46", brd: "#A7F3D0" },
+    cancelled: { text: "취소됨", bg: "#FEF2F2", color: "#991B1B", brd: "#FECACA" },
+    refund: { text: "환불진행", bg: "#FFF7ED", color: "#9A3412", brd: "#FED7AA" },
+    pending: { text: "대기중", bg: "#EEF2FF", color: "#3730A3", brd: "#C7D2FE" },
+  };
+  const b = map[status] || { text: status || "-", bg: "#F3F4F6", color: "#374151", brd: "#E5E7EB" };
+  return (
+    <span
+      style={{
+        background: b.bg,
+        color: b.color,
+        border: `1px solid ${b.brd}`,
+        padding: "2px 8px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {b.text}
+    </span>
+  );
+};
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -28,191 +62,242 @@ export default function OrderDetailPage() {
   const [items, setItems] = useState([]);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useGlobalAlert();
+
   useEffect(() => {
     if (!router.isReady || !id) return;
-
-    const fetchItems = async () => {
+    (async () => {
       try {
         const res = await api.get(`/orders/${id}/items`);
-        console.log("🟦 주문 응답:", res.data);
-
-        // ✅ 콘솔 로그 추가: schedule_id, product_type 확인용
-        res.data.items.forEach((item, i) => {
-          console.log(
-            `📦 [${i}] schedule_id: ${item.schedule_id}, product_type: ${item.type}`
-          );
-        });
-
         setItems(res.data.items || []);
         setOrder(res.data.order || null);
       } catch (err) {
         console.error("❌ 주문 항목 조회 실패:", err);
+        showAlert?.("주문 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchItems();
+    })();
   }, [router.isReady, id]);
 
+  const itemsSum = useMemo(() => {
+    return items.reduce((sum, it) => {
+      const unit =
+        typeof it.subtotal === "number"
+          ? it.subtotal
+          : (it.discount_price ?? it.unit_price) * (it.quantity || 0);
+      return sum + (Number(unit) || 0);
+    }, 0);
+  }, [items]);
+
+  const coupon = Number(order?.coupon_discount || 0);
+  const usedPoint = Number(order?.used_point || 0);
+  const payAmount = Math.max(0, itemsSum - coupon - usedPoint);
+
+  const copyOrderId = async () => {
+    try {
+      await navigator.clipboard.writeText(String(id));
+      showAlert?.("주문번호가 복사되었습니다.");
+    } catch {
+      showAlert?.("복사에 실패했습니다.");
+    }
+  };
+
   if (loading) return <p style={{ padding: 40 }}>불러오는 중...</p>;
-  if (!items.length)
-    return <p style={{ padding: 40 }}>주문 내역이 없습니다.</p>;
+  if (!items.length) return <p style={{ padding: 40 }}>주문 내역이 없습니다.</p>;
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
-      <h2 style={{ fontSize: 20, fontWeight: "bold", marginBottom: 20 }}>
-        주문 상세내역
-      </h2>
-
-      {/* 주문 요약 정보 */}
-      {order && (
-        <div
-          style={{
-            marginBottom: 24,
-            background: "#f9f9f9",
-            border: "1px solid #ddd",
-            padding: 16,
-            borderRadius: 8,
-            lineHeight: "1.6",
-            fontSize: 15,
-          }}
-        >
-          <div>
-            총 상품금액:{" "}
-            <strong>
-              {formatPrice(
-                order.total_amount +
-                  (order.used_point || 0) +
-                  (order.coupon_discount || 0)
-              )}
-              원
-            </strong>
-          </div>
-          <div>
-            쿠폰 할인:{" "}
-            <strong>{formatPrice(order.coupon_discount || 0)}원</strong>
-          </div>
-          <div>
-            포인트 사용: <strong>{formatPrice(order.used_point || 0)}P</strong>
-          </div>
-          <hr style={{ margin: "12px 0" }} />
-          <div style={{ fontWeight: "bold", fontSize: 16 }}>
-            결제금액:{" "}
-            <span style={{ color: "#0070f3" }}>
-              {formatPrice(order.total_amount)}원
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* 항목 카드 리스트 */}
+    <div style={{ maxWidth: 1240, margin: "0 auto", padding: 24 }}>
+      {/* 헤더 라인 */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 12,
+          flexWrap: "wrap",
         }}
       >
-        {items.map((item) => (
-          <div
-            key={item.id}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20, fontWeight: 600, color: "#111827" }}>
+            주문 #{id}
+          </span>
+          {order?.order_status ? statusBadge(order.order_status) : null}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={copyOrderId}
             style={{
-              border: "1px solid #ddd",
+              background: "#F3F4F6",
+              border: "1px solid #E5E7EB",
               borderRadius: 8,
-              padding: 16,
-              background: "#fff",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+              padding: "6px 10px",
+              fontSize: 13,
+              cursor: "pointer",
             }}
+            aria-label="주문번호 복사"
           >
-            {/* ✅ 여기부터 */}
-            <div
-              style={{
-                width: "100%",
-                aspectRatio: "4 / 3",
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                backgroundColor: "#f9f9f9",
-                overflow: "hidden",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 12,
-              }}
-            >
-              {item.image_url ? (
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain", // ✅ 잘리지 않게 유지
-                  }}
-                />
-              ) : (
-                <span style={{ color: "#999", fontSize: 13 }}>이미지 없음</span>
-              )}
-            </div>
+            주문번호 복사
+          </button>
+        </div>
+      </div>
 
-            <div style={{ fontWeight: "bold", fontSize: 16, marginBottom: 8 }}>
-              {item.title}
-            </div>
+     {/* 좌측/우측 카드 영역 */}
+{order && (
+  <>
+    <div className="summary-grid">
+      {/* 좌측 카드 */}
+      <div
+        style={{
+          border: "1px solid #E5E7EB",
+          borderRadius: 10,
+          padding: 16,
+          background: "#FFFFFF",
+        }}
+      >
+        <MetaRow
+          label="주문일시"
+          value={
+            order.created_at
+              ? new Date(order.created_at).toLocaleString("ko-KR")
+              : "-"
+          }
+        />
+        <MetaRow
+          label="결제수단"
+          value={formatPayMethod(order.payment_method)}
+        />
+        <MetaRow
+          label="총 결제금액"
+          value={
+            <span style={{ color: "#0070f3", fontWeight: 600 }}>
+              {formatPrice(payAmount)}원
+            </span>
+          }
+        />
+      </div>
 
-            <div style={{ fontSize: 14, color: "#555" }}>
-  교육기간: {formatDateRange(item.start_date, item.end_date, item.start_time, item.end_time)}
-</div>
+      {/* 우측 카드 */}
+      <div
+        style={{
+          border: "1px solid #E5E7EB",
+          borderRadius: 10,
+          padding: 16,
+          background: "#FFFFFF",
+        }}
+      >
+        <PriceRow label="상품합계" value={`${formatPrice(itemsSum)}원`} />
+        <PriceRow
+          label="쿠폰할인"
+          value={
+            coupon > 0
+              ? `-${formatPrice(coupon)}원`
+              : `${formatPrice(coupon)}원`
+          }
+          dim
+        />
+        <PriceRow
+          label="포인트사용"
+          value={
+            usedPoint > 0
+              ? `-${formatPrice(usedPoint)}P`
+              : `${formatPrice(usedPoint)}P`
+          }
+          dim
+        />
+        <hr
+          style={{ border: 0, borderTop: "1px solid #EEE", margin: "12px 0" }}
+        />
+        <PriceRow
+          label="결제금액"
+          value={`${formatPrice(payAmount)}원`}
+          highlight
+        />
+      </div>
+    </div>
+
+    <style jsx>{`
+      .summary-grid {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 20px;
+        grid-template-columns: 1fr; /* 모바일: 한 줄 */
+      }
+      @media (min-width: 768px) {
+        .summary-grid {
+          grid-template-columns: 1fr 1fr; /* 태블릿 이상: 두 칸 */
+        }
+      }
+    `}</style>
+  </>
+)}
 
 
-            <div style={{ fontSize: 14, color: "#555" }}>
-              수량: {item.quantity}
-            </div>
+   {/* 상품 카드 리스트 - ScheduleCardGrid 재사용 */}
+<ScheduleCardGrid
+  schedules={items}
+  type="order"
+  hideEndMessage
+  hideBadge
+  showDetailButton
+/>
 
-            <div style={{ fontSize: 14, color: "#555" }}>
-  단가:{" "}
-  {item.discount_price && item.discount_price < item.unit_price ? (
-    <>
-      <span style={{ textDecoration: "line-through", marginRight: 8 }}>
-        {formatPrice(item.unit_price)}원
-      </span>
-      <span style={{ color: "#d32f2f" }}>
-        {formatPrice(item.discount_price)}원
-      </span>
-    </>
-  ) : (
-    `${formatPrice(item.unit_price)}원`
-  )}
-</div>
+    </div>
+  );
+}
 
+function MetaRow({ label, value }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+      }}
+    >
+      <span style={{ color: "#6B7280", fontSize: 13 }}>{label}</span>
+      <span style={{ color: "#111827", fontSize: 14 }}>{value}</span>
+    </div>
+  );
+}
 
-            <div style={{ fontSize: 14, color: "#555" }}>
-              합계: {formatPrice(item.subtotal)}원
-            </div>
-
-            {/* 상세보기 버튼 */}
-            {item.type && item.schedule_id && (
-              <div style={{ marginTop: 12 }}>
-                <button
-                  onClick={() =>
-                    router.push(`/education/${item.type}/${item.schedule_id}`)
-                  }
-                  style={{
-                    padding: "6px 12px",
-                    background: "#0070f3",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  상세보기
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+function PriceRow({ label, value, highlight, dim }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "88px 1fr",
+        gap: 8,
+        alignItems: "center",
+        margin: "4px 0",
+      }}
+    >
+      <div style={{ color: dim ? "#9CA3AF" : "#6B7280", fontSize: 13 }}>
+        {label}
+      </div>
+      <div
+        style={{
+          color: highlight ? "#0070f3" : "#111827",
+          fontSize: highlight ? 18 : 14,
+          fontWeight: highlight ? 600 : 400,
+          textAlign: "right",
+        }}
+      >
+        {value}
       </div>
     </div>
   );
+}
+
+function formatPayMethod(method) {
+  if (!method) return "";
+  const map = {
+    card: "카드결제",
+    toss: "토스결제",
+    vbank: "가상계좌",
+    transfer: "계좌이체",
+  };
+  return map[method] || method;
 }
