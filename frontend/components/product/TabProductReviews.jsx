@@ -61,8 +61,8 @@ export default function TabProductReviews({ productId, scheduleId }) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-    z;
   }, []);
+  
   useEffect(() => {
     fetchReviews();
   }, [productId]);
@@ -135,7 +135,7 @@ export default function TabProductReviews({ productId, scheduleId }) {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            minHeight: 300,
+            minHeight: 200,
             backgroundColor: "#fafafa",
             color: "#888",
             fontSize: 14,

@@ -24,32 +24,30 @@ export default function CheckoutPage() {
   const [pointUsed, setPointUsed] = useState(Number(point) || 0);
   const [userInfo, setUserInfo] = useState(null);
 
-  /** /user 데이터 로딩 (게스트 차단) */
   useEffect(() => {
+    if (!router.isReady) return;
+  
+    const returnTo = router.asPath || "/checkout";
+  
     const fetchInitial = async () => {
       try {
         const res = await api.get("/user");
         const user = res.data.user || {};
         if (!user?.id) {
-          const qs = new URLSearchParams(router.query).toString();
-          router.replace(
-            `/login?redirect=${encodeURIComponent(`/checkout${qs ? "?" + qs : ""}`)}`
-          );
+          router.replace(`/login?redirect=${encodeURIComponent(returnTo)}`);
           return;
         }
         setUserInfo(user);
         setAvailablePoint(Number(user.point_balance ?? 0));
         setAvailableCoupons(Array.isArray(user.coupons) ? user.coupons : []);
       } catch {
-        const qs = new URLSearchParams(router.query).toString();
-        router.replace(
-          `/login?redirect=${encodeURIComponent(`/checkout${qs ? "?" + qs : ""}`)}`
-        );
+        router.replace(`/login?redirect=${encodeURIComponent(returnTo)}`);
       }
     };
+  
     fetchInitial();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router.isReady]);
+  
 
   /** 금액 계산 */
   function calcFinalAmount(items, couponAmount, pointUsedValue) {

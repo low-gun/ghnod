@@ -59,37 +59,9 @@ export default function EducationScheduleDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
-const isTabOrBelow980 = useIsTabletOrBelow980();
+  const isTabOrBelow980 = useIsTabletOrBelow980();
 
   const { showAlert } = useGlobalAlert();
-// ✅ 동적 헤더 높이
-const [headerTop, setHeaderTop] = useState(80);
-const rafRef = useRef(0);
-
-useEffect(() => {
-  const measure = () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      const h = document.querySelector("header")?.offsetHeight;
-      setHeaderTop(h || (isMobile ? 56 : 80));
-    });
-  };
-
-  measure();
-  window.addEventListener("resize", measure);
-  window.addEventListener("orientationchange", measure);
-  // ⬇️ 모바일 주소창 접힘/펼침 등으로 헤더 높이가 변해도 즉시 반영
-  window.addEventListener("scroll", measure, { passive: true });
-
-  return () => {
-    window.removeEventListener("resize", measure);
-    window.removeEventListener("orientationchange", measure);
-    window.removeEventListener("scroll", measure);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-  };
-}, [isMobile]);
-
-
 
 const tabsRef = useRef(null);
 
@@ -142,7 +114,7 @@ const tabsRef = useRef(null);
   const remainingForSelection = useMemo(() => {
     if (sessionsCount > 1) {
       const sess = (schedule?.sessions || []).find(
-        (s) => (s?.id || s?.session_id) === selectedSessionId
+        (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
       );
       if (!sess) return 0;
       const tot = Number(sess?.total_spots ?? 0);
@@ -150,8 +122,7 @@ const tabsRef = useRef(null);
     }
     const tot = Number(schedule?.total_spots ?? 0);
     return Number(schedule?.remaining_spots ?? Math.max(tot - (schedule?.reserved_spots ?? 0), 0));
-  }, [sessionsCount, selectedSessionId, schedule]);
-  
+  }, [sessionsCount, selectedSessionId, schedule]);  
 
 const isSoldOut = remainingForSelection <= 0;
 
@@ -165,7 +136,7 @@ const disableActions = useMemo(() => {
 
 const disableTitle = useMemo(() => {
   if (sessionsCount > 1) {
-    if (!selectedSessionId) return "회차를 먼저 선택하세요.";
+    if (!selectedSessionId) return "일자를 먼저 선택해주세요.";
     return isSoldOut ? "마감된 회차입니다." : undefined;
   }
   return isSoldOut ? "마감된 일정입니다." : undefined;
@@ -187,9 +158,9 @@ const disableTitle = useMemo(() => {
 
     try {
       if (sessionsCount > 1 && !selectedSessionId) {
-        showAlert("원하시는 회차를 선택해 주세요.");
+        showAlert("원하시는 일자를 선택해 주세요.");
         return;
-      }
+      }   
       if (isSoldOut) {
         showAlert(sessionsCount > 1 ? "마감된 회차입니다. 다른 회차를 선택해 주세요." : "마감된 일정입니다.");
         return;
@@ -227,7 +198,7 @@ const disableTitle = useMemo(() => {
     
     try {
       if ((schedule.sessions || []).length > 1 && !selectedSessionId) {
-        showAlert("원하시는 회차를 선택해 주세요.");
+        showAlert("원하시는 일자를 선택해 주세요.");
         return;
       }
       if (isSoldOut) {
@@ -452,19 +423,17 @@ const disableTitle = useMemo(() => {
                   }}
                   className="sessionSelect"
                 >
-                  {sessionsCount > 1 && !selectedSessionId && <option value="">회차를 선택하세요</option>}
+                  {sessionsCount > 1 && !selectedSessionId && <option value="">일자를 선택해주세요</option>}
                   {sessionsArr.map((s, idx) => {
   const sid = s.id || s.session_id || idx;
   const dateLabel = formatRangeWithWeekday(s.start_date, s.end_date);
-  const rem = Number(s.remaining_spots ?? 0);
-  const tot = Number(s.total_spots ?? 0);
-  const seatText = rem === 0 ? "마감" : `잔여 ${rem}명(총원 ${tot}명)`;
   return (
     <option key={sid} value={sid}>
-      {`(${idx + 1}회차) ${dateLabel} ─ ${seatText}`}
+      {dateLabel}
     </option>
   );
 })}
+
 
                 </select>
               ) : (
@@ -472,34 +441,19 @@ const disableTitle = useMemo(() => {
                   {sessionsArr.map((s, idx) => {
                     const sid = s.id || s.session_id || idx;
                     const label = formatRangeWithWeekday(s.start_date, s.end_date);
-                    const isSelected = selectedSessionId === sid;
+                    const isSelected = Number(selectedSessionId) === Number(sid);
   
                     return (
                       <label key={sid} className={`sessionItem ${isSelected ? "selected" : ""}`}>
-                        <input
-                          type="radio"
-                          name="session"
-                          checked={isSelected}
-                          onChange={() => setSelectedSessionId(sid)}
-                        />
-                        <span className="sessionIdx">{`(${idx + 1}회차)`}</span>
-                        <span className="sessionDate">{label}</span>
-                        {(() => {
-  const rem = Number(s.remaining_spots ?? 0);
-  const tot = Number(s.total_spots ?? 0);
-  return rem === 0 ? (
-    <span className="sessionSeats" style={{ color: "#e11d48", fontWeight: 700 }}>
-      마감
-    </span>
-  ) : (
-    <span className="sessionSeats">
-      <Users size={14} style={{ marginRight: 4, color: "#555" }} />
-      {`잔여 ${rem}명(총원 ${tot}명)`}
-    </span>
-  );
-})()}
+  <input
+    type="radio"
+    name="session"
+    checked={isSelected}
+    onChange={() => setSelectedSessionId(sid)}
+  />
+  <span className="sessionDate">{label}</span>
+</label>
 
-                      </label>
                     );
                   })}
                 </div>
@@ -518,7 +472,7 @@ const disableTitle = useMemo(() => {
                       label: "교육기간",
                       value: (() => {
                         const sess = (schedule.sessions || []).find(
-                          (s) => (s.id || s.session_id) === selectedSessionId
+                          (s) => Number(s.id ?? s.session_id) === Number(selectedSessionId)
                         );
                         const base = formatRangeWithWeekday(
                           sess?.start_date || schedule.start_date,
@@ -540,9 +494,15 @@ const disableTitle = useMemo(() => {
                 label: "모집",
                 value: (() => {
                   const sess = (schedule?.sessions || []).find(
-                    (s) => (s?.id || s?.session_id) === selectedSessionId
+                    (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
                   );
               
+                  // ✅ 다회차 + 미선택 → 안내
+                  if (sessionsCount > 1 && !sess) {
+                    return <span style={{ color: "#6b7280" }}>일자를 선택해주세요</span>;
+                  }
+                                
+                  // ✅ 다회차 + 선택됨 → 선택 회차 기준
                   if (sessionsCount > 1 && sess) {
                     const total = Number(sess?.total_spots ?? 0);
                     const remaining = Number(
@@ -551,18 +511,20 @@ const disableTitle = useMemo(() => {
                     return remaining === 0
                       ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
                       : `잔여 ${remaining}명(총원 ${total}명)`;
-                  } else {
-                    const total = Number(schedule?.total_spots ?? 0);
-                    const remaining = Number(
-                      schedule?.remaining_spots ?? Math.max(total - (schedule?.reserved_spots ?? 0), 0)
-                    );
-                    return remaining === 0
-                      ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
-                      : `잔여 ${remaining}명(총원 ${total}명)`;
                   }
+              
+                  // ✅ 단일 회차(기존 로직 유지)
+                  const total = Number(schedule?.total_spots ?? 0);
+                  const remaining = Number(
+                    schedule?.remaining_spots ?? Math.max(total - (schedule?.reserved_spots ?? 0), 0)
+                  );
+                  return remaining === 0
+                    ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
+                    : `잔여 ${remaining}명(총원 ${total}명)`;
                 })(),
                 icon: <Users size={16} />,
               },
+              
                 
             ].map((item, idx, arr) => (
               <div className="infoRow" key={`${item.label}-${idx}`}>
@@ -779,8 +741,7 @@ const disableTitle = useMemo(() => {
     border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer;
   }
   .sessionItem.selected { background: #eef5ff; border-color: #cfe2ff; }
-  .sessionIdx { color: #555; font-size: 12px; }
-  .sessionDate { line-height: 1.4; }
+    .sessionDate { line-height: 1.4; }
 
   .infoCard { margin-top: 20px; background: #f7f9fc; border-radius: 8px; }
   .infoRow {

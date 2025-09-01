@@ -9,8 +9,10 @@ import { useGlobalAlert } from "@/stores/globalAlert";
 const getSafePath = (p) => {
   if (!p || typeof p !== "string") return "/";
   if (p.startsWith("http://") || p.startsWith("https://")) return "/";
+  if (p.startsWith("//")) return "/"; // 프로토콜 상대 외부 URL 차단
   return p.startsWith("/") ? p : `/${p}`;
 };
+
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
@@ -39,19 +41,20 @@ export default function GoogleCallbackPage() {
       .then((res) => {
         const { accessToken, user, tempToken } = res.data;
 
-        if (accessToken && user) {
-          login(user, accessToken);
+if (accessToken && user) {
+  login(user, accessToken);
 
-          const redirect = getSafePath(router.query.redirect);
-          if (redirect && redirect !== "/") {
-            router.replace(redirect);
-          } else if (typeof window !== "undefined" && window.history.length > 1) {
-            router.back();
-          } else {
-            router.replace("/");
-          }
-          return;
-        }
+  const redirect = getSafePath(router.query.redirect);
+  if (redirect && redirect !== "/") {
+    router.replace(redirect);
+  } else if (user?.role === "admin") {
+    router.replace("/admin");
+  } else {
+    router.replace("/");
+  }
+  return;
+}
+
 
         if (tempToken) {
           router.replace(`/register/social?token=${tempToken}`);

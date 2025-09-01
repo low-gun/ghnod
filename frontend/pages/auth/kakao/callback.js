@@ -9,8 +9,10 @@ import { useGlobalAlert } from "@/stores/globalAlert";
 const getSafePath = (p) => {
   if (!p || typeof p !== "string") return "/";
   if (p.startsWith("http://") || p.startsWith("https://")) return "/";
+  if (p.startsWith("//")) return "/"; // 프로토콜 상대 URL 차단
   return p.startsWith("/") ? p : `/${p}`;
 };
+
 
 export default function KakaoCallbackPage() {
   const router = useRouter();
@@ -41,18 +43,18 @@ export default function KakaoCallbackPage() {
 
         if (accessToken && user) {
           login(user, accessToken);
-
+        
           const redirect = getSafePath(router.query.redirect);
           if (redirect && redirect !== "/") {
             router.replace(redirect);
-          } else if (typeof window !== "undefined" && window.history.length > 1) {
-            router.back();
+          } else if (user?.role === "admin") {
+            router.replace("/admin");
           } else {
             router.replace("/");
           }
           return;
         }
-
+        
         if (tempToken) {
           router.replace(`/register/social?token=${tempToken}`);
           return;

@@ -6,6 +6,19 @@ import { useUserContext } from "@/context/UserContext";
 import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
+const EMPTY_PANEL_STYLE = {
+  minHeight:200,
+  padding: 24,
+  borderRadius: 8,
+  backgroundColor: "#F9FAFB",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+  color: "#6B7280",
+  fontSize: 14,
+};
+
 export default function TabProductInquiry({ productId }) {
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,20 +114,12 @@ export default function TabProductInquiry({ productId }) {
       </div>
 
       {loading ? (
-        <p style={{ color: "#999" }}>불러오는 중...</p>
-      ) : inquiries.length === 0 ? (
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: "#888",
-            backgroundColor: "#fafafa",
-            borderRadius: 8,
-          }}
-        >
-          등록된 문의가 없습니다.
-        </div>
-      ) : (
+  <></>
+) : inquiries.length === 0 ? (
+  <div style={EMPTY_PANEL_STYLE}>
+    <div>등록된 문의가 없습니다.</div>
+  </div>
+) : (
         <ul
           style={{
             display: "flex",
@@ -233,79 +238,56 @@ export default function TabProductInquiry({ productId }) {
 
               {/* 답변 영역 */}
               {item.answer && (
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 12,
-                    backgroundColor: "#f7f7f7",
-                    borderRadius: 6,
-                    fontSize: 14,
-                    whiteSpace: "pre-wrap",
-                    color: "#444",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 6,
-                    }}
-                  >
-                    <span
-                      style={{
-                        backgroundColor: "#999",
-                        color: "#fff",
-                        padding: "2px 8px",
-                        fontSize: 12,
-                        borderRadius: 12,
-                      }}
-                    >
-                      답변
-                    </span>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <span
-                          style={{
-                            backgroundColor: "#999",
-                            color: "#fff",
-                            padding: "2px 8px",
-                            fontSize: 12,
-                            borderRadius: 12,
-                          }}
-                        >
-                          답변
-                        </span>
-                        <strong style={{ color: "#333" }}>관리자</strong>
-                      </div>
+  <div
+    style={{
+      marginTop: 16,
+      padding: 12,
+      backgroundColor: "#f7f7f7",
+      borderRadius: 6,
+      fontSize: 14,
+      whiteSpace: "pre-wrap",
+      color: "#444",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        marginBottom: 6,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span
+          style={{
+            backgroundColor: "#999",
+            color: "#fff",
+            padding: "2px 8px",
+            fontSize: 12,
+            borderRadius: 12,
+          }}
+        >
+          답변
+        </span>
+        <strong style={{ color: "#333" }}>관리자</strong>
+      </div>
+      <span style={{ fontSize: 12, color: "#aaa" }}>
+        {new Date(item.answered_at).toLocaleString("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })}
+      </span>
+    </div>
 
-                      <span style={{ fontSize: 12, color: "#aaa" }}>
-                        {new Date(item.answered_at).toLocaleString("ko-KR", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                  {item.answer}
-                </div>
-              )}
+    {item.answer}
+  </div>
+)}
+
             </li>
           ))}
         </ul>

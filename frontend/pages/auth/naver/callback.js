@@ -10,12 +10,13 @@ export default function NaverCallbackPage() {
   const { login } = useUserContext();
   const { showAlert } = useGlobalAlert();
 
-  // 안전 경로 유틸
-  const getSafePath = (p) => {
-    if (!p || typeof p !== "string") return "/";
-    if (p.startsWith("http://") || p.startsWith("https://")) return "/";
-    return p.startsWith("/") ? p : `/${p}`;
-  };
+// 안전 경로 유틸
+const getSafePath = (p) => {
+  if (!p || typeof p !== "string") return "/";
+  if (p.startsWith("http://") || p.startsWith("https://")) return "/";
+  if (p.startsWith("//")) return "/"; // ← 추가: 프로토콜 상대 외부 URL 차단
+  return p.startsWith("/") ? p : `/${p}`;
+};
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -42,17 +43,18 @@ export default function NaverCallbackPage() {
 
         if (accessToken && user) {
           login(user, accessToken);
-
+        
           const redirect = getSafePath(router.query.redirect);
           if (redirect && redirect !== "/") {
             router.replace(redirect);
-          } else if (typeof window !== "undefined" && window.history.length > 1) {
-            router.back();
+          } else if (user?.role === "admin") {
+            router.replace("/admin");
           } else {
             router.replace("/");
           }
           return;
         }
+        
 
         if (tempToken) {
           router.replace(`/register/social?token=${tempToken}`);
