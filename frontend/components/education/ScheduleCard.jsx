@@ -81,7 +81,9 @@ export default function ScheduleCard({
   }[status];
 
   const handleClick = () => {
-    router.push(`/education/${schedule.type}/${schedule.id}`);
+    const targetId = (schedule.schedule_id ?? schedule.id);
+    const targetType = (schedule.type ?? type);
+    router.push(`/education/${targetType}/${targetId}`);
   };
   
 
