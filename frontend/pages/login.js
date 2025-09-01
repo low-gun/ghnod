@@ -15,7 +15,8 @@ const getSafePath = (p) => {
   try {
     if (!p || typeof p !== "string") return "/";
     if (p.startsWith("http://") || p.startsWith("https://")) return "/";
-    return p.startsWith("/") ? p : `/${p}`;
+if (p.startsWith("//")) return "/"; // ← 추가: 프로토콜 상대 외부 URL 차단
+return p.startsWith("/") ? p : `/${p}`;
   } catch { return "/"; }
 };
 
@@ -30,7 +31,26 @@ export default function LoginPage() {
   const alreadyRedirected = useRef(false);
   const [autoLogin, setAutoLogin] = useState(false);
   const { showAlert } = useGlobalAlert();
-
+  const safeBack = () => {
+    const redirect = getSafePath(router.query.redirect);
+    const hasRedirect = redirect && redirect !== "/";
+  
+    if (hasRedirect) {
+      router.replace(redirect);
+      return;
+    }
+  
+    if (
+      typeof window !== "undefined" &&
+      document.referrer &&
+      document.referrer.startsWith(window.location.origin) &&
+      window.history.length > 1
+    ) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  };
   useEffect(() => {
     if (user?.id && !alreadyRedirected.current) {
       alreadyRedirected.current = true;
@@ -38,16 +58,15 @@ export default function LoginPage() {
       const redirect = getSafePath(router.query.redirect);
       const hasRedirect = redirect && redirect !== "/";
 
-      // ✅ 우선순위: redirect > admin > history back > /
-      if (hasRedirect) {
-        router.replace(redirect);
-      } else if (user.role === "admin") {
-        router.replace("/admin");
-      } else if (typeof window !== "undefined" && window.history.length > 1) {
-        router.back();
-      } else {
-        router.replace("/");
-      }
+      // ✅ 우선순위: redirect > admin > /
+if (hasRedirect) {
+  router.replace(redirect);
+} else if (user.role === "admin") {
+  router.replace("/admin");
+} else {
+  router.replace("/");
+}
+
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, router.isReady]);
@@ -94,18 +113,18 @@ export default function LoginPage() {
         delete api.defaults.headers.common["x-guest-token"];
 
         // ✅ 우선순위: redirect > admin > history back > /
-        const redirect = getSafePath(router.query.redirect);
-        const hasRedirect = redirect && redirect !== "/";
+        // ✅ 우선순위: redirect > admin > /
+const redirect = getSafePath(router.query.redirect);
+const hasRedirect = redirect && redirect !== "/";
 
-        if (hasRedirect) {
-          router.replace(redirect);
-        } else if (userData.role === "admin") {
-          router.replace("/admin");
-        } else if (typeof window !== "undefined" && window.history.length > 1) {
-          router.back();
-        } else {
-          router.replace("/");
-        }
+if (hasRedirect) {
+  router.replace(redirect);
+} else if (userData.role === "admin") {
+  router.replace("/admin");
+} else {
+  router.replace("/");
+}
+
       } else {
         showAlert("로그인 실패: " + data.message);
       }
@@ -122,14 +141,14 @@ export default function LoginPage() {
     <div className="login-root">
       <div className="login-card">
         <div className="title-bar">
-          <button
-            type="button"
-            className="back-btn"
-            onClick={() => router.back()}
-            aria-label="뒤로가기"
-          >
-            <ChevronLeft size={22} />
-          </button>
+        <button
+  type="button"
+  className="back-btn"
+  onClick={safeBack}
+  aria-label="뒤로가기"
+>
+  <ChevronLeft size={22} />
+</button>
           <div className="title-wrap">
             <LogIn size={32} color="#3577f1" style={{ marginBottom: 4 }} />
             <h2 className="title">로그인</h2>

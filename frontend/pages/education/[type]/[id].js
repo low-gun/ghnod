@@ -174,14 +174,12 @@ const disableTitle = useMemo(() => {
   // 장바구니/바로구매
   const handleBuyNow = useCallback(async () => {
     if (!user) {
-      const redirect =
-        typeof window !== "undefined"
-          ? window.location.pathname + window.location.search
-          : "/";
+      const redirect = router.asPath || "/";
       showAlert("로그인 후 결제하실 수 있습니다.");
       router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
+    
     if (!schedule) {
       showAlert("일정 정보를 불러오지 못했습니다.");
       return;
@@ -221,14 +219,12 @@ const disableTitle = useMemo(() => {
 
   const handleAddToCart = useCallback(async () => {
     if (!user) {
-      const redirect =
-        typeof window !== "undefined"
-          ? window.location.pathname + window.location.search
-          : "/";
+      const redirect = router.asPath || "/";
       showAlert("로그인 후 장바구니를 이용하실 수 있습니다.");
       router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
+    
     try {
       if ((schedule.sessions || []).length > 1 && !selectedSessionId) {
         showAlert("원하시는 회차를 선택해 주세요.");
