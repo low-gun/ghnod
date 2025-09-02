@@ -22,17 +22,35 @@ export default function UserPointsTab({ userId }) {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
-  const fetchPoints = () => {
-    api.get(`/admin/users/${userId}/points`).then((res) => {
-      const data = res.data.points || [];
-      setPoints(data);
-      setFiltered(data);
-    });
-
-    api.get(`/admin/users/${userId}`).then((res) => {
-      setUserInfo(res.data.user);
-    });
+  const fetchPoints = async () => {
+    try {
+      const res = await api.get(`/admin/users/${userId}/points`);
+      if (res.data?.success) {
+        const data = res.data.points || [];
+        setPoints(data);
+        setFiltered(data);
+      } else {
+        console.warn("❌ 포인트 API 실패:", res.data?.message);
+        setPoints([]);
+        setFiltered([]);
+      }
+    } catch (err) {
+      console.error("❌ 포인트 API 오류:", err);
+      setPoints([]);
+      setFiltered([]);
+    }
+  
+    try {
+      const resUser = await api.get(`/admin/users/${userId}`);
+      if (resUser.data?.success) {
+        setUserInfo(resUser.data.user);
+      }
+    } catch (err) {
+      console.error("❌ 사용자 정보 API 오류:", err);
+      setUserInfo(null);
+    }
   };
+  
 
   useEffect(() => {
     if (!userId) return;
@@ -292,19 +310,22 @@ export default function UserPointsTab({ userId }) {
           </>
         )}
       </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginTop: "16px",
-        }}
-      >
-        <PaginationControls
-          page={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+      {filtered.length > 0 && totalPages > 1 && (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      marginTop: "16px",
+    }}
+  >
+    <PaginationControls
+      page={currentPage}
+      totalPages={totalPages}
+      onPageChange={setCurrentPage}
+    />
+  </div>
+)}
+
     </div>
   );
 }

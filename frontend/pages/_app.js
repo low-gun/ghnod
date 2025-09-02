@@ -1,7 +1,7 @@
 // pages/_app.js
-import Head from "next/head"; // ✅ 추가
+import Head from "next/head";
 import { useRouter } from "next/router";
-import { useEffect, useRef } from "react"; // ✅ useRef 추가
+import { useEffect, useRef } from "react";
 import Script from "next/script";
 import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
@@ -11,10 +11,10 @@ import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import GlobalConfirmModal from "@/components/common/GlobalConfirmModal";
 import GlobalAlert from "@/components/common/GlobalAlert";
-import GlobalAgreements from "@/components/common/GlobalAgreements"; // ✅ 추가
+import GlobalAgreements from "@/components/common/GlobalAgreements";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "../styles/adminTable.css"; // ✅ 추가
+import "../styles/adminTable.css";
 
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
@@ -53,19 +53,17 @@ const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const isAdmin = router.pathname.startsWith("/admin"); // ✅ 추가
+  const isAdmin = router.pathname.startsWith("/admin");
   const showLoading = useGlobalLoading((state) => state.showLoading);
+  const hideLoading = useGlobalLoading((state) => state.hideLoading);
+  const startRef = useRef(0);
+  const timeoutRef = useRef(null);
 
-  // ✅ 어드민 경로일 때 body에 클래스 토글
+  // 어드민 경로일 때 body 클래스 토글
   useEffect(() => {
     document.body.classList.toggle("admin-page", isAdmin);
     return () => document.body.classList.remove("admin-page");
   }, [isAdmin]);
-
-
-  const hideLoading = useGlobalLoading((state) => state.hideLoading);
-  const startRef = useRef(0);      // ✅ 변경
-const timeoutRef = useRef(null); // ✅ 변경
 
   useEffect(() => {
     console.log(
@@ -80,43 +78,49 @@ const timeoutRef = useRef(null); // ✅ 변경
 
   useEffect(() => {
     const handleStart = () => {
-      startRef.current = Date.now(); // ✅ 변경
+      startRef.current = Date.now();
       showLoading();
-    
-      if (timeoutRef.current) clearTimeout(timeoutRef.current); // ✅ 중복 타이머 방지
+
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         hideLoading();
         console.warn("⏱ 로딩이 30초 이상 지속되어 자동 종료되었습니다.");
       }, 30000);
     };
-    
+
     const handleEnd = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current); // ✅ 변경
-      const elapsed = Date.now() - startRef.current;            // ✅ 변경
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      const elapsed = Date.now() - startRef.current;
       const delay = Math.max(300 - elapsed, 0);
       setTimeout(hideLoading, delay);
     };
-    
 
     router.events.on("routeChangeStart", handleStart);
     router.events.on("routeChangeComplete", handleEnd);
     router.events.on("routeChangeError", handleEnd);
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current); // ✅ 변경
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       router.events.off("routeChangeStart", handleStart);
       router.events.off("routeChangeComplete", handleEnd);
       router.events.off("routeChangeError", handleEnd);
     };
-  }, [router]);
+  }, [router, showLoading, hideLoading]);
 
   const LayoutWrapper = isAdmin
-  ? ({ children }) => <>{children}</>
-  : ({ children }) => <MainLayout>{children}</MainLayout>;
+    ? ({ children }) => <>{children}</>
+    : ({ children }) => <MainLayout>{children}</MainLayout>;
+
+  // ✅ Kakao SDK 필요 페이지에서만 로드
+  const needsKakao =
+    !isAdmin &&
+    (router.pathname === "/login" ||
+      router.pathname.startsWith("/auth/") ||
+      router.pathname === "/register/social");
 
   return (
     <>
-      {/* ✅ 전역 viewport 설정 */}
+      {/* 전역 viewport 설정 */}
       <Head>
         <meta
           name="viewport"
@@ -124,52 +128,47 @@ const timeoutRef = useRef(null); // ✅ 변경
         />
       </Head>
 
-      {/* ✅ Kakao JavaScript SDK 로드 및 초기화 보장 */}
-      {!isAdmin && (
-  <Script
-    id="kakao-sdk"
-    src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
-    strategy="afterInteractive" // ✅ 변경
-    onLoad={() => {
-      console.log("[Kakao] script tag loaded, checking window.Kakao...");
-      const checkKakao = setInterval(() => {
-        if (window.Kakao) {
-          console.log("[Kakao] object found");
-          if (!window.Kakao.isInitialized()) {
-            if (!process.env.NEXT_PUBLIC_KAKAO_JS_KEY) {
-              console.warn("[Kakao] NEXT_PUBLIC_KAKAO_JS_KEY missing");
-            }
-            window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
-            console.log("[Kakao] initialized:", window.Kakao.isInitialized());
-          }
-          clearInterval(checkKakao);
-        }
-      }, 200);
-      setTimeout(() => clearInterval(checkKakao), 5000);
-    }}
-    onError={(e) => console.error("[Kakao] script load error", e)}
-    crossOrigin="anonymous"
-  />
-)}
+      {/* Kakao JavaScript SDK: 필요한 페이지에서만 로드 */}
+      {needsKakao && (
+        <Script
+          id="kakao-sdk"
+          src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
+          strategy="afterInteractive"
+          onLoad={() => {
+            const checkKakao = setInterval(() => {
+              if (window.Kakao) {
+                if (!window.Kakao.isInitialized()) {
+                  if (!process.env.NEXT_PUBLIC_KAKAO_JS_KEY) {
+                    console.warn("[Kakao] NEXT_PUBLIC_KAKAO_JS_KEY missing");
+                  }
+                  window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
+                }
+                clearInterval(checkKakao);
+              }
+            }, 200);
+            setTimeout(() => clearInterval(checkKakao), 5000);
+          }}
+          onError={(e) => console.error("[Kakao] script load error", e)}
+          crossOrigin="anonymous"
+        />
+      )}
 
+      <QueryClientProvider client={queryClient}>
+        <UserProvider>
+          <CartProvider>
+            <GlobalLoadingBar />
+            <GlobalAlert />
+            <GlobalConfirmModal />
+            <GlobalAgreements />
 
-<QueryClientProvider client={queryClient}>
-  <UserProvider>
-    <CartProvider>
-    <GlobalLoadingBar />
-<GlobalAlert />
-<GlobalConfirmModal />
-<GlobalAgreements /> {/* 데스크탑=모달, 모바일=토스트 */}
+            {!isAdmin && <CartInitializer />}
 
-      {!isAdmin && <CartInitializer />}
-
-      <LayoutWrapper>
-        <Component {...pageProps} />
-      </LayoutWrapper>
-    </CartProvider>
-  </UserProvider>
-</QueryClientProvider>
-
+            <LayoutWrapper>
+              <Component {...pageProps} />
+            </LayoutWrapper>
+          </CartProvider>
+        </UserProvider>
+      </QueryClientProvider>
     </>
   );
 }

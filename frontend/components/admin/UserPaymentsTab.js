@@ -34,17 +34,35 @@ export default function UserPaymentsTab({ userId }) {
       </span>
     );
   };
-  const fetchPayments = () => {
-    api.get(`/admin/users/${userId}/payments`).then((res) => {
-      const data = res.data.payments || [];
-      setPayments(data);
-      setFiltered(data);
-    });
-
-    api.get(`/admin/users/${userId}`).then((res) => {
-      setUserInfo(res.data.user);
-    });
+  const fetchPayments = async () => {
+    try {
+      const res = await api.get(`/admin/users/${userId}/payments`);
+      if (res.data?.success) {
+        const data = res.data.payments || [];
+        setPayments(data);
+        setFiltered(data);
+      } else {
+        console.warn("❌ 결제내역 API 실패:", res.data?.message);
+        setPayments([]);
+        setFiltered([]);
+      }
+    } catch (err) {
+      console.error("❌ 결제내역 API 오류:", err);
+      setPayments([]);
+      setFiltered([]);
+    }
+  
+    try {
+      const resUser = await api.get(`/admin/users/${userId}`);
+      if (resUser.data?.success) {
+        setUserInfo(resUser.data.user);
+      }
+    } catch (err) {
+      console.error("❌ 사용자 정보 API 오류:", err);
+      setUserInfo(null);
+    }
   };
+  
 
   useEffect(() => {
     if (!userId) return;
@@ -353,19 +371,22 @@ export default function UserPaymentsTab({ userId }) {
           </table>
         )}
       </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginTop: "16px",
-        }}
-      >
-        <PaginationControls
-          page={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+      {filtered.length > 0 && totalPages > 1 && (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      marginTop: "16px",
+    }}
+  >
+    <PaginationControls
+      page={currentPage}
+      totalPages={totalPages}
+      onPageChange={setCurrentPage}
+    />
+  </div>
+)}
+
     </div>
   );
 }

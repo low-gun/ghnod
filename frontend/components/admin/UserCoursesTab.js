@@ -24,17 +24,39 @@ export default function UserCoursesTab({ userId }) {
   const router = useRouter();
   useEffect(() => {
     if (!userId) return;
-
-    api.get(`/admin/users/${userId}/courses`).then((res) => {
-      const data = res.data.courses || [];
-      setCourses(data);
-      setFiltered(data);
-    });
-
-    api.get(`/admin/users/${userId}`).then((res) => {
-      setUserInfo(res.data.user);
-    });
+  
+    const fetchData = async () => {
+      try {
+        const res = await api.get(`/admin/users/${userId}/courses`);
+        if (res.data?.success) {
+          const data = res.data.courses || [];
+          setCourses(data);
+          setFiltered(data);
+        } else {
+          console.warn("❌ 수강내역 API 실패:", res.data?.message);
+          setCourses([]);
+          setFiltered([]);
+        }
+      } catch (err) {
+        console.error("❌ 수강내역 API 오류:", err);
+        setCourses([]);
+        setFiltered([]);
+      }
+  
+      try {
+        const resUser = await api.get(`/admin/users/${userId}`);
+        if (resUser.data?.success) {
+          setUserInfo(resUser.data.user);
+        }
+      } catch (err) {
+        console.error("❌ 사용자 정보 API 오류:", err);
+        setUserInfo(null);
+      }
+    };
+  
+    fetchData();
   }, [userId]);
+  
 
   useEffect(() => {
     let temp = [...courses];
@@ -292,19 +314,22 @@ export default function UserCoursesTab({ userId }) {
           </table>
         )}
       </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginTop: "16px",
-        }}
-      >
-        <PaginationControls
-          page={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+      {filtered.length > 0 && totalPages > 1 && (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      marginTop: "16px",
+    }}
+  >
+    <PaginationControls
+      page={currentPage}
+      totalPages={totalPages}
+      onPageChange={setCurrentPage}
+    />
+  </div>
+)}
+
     </div>
   );
 }

@@ -2,8 +2,16 @@ import { useEffect, useContext } from "react";
 import { useRouter } from "next/router";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { UserContext } from "@/context/UserContext";
-import AdminDashboard from "@/components/admin/AdminDashboard";
-
+import dynamic from "next/dynamic";
+const AdminDashboard = dynamic(
+  () => import("@/components/admin/AdminDashboard"),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ padding: 100, textAlign: "center" }}>대시보드 불러오는 중…</div>
+    ),
+  }
+);
 export default function AdminPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);

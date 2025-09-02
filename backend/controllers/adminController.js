@@ -472,9 +472,10 @@ exports.getUserCourses = async (req, res) => {
   const userId = req.params.id;
   try {
     const courses = await courseModel.getCourseInfoByUser(userId);
-    res.json({ success: true, courses });
+    console.log("ℹ️ getUserCourses:", { userId, count: courses.length });
+    res.json({ success: true, courses }); // 빈 배열이어도 success:true
   } catch (err) {
-    console.error("❌ 관리자 수강내역 조회 오류:", err);
+    console.error("❌ 관리자 수강내역 조회 오류:", err?.message, err);
     res.status(500).json({ success: false, message: "수강내역 조회 실패" });
   }
 };
@@ -1490,27 +1491,28 @@ exports.getUnansweredInquiries = async (req, res) => {
     const limit = Math.max(parseInt(pageSize, 10) || 20, 1);
     const offset = Math.max((parseInt(page, 10) - 1) * limit, 0);
 
-    const ALLOWED_SORT = new Set([
-      "created_at",
-      "answered_at",
-      "username",
-      "email",
-    ]);
-    const sortCol = ALLOWED_SORT.has(String(sort))
-      ? String(sort)
-      : "created_at";
+    const ALLOWED_SORT = new Set(["created_at","answered_at","username","email"]);
+    const sortKey = ALLOWED_SORT.has(String(sort)) ? String(sort) : "created_at";
     const sortOrder = String(order).toLowerCase() === "asc" ? "ASC" : "DESC";
+    const SORT_EXPR = {
+      created_at: "i.created_at",
+      answered_at: "i.answered_at",
+      username: "u.username",
+      email: "u.email",
+    };
+    const sortExpr = SORT_EXPR[sortKey] || "i.created_at";
 
     const where = [];
     const vals = [];
 
     // ✅ status 필터: all | unanswered | answered
     const st = String(status || "unanswered");
-    if (st === "unanswered") {
-      where.push("(i.status = '접수' OR i.answer IS NULL OR i.answer = '')");
-    } else if (st === "answered") {
-      where.push("(i.answer IS NOT NULL AND i.answer <> '')");
-    }
+if (st === "unanswered") {
+  where.push("i.status = '접수'");
+} else if (st === "answered") {
+  where.push("i.status = '답변완료'");
+}
+
     // (all 은 추가 where 없음)
 
     if (search) {
@@ -1523,15 +1525,24 @@ exports.getUnansweredInquiries = async (req, res) => {
     const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
 
     const listSql = `
-      SELECT
-        i.id, i.user_id, i.title, i.message, i.answer, i.status,
-        i.created_at, i.answered_at,
-        u.username, u.email
-      FROM inquiries i
-      JOIN users u ON u.id = i.user_id
+SELECT
+  i.id, i.user_id, i.product_id, i.title, i.message, i.answer, i.status,
+  i.created_at, i.answered_at, i.answered_by,
+  u.username, u.email,
+  au.username AS answered_by_name,
+  au.email    AS answered_by_email,
+  p.title     AS product_title,
+  p.type      AS product_type,                                    -- ✅ 추가
+  CONCAT('/education/', p.type, '/', i.product_id) AS product_public_url  -- ✅ 추가
+FROM inquiries i
+JOIN users u  ON u.id = i.user_id
+LEFT JOIN users au ON au.id = i.answered_by
+LEFT JOIN products p ON p.id = i.product_id
+
       ${whereSql}
-      ORDER BY i.${sortCol} ${sortOrder}
+ORDER BY ${sortExpr} ${sortOrder}
       LIMIT ? OFFSET ?
+
     `;
     const countSql = `
       SELECT COUNT(*) AS totalCount
@@ -1562,15 +1573,12 @@ exports.answerInquiryByAdmin = async (req, res) => {
   }
 
   try {
-    const [result] = await pool.query(
-      `
+    const [result] = await pool.query(`
       UPDATE inquiries
-      SET answer = ?, answered_at = NOW(), status = '답변'
+      SET answer = ?, answered_at = NOW(), answered_by = ?, status = '답변완료'
       WHERE id = ?
-      `,
-      [String(answer).trim(), id]
-    );
-
+    `, [String(answer).trim(), req.user?.id || null, id]);
+    
     if (result.affectedRows === 0) {
       return res
         .status(404)

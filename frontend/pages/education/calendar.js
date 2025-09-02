@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import moment from "moment";
-import CustomCalendar from "../../components/schedules/CustomCalendar";
+import TableCalendar from "@/components/schedules/TableCalendar";
 import axios from "axios";
 import { useGlobalAlert } from "@/stores/globalAlert";
-import SearchFilter from "@/components/common/SearchFilter";
 
 export async function getServerSideProps(context) {
   try {
@@ -51,18 +50,9 @@ export default function CalendarPage({ eventsData }) {
     [eventsData]
   );
 
-  const [searchType, setSearchType] = useState("전체");
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(2025, 11, 31));
   const [calendarDate, setCalendarDate] = useState(moment());
 
-  const selectedEvent = useMemo(() => {
-    const id = router.query.id;
-    return events.find((e) => String(e.id) === String(id));
-  }, [router.query.id, events]);
-
-  const handleSelectEvent = useCallback(
+const handleSelectEvent = useCallback(
     (event) => {
       if (!event?.type) {
         showAlert("교육 타입 정보가 없습니다.");
@@ -73,62 +63,37 @@ export default function CalendarPage({ eventsData }) {
     },
     [router, showAlert]
   );
-  
-
-  useEffect(() => {
-    if (searchType === "교육기간") setCalendarDate(moment(startDate));
-  }, [searchType, startDate]);
-
-  const filteredEvents = useMemo(() => {
-    const kw = searchKeyword.toLowerCase();
-    return events.filter((evt) => {
-      if (searchType === "전체") {
-        return (
-          !kw ||
-          [evt.title, evt.location, evt.instructor, evt.description].some((v) =>
-            v?.toLowerCase().includes(kw)
-          )
-        );
-      } else if (searchType === "교육명") {
-        return evt.title?.toLowerCase().includes(kw);
-      } else if (searchType === "교육기간") {
-        return !(evt.end < startDate || evt.start > endDate);
-      }
-      return true;
-    });
-  }, [events, searchType, searchKeyword, startDate, endDate]);
-
+    
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
-      <SearchFilter
-        searchType={searchType}
-        setSearchType={setSearchType}
-        searchQuery={searchKeyword}
-        setSearchQuery={setSearchKeyword}
-        startDate={startDate}
-        endDate={endDate}
-        setStartDate={setStartDate}
-        setEndDate={setEndDate}
-        searchOptions={[
-          { value: "전체", label: "전체", type: "text" },
-          { value: "교육명", label: "교육명", type: "text" },
-          { value: "교육기간", label: "교육기간", type: "date" },
-        ]}
-        onSearchUpdate={(type, query) => {
-          setSearchType(type);
-          setSearchKeyword(query);
-          setCalendarDate(moment());
-        }}
-        isMobile={false}
-      />
+      
+      <TableCalendar
+  events={events}
+  currentMonth={calendarDate}
+  setCurrentMonth={setCalendarDate}
+  onSelectSchedule={handleSelectEvent}
+  onShowMore={(date, hiddenEvents) => {
+    if (window.innerWidth <= 640) {
+      const items = hiddenEvents
+        .map(ev => {
+          const sid = ev.schedule_id || ev.id;
+          return `• <a href="/education/${ev.type}/${sid}" style="color:#2563eb;text-decoration:underline;">${ev.title}</a>`;
+        })
+        .join("<br/>");
 
-      <CustomCalendar
-        schedules={filteredEvents}
-        currentMonth={calendarDate}
-        setCurrentMonth={setCalendarDate}
-        onSelectSchedule={handleSelectEvent}
-        shouldFilterInactive={false}
-      />
+        showAlert(`
+          <div>
+            <strong>${moment(date).format("M월 D일")} 일정 더보기 (${hiddenEvents.length}건)</strong><br/>
+            ${items}
+          </div>
+        `, { isHtml: true });
+        
+    } else {
+      // 데스크탑: 모달 그대로
+    }
+  }}
+/>
+
 
       
     </div>

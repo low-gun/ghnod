@@ -1,5 +1,6 @@
 // /frontend/components/admin/UnansweredInquiriesModal.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import AdminDialog from "@/components/common/AdminDialog";
 import api from "@/lib/api";
 import PaginationControls from "@/components/common/PaginationControls";
@@ -22,7 +23,7 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
   const [order, setOrder] = useState("desc"); // asc | desc
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
+  const isMobile = useIsMobile();
   // 답변 작성
   const [replyingId, setReplyingId] = useState(null);
   const [replyText, setReplyText] = useState("");
@@ -128,100 +129,104 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
       footer={footer}
       closeOnBackdrop={!submitting}
     >
-      {/* 상단 컨트롤: 탭 + 검색/정렬 */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          alignItems: "center",
-          marginBottom: 12,
-          justifyContent: "space-between",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            maxWidth: "100%",
-          }}
-        >
-          <TabButton
-            active={tab === "all"}
-            onClick={() => {
-              setTab("all");
-              setPage(1);
-            }}
-          >
-            전체
-          </TabButton>
-          <TabButton
-            active={tab === "unanswered"}
-            onClick={() => {
-              setTab("unanswered");
-              setPage(1);
-            }}
-          >
-            미답변{" "}
-            {countByStatus.unanswered ? `(${countByStatus.unanswered})` : ""}
-          </TabButton>
-          <TabButton
-            active={tab === "answered"}
-            onClick={() => {
-              setTab("answered");
-              setPage(1);
-            }}
-          >
-            답변완료{" "}
-            {countByStatus.answered ? `(${countByStatus.answered})` : ""}
-          </TabButton>
-        </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            maxWidth: "100%",
-          }}
-        >
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="제목/내용/사용자/이메일 검색"
-            style={searchInput}
-          />
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            style={sel}
-            aria-label="정렬 컬럼"
-          >
-            <option value="created_at">작성일시</option>
-            <option value="answered_at">답변일시</option>
-            <option value="username">이름</option>
-            <option value="email">이메일</option>
-          </select>
-          <select
-            value={order}
-            onChange={(e) => setOrder(e.target.value)}
-            style={sel}
-            aria-label="정렬 방향"
-          >
-            <option value="desc">내림차순</option>
-            <option value="asc">오름차순</option>
-          </select>
-          <button
-            type="button"
-            onClick={handleSearch}
-            style={btnPrimary}
-            disabled={loading}
-          >
-            검색
-          </button>
-        </div>
-      </div>
+      {/* 상단 컨트롤: 탭 + 검색/정렬 */}
+<div
+  style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 12,
+    justifyContent: "space-between",
+  }}
+>
+  {/* 좌측: 탭 */}
+  <div
+    style={{
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      maxWidth: "100%",
+    }}
+  >
+    <TabButton
+      active={tab === "all"}
+      onClick={() => {
+        setTab("all");
+        setPage(1);
+      }}
+    >
+      전체
+    </TabButton>
+    <TabButton
+      active={tab === "unanswered"}
+      onClick={() => {
+        setTab("unanswered");
+        setPage(1);
+      }}
+    >
+      미답변 {countByStatus.unanswered ? `(${countByStatus.unanswered})` : ""}
+    </TabButton>
+    <TabButton
+      active={tab === "answered"}
+      onClick={() => {
+        setTab("answered");
+        setPage(1);
+      }}
+    >
+      답변완료 {countByStatus.answered ? `(${countByStatus.answered})` : ""}
+    </TabButton>
+  </div>
+
+  {/* 우측: 검색/정렬 (모바일에서는 숨김) */}
+  {!isMobile && (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap",
+        maxWidth: "100%",
+      }}
+    >
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="제목/내용/사용자/이메일 검색"
+        style={searchInput}
+      />
+      <select
+        value={sort}
+        onChange={(e) => setSort(e.target.value)}
+        style={sel}
+        aria-label="정렬 컬럼"
+      >
+        <option value="created_at">작성일시</option>
+        <option value="answered_at">답변일시</option>
+        <option value="username">이름</option>
+        <option value="email">이메일</option>
+      </select>
+      <select
+        value={order}
+        onChange={(e) => setOrder(e.target.value)}
+        style={sel}
+        aria-label="정렬 방향"
+      >
+        <option value="desc">내림차순</option>
+        <option value="asc">오름차순</option>
+      </select>
+      <button
+        type="button"
+        onClick={handleSearch}
+        style={btnPrimary}
+        disabled={loading}
+      >
+        검색
+      </button>
+    </div>
+  )}
+</div>
+
 
       {/* 목록 */}
       {loading ? (
@@ -235,37 +240,56 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
             return (
               <article key={q.id} style={card(answered)}>
                 <header style={cardHeader}>
-                  <strong
-                    style={{
-                      fontSize: 15,
-                      color: "#111827",
-                      overflowWrap: "anywhere",
-                    }}
-                  >
-                    {q.title}
-                  </strong>
-                  <StatusPill answered={answered} />
-                </header>
+  <div style={{display:"flex",alignItems:"center",gap:8}}>
+    <strong style={{fontSize:15,color:"#111827",overflowWrap:"anywhere"}}>{q.title}</strong>
+    {q.product_id ? (
+  <a
+    className="badgeLink"
+    href={`/admin/products/${q.product_id}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    title={q.product_title ? `상품: ${q.product_title}` : "상품 상세로 이동"}
+    aria-label={q.product_title ? `상품 ${q.product_title} 상세로 이동` : "상품 상세로 이동"}
+  >
+    상품: {q.product_title || "알 수 없음"}
+  </a>
+) : (
+  <span className="badgeStatic" title="1:1문의">1:1문의</span>
+)}
 
+  </div>
+  <StatusPill answered={answered} />
+</header>
                 <section style={{ padding: "12px 14px" }}>
                   <div style={sectTitle}>문의 내용</div>
                   <p style={message}>{q.message}</p>
 
-                  {/* ✅ 메타: 2줄 */}
-                  <div style={metaLines}>
-                    <div>
-                      작성자 : {q.username} ({toDateTime(q.created_at)})
-                    </div>
-                    <div>
-                      답변자 : {q.answered_by_name || q.answered_by || "-"} (
-                      {q.answered_at ? toDateTime(q.answered_at) : "-"})
-                    </div>
-                  </div>
+{/* ✅ 답변 내용 표시 */}
+{answered && (
+  <div style={{ marginTop: 12 }}>
+    <div style={sectTitle}>답변 내용</div>
+    <p style={{ ...message, marginTop: 6 }}>{q.answer}</p>
+  </div>
+)}
+<div style={metaLines}>
+  <div style={{fontWeight:600,color:"#111827"}}>작성자(작성일시)</div>
+  <div>{(q.email || "-")} ({q.username || "-"})</div>
+  <div style={{color:"#6b7280"}}>{toDateTime(q.created_at)}</div>
 
-                  {/* 답변 영역 */}
-                  {!answered ? (
-                    <>
-                      {replyingId === q.id ? (
+  {answered && (
+    <>
+      <div style={{marginTop:8,fontWeight:600,color:"#111827"}}>답변자(작성일시)</div>
+      <div>{(q.answered_by_email || q.answered_by_name || q.answered_by || "-")} ({q.answered_by_name || "-"})</div>
+      <div style={{color:"#6b7280"}}>{q.answered_at ? toDateTime(q.answered_at) : "-"}</div>
+    </>
+  )}
+</div>
+
+
+{/* 답변 영역 */}
+{!answered ? (
+  <>
+    {replyingId === q.id ? (
                         <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
                           <textarea
                             value={replyText}
@@ -336,6 +360,32 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
           </div>
         </div>
       )}
+      <style jsx>{`
+  .badgeLink, .badgeStatic {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    color: #374151;
+    display: inline-block;
+    max-width: 260px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .badgeLink {
+    cursor: pointer;
+    text-decoration: none;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .badgeLink:hover, .badgeLink:focus-visible {
+    color: #1e40af;
+    border-color: #bfdbfe;
+    background: #eef5ff;
+    outline: none;
+  }
+`}</style>
     </AdminDialog>
   );
 }

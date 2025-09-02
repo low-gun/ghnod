@@ -2,22 +2,26 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import AdminTopPanels from "@/components/common/AdminTopPanels";
-import UnansweredInquiriesModal from "@/components/admin/UnansweredInquiriesModal";
-import UserPointGrantModal from "@/components/admin/UserPointGrantModal.jsx";
-import UserCouponGrantModal from "@/components/admin/UserCouponGrantModal.jsx";
 import api from "@/lib/api";
+import dynamic from "next/dynamic";
 
-// Recharts
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+const UnansweredInquiriesModal = dynamic(
+  () => import("@/components/admin/UnansweredInquiriesModal"),
+  { ssr: false, loading: () => null }
+);
+const UserPointGrantModal = dynamic(
+  () => import("@/components/admin/UserPointGrantModal.jsx"),
+  { ssr: false, loading: () => null }
+);
+const UserCouponGrantModal = dynamic(
+  () => import("@/components/admin/UserCouponGrantModal.jsx"),
+  { ssr: false, loading: () => null }
+);
 
+const DashboardTrends = dynamic(
+  () => import("@/components/admin/DashboardTrends"),
+  { ssr: false, loading: () => <div style={{padding:12,textAlign:"center"}}>차트 불러오는 중…</div> }
+);
 // 날짜 유틸
 const pad = (n) => String(n).padStart(2, "0");
 const fmt = (d) =>
@@ -369,8 +373,9 @@ export default function AdminDashboard() {
           {
             label: "미답변 문의",
             color: "custom",
-            onClick: () => setOpenUnansweredModal(true),
+            onClick: () => setShowUnanswered(true),
           },
+          
         ]}
         excel={{ visible: false }}
       />
@@ -440,81 +445,42 @@ export default function AdminDashboard() {
       </section>
 
      {/* 시각화: 매출/가입 추이 (그리드 카드) */}
-<section style={sectionBox}>
+     <section style={sectionBox}>
   <h3 style={sectionTitle}>최근 30일 추이</h3>
-  <div style={chartsGrid}>
-    <div style={chartCard}>
-      <div style={chartTitle}>매출 추이</div>
-      <div style={{ width: "100%", height: 180 }}>
-        <ResponsiveContainer>
-          <LineChart data={salesTrend}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip
-              formatter={(v) => `${Number(v).toLocaleString()}원`}
-              labelStyle={{ fontSize: 12 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="amount"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-
-    <div style={chartCard}>
-      <div style={chartTitle}>가입자 추이</div>
-      <div style={{ width: "100%", height: 180 }}>
-        <ResponsiveContainer>
-          <LineChart data={userTrend}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip
-              formatter={(v) => `${v}명`}
-              labelStyle={{ fontSize: 12 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="count"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  </div>
+  <DashboardTrends
+    salesTrend={salesTrend}
+    userTrend={userTrend}
+    chartsGrid={chartsGrid}
+    chartCard={chartCard}
+    chartTitle={chartTitle}
+  />
 </section>
-
 
       {/* 모달 */}
       {showUnanswered && (
-        <UnansweredInquiriesModal onClose={() => setShowUnanswered(false)} />
-      )}
-      {showPointGrant && (
-        <UserPointGrantModal
-          selectedIds={[]}
-          onClose={() => setShowPointGrant(false)}
-          onSuccess={() => setShowPointGrant(false)}
-        />
-      )}
-      {showCouponGrant && (
-        <UserCouponGrantModal
-          selectedIds={[]}
-          couponTemplates={[]}
-          onClose={() => setShowCouponGrant(false)}
-          onSuccess={() => setShowCouponGrant(false)}
-        />
-      )}
+  <UnansweredInquiriesModal
+    open={showUnanswered}
+    onClose={() => setShowUnanswered(false)}
+  />
+)}
+
+{showPointGrant && (
+  <UserPointGrantModal
+    selectedIds={[]}
+    onClose={() => setShowPointGrant(false)}
+    onSuccess={() => setShowPointGrant(false)}
+  />
+)}
+
+{showCouponGrant && (
+  <UserCouponGrantModal
+    selectedIds={[]}
+    couponTemplates={[]}
+    onClose={() => setShowCouponGrant(false)}
+    onSuccess={() => setShowCouponGrant(false)}
+  />
+)}
+
     </div>
   );
 }

@@ -1,17 +1,34 @@
 // frontend/pages/admin/schedules/[id].js
+// 1) 모든 import를 최상단에 모읍니다.
 import { useRouter } from "next/router";
 import { useEffect, useState, useMemo } from "react";
 import api from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
-import TiptapEditor from "@/components/editor/TiptapEditor";
-import ImageUploader from "@/components/common/ImageUploader";
+import dynamic from "next/dynamic";
 import FormSection from "@/components/common/FormSection";
 import FormField from "@/components/common/FormField";
-import SessionRow from "@/components/admin/SessionRow";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
-import FormFooterBar from "@/components/common/FormFooterBar";
-import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";   // ✅ 모바일/태블릿 모달용
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+
+// 2) 그 다음에 dynamic 변수들을 선언합니다.
+const TiptapEditor = dynamic(
+  () => import("@/components/editor/TiptapEditor"),
+  { ssr: false, loading: () => null }
+);
+const ImageUploader = dynamic(
+  () => import("@/components/common/ImageUploader"),
+  { ssr: false, loading: () => null }
+);
+const SessionRow = dynamic(
+  () => import("@/components/admin/SessionRow"),
+  { ssr: false, loading: () => null }
+);
+const FormFooterBar = dynamic(
+  () => import("@/components/common/FormFooterBar"),
+  { ssr: false, loading: () => null }
+);
+
 
 const fmtKRW = (n) => {
   if (n === "" || n === null || n === undefined) return "";
@@ -19,23 +36,15 @@ const fmtKRW = (n) => {
   if (Number.isNaN(num)) return "";
   return num.toLocaleString("ko-KR");
 };
-
-const LABELS = {
-  title: "일정명",
-  location: "장소",
-  instructor: "강사",
-  total_spots: "정원",
-};
-
 export default function ScheduleFormPage() {
   const router = useRouter();
   const { id } = router.query;
   const isEdit = id !== "new";
   const { showAlert } = useGlobalAlert();
   const { showConfirm } = useGlobalConfirm();
-  const isTabletOrBelow = useIsTabletOrBelow?.() ?? false;   // ✅ 태블릿 이하에서 모달 사용
+  const isTabletOrBelow = useIsTabletOrBelow();   // ✅ 태블릿 이하에서 모달 사용
   const [showScheduleModal, setShowScheduleModal] = useState(false);  // ✅ 모달 상태
-
+  const [editorMounted, setEditorMounted] = useState(false);
   const [form, setForm] = useState({
     product_id: "",
     title: "",
@@ -92,8 +101,8 @@ export default function ScheduleFormPage() {
     if (!isEdit || !id) return;
     setLoading(true);
     api
-      .get(`admin/schedules/${id}`)
-      .then((res) => {
+    .get(`admin/schedules/${id}`)
+    .then((res) => {
         if (!res.data.success) return showAlert("일정 정보를 불러오지 못했습니다.");
         const data = res.data.schedule;
 
@@ -153,7 +162,7 @@ export default function ScheduleFormPage() {
       setSelectedType(selected?.type || "");
       setForm((prev) => ({
         ...prev,
-        product_id: value,
+        product_id: Number(value),
         title: selected?.title || "",
         price: selected?.price ?? "",
         description: selected?.description || "",
@@ -272,10 +281,10 @@ console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, n
                 </FormField>
 
                 <FormField
-                  label="간단 설명"
-                  helper={`${String(form.description || "").length}/120`}
-                  helperAlign="right"
-                >
+  label="간단 설명"
+  helper={`${String(form.description || "").length}/120`}
+  helperAlign="right"
+>
                   <input
                     name="description"
                     value={form.description || ""}
@@ -469,12 +478,18 @@ console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, n
             </div>
 
             <FormSection title="상세 설명">
-              <TiptapEditor
-                value={form.detail}
-                onChange={(html) => setForm((p) => ({ ...p, detail: html }))}
-                height={280}
-              />
-            </FormSection>
+  {!editorMounted ? (
+    <button className="btnPrimary" onClick={() => setEditorMounted(true)}>
+      에디터 열기
+    </button>
+  ) : (
+    <TiptapEditor
+      value={form.detail}
+      onChange={(html) => setForm((p) => ({ ...p, detail: html }))}
+      height={280}
+    />
+  )}
+</FormSection>
 
             <FormFooterBar
               onList={() => router.push("/admin/schedules")}

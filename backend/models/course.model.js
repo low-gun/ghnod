@@ -1,19 +1,20 @@
+const pool = require("../config/db"); // 상단에 추가
+
 exports.getCourseInfoByUser = async (userId) => {
-  const [rows] = await db.query(
+  const [rows] = await pool.query(
     `
     SELECT
       s.id AS schedule_id,
       s.title,
-      -- ✅ 회차가 있으면 회차 날짜/시간 우선
       COALESCE(ss.start_date, s.start_date) AS start_date,
       COALESCE(ss.end_date,   s.end_date)   AS end_date,
       ss.start_time,
       ss.end_time,
       s.location,
       s.instructor,
-      p.type         AS type,            -- (카테고리/유형 표기 용)
+      p.type AS type,
       COALESCE(s.image_url, p.image_url) AS image_url,
-      oi.schedule_session_id,            -- ✅ 선택 회차 FK
+      oi.schedule_session_id,
       o.created_at AS order_date,
       CASE
         WHEN NOW() < COALESCE(ss.start_date, s.start_date) THEN '예정'
@@ -27,10 +28,10 @@ exports.getCourseInfoByUser = async (userId) => {
     LEFT JOIN products p      ON p.id = s.product_id
     WHERE o.user_id = ?
       AND o.order_status = 'paid'
-      AND COALESCE(ss.end_date, s.end_date) >= NOW()      -- ✅ 기간 필터도 회차 기준
+      AND COALESCE(ss.end_date, s.end_date) >= CURDATE()  -- DATE 비교 일관화
     ORDER BY COALESCE(ss.start_date, s.start_date) ASC
     `,
     [userId]
   );
-  return rows;
+  return rows; // rows가 빈 배열이어도 예외 없이 반환
 };

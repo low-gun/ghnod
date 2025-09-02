@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
-import HistoryModal from "@/components/admin/HistoryModal";
-import api from "@/lib/api";
+import dynamic from "next/dynamic";
+
+const HistoryModal = dynamic(
+  () => import("@/components/admin/HistoryModal"),
+  { ssr: false, loading: () => null }
+);import api from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ showAlert용
 import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 상단 import 추가
 
@@ -181,11 +185,11 @@ export default function UserDetailPageComponent({ user }) {
       </div>
 
       {showHistoryModal && (
-        <HistoryModal
-          userId={user.id}
-          onClose={() => setShowHistoryModal(false)}
-        />
-      )}
+  <HistoryModal
+    userId={user.id}
+    onClose={() => setShowHistoryModal(false)}
+  />
+)}
     </div>
   );
 }

@@ -132,8 +132,7 @@ axiosInstance.interceptors.response.use(
     if (
       error.response &&
       [401, 403, 419].includes(error.response.status) &&
-      !originalRequest?._retry &&
-      inMemoryAccessToken
+      !originalRequest?._retry
     ) {
       originalRequest._retry = true;
       try {

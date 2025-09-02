@@ -1,8 +1,22 @@
 import { useState } from "react";
-import UserCoursesTab from "./UserCoursesTab";
-import UserPaymentsTab from "./UserPaymentsTab";
-import UserPointsTab from "./UserPointsTab";
-import UserCouponsTab from "./UserCouponsTab";
+import dynamic from "next/dynamic";
+
+const UserCoursesTab = dynamic(() => import("./UserCoursesTab"), {
+  ssr: false,
+  loading: () => <div>수강정보 로딩중...</div>,
+});
+const UserPaymentsTab = dynamic(() => import("./UserPaymentsTab"), {
+  ssr: false,
+  loading: () => <div>결제내역 로딩중...</div>,
+});
+const UserPointsTab = dynamic(() => import("./UserPointsTab"), {
+  ssr: false,
+  loading: () => <div>포인트 로딩중...</div>,
+});
+const UserCouponsTab = dynamic(() => import("./UserCouponsTab"), {
+  ssr: false,
+  loading: () => <div>쿠폰 로딩중...</div>,
+});
 
 export default function UserTabs({ userId }) {
   const [activeTab, setActiveTab] = useState("courses");

@@ -27,6 +27,7 @@ function CustomCalendar({
 const showAlert = useGlobalAlert((s) => s.showAlert);
 const showConfirm = useGlobalConfirm((s) => s.showConfirm);
 const calendarRef = useRef(null);
+const lastRangeRef = useRef({ start: "", end: "" }); // ★ 추가: 같은 범위 재요청 방지
 const [isMobile, setIsMobile] = useState(false);
 
 // ✅ 회차 단위 이벤트를 담을 상태
@@ -38,14 +39,40 @@ const fetchSessionEvents = useCallback(async (startYmd, endYmd) => {
     const { data } = await api.get("/education/schedules/public/sessions", {
       params: { start_date: startYmd, end_date: endYmd, limit: 1000 },
     });
-    
+
     const list = Array.isArray(data?.sessions) ? data.sessions : [];
+    console.table(
+      list.slice(0, 8).map(ss => ({
+        session_id: ss.session_id,
+        schedule_id: ss.schedule_id,
+        title: ss.title,
+        start_date: ss.start_date,
+        end_date: ss.end_date,
+        start_time: ss.start_time,
+        end_time: ss.end_time,
+        type: ss.type,
+      }))
+    );
+    console.log("🔎 [sessions sample]",
+      list.slice(0, 8).map(ss => ({
+        session_id: ss.session_id,
+        schedule_id: ss.schedule_id,
+        title: ss.title,
+        start_date: ss.start_date,
+        end_date: ss.end_date,
+        start_time: ss.start_time,
+        end_time: ss.end_time,
+        type: ss.type,
+      }))
+    ); // ★ 추가
+
     setSessionEvents(list);
   } catch (e) {
     console.error("❌ 공개 회차 목록 조회 실패:", e);
     showAlert("일정 불러오기 실패");
   }
 }, [showAlert]);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return; // SSR 가드
@@ -89,37 +116,73 @@ const fetchSessionEvents = useCallback(async (startYmd, endYmd) => {
   };
   
   // ✅ 세션(회차) → FC 이벤트
-const stableEvents = useMemo(() => {
-  const base = sessionEvents; // 공개 세션 API 결과 사용
-  return base.map((ss) => {
-    const start = moment(ss.start_date).toISOString();
-    // dayGrid는 end exclusive → 종료일 +1일
-    const end   = moment(ss.end_date).add(1, "day").toISOString();
-    return {
-      id: ss.session_id,                              // 이벤트 id = session_id
-      title: ss.title,                                // 일정 제목
-      start,
-      end,
-      extendedProps: {
-        schedule_id: ss.schedule_id,                 // 상세 이동/관리용
-        type: ss.type ?? null,
-        productTitle: ss.product_title ?? null,
-        start_time: ss.start_time,
-        end_time: ss.end_time,
-        image_url: ss.image_url,
-      },
-    };
-  });
-}, [sessionEvents]);
+  const stableEvents = useMemo(() => {
+    return sessionEvents.map((ss) => {
+      let start, end, allDay = false;
+  
+      if (ss.start_time === "00:00:00" && ss.end_time === "00:00:00") {
+        // ▶ 종일 일정
+        allDay = true;
+        start = moment(`${ss.start_date} 00:00:00`).toISOString();
+        end   = moment(`${ss.end_date} 00:00:00`).add(1, "day").toISOString();
+      } else {
+        // ▶ 시간 있는 일정
+        const st = ss.start_time ?? "00:00:00";
+        const et = ss.end_time   ?? "00:00:00";
+        start = moment(`${ss.start_date} ${st}`).toISOString();
+        end   = moment(`${ss.end_date} ${et}`).toISOString();
+      }
+  
+      return {
+        id: ss.session_id,
+        title: ss.title,
+        start,
+        end,
+        allDay,
+        extendedProps: {
+          schedule_id: ss.schedule_id,
+          type: ss.type ?? null,
+          productTitle: ss.product_title ?? null,
+          start_time: ss.start_time,
+          end_time: ss.end_time,
+          image_url: ss.image_url,
+        },
+      };
+    });
+  }, [sessionEvents]);
+  
+  
+  
+  
 const stableOnDatesSet = useCallback(
   (info) => {
-    const startYmd = moment(info.start).format("YYYY-MM-DD");
-    const endYmd   = moment(info.end).format("YYYY-MM-DD");
+    // info.start ~ info.end은 6주 격자 범위이므로,
+    // 중간 지점을 기준으로 '보이는 달'을 계산
+    const mid = moment(info.start).add(2, "weeks");
+    const monthStart = mid.clone().startOf("month");
+    const monthEndEx = mid.clone().endOf("month").add(1, "day"); // end exclusive
+
+    const startYmd = monthStart.format("YYYY-MM-DD");
+    const endYmd   = monthEndEx.format("YYYY-MM-DD");
+
+    // 같은 범위 재요청 방지
+    if (lastRangeRef.current.start === startYmd && lastRangeRef.current.end === endYmd) {
+      return;
+    }
+    lastRangeRef.current = { start: startYmd, end: endYmd };
+
+    console.log("🔎 [FC safe month range]", { startYmd, endYmd });
+
+    // ★ 단 한 번만 호출
     fetchSessionEvents(startYmd, endYmd);
+
     if (onDatesSet) onDatesSet(info);
   },
   [onDatesSet, fetchSessionEvents]
 );
+
+
+
   const colorList = useMemo(
     () => [
       "#F28B82", // 부드러운 레드

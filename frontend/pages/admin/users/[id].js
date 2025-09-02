@@ -1,8 +1,16 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useContext } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import UserTabs from "@/components/admin/UserTabs";
-import UserDetailPageComponent from "@/components/admin/UserDetailPageComponent";
+import dynamic from "next/dynamic";
+
+const UserTabs = dynamic(() => import("@/components/admin/UserTabs"), {
+  ssr: false,
+  loading: () => null,
+});
+const UserDetailPageComponent = dynamic(
+  () => import("@/components/admin/UserDetailPageComponent"),
+  { ssr: false, loading: () => null }
+);
 import api from "@/lib/api";
 import { UserContext } from "@/context/UserContext";
 import { User } from "lucide-react";

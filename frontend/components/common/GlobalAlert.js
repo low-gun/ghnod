@@ -4,7 +4,7 @@ import { useGlobalAlert } from "@/stores/globalAlert";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 
 export default function GlobalAlert() {
-  const { show, message, hideAlert } = useGlobalAlert();
+  const { show, message, hideAlert, isHtml } = useGlobalAlert();
   const isMobile = useIsMobile();
 
   const type = isMobile ? "bottomsheet" : "toast";
@@ -41,10 +41,13 @@ export default function GlobalAlert() {
           transition: "all 0.25s",
           whiteSpace: "pre-line", // ← 추가: \n 줄바꿈 표시
         }}
-        onClick={hideAlert}
-      >
-        {message}
-      </div>
+        onClick={(e) => {
+          if (isHtml && e.target.closest('a')) return; // 링크 클릭 시 닫지 않음
+          hideAlert();
+        }}      >
+{isHtml
+  ? <div dangerouslySetInnerHTML={{ __html: message }} />
+  : message}      </div>
     );
   }
 
@@ -135,10 +138,13 @@ export default function GlobalAlert() {
             &times;
           </button>
           <div
-            style={{ paddingTop: 18, paddingBottom: 2, whiteSpace: "pre-line" }}
-          >
-            {message}
-          </div>{" "}
+  style={{ paddingTop: 18, paddingBottom: 2, whiteSpace: "pre-line" }}
+>
+  {isHtml
+    ? <div dangerouslySetInnerHTML={{ __html: message }} />
+    : message}
+</div>
+{" "}
         </div>
         <style>
           {`

@@ -281,9 +281,7 @@ export default function MyInfo({ data }) {
       </div>
       {/* 탈퇴 버튼은 항상 하단에 */}
       <button onClick={handleWithdraw} style={withdrawButton}>
-        <span style={{ fontSize: 18, marginRight: 4, verticalAlign: "-2px" }}>
-          ✖
-        </span>{" "}
+    
         탈퇴하기
       </button>
 

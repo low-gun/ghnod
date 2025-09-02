@@ -75,13 +75,14 @@ JOIN products p ON s.product_id = p.id
     console.log("[DBG:/public] values =", values);
 
     req.mark("db:start");
-    const [rows] = await pool.execute(query, values);
-    req.mark("db:end");
+const [rows] = await pool.execute(query, values);
+req.mark("db:end");
 
-    // 짧은 캐시로 체감 개선 (공개 데이터)
-    res.set("Cache-Control", "public, max-age=60");
+// ✅ 디버그 로그 추가
+console.log("[DBG row sample]", rows[0]);
 
-    return res.json({ success: true, schedules: rows });
+res.set("Cache-Control", "public, max-age=60");
+return res.json({ success: true, schedules: rows });
   } catch (err) {
     console.error("공개 일정 조회 오류:", err);
     return res.status(500).json({ success: false, message: "서버 오류" });
@@ -140,11 +141,14 @@ router.get("/public/sessions", serverTiming, async (req, res) => {
     console.log("[DBG:/public/sessions] vals =", vals);
 
     req.mark("db:start");
-    const [rows] = await pool.execute(sql, vals);
-    req.mark("db:end");
+const [rows] = await pool.execute(sql, vals);
+req.mark("db:end");
 
-    res.set("Cache-Control", "public, max-age=60");
-    return res.json({ success: true, sessions: rows });
+// ✅ rows 확인 로그만 추가
+console.log("[DBG row sample]", rows[0]);
+
+res.set("Cache-Control", "public, max-age=60");
+return res.json({ success: true, sessions: rows });
   } catch (err) {
     console.error("공개 회차 목록 조회 오류:", err);
     return res.status(500).json({ success: false, message: "서버 오류" });

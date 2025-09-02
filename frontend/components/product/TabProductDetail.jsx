@@ -3,7 +3,12 @@ import { useRef, useState, useEffect } from "react";
 export default function TabProductDetail({ html }) {
   const contentRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
-  const [limitHeight, setLimitHeight] = useState(1200);
+const [limitHeight, setLimitHeight] = useState(1200);
+const [canExpand, setCanExpand] = useState(false);
+
+const isEmptyDetail = !html || /상세\s*설명이\s*없습니다\.?/i.test(
+  String(html).replace(/<[^>]*>/g, "").trim()
+);
 
   // img 태그에 lazy 속성 자동 추가
   const processedHtml = (html || "<p>상세 설명이 없습니다.</p>")
@@ -16,8 +21,15 @@ export default function TabProductDetail({ html }) {
   useEffect(() => {
     const h = window.innerHeight ? window.innerHeight * 2.5 : 1200;
     setLimitHeight(h);
-  }, [html]);
-
+  
+    const id = requestAnimationFrame(() => {
+      const el = contentRef.current;
+      const overflow = el ? el.scrollHeight > h + 1 : false;
+      setCanExpand(!isEmptyDetail && overflow);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [html, isEmptyDetail]);
+  
   const handleToggle = () => setExpanded((prev) => !prev);
 
   return (
@@ -47,17 +59,16 @@ export default function TabProductDetail({ html }) {
   />
 
   {/* 접기 상태일 때만 버튼을 콘텐츠 위에 오버레이 */}
-  {!expanded && (
-    <div className="fade-overlay">
-      <button className="detail-toggle" onClick={handleToggle}>
-        상품상세 더보기 ▼
-      </button>
-    </div>
-  )}
-</div>
-
+  {!expanded && canExpand && (
+  <div className="fade-overlay">
+    <button className="detail-toggle" onClick={handleToggle}>
+      상품상세 더보기 ▼
+    </button>
+  </div>
+)}
+ </div>
 {/* 펼친 상태에서는 기존처럼 아래에 접기 버튼만 표시 */}
-{expanded && (
+{expanded && canExpand && (
   <div style={{ textAlign: "center", marginTop: 36 }}>
     <button
       onClick={handleToggle}
