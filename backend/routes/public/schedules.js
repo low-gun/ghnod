@@ -187,7 +187,7 @@ router.get("/:id/reviews/check-eligible", async (req, res) => {
 });
 
 // 공개용 일정 단건 조회 (단건은 기존 로직 유지)
-router.get("/:id", async (req, res) => {
+router.get("/:id(\\d+)", async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -228,7 +228,7 @@ router.get("/:id", async (req, res) => {
     return res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
-// ✅ 캘린더 전용 라이트 응답: 필요한 필드만 반환 (session_id, schedule_id, title, start_date, end_date)
+// ✅ 캘린더 전용 라이트 응답: 필요한 필드만 반환 (session_id, schedule_id, title, type, start_date, end_date)
 router.get("/public/calendar", serverTiming, async (req, res) => {
   let { type, start_date, end_date, limit } = req.query;
   req.mark("parse");
@@ -250,6 +250,7 @@ router.get("/public/calendar", serverTiming, async (req, res) => {
         ss.id  AS session_id,
         s.id   AS schedule_id,
         s.title,
+        p.type AS type,        -- ✅ 추가
         ss.start_date,
         ss.end_date
       FROM schedule_sessions ss
@@ -289,5 +290,6 @@ router.get("/public/calendar", serverTiming, async (req, res) => {
     return res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+
 
 module.exports = router;

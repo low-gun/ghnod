@@ -20,15 +20,22 @@ export async function getServerSideProps({ res }) {
   const end   = now.endOf("month").add(1, "month").format("YYYY-MM-DD");
 
   // ✅ 첫 화면용: 이번 달 일정만 서버에서 미리 받아서 props로 전달
-  const { data } = await axios.get(
-    `${baseURL}/education/schedules/public/calendar`,
-    { params: { type: "전체", start_date: start, end_date: end } }
-  );
+  let initialEvents = [];
+  try {
+    const { data } = await axios.get(
+      `${baseURL}/education/schedules/public/calendar`,
+      { params: { type: "전체", start_date: start, end_date: end } }
+    );
+    initialEvents = data?.sessions || [];
+  } catch (e) {
+    // SSR 실패해도 페이지는 떠야 함
+    initialEvents = [];
+  }
 
   return {
     props: {
       initialMonth: now.format("YYYY-MM-01"),
-      initialEvents: data?.sessions || [],
+      initialEvents,
     },
   };
 }
@@ -36,7 +43,7 @@ export async function getServerSideProps({ res }) {
 export default function CalendarPage({ initialMonth, initialEvents }) {
   // ✅ 첫 진입은 SSR 데이터로 즉시 채움
   const [eventsData, setEventsData] = useState(initialEvents || []);
-  const [calendarDate, setCalendarDate] = useState(dayjs());
+  const [calendarDate, setCalendarDate] = useState(dayjs(initialMonth));
 
   // ✅ 달을 바꿨을 때만 CSR fetch
   useEffect(() => {
