@@ -187,18 +187,29 @@ router.get("/:id/reviews/check-eligible", async (req, res) => {
 });
 
 // 공개용 일정 단건 조회 (단건은 기존 로직 유지)
-router.get("/:id(\\d+)", async (req, res) => {
+// 공개용 일정 단건 조회 (라이트 응답)
+router.get("/:id(\\d+)", serverTiming, async (req, res) => {
+  req.mark("parse");
   const { id } = req.params;
 
   try {
+    req.mark("db:start");
     const [rows] = await pool.execute(
       `SELECT 
-         s.*,
-         s.product_id,           -- 명시적 포함
-         p.title      AS product_title, 
-         p.image_url  AS product_image, 
-         p.price      AS product_price,
-         p.type       AS type
+         s.id,
+         s.product_id,
+         s.title,
+         s.start_date,
+         s.end_date,
+         s.location,
+         s.instructor,
+         s.status,
+         s.is_active,
+         s.created_at,
+         s.updated_at,
+         p.title AS product_title,
+         p.price AS product_price,
+         p.type  AS type
        FROM schedules s
        LEFT JOIN products p ON s.product_id = p.id
       WHERE s.id = ?
@@ -206,12 +217,15 @@ router.get("/:id(\\d+)", async (req, res) => {
         AND s.is_active = 1`,
       [id]
     );
+    req.mark("db:end");
+
 
     if (!rows.length) {
       return res.status(404).json({ success: false, message: "일정 없음" });
     }
     
     // ✅ 기간형 회차 목록 동봉
+    req.mark("db2:start");
     const [sess] = await pool.execute(
       `SELECT id, start_date, end_date, start_time, end_time, total_spots, remaining_spots
        FROM schedule_sessions
@@ -219,9 +233,11 @@ router.get("/:id(\\d+)", async (req, res) => {
        ORDER BY start_date, start_time`,
       [id]
     );
-    
-    
+    req.mark("db2:end");
+
+    res.set("Cache-Control", "public, max-age=60");
     return res.json({ success: true, schedule: { ...rows[0], sessions: sess } });
+
     
   } catch (err) {
     console.error("❌ 공개 일정 단건 조회 오류:", err);
