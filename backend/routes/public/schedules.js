@@ -228,5 +228,66 @@ router.get("/:id", async (req, res) => {
     return res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+// ✅ 캘린더 전용 라이트 응답: 필요한 필드만 반환 (session_id, schedule_id, title, start_date, end_date)
+router.get("/public/calendar", serverTiming, async (req, res) => {
+  let { type, start_date, end_date, limit } = req.query;
+  req.mark("parse");
+
+  type = (type ?? "").trim();
+  const hasRange = !!(start_date && end_date);
+
+  // LIMIT 정수 보정
+  let limitNum = Number.parseInt(limit ?? "1000", 10);
+  if (!Number.isFinite(limitNum)) limitNum = 1000;
+  limitNum = Math.min(Math.max(limitNum, 1), 5000);
+
+  const start = (start_date || "").slice(0, 10);
+  const end   = (end_date   || "").slice(0, 10);
+
+  try {
+    let sql = `
+      SELECT
+        ss.id  AS session_id,
+        s.id   AS schedule_id,
+        s.title,
+        ss.start_date,
+        ss.end_date
+      FROM schedule_sessions ss
+      JOIN schedules s ON ss.schedule_id = s.id
+      JOIN products  p ON s.product_id   = p.id
+      WHERE p.category = '교육'
+        AND s.status   = 'open'
+        AND s.is_active = 1
+    `;
+    const vals = [];
+
+    if (type && type !== "전체") {
+      sql += ` AND p.type = ?`;
+      vals.push(type);
+    }
+
+    if (hasRange) {
+      // 기간 겹침
+      sql += ` AND ss.start_date <= ? AND ss.end_date >= ?`;
+      vals.push(end, start);
+    }
+
+    sql += ` ORDER BY ss.start_date ASC, ss.end_date ASC, ss.id ASC LIMIT ${limitNum}`;
+
+    console.log("[DBG:/public/calendar] sql =", sql.trim());
+    console.log("[DBG:/public/calendar] vals =", vals);
+
+    req.mark("db:start");
+    const [rows] = await pool.execute(sql, vals);
+    req.mark("db:end");
+
+    // 라이트 필드만 그대로 반환
+    res.set("Cache-Control", "public, max-age=60");
+    return res.json({ success: true, sessions: rows });
+  } catch (err) {
+    console.error("공개 캘린더 라이트 목록 조회 오류:", err);
+    return res.status(500).json({ success: false, message: "서버 오류" });
+  }
+});
 
 module.exports = router;
