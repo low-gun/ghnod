@@ -113,10 +113,9 @@ function MyApp({ Component, pageProps }) {
 
   // ✅ Kakao SDK 필요 페이지에서만 로드
   const needsKakao =
-    !isAdmin &&
-    (router.pathname === "/login" ||
-      router.pathname.startsWith("/auth/") ||
-      router.pathname === "/register/social");
+  !isAdmin &&
+  (router.pathname.startsWith("/auth/") ||
+    router.pathname === "/register/social");
 
   return (
     <>

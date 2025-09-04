@@ -1,6 +1,5 @@
-import { Eye, EyeOff } from "lucide-react";
 import { useEffect } from "react"; // ★ 이 줄 추가
-
+import { Eye, EyeOff } from "lucide-react";
 export default function RegisterStep1({
   email,
   password,

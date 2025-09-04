@@ -1,10 +1,29 @@
 import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/router";
-import SearchFilterBox from "@/components/common/SearchFilterBox";
-import ScheduleSubTabs from "@/components/education/ScheduleSubTabs";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
 import { useQuery } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+
+const SearchFilterBox = dynamic(
+  () => import("@/components/common/SearchFilterBox"),
+  { ssr: false, loading: () => null }
+);
+
+const ScheduleSubTabs = dynamic(
+  () => import("@/components/education/ScheduleSubTabs"),
+  { ssr: false, loading: () => null }
+);
+
+const ScheduleCardGrid = dynamic(
+  () => import("@/components/education/ScheduleCardGrid"),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ textAlign: "center", padding: "40px 0" }}>
+        카드 불러오는 중…
+      </div>
+    ),
+  }
+);
 
 export default function FollowupPage() {
   const [sort, setSort] = useState("start_date");
@@ -13,7 +32,6 @@ export default function FollowupPage() {
   const [searchType, setSearchType] = useState("전체");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
-  const router = useRouter();
   const type = "followup";
   const isMobileOrTablet = useIsTabletOrBelow();
 

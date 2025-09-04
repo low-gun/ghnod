@@ -1,5 +1,4 @@
 import { ChevronLeft } from "lucide-react";
-
 export default function AuthCardLayout({
   title,
   icon,

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 export default function ScheduleListModal({ open, onClose, date, events }) {
   useEffect(() => {
@@ -62,8 +62,8 @@ export default function ScheduleListModal({ open, onClose, date, events }) {
         <h3
           style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" }}
         >
-          {moment(date).format("YYYY년 M월 D일")} 일정
-        </h3>
+{dayjs(date).format("YYYY년 M월 D일")} 일정
+</h3>
 
         <ul
           style={{

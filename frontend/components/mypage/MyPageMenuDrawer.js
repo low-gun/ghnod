@@ -4,29 +4,22 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
+  Divider,  
 } from "@mui/material";
-import {
-  User,
-  BookOpen,
-  CreditCard,
-  Tag,
-  Star,
-  MessageCircle,
-  LogOut,
-} from "lucide-react";
+import { User, BookOpen, CreditCard, Tag, Star, MessageCircle, LogOut } from "lucide-react";
 import { useRouter } from "next/router";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import { useContext } from "react";
 import { UserContext } from "@/context/UserContext";
 const MENUS = [
-  { label: "내 정보", icon: <User size={18} /> },
-  { label: "수강정보", icon: <BookOpen size={18} /> },
-  { label: "결제내역", icon: <CreditCard size={18} /> },
-  { label: "쿠폰", icon: <Tag size={18} /> },
-  { label: "포인트", icon: <Star size={18} /> },
-  { label: "1:1문의", icon: <MessageCircle size={18} /> },
+  { label: "내 정보", icon: User },
+  { label: "수강정보", icon: BookOpen },
+  { label: "결제내역", icon: CreditCard },
+  { label: "쿠폰", icon: Tag },
+  { label: "포인트", icon: Star },
+  { label: "1:1문의", icon: MessageCircle },
 ];
+
 const siteUrl =
   (typeof window !== "undefined" && window.location.origin) ||
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -97,35 +90,41 @@ export default function MyPageMenuDrawer({
         }}
       >
         <List>
-          {MENUS.map((menu) => (
-            <ListItem
-              key={menu.label}
-              selected={menu.label === activeMenu}
-              onClick={() => {
-                setActiveMenu(menu.label);
-                setOpen(false);
-                router.push({
-                  pathname: "/mypage",
-                  query: { menu: menu.label },
-                });
-              }}
-              sx={{
-                borderRadius: "6px",
-                transition: "background 0.12s, color 0.11s",
-                cursor: "pointer",
-                mb: "2px",
-                "&:hover": {
-                  background: "#e5eefe",
-                  color: "#1e3a6e",
-                  fontWeight: 700,
-                },
-              }}
-            >
-              <ListItemIcon>{menu.icon}</ListItemIcon>
-              <ListItemText primary={menu.label} />
-            </ListItem>
-          ))}
-        </List>
+  {MENUS.map((menu) => {
+    const Icon = menu.icon;
+    return (
+      <ListItem
+        key={menu.label}
+        selected={menu.label === activeMenu}
+        onClick={() => {
+          setActiveMenu(menu.label);
+          setOpen(false);
+          router.push({
+            pathname: "/mypage",
+            query: { menu: menu.label },
+          });
+        }}
+        sx={{
+          borderRadius: "6px",
+          transition: "background 0.12s, color 0.11s",
+          cursor: "pointer",
+          mb: "2px",
+          "&:hover": {
+            background: "#e5eefe",
+            color: "#1e3a6e",
+            fontWeight: 700,
+          },
+        }}
+      >
+        <ListItemIcon>
+          <Icon size={18} />
+        </ListItemIcon>
+        <ListItemText primary={menu.label} />
+      </ListItem>
+    );
+  })}
+</List>
+
         <div style={{ width: "100%" }}>
           <Divider style={{ margin: "16px 0 0 0", background: "#eee" }} />
           <button

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 export default function DateRangeSelector({ value, onChange }) {
   const [openTarget, setOpenTarget] = useState(null); // "start" or "end"
   const ref = useRef();
-  const [month, setMonth] = useState(moment());
+  const [month, setMonth] = useState(dayjs());
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -148,16 +148,23 @@ export default function DateRangeSelector({ value, onChange }) {
 }
 
 function Calendar({ month, setMonth, selected, onSelect }) {
-  const startOfMonth = month.clone().startOf("month").startOf("week");
-  const endOfMonth = month.clone().endOf("month").endOf("week");
-  const days = [];
-  let day = startOfMonth.clone();
-  while (day.isSameOrBefore(endOfMonth, "day")) {
-    days.push(day.clone());
-    day.add(1, "day");
-  }
+  const startMonth = month.startOf("month");
+const startWeekday = Number(startMonth.format("d")); // 0(일)~6(토)
+const startOfMonth = startMonth.subtract(startWeekday, "day");
 
-  const today = moment();
+const endMonth = month.endOf("month");
+const endWeekday = Number(endMonth.format("d"));
+const endOfMonth = endMonth.add(6 - endWeekday, "day").endOf("day");
+
+const days = [];
+let day = startOfMonth;
+while (day.valueOf() <= endOfMonth.valueOf()) {
+  days.push(day);
+  day = day.add(1, "day");
+}
+
+
+const today = dayjs();
 
   return (
     <div>
@@ -171,8 +178,8 @@ function Calendar({ month, setMonth, selected, onSelect }) {
         }}
       >
         <button
-          onClick={() => setMonth(month.clone().subtract(1, "month"))}
-          style={{
+onClick={() => setMonth(month.subtract(1, "month"))}
+style={{
             background: "none",
             border: "none",
             fontSize: 16,
@@ -183,8 +190,8 @@ function Calendar({ month, setMonth, selected, onSelect }) {
         </button>
         <strong style={{ fontSize: 14 }}>{month.format("YYYY년 M월")}</strong>
         <button
-          onClick={() => setMonth(month.clone().add(1, "month"))}
-          style={{
+onClick={() => setMonth(month.add(1, "month"))}
+style={{
             background: "none",
             border: "none",
             fontSize: 16,
@@ -218,10 +225,10 @@ function Calendar({ month, setMonth, selected, onSelect }) {
         ))}
 
         {days.map((date) => {
-          const isToday = date.isSame(moment(), "day");
-          const isSelected = selected && date.isSame(selected, "day");
-          const isCurrentMonth = date.month() === month.month();
-          const dayOfWeek = date.day();
+const isToday = date.isSame(dayjs(), "day");
+const isSelected = selected && date.isSame(selected, "day");
+const isCurrentMonth = date.month() === month.month();
+const dayOfWeek = Number(date.format("d"));
 
           let textColor = "#333";
           if (!isCurrentMonth) textColor = "#ccc";

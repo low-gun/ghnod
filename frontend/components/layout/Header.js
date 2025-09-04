@@ -8,7 +8,6 @@ import {
   useIsTabletOrBelow980, // <=980: 모바일 UI
 } from "@/lib/hooks/useIsDeviceSize";
 import { Menu, LogIn, User, ShoppingCart } from "lucide-react";
-
 // ✅ 무거운 컴포넌트는 dynamic import
 const ProfileDropdownDynamic = dynamic(() => import("../ProfileDropdown"), {
   ssr: false,

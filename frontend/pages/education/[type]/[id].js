@@ -5,14 +5,15 @@ import api from "@/lib/api";
 import { useCartContext } from "@/context/CartContext";
 import { useUserContext } from "@/context/UserContext";
 import ProductTabs from "@/components/product/ProductTabs";
-import TabProductDetail from "@/components/product/TabProductDetail";
-import TabProductReviews from "@/components/product/TabProductReviews";
-import TabProductInquiry from "@/components/product/TabProductInquiry";
-import TabRefundPolicy from "@/components/product/TabRefundPolicy";
-import { ShoppingCart, Calendar, MapPin, User, Users, Share2 } from "lucide-react";
+import dynamic from "next/dynamic";
 
+const TabProductDetail = dynamic(() => import("@/components/product/TabProductDetail"), { ssr: false });
+const TabProductReviews = dynamic(() => import("@/components/product/TabProductReviews"), { ssr: false });
+const TabProductInquiry  = dynamic(() => import("@/components/product/TabProductInquiry"),  { ssr: false });
+const TabRefundPolicy   = dynamic(() => import("@/components/product/TabRefundPolicy"),   { ssr: false });
 import { useIsMobile, useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 import { useGlobalAlert } from "@/stores/globalAlert";
+import { ShoppingCart, Calendar, MapPin, User, Users, Share2 } from "lucide-react";
 
 function formatRangeWithWeekday(startDate, endDate) {
   const start = new Date(startDate);

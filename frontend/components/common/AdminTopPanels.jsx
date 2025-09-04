@@ -1,6 +1,10 @@
 import React from "react";
-import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
+import dynamic from "next/dynamic";
 
+const ExcelDownloadButton = dynamic(
+  () => import("@/components/common/ExcelDownloadButton"),
+  { ssr: false, loading: () => null }
+);
 /**
  * 범용 Admin 상단 패널
  * @param {Array} stats  - [{ title, value }]

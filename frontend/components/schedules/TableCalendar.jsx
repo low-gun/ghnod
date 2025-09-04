@@ -1,26 +1,38 @@
 import React, { useState, useEffect } from "react";  // ★ useEffect 추가
-import moment from "moment";
+import dayjs from "dayjs";
 import processEvents from "@/utils/processEvents";
 import styles from "./TableCalendar.module.css";  // CSS Module import
 
 export default function TableCalendar({
-    events = [],
-    currentMonth,
-    setCurrentMonth,
-    onSelectSchedule,
-    onShowMore,   // ★ 추가
-  }) {
+  events = [],
+  currentMonth,
+  setCurrentMonth,
+  onSelectSchedule,
+  onShowMore,
+}) {
+if (process.env.NODE_ENV !== 'production') console.count('Render:TableCalendar');
 
-  const start = currentMonth.clone().startOf("month").startOf("week");
-  const end = currentMonth.clone().endOf("month").endOf("week");
+
+  // currentMonth가 moment든 dayjs든 대응 (valueOf 있으면 ms로 변환)
+  const cm = currentMonth?.valueOf ? dayjs(currentMonth.valueOf()) : dayjs(currentMonth);
+
+  const startMonth = cm.startOf("month");
+  const startWeekday = Number(startMonth.format("d")); // 0(일)~6(토)
+  const start = startMonth.subtract(startWeekday, "day"); // 일요일로 보정
+
+  const endMonth = cm.endOf("month");
+  const endWeekday = Number(endMonth.format("d"));
+  const end = endMonth.add(6 - endWeekday, "day").endOf("day"); // 토요일 말까지
+
 
   // 날짜 배열
   const days = [];
-  const day = start.clone();
-  while (day.isSameOrBefore(end)) {
-    days.push(day.clone());
-    day.add(1, "day");
+  let day = start;
+  while (day.valueOf() <= end.valueOf()) {
+    days.push(day);
+    day = day.add(1, "day");
   }
+
 
   // 주 단위 배열
   const weeks = [];
@@ -63,15 +75,15 @@ console.groupEnd();
 
 // ★ 달 이동 핸들러
 const handlePrev = () =>
-  setCurrentMonth?.(currentMonth.clone().subtract(1, "month"));
+  setCurrentMonth?.((currentMonth?.valueOf ? dayjs(currentMonth.valueOf()) : dayjs(currentMonth)).subtract(1, "month"));
 const handleNext = () =>
-  setCurrentMonth?.(currentMonth.clone().add(1, "month"));
-const handleToday = () => setCurrentMonth?.(moment());
+  setCurrentMonth?.((currentMonth?.valueOf ? dayjs(currentMonth.valueOf()) : dayjs(currentMonth)).add(1, "month"));
+const handleToday = () => setCurrentMonth?.(dayjs());
   return (
     <div className={styles.calendarWrapper}>
       <div className={styles.calendarHeader}>
   <button className={styles.navBtn} onClick={handlePrev} aria-label="이전 달">◀</button>
-  <span className={styles.monthTitle}>{currentMonth?.format("YYYY년 M월")}</span>
+  <span className={styles.monthTitle}>{(currentMonth?.valueOf ? dayjs(currentMonth.valueOf()) : dayjs(currentMonth))?.format("YYYY년 M월")}</span>
   <button className={styles.navBtn} onClick={handleNext} aria-label="다음 달">▶</button>
   <button className={styles.todayBtn} onClick={handleToday}>오늘</button>
 </div>
@@ -92,9 +104,8 @@ const handleToday = () => setCurrentMonth?.(moment());
               <tr className={styles.dayRow}>
   {week.map((day, di) => {
 const dateStr = day.format("YYYY-MM-DD");
-const hidden = hiddenEventsMap?.[dateStr] ?? [];   // ★ 복구: 숨김 일정 배열
-const isToday = day.isSame(moment(), "day");
-
+const hidden = hiddenEventsMap?.[dateStr] ?? [];
+const isToday = day.isSame(dayjs(), "day");
     return (
       <td
         key={di}
@@ -138,7 +149,7 @@ const isToday = day.isSame(moment(), "day");
       let di = 0;
 
       // ★ 이번 주에 '오늘'이 있으면 그 요일 인덱스(0~6), 없으면 -1
-      const weekTodayIdx = week.findIndex(d => d.isSame(moment(), "day"));
+      const weekTodayIdx = week.findIndex(d => d.isSame(dayjs(), "day"));
 
       while (di < 7) {
         const day = week[di];
@@ -151,13 +162,13 @@ const isOtherMonth = day.month() !== currentMonth.month();   // ★ 추가
 
         if (ev) {
           const span = Math.min(ev._colSpan, 7 - di);
-          const today = moment().startOf("day");
-          const start = moment(ev.start).startOf("day");
-          const end = moment(ev.end).endOf("day");
-          const status =
-            start.isAfter(today) ? "upcoming"
-            : end.isBefore(today) ? "ended"
-            : "ongoing";
+const today = dayjs().startOf("day");
+const start = dayjs(ev.start).startOf("day");
+const end = dayjs(ev.end).endOf("day");
+const status =
+  start.isAfter(today) ? "upcoming"
+  : end.isBefore(today) ? "ended"
+  : "ongoing";
 
           // ★ 이 이벤트 셀이 '오늘' 컬럼을 덮는지 계산
           // ★ '오늘' 오버레이는 제거 → 날짜 숫자만 강조
@@ -210,9 +221,10 @@ const isOtherMonth = day.month() !== currentMonth.month();   // ★ 추가
       {modalDate && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
-            <h2 className={styles.modalHeader}>
-              {moment(modalDate).format("YYYY년 M월 D일")} 일정
-            </h2>
+          <h2 className={styles.modalHeader}>
+  {dayjs(modalDate).format("YYYY년 M월 D일")} 일정
+</h2>
+
             <ul>
               {(hiddenEventsMap[modalDate] || []).map((ev) => (
                 <li

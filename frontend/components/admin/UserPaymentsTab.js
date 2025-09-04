@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import DatePicker from "react-datepicker";
+import dynamic from "next/dynamic";
+const DatePicker = dynamic(() => import("react-datepicker"), { ssr: false });
 import "react-datepicker/dist/react-datepicker.css";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { downloadExcel } from "@/lib/downloadExcel";
 import { useMemo } from "react"; // 상단 import도 추가
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import PaginationControls from "@/components/common/PaginationControls";
@@ -131,13 +131,13 @@ export default function UserPaymentsTab({ userId }) {
     setEndDate(null);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const exportData = filtered.map((p) => {
       const createdAt = new Date(p.created_at).toLocaleString("ko-KR");
       const refundedAt = p.refunded_at
         ? new Date(p.refunded_at).toLocaleString("ko-KR")
         : null;
-
+  
       return {
         금액: p.amount,
         결제수단: p.payment_method,
@@ -145,20 +145,18 @@ export default function UserPaymentsTab({ userId }) {
         일시: refundedAt ? `${createdAt} (${refundedAt})` : createdAt,
       };
     });
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "결제내역");
-
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  
     const name = userInfo?.username || "user";
     const email = userInfo?.email || "email";
-    const fileName = `결제내역_${name}(${email})_${today}.xlsx`;
-
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, fileName);
+    const fileName = `결제내역_${name}(${email})`; // 날짜는 util에서 자동 추가
+  
+    await downloadExcel({
+      fileName,
+      sheets: [{ name: "결제내역", data: exportData }],
+    });
   };
+  
+  
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);

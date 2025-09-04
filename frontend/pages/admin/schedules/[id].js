@@ -9,8 +9,6 @@ import FormSection from "@/components/common/FormSection";
 import FormField from "@/components/common/FormField";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
-import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-
 // 2) 그 다음에 dynamic 변수들을 선언합니다.
 const TiptapEditor = dynamic(
   () => import("@/components/editor/TiptapEditor"),
@@ -42,8 +40,6 @@ export default function ScheduleFormPage() {
   const isEdit = id !== "new";
   const { showAlert } = useGlobalAlert();
   const { showConfirm } = useGlobalConfirm();
-  const isTabletOrBelow = useIsTabletOrBelow();   // ✅ 태블릿 이하에서 모달 사용
-  const [showScheduleModal, setShowScheduleModal] = useState(false);  // ✅ 모달 상태
   const [editorMounted, setEditorMounted] = useState(false);
   const [form, setForm] = useState({
     product_id: "",
@@ -360,121 +356,42 @@ console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, n
               </FormSection>
 
               <FormSection title="스케줄">
-                {/* 태블릿 이하: 모달, 데스크톱: 인라인 */}
-                {isTabletOrBelow ? (
-                  <>
-                    <button
-                      className="addSessionBtn"
-                      onClick={() => setShowScheduleModal(true)}
-                    >
-                      스케줄 편집
-                    </button>
+  <div className="scheduleWrap"> {/* ✅ 가로 스크롤 래퍼 추가 */}
+    <div className="scheduleGrid">
+      <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
+      <div className="hdr">종료일</div>
+      <div className="hdr">모집인원</div>
+      <div></div>
 
-                    {showScheduleModal && (
-                      <div
-                        className="modalBackdrop"
-                        onClick={() => setShowScheduleModal(false)}
-                      >
-                        <div
-                          className="modalPanel"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <h4 className="modalTitle">스케줄 편집</h4>
+      {sessions.map((s, idx) => (
+        <SessionRow
+          key={idx}
+          value={s}
+          index={idx}
+          error={rowErrors[idx]}
+          onChange={(i, next) =>
+            setSessions((prev) => prev.map((x, ii) => (ii === i ? next : x)))
+          }
+          onRemove={resetSession}
+          placeholderTotalSpots={form.total_spots || ""}
+        />
+      ))}
+    </div>
+  </div>
 
-                          <div className="scheduleGrid">
-  <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
-  <div className="hdr">종료일</div>
-  <div className="hdr">모집인원</div>
-  <div></div>
+  <button
+    className="addSessionBtn"
+    onClick={() =>
+      setSessions((p) => [
+        ...p,
+        { start_date: "", end_date: "", total_spots: form.total_spots || "" },
+      ])
+    }
+  >
+    + 회차 추가
+  </button>
+</FormSection>
 
-                            {sessions.map((s, idx) => (
-                              <SessionRow
-                                key={idx}
-                                value={s}
-                                index={idx}
-                                error={rowErrors[idx]}
-                                onChange={(i, next) =>
-                                  setSessions((prev) =>
-                                    prev.map((x, ii) => (ii === i ? next : x))
-                                  )
-                                }
-                                onRemove={resetSession}
-                                placeholderTotalSpots={form.total_spots || ""}
-                              />
-                            ))}
-                          </div>
-
-                          <button
-                            className="addSessionBtn"
-                            onClick={() =>
-                              setSessions((p) => [
-                                ...p,
-                                {
-                                  start_date: "",
-                                  end_date: "",
-                                  total_spots: form.total_spots || "",
-                                },
-                              ])
-                            }
-                          >
-                            + 회차 추가
-                          </button>
-
-                          <div className="modalActions">
-                            <button
-                              className="btnPrimary"
-                              onClick={() => setShowScheduleModal(false)}
-                            >
-                              완료
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-<div className="scheduleGrid">
-  <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
-  <div className="hdr">종료일</div>
-  <div className="hdr">모집인원</div>
-  <div></div>
-
-                      {sessions.map((s, idx) => (
-                        <SessionRow
-                          key={idx}
-                          value={s}
-                          index={idx}
-                          error={rowErrors[idx]}
-                          onChange={(i, next) =>
-                            setSessions((prev) =>
-                              prev.map((x, ii) => (ii === i ? next : x))
-                            )
-                          }
-                          onRemove={resetSession}
-                          placeholderTotalSpots={form.total_spots || ""}
-                        />
-                      ))}
-                    </div>
-
-                    <button
-                      className="addSessionBtn"
-                      onClick={() =>
-                        setSessions((p) => [
-                          ...p,
-                          {
-                            start_date: "",
-                            end_date: "",
-                            total_spots: form.total_spots || "",
-                          },
-                        ])
-                      }
-                    >
-                      + 회차 추가
-                    </button>
-                  </>
-                )}
-              </FormSection>
             </div>
 
             <FormSection title="상세 설명">
@@ -649,27 +566,22 @@ console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, n
 .topGrid > :global(.sectionCard) { width:100%; }
   
   @media (max-width:640px){
-    .container{ padding:0; border-radius:0; }
-    .topGrid{ gap:8px; }
-    .sectionCard{ border:none; border-radius:0; padding:12px; margin:0; box-shadow:none; }
-    .addSessionBtn{ width:100%; }
+  .container{ padding:0; border-radius:0; }
+  .topGrid{ gap:8px; }
+  .sectionCard{ border:none; border-radius:0; padding:12px; margin:0; box-shadow:none; }
+  .addSessionBtn{ width:100%; }
 
-    .modalBackdrop{
-      position:fixed; inset:0; background:rgba(0,0,0,.4);
-      display:flex; align-items:center; justify-content:center; z-index:1000;
-    }
-    .modalPanel{
-      width:min(92vw,560px); max-height:86vh;
-      background:#fff; border-radius:12px; padding:16px; overflow:auto;
-    }
-    .modalTitle{ margin:0 0 12px; font-size:16px; font-weight:700; }
-    .modalActions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
-
-    .scheduleGrid{
-      grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(80px,120px) 32px;
-      row-gap:10px;
-    }
+  /* 스케줄: 데스크탑과 동일한 열 구성 유지 (spacer 포함) */
+  .scheduleWrap{ overflow-x:visible; } /* 필요 시 auto 로 변경 가능 */
+  .scheduleGrid{
+    grid-template-columns:
+      minmax(120px,1fr) 12px minmax(120px,1fr) minmax(80px,120px) 28px;
+    column-gap:8px; row-gap:10px;
   }
+  .spacer{ display:block; width:12px; } /* 980px 규칙에서 숨긴 것을 모바일에선 복원 */
+}
+
+
 `}</style>
 
     </AdminLayout>

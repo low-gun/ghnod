@@ -3,8 +3,7 @@ import { useState, useEffect, useContext } from "react";
 import TermsModal from "@/components/modals/TermsModal";
 import PrivacyModal from "@/components/modals/PrivacyModal";
 import { UserContext } from "@/context/UserContext";
-import { LogOut } from "lucide-react"; // 가장 위에 추가 (없으면 직접 svg 코딩해도 됨)
-
+import { LogOut } from "lucide-react";
 // ✅ 950px 이하에서 showNarrowFooter true
 export default function Footer({ showProfile }) {
   const { user, logout } = useContext(UserContext);

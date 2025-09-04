@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo } from "react";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import PaginationControls from "@/components/common/PaginationControls";
 import api from "@/lib/api";
-import DatePicker from "react-datepicker";
+import dynamic from "next/dynamic";
+const DatePicker = dynamic(() => import("react-datepicker"), { ssr: false });
 import "react-datepicker/dist/react-datepicker.css";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { downloadExcel } from "@/lib/downloadExcel";
 
 export default function UserPointsTab({ userId }) {
   const [points, setPoints] = useState([]);
@@ -132,27 +132,24 @@ export default function UserPointsTab({ userId }) {
     setEndDate(null);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const exportData = filtered.map((p) => ({
       일시: p.created_at?.slice(0, 19).replace("T", " "),
       상태: p.change_type,
       금액: p.amount,
       설명: p.description || "-",
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "포인트");
-
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  
     const name = userInfo?.username || "user";
     const email = userInfo?.email || "email";
-    const fileName = `포인트_${name}(${email})_${today}.xlsx`;
-
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, fileName);
+    const fileName = `포인트_${name}(${email})`; // 날짜는 util에서 자동 추가
+  
+    await downloadExcel({
+      fileName,
+      sheets: [{ name: "포인트", data: exportData }],
+    });
   };
+  
 
   const renderBadge = (type) => {
     const color = type === "적립" ? "#0070f3" : "#f44336";

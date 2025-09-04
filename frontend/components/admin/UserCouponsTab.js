@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import DatePicker from "react-datepicker";
+import dynamic from "next/dynamic";
+const DatePicker = dynamic(() => import("react-datepicker"), { ssr: false });
 import "react-datepicker/dist/react-datepicker.css";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { downloadExcel } from "@/lib/downloadExcel";
 import { useMemo } from "react";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import PaginationControls from "@/components/common/PaginationControls";
@@ -137,27 +137,25 @@ export default function UserCouponsTab({ userId }) {
     setEndDate(null);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const exportData = filtered.map((c) => ({
       쿠폰명: c.name,
       할인액: c.discount_amount,
       상태: c.is_used ? "사용됨" : "미사용",
       만료일: c.expiry_date?.slice(0, 10),
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "쿠폰");
-
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  
     const name = userInfo?.username || "user";
     const email = userInfo?.email || "email";
-    const fileName = `쿠폰_${name}(${email})_${today}.xlsx`;
-
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, fileName);
+    const fileName = `쿠폰_${name}(${email})`; // 날짜는 util에서 자동 추가
+  
+    await downloadExcel({
+      fileName,
+      sheets: [{ name: "쿠폰", data: exportData }],
+    });
   };
+  
+  
 
   const renderBadge = (isUsed) => {
     const color = isUsed ? "#f44336" : "#4CAF50";

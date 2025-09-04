@@ -3,12 +3,12 @@ import { useRouter } from "next/router";
 import { User, BookOpen, CreditCard, Tag, Star, MessageCircle } from "lucide-react";
 
 const MENUS = [
-  { label: "내 정보", icon: <User size={18} /> },
-  { label: "수강정보", icon: <BookOpen size={18} /> },
-  { label: "결제내역", icon: <CreditCard size={18} /> },
-  { label: "쿠폰", icon: <Tag size={18} /> },
-  { label: "포인트", icon: <Star size={18} /> },
-  { label: "1:1문의", icon: <MessageCircle size={18} /> },
+  { label: "내 정보", icon: User },
+  { label: "수강정보", icon: BookOpen },
+  { label: "결제내역", icon: CreditCard },
+  { label: "쿠폰", icon: Tag },
+  { label: "포인트", icon: Star },
+  { label: "1:1문의", icon: MessageCircle },
 ];
 
 export default function MyPageSidebar({ activeMenu, setActiveMenu }) {
@@ -60,8 +60,10 @@ export default function MyPageSidebar({ activeMenu, setActiveMenu }) {
               onMouseOver={e => e.currentTarget.style.background = isActive ? "#e5eeff" : "#f1f6ff"}
               onMouseOut={e => e.currentTarget.style.background = isActive ? "#e5eeff" : "transparent"}
             >
-              {menu.icon}
-              <span>{menu.label}</span>
+              const Icon = menu.icon;
+<Icon size={18} />
+<span>{menu.label}</span>
+
             </li>
           );
         })}

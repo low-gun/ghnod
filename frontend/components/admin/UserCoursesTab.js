@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import DatePicker from "react-datepicker";
+import dynamic from "next/dynamic";
+const DatePicker = dynamic(() => import("react-datepicker"), { ssr: false });
 import "react-datepicker/dist/react-datepicker.css";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { downloadExcel } from "@/lib/downloadExcel";
 import { useRouter } from "next/router";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import PaginationControls from "@/components/common/PaginationControls";
@@ -149,7 +149,7 @@ export default function UserCoursesTab({ userId }) {
     setSearch("");
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const exportData = filtered.map((course) => ({
       강의명: course.title,
       시작일: course.start_date?.slice(0, 10),
@@ -157,19 +157,15 @@ export default function UserCoursesTab({ userId }) {
       주문일: course.order_date?.slice(0, 10),
       상태: course.status,
     }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "수강정보");
-
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  
     const name = userInfo?.username || "user";
     const email = userInfo?.email || "email";
-    const fileName = `수강정보_${name}(${email})_${today}.xlsx`;
-
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, fileName);
+    const fileName = `수강정보_${name}(${email})`; // 날짜는 util에서 자동 추가
+  
+    await downloadExcel({
+      fileName,
+      sheets: [{ name: "수강정보", data: exportData }],
+    });
   };
 
   return (

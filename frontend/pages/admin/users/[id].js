@@ -1,7 +1,8 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useContext } from "react";
+import dynamic from "next/dynamic";   // ✅ 다시 추가
 import AdminLayout from "@/components/layout/AdminLayout";
-import dynamic from "next/dynamic";
+import { User as UserIcon } from "lucide-react";
 
 const UserTabs = dynamic(() => import("@/components/admin/UserTabs"), {
   ssr: false,
@@ -11,10 +12,9 @@ const UserDetailPageComponent = dynamic(
   () => import("@/components/admin/UserDetailPageComponent"),
   { ssr: false, loading: () => null }
 );
+
 import api from "@/lib/api";
 import { UserContext } from "@/context/UserContext";
-import { User } from "lucide-react";
-
 export default function AdminUserDetailPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -52,8 +52,8 @@ export default function AdminUserDetailPage() {
     <AdminLayout
   pageTitle={
     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <User size={20} style={{ verticalAlign: "middle" }} />
-      사용자 상세정보
+<UserIcon size={20} style={{ verticalAlign: "middle" }} />
+사용자 상세정보
     </span>
   }
 >      {loading ? null : user ? (

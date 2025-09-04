@@ -8,22 +8,14 @@ import {
 import { useRouter } from "next/router";
 import { useIsTabletOrBelow980 } from "@/lib/hooks/useIsDeviceSize";
 import { centerGroup } from "@/data/menuData";
-import {
-  Activity,
-  GraduationCap,
-  CalendarDays,
-  Handshake,
-  FolderOpen,
-  ShoppingBag,
-} from "lucide-react";
-
+import { Activity, GraduationCap, CalendarDays, Handshake, FolderOpen, ShoppingBag } from "lucide-react";
 const MENU_ICONS = {
-  진단: <Activity size={18} />,
-  교육: <GraduationCap size={18} />,
-  교육일정: <CalendarDays size={18} />,
-  컨설팅: <Handshake size={18} />,
-  수행사례: <FolderOpen size={18} />,
-  FTShop: <ShoppingBag size={18} />,
+  진단: Activity,
+  교육: GraduationCap,
+  교육일정: CalendarDays,
+  컨설팅: Handshake,
+  수행사례: FolderOpen,
+  FTShop: ShoppingBag,
 };
 
 export default function MobileMenuDrawer({ open, onClose }) {
@@ -46,34 +38,32 @@ export default function MobileMenuDrawer({ open, onClose }) {
       }}
     >
       <List>
-        {centerGroup.map((menu) => (
-          <ListItem
-            key={menu.label}
-            onClick={() => {
-              onClose();
-              router.push(
-                menu.sub ? `${menu.link}/${menu.sub[0].slug}` : menu.link
-              );
-            }}
-            sx={{
-              borderRadius: "6px",
-              transition: "background 0.12s, color 0.11s",
-              cursor: "pointer",
-              mb: "2px",
-              "&:hover": {
-                background: "#e5eefe",
-                color: "#1e3a6e",
-                fontWeight: 700,
-              },
-              fontWeight: 500,
-            }}
-          >
-            <ListItemIcon>
-              {MENU_ICONS[menu.label] || <Activity size={18} />}
-            </ListItemIcon>
-            <ListItemText primary={menu.label} />
-          </ListItem>
-        ))}
+      {centerGroup.map((menu) => {
+  const Icon = MENU_ICONS[menu.label] || Activity;
+  return (
+    <ListItem
+      key={menu.label}
+      onClick={() => {
+        onClose();
+        router.push(menu.sub ? `${menu.link}/${menu.sub[0].slug}` : menu.link);
+      }}
+      sx={{
+        borderRadius: "6px",
+        transition: "background 0.12s, color 0.11s",
+        cursor: "pointer",
+        mb: "2px",
+        "&:hover": { background: "#e5eefe", color: "#1e3a6e", fontWeight: 700 },
+        fontWeight: 500,
+      }}
+    >
+      <ListItemIcon>
+        <Icon size={18} />
+      </ListItemIcon>
+      <ListItemText primary={menu.label} />
+    </ListItem>
+  );
+})}
+
       </List>
     </Drawer>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 export default function ScheduleDetailModal({
   schedule,
@@ -21,7 +21,7 @@ export default function ScheduleDetailModal({
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  const formatDateTime = (d) => moment(d).format("YYYY.MM.DD A h:mm");
+  const formatDateTime = (d) => dayjs(d).format("YYYY.MM.DD A h:mm");
   const formatPrice = (price) =>
     typeof price === "number" ? price.toLocaleString() + "원" : "-";
 
@@ -113,9 +113,9 @@ export default function ScheduleDetailModal({
           <InfoRow
   label="기간"
   value={(() => {
-    const start = schedule.start ? moment(schedule.start) : null;
+    const start = schedule.start ? dayjs(schedule.start) : null;
     // dayGrid end는 배타 → 1일 보정
-    const rawEnd = schedule.end ? moment(schedule.end).clone().subtract(1, "day") : null;
+    const rawEnd = schedule.end ? dayjs(schedule.end).subtract(1, "day") : null;
 
     // 회차 시간이 내려온 경우(선택 회차) 시간까지 표시
     const st = schedule.start_time ? ` ${schedule.start_time?.slice(0,5)}` : "";

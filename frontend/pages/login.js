@@ -1,14 +1,18 @@
 import { useRef, useState, useContext, useEffect } from "react";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";               // ✅ 추가
 import { UserContext } from "../context/UserContext";
 import { useCartContext } from "../context/CartContext";
 import api from "@/lib/api";
-import ChangePasswordModal from "@/components/mypage/ChangePasswordModal";
 import { getClientSessionId } from "@/lib/session";
 import { ChevronLeft, LogIn } from "lucide-react";
 import SocialLoginButtons from "@/components/SocialLoginButtons.dynamic";
 import { setAccessToken } from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert";
+const ChangePasswordModal = dynamic(
+  () => import("@/components/mypage/ChangePasswordModal"),
+  { ssr: false, loading: () => null }
+);
 
 // 안전한 경로 유틸 (외부 URL 차단)
 const getSafePath = (p) => {

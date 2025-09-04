@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import { User } from "lucide-react";
-
 export default function ProfileDropdown({ showProfile, setShowProfile }) {
   const dropdownRef = useRef(null);
   const { user, logout } = useContext(UserContext);

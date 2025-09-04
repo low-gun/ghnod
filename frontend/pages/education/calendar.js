@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import moment from "moment";
+import dayjs from "dayjs";
 import TableCalendar from "@/components/schedules/TableCalendar";
 import axios from "axios";
 import { useGlobalAlert } from "@/stores/globalAlert";
@@ -12,30 +12,39 @@ export async function getServerSideProps(context) {
     if (!baseURL)
       throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
 
-    const now = moment();
-    const startOfMonth = now.clone().startOf("month").format("YYYY-MM-DD");
-    const endOfMonth = now
-      .clone()
-      .endOf("month")
-      .add(1, "month")
-      .format("YYYY-MM-DD");
+    const now = dayjs();
+const startOfMonth = now.startOf("month").format("YYYY-MM-DD");
+const endOfMonth = now.endOf("month").add(1, "month").format("YYYY-MM-DD");
 
-    const res = await axios.get(
-      `${baseURL}/education/schedules/public?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
-      { headers: { Cookie: cookie } }
-    );
+    // getServerSideProps 내
+const res = await axios.get(
+  `${baseURL}/education/schedules/public/sessions?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
+  { headers: { Cookie: cookie } }
+);
 
-    return {
-      props: {
-        eventsData: res.data?.schedules || [],
-      },
-    };
+return {
+  props: {
+    eventsData: res.data?.sessions || [],
+  },
+};
+
   } catch (error) {
     return { props: { eventsData: [] } };
   }
 }
 
 export default function CalendarPage({ eventsData }) {
+  console.table(
+    (eventsData || [])
+      .filter(e => String(e.title || "").includes("테스트")) // 필요시 키워드 변경
+      .map(e => ({
+        title: e.title,
+        id: e.id || e.schedule_id,
+        start: (e.start_date || "").slice(0,10),
+        end:   (e.end_date   || "").slice(0,10),
+      }))
+  );
+  
   const router = useRouter();
   const { showAlert } = useGlobalAlert();
 
@@ -43,14 +52,27 @@ export default function CalendarPage({ eventsData }) {
     () =>
       (eventsData || []).map((item) => ({
         ...item,
+        id: item.session_id,           // 세션 고유 ID
+        schedule_id: item.schedule_id, // 상세 페이지 이동용
         start: new Date(item.start_date),
         end: new Date(item.end_date),
         type: item.type || item.category || null,
       })),
     [eventsData]
   );
+  
 
-  const [calendarDate, setCalendarDate] = useState(moment());
+  useEffect(() => {
+    const rows = (events || [])
+      .filter(e => String(e.title || "").includes("테스트"))
+      .map(e => ({
+        id: e.id || e.schedule_id,
+        start: e.start,
+        end: e.end,
+      }));
+    console.log("🧪 mapped events 샘플:", rows);
+  }, [events]);
+  const [calendarDate, setCalendarDate] = useState(dayjs());
 
 const handleSelectEvent = useCallback(
     (event) => {
@@ -83,7 +105,7 @@ const handleSelectEvent = useCallback(
 
         showAlert(`
           <div>
-            <strong>${moment(date).format("M월 D일")} 일정 더보기 (${hiddenEvents.length}건)</strong><br/>
+<strong>${dayjs(date).format("M월 D일")} 일정 더보기 (${hiddenEvents.length}건)</strong><br/>
             ${items}
           </div>
         `, { isHtml: true });

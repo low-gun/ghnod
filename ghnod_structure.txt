@@ -67,6 +67,7 @@
 ./frontend/components/admin
 ./frontend/components/admin/AdminDashboard.js
 ./frontend/components/admin/CouponTemplateModal.jsx
+./frontend/components/admin/DashboardTrends.jsx
 ./frontend/components/admin/HistoryModal.js
 ./frontend/components/admin/PaymentDetailModal.jsx
 ./frontend/components/admin/PaymentsTable.js
@@ -75,6 +76,7 @@
 ./frontend/components/admin/SchedulesTable.js
 ./frontend/components/admin/SessionRow.jsx
 ./frontend/components/admin/UnansweredInquiriesModal.jsx
+./frontend/components/admin/UPlotLineImpl.jsx
 ./frontend/components/admin/UserCouponGrantModal.jsx
 ./frontend/components/admin/UserCouponModal.js
 ./frontend/components/admin/UserCouponsTab.js
@@ -117,6 +119,7 @@
 ./frontend/components/common/MobileMenuDrawer.js
 ./frontend/components/common/PageSizeSelector.jsx
 ./frontend/components/common/PaginationControls.jsx
+./frontend/components/common/ResponsiveGrid.jsx
 ./frontend/components/common/ResponsiveSubTabs.js
 ./frontend/components/common/SearchFilter.js
 ./frontend/components/common/SearchFilterBox.jsx
@@ -186,10 +189,10 @@
 ./frontend/components/register/RegisterStep2.js
 ./frontend/components/register/useRegisterForm.js
 ./frontend/components/schedules
-./frontend/components/schedules/CustomCalendar.jsx
 ./frontend/components/schedules/ScheduleDetailModal.jsx
 ./frontend/components/schedules/ScheduleListModal.jsx
 ./frontend/components/schedules/ScheduleModal.js
+./frontend/components/schedules/TableCalendar.jsx
 ./frontend/components/schedules/UserScheduleDetailModal.jsx
 ./frontend/components/SocialLoginButtons.dynamic.js
 ./frontend/components/SocialLoginButtons.jsx

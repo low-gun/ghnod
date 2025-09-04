@@ -3,11 +3,24 @@ import { useRouter } from "next/router";
 
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminTopPanels from "@/components/common/AdminTopPanels";
-import AdminSearchFilter from "@/components/common/AdminSearchFilter";
-import PaymentsTable from "@/components/admin/PaymentsTable";
-
 import { formatPrice } from "@/lib/format";
 import { UserContext } from "@/context/UserContext";
+import dynamic from "next/dynamic";
+
+const AdminSearchFilter = dynamic(
+  () => import("@/components/common/AdminSearchFilter"),
+  { ssr: false, loading: () => null }
+);
+
+const PaymentsTable = dynamic(
+  () => import("@/components/admin/PaymentsTable"),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ padding: 40, textAlign: "center" }}>테이블 불러오는 중…</div>
+    ),
+  }
+);
 
 export default function AdminPaymentsPage() {
   const router = useRouter();

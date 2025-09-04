@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 export default function UserScheduleDetailModal({ schedule, onClose }) {
   if (!schedule) return null;
@@ -12,7 +12,7 @@ export default function UserScheduleDetailModal({ schedule, onClose }) {
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  const formatDateTime = (d) => moment(d).format("YYYY.MM.DD A h:mm");
+  const formatDateTime = (d) => dayjs(d).format("YYYY.MM.DD A h:mm");
 
   return (
     <div
@@ -100,8 +100,8 @@ export default function UserScheduleDetailModal({ schedule, onClose }) {
 <InfoRow
   label="기간"
   value={(() => {
-    const start = schedule.start ? moment(schedule.start) : null;
-    const rawEnd = schedule.end ? moment(schedule.end).clone().subtract(1, "day") : null;
+    const start = schedule.start ? dayjs(schedule.start) : null;
+    const rawEnd = schedule.end ? dayjs(schedule.end).subtract(1, "day") : null;
 
     const st = schedule.start_time ? ` ${schedule.start_time?.slice(0,5)}` : "";
     const et = schedule.end_time ? ` ${schedule.end_time?.slice(0,5)}` : "";

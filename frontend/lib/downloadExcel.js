@@ -1,4 +1,11 @@
-import * as XLSX from "xlsx";
+let _XLSX;
+async function getXLSX() {
+  if (!_XLSX) {
+    const m = await import("xlsx");
+    _XLSX = m.default || m;
+  }
+  return _XLSX;
+}
 import { saveAs } from "file-saver";
 import { useGlobalAlert } from "@/stores/globalAlert";
 
@@ -8,7 +15,7 @@ import { useGlobalAlert } from "@/stores/globalAlert";
  * @param {string} options.fileName
  * @param {Array} options.sheets - [{ name, headers?, data }]
  */
-export const downloadExcel = ({ fileName, sheets = [] }) => {
+export const downloadExcel = async ({ fileName, sheets = [] }) => {
   if (!Array.isArray(sheets)) return;
 
   const date = new Date();
@@ -17,7 +24,9 @@ export const downloadExcel = ({ fileName, sheets = [] }) => {
   const dd = String(date.getDate()).padStart(2, "0");
   const today = `${yyyy}${mm}${dd}`;
 
+  const XLSX = await getXLSX();     // ← 추가
   const workbook = XLSX.utils.book_new();
+
 
   sheets.forEach(({ name, headers, data }) => {
     if (!data || data.length === 0) return;

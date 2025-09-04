@@ -1,9 +1,30 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
-import SearchFilterBox from "@/components/common/SearchFilterBox";
+import dynamic from "next/dynamic";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-import ScheduleSubTabs from "@/components/education/ScheduleSubTabs";
-import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
+
+const SearchFilterBox = dynamic(
+  () => import("@/components/common/SearchFilterBox"),
+  { ssr: false, loading: () => null }
+);
+
+const ScheduleSubTabs = dynamic(
+  () => import("@/components/education/ScheduleSubTabs"),
+  { ssr: false, loading: () => null }
+);
+
+const ScheduleCardGrid = dynamic(
+  () => import("@/components/education/ScheduleCardGrid"),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ textAlign: "center", padding: "40px 0" }}>
+        카드 불러오는 중…
+      </div>
+    ),
+  }
+);
+
 import { useQuery } from "@tanstack/react-query";
 
 export default function OpenCoursePage() {
