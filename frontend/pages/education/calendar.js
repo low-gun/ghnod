@@ -5,38 +5,31 @@ import TableCalendar from "@/components/schedules/TableCalendar";
 import axios from "axios";
 import { useGlobalAlert } from "@/stores/globalAlert";
 
-export async function getServerSideProps(context) {
-  try {
-    const cookie = context.req.headers.cookie || "";
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseURL)
-      throw new Error("API_BASE_URL 환경변수가 설정되지 않았습니다.");
+export async function getServerSideProps({ res }) {
+  // Vercel Edge 캐시 적용: 60초 신선, 600초 동안은 stale 서빙하며 백그라운드 재검증
+  res.setHeader(
+    "Cache-Control",
+    "public, s-maxage=60, stale-while-revalidate=600"
+  );
 
-    const now = dayjs();
-const startOfMonth = now.startOf("month").format("YYYY-MM-DD");
-const endOfMonth = now.endOf("month").add(1, "month").format("YYYY-MM-DD");
-
-    // getServerSideProps 내
-const res = await axios.get(
-  `${baseURL}/education/schedules/public/sessions?type=전체&start_date=${startOfMonth}&end_date=${endOfMonth}`,
-  { headers: { Cookie: cookie } }
-);
-
-return {
-  props: {
-    eventsData: res.data?.sessions || [],
-  },
-};
-
-  } catch (error) {
-    return { props: { eventsData: [] } };
-  }
+  const now = dayjs();
+  return {
+    props: {
+      initialMonth: now.format("YYYY-MM-01"),
+    },
+  };
 }
 
-export default function CalendarPage({ eventsData }) {
+
+
+export default function CalendarPage({ initialMonth }) {
+  // SSR → CSR 전환: 클라이언트에서 월 범위로 데이터 로딩
+  const [eventsData, setEventsData] = useState([]);
+
+  // (선택) 확인용 로그는 상태 기반으로 그대로 유지
   console.table(
     (eventsData || [])
-      .filter(e => String(e.title || "").includes("테스트")) // 필요시 키워드 변경
+      .filter(e => String(e.title || "").includes("테스트"))
       .map(e => ({
         title: e.title,
         id: e.id || e.schedule_id,
@@ -44,24 +37,44 @@ export default function CalendarPage({ eventsData }) {
         end:   (e.end_date   || "").slice(0,10),
       }))
   );
-  
+
   const router = useRouter();
   const { showAlert } = useGlobalAlert();
 
   const events = useMemo(
     () =>
       (eventsData || []).map((item) => ({
-        ...item,
-        id: item.session_id,           // 세션 고유 ID
-        schedule_id: item.schedule_id, // 상세 페이지 이동용
+        // 불필요한 확장 전개(...) 제거: 필요한 필드만 유지
+        id: item.session_id,
+        schedule_id: item.schedule_id,
+        title: item.title,
         start: new Date(item.start_date),
         end: new Date(item.end_date),
         type: item.type || item.category || null,
       })),
     [eventsData]
   );
-  
 
+  useEffect(() => {
+    const fetchMonth = async (refDate) => {
+      const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const start = dayjs(refDate).startOf("month").format("YYYY-MM-DD");
+      const end   = dayjs(refDate).endOf("month").add(1, "month").format("YYYY-MM-DD");
+      try {
+        const { data } = await axios.get(
+          `${baseURL}/education/schedules/public/sessions`,
+          { params: { type: "전체", start_date: start, end_date: end } }
+        );
+        setEventsData(data?.sessions || []);
+      } catch (e) {
+        setEventsData([]);
+      }
+    };
+
+    fetchMonth(initialMonth || dayjs());
+  }, [initialMonth]);
+
+  // (기존 rows 로그 유지)
   useEffect(() => {
     const rows = (events || [])
       .filter(e => String(e.title || "").includes("테스트"))
@@ -72,6 +85,7 @@ export default function CalendarPage({ eventsData }) {
       }));
     console.log("🧪 mapped events 샘플:", rows);
   }, [events]);
+
   const [calendarDate, setCalendarDate] = useState(dayjs());
 
 const handleSelectEvent = useCallback(
