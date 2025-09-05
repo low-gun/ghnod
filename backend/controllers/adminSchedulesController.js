@@ -53,7 +53,6 @@ function normalizeSessions(sessions) {
 const toDT = (d, t) => `${d} ${t}:00`;
 
 /* ===== 목록 ===== */
-/* ===== 목록 ===== */
 exports.listSchedules = async (req, res) => {
   const {
     page = 1, pageSize = 20, sortKey = "start_date", sortDir = "desc",
@@ -104,10 +103,11 @@ exports.listSchedules = async (req, res) => {
         const placeholders = ids.map(() => "?").join(",");
         const [rowsSess] = await pool.query(
           `
-          SELECT schedule_id, start_date, end_date, total_spots, remaining_spots
-          FROM schedule_sessions
-          WHERE schedule_id IN (${placeholders})
-          ORDER BY start_date, start_time
+          SELECT id, schedule_id, start_date, end_date, total_spots, remaining_spots
+FROM schedule_sessions
+WHERE schedule_id IN (${placeholders})
+ORDER BY start_date, start_time
+
           `,
           ids
         );
@@ -184,9 +184,17 @@ sessionsMap = rowsSess.reduce((m, r) => {
       const reserved = rmap.get(s.id) || 0;
       const total = Number(s.total_spots) || 0;
       const remaining = Math.max(total - reserved, 0);
-      return { ...s, reserved_spots: reserved, remaining_spots: remaining };
-    });
+      return { 
+        ...s, 
+        reserved_spots: reserved, 
+        remaining_spots: remaining,
+        // ✅ 일정 이미지가 없으면 상품 이미지를 fallback으로 사용
+        schedule_image: s.schedule_image || s.product_image,
+        image_url: s.image_url || s.product_image,   // ✅ 프론트가 image_url만 볼 때 대비
 
+      };
+    });
+    
     // 필터들
     if (tabType && tabType !== "전체") {
       filtered = filtered.filter((s) => s.product_type === tabType);
@@ -274,7 +282,16 @@ sessionsMap = rowsSess.reduce((m, r) => {
     const pageSizeNum = Math.max(parseInt(pageSize, 10) || 20, 1);
     const start = (pageNum - 1) * pageSizeNum;
     const paged = sorted.slice(start, start + pageSizeNum);
-
+    console.log(
+      "[DEBUG schedules list]",
+      paged.slice(0, 2).map(s => ({
+        id: s.id,
+        title: s.title,
+        thumbnail: s.thumbnail ? s.thumbnail.slice(0, 80) : null,
+        image_url: s.image_url ? s.image_url.slice(0, 80) : null,
+        product_image: s.product_image ? s.product_image.slice(0, 80) : null,
+      }))
+    );
     res.json({
       success: true,
       schedules: paged,
@@ -329,10 +346,23 @@ exports.getScheduleById = async (req, res) => {
       [id]
     );
     
-    // ✅ 임시 로그로 실제 내려가는 값 확인
-    console.log('[DEBUG getScheduleById]', id, JSON.stringify(sess, null, 2));
-    
-    return res.json({ success: true, schedule: { ...rows[0], sessions: sess } });
+       // ✅ 임시 로그로 실제 내려가는 값 확인
+       console.log("[DEBUG getScheduleById]", {
+        id,
+        schedule_image: rows[0]?.image_url?.slice(0, 80),
+        product_image: rows[0]?.product_image?.slice(0, 80),
+      });
+  
+      // ✅ fallback: 일정 이미지 없으면 상품 이미지 사용
+      const scheduleRow = {
+        ...rows[0],
+        schedule_image: rows[0]?.image_url || rows[0]?.product_image,
+        image_url: rows[0]?.image_url || rows[0]?.product_image,
+      };
+  
+      return res.json({ success: true, schedule: { ...scheduleRow, sessions: sess } });
+  
+
     
   } catch (err) {
     console.error("일정 조회 오류:", err);
@@ -348,6 +378,31 @@ exports.createSchedule = async (req, res) => {
     price, detail, image_url, sessions,
   } = req.body;
 
+  // 이미지 URL 결정: 업로드 우선, data:image 차단
+  const uploadedUrl =
+  Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
+    ? req.uploadedImageUrls[0].original
+    : null;
+
+const isDataUrl = typeof image_url === "string" && /^data:image\//i.test(image_url);
+if (!uploadedUrl && isDataUrl) {
+  // 🔎 무엇이 들어왔는지 서버 로그로 남김
+  console.error("❌ dataURL 차단:", {
+    length: image_url.length,
+    head: String(image_url).slice(0, 32)
+  });
+  return res.status(400).json({
+    success: false,
+    code: "DATA_IMAGE",
+    message: "data:image URL 차단",
+    hint: "프론트에서 /upload/image로 업로드 후 반환된 공개 URL을 image_url로 보내세요."
+  });
+}
+
+const resolvedImageUrl = uploadedUrl || (image_url || null);
+
+
+
   const normSessions = normalizeSessions(sessions);
   let startDt = start_date;
   let endDt   = end_date;
@@ -358,9 +413,30 @@ exports.createSchedule = async (req, res) => {
     endDt   = ends[ends.length - 1];
   }
 
-  if (!product_id || !title || !startDt || !endDt || price == null) {
-    return res.status(400).json({ success: false, message: "필수 항목 누락" });
+  // 🔎 디버깅: 값 보정 + 누락 사유 구체화
+  const priceNum = (price === '' || price === undefined) ? null : Number(price);
+  const missing = [];
+  if (!product_id) missing.push('product_id');
+  if (!title) missing.push('title');
+  if (!startDt) missing.push('start_date');
+  if (!endDt) missing.push('end_date');
+  if (priceNum == null || Number.isNaN(priceNum)) missing.push('price');
+
+  if (missing.length) {
+    console.error('❌ createSchedule 누락 필드:', missing, {
+      bodyKeys: Object.keys(req.body || {}),
+      startDt, endDt,
+      hasSessions: Array.isArray(sessions) ? sessions.length : 'no',
+      image_url_type: image_url ? (String(image_url).slice(0,10)) : null,
+      uploadedImageUrls: Array.isArray(req.uploadedImageUrls) ? req.uploadedImageUrls.length : 0,
+    });
+    return res.status(400).json({
+      success: false,
+      message: '필수 항목 누락',
+      details: missing
+    });
   }
+
 
   const conn = await pool.getConnection();
   try {
@@ -370,8 +446,8 @@ exports.createSchedule = async (req, res) => {
          (product_id, title, start_date, end_date, location, instructor,
           description, total_spots, price, detail, image_url, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [product_id, title, startDt, endDt, location, instructor,
-       description, total_spots, price, detail, image_url]
+       [product_id, title, startDt, endDt, location, instructor,
+        description, total_spots, price, detail, resolvedImageUrl]      
     );
     const newId = r.insertId;
 
@@ -409,7 +485,7 @@ await conn.execute(
     conn.release();
   }
 };
-
+ 
 /* ===== 수정 ===== */
 exports.updateSchedule = async (req, res) => {
   const { id } = req.params;
@@ -418,6 +494,20 @@ exports.updateSchedule = async (req, res) => {
     location, instructor, description, total_spots,
     price, detail, image_url, sessions,
   } = req.body;
+
+  // 이미지 URL 결정: 업로드 우선, data:image 차단
+  const uploadedUrl =
+    Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
+      ? req.uploadedImageUrls[0].original
+      : null;
+  if (!uploadedUrl && image_url && /^data:image\//i.test(image_url)) {
+    return res.status(400).json({
+      success: false,
+      message: "data:image URL은 허용하지 않습니다. 파일 업로드를 사용하세요.",
+    });
+  }
+  const resolvedImageUrl = uploadedUrl || (image_url || null);
+
 
   const normSessions = normalizeSessions(sessions);
   let startDt = start_date;
@@ -442,8 +532,8 @@ exports.updateSchedule = async (req, res) => {
           SET product_id=?, title=?, start_date=?, end_date=?, location=?, instructor=?,
               description=?, total_spots=?, price=?, detail=?, image_url=?, updated_at=NOW()
         WHERE id=?`,
-      [product_id, title, startDt, endDt, location, instructor,
-       description, total_spots, price, detail, image_url, id]
+        [product_id, title, startDt, endDt, location, instructor,
+          description, total_spots, price, detail, resolvedImageUrl, id]       
     );
 
     await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
@@ -481,7 +571,6 @@ await conn.execute(
     conn.release();
   }
 };
-
 /* ===== 활성/비활성 ===== */
 exports.toggleActive = async (req, res) => {
   const { id } = req.params;

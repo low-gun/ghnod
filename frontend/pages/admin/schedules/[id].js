@@ -162,12 +162,14 @@ export default function ScheduleFormPage() {
         title: selected?.title || "",
         price: selected?.price ?? "",
         description: selected?.description || "",
-        // detail, image_url 은 기존 값 유지
+        image_url: selected?.image_url || prev.image_url || "", // ✅ 상품 이미지도 세팅
+        // detail 은 기존 값 유지
       }));
       
       setPriceInput(fmtKRW(selected?.price ?? ""));
       return;
     }
+    
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -175,53 +177,100 @@ export default function ScheduleFormPage() {
     if (sessions.length === 1) {
       setSessions([{ start_date: "", end_date: "", start_time: "", end_time: "" }]);
     } else {
+      console.log("[DEBUG] 업로드 조건 불충족, image_url 값:", resolvedImageUrl);
       setSessions((prev) => prev.filter((_, i) => i !== idx));
     }
   };
 
   const handleSave = async () => {
+    console.log("[handleSave] raw image_url:", form.image_url);
+console.log("[handleSave] startsWith check:", form.image_url?.startsWith("data:image/"));
+    console.log("[handleSave] form.image_url", form.image_url?.slice(0, 50));
+  console.log("[handleSave] type", typeof form.image_url);
     if (hasAnyError) return showAlert("입력값을 확인하세요.");
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `admin/schedules/${id}` : "admin/schedules";
-      // 빈문자열은 null로 취급하도록 엄격 변환
-const toIntOrNull = (v) => {
-  if (v === undefined || v === null) return null;
-  if (typeof v === "string" && v.trim() === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
+  
+      // (1) data:image이면 먼저 업로드 → 공개 URL 확보
+      let resolvedImageUrl = form.image_url || null;
+  
+      if (resolvedImageUrl && resolvedImageUrl.startsWith("data:image/")) {
+        console.log("[DEBUG] 업로드 조건 충족, dataURL 감지:", resolvedImageUrl.slice(0, 30));
+        const dataURLtoBlob = (dataURL) => {
+          const [meta, b64] = dataURL.split(",");
+          const mime = (meta.match(/data:(.*?);base64/) || [])[1] || "image/png";
+          const bin = atob(b64);
+          const len = bin.length;
+          const u8 = new Uint8Array(len);
+          for (let i = 0; i < len; i++) u8[i] = bin.charCodeAt(i);
+          return new Blob([u8], { type: mime });
+        };
+  
+        const fd = new FormData();
+        fd.append("files", dataURLtoBlob(resolvedImageUrl), "schedule.png"); // 필드명: files
+  
+        const uploadRes = await api.post("upload/image", fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        });
+  
+        resolvedImageUrl = uploadRes?.data?.urls?.[0]?.original || null;
+        if (!resolvedImageUrl) return showAlert("이미지 업로드에 실패했습니다.");
+      }
+  
+      // (2) 유틸
+      const toIntOrNull = (v) => {
+        if (v === undefined || v === null) return null;
+        if (typeof v === "string" && v.trim() === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+  
+      // (3) payload 구성: price 숫자화 + 이미지 URL 치환 + 세션
+      const priceNum =
+        typeof form.price === "string"
+          ? Number(form.price.replace(/,/g, ""))
+          : Number(form.price);
+  
+      const payload = {
+        ...form,
+        price: Number.isFinite(priceNum) ? priceNum : 0,
+        image_url: resolvedImageUrl,
+        sessions: sessions.map((s) => {
+          const rowSpots = toIntOrNull(s.total_spots);
+          const defaultSpots = toIntOrNull(form.total_spots);
+          return {
+            start_date: s.start_date,
+            end_date: s.end_date,
+            start_time: "00:00",
+            end_time: "00:00",
+            total_spots: rowSpots ?? defaultSpots ?? null,
+          };
+        }),
+      };
+      console.log("[FINAL PAYLOAD]", payload);  // ← 이 줄 추가
 
-const payload = {
-  ...form,
-  sessions: sessions.map((s) => {
-    const rowSpots = toIntOrNull(s.total_spots);
-    const defaultSpots = toIntOrNull(form.total_spots);
-    return {
-      start_date: s.start_date,
-      end_date: s.end_date,
-      start_time: "00:00",
-      end_time: "00:00",
-      // 우선순위: 회차 입력값 → 상단 모집인원 → null (절대 0으로 강제하지 않음)
-      total_spots: rowSpots ?? defaultSpots ?? null,
-    };
-  }),
-};
-
-console.log("[DEBUG save payload] form.total_spots:", form.total_spots);
-console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, null, 2));
-
+      console.log("[DEBUG save payload] form.total_spots:", form.total_spots);
+      console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, null, 2));
+  
       const res = await api[method](url, payload);
-      
-
+  
       if (res.data.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
         router.push("/admin/schedules");
       }
-    } catch {
-      showAlert("저장 중 오류 발생");
+    } catch (err) {
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      console.error("[save error]", status, data);
+      const msg = data?.message || "저장 중 오류 발생";
+      const details = Array.isArray(data?.details) ? ` (${data.details.join(", ")})` : "";
+      showAlert(`${msg}${details}`);
     }
   };
+  
+  
 
   if (!router.isReady) return null;
 

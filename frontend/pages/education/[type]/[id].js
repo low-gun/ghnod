@@ -625,9 +625,10 @@ const disableTitle = useMemo(() => {
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
-        <TabProductDetail html={schedule.detail} />
-      </div>
+<div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
+  <TabProductDetail scheduleId={schedule.id} />
+</div>
+
       <div id="review" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabProductReviews
           productId={schedule.product_id || schedule.productId}

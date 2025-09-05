@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { authenticateToken, adminOnly } = require("../../middlewares/authMiddleware");
+const { upload, uploadToBlob } = require("../../middlewares/uploadBlob");  // ★ 추가
 const ctrl = require("../../controllers/adminSchedulesController");
 
 // 일정 목록 조회
@@ -13,11 +14,23 @@ router.get("/types", authenticateToken, adminOnly, ctrl.listScheduleTypes);
 router.get("/:id", authenticateToken, adminOnly, ctrl.getScheduleById);
 
 // 일정 등록
-router.post("/", authenticateToken, adminOnly, ctrl.createSchedule);
-
+router.post(
+    "/",
+    authenticateToken,
+    adminOnly,
+    upload.array("images", 1),   // ★ 추가
+    uploadToBlob,                // ★ 추가
+    ctrl.createSchedule
+  );
 // 일정 수정
-router.put("/:id", authenticateToken, adminOnly, ctrl.updateSchedule);
-
+router.put(
+    "/:id",
+    authenticateToken,
+    adminOnly,
+    upload.array("images", 1),   // ★ 추가
+    uploadToBlob,                // ★ 추가
+    ctrl.updateSchedule
+  );
 // 일정 활성/비활성 토글
 router.patch("/:id/active", authenticateToken, adminOnly, ctrl.toggleActive);
 

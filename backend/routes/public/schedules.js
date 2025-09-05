@@ -186,7 +186,6 @@ router.get("/:id/reviews/check-eligible", async (req, res) => {
   }
 });
 
-// 공개용 일정 단건 조회 (단건은 기존 로직 유지)
 // 공개용 일정 단건 조회 (라이트 응답)
 router.get("/:id(\\d+)", serverTiming, async (req, res) => {
   req.mark("parse");
@@ -207,9 +206,11 @@ router.get("/:id(\\d+)", serverTiming, async (req, res) => {
          s.is_active,
          s.created_at,
          s.updated_at,
-         p.title AS product_title,
-         p.price AS product_price,
-         p.type  AS type
+         s.image_url,
+         p.image_url AS product_image,   -- ✅ 추가
+         p.title     AS product_title,
+         p.price     AS product_price,
+         p.type      AS type
        FROM schedules s
        LEFT JOIN products p ON s.product_id = p.id
       WHERE s.id = ?
@@ -219,12 +220,10 @@ router.get("/:id(\\d+)", serverTiming, async (req, res) => {
     );
     req.mark("db:end");
 
-
     if (!rows.length) {
       return res.status(404).json({ success: false, message: "일정 없음" });
     }
-    
-    // ✅ 기간형 회차 목록 동봉
+
     req.mark("db2:start");
     const [sess] = await pool.execute(
       `SELECT id, start_date, end_date, start_time, end_time, total_spots, remaining_spots
@@ -235,15 +234,55 @@ router.get("/:id(\\d+)", serverTiming, async (req, res) => {
     );
     req.mark("db2:end");
 
-    res.set("Cache-Control", "public, max-age=60");
-    return res.json({ success: true, schedule: { ...rows[0], sessions: sess } });
+    // ✅ 이미지 fallback 적용: schedule.image_url 없으면 product_image 사용
+    const row = rows[0];
+    const schedule = {
+      ...row,
+      image_url: row.image_url || row.product_image,
+      schedule_image: row.image_url || row.product_image,
+      sessions: sess,
+    };
 
-    
+    res.set("Cache-Control", "public, max-age=60");
+    return res.json({ success: true, schedule });
+
   } catch (err) {
     console.error("❌ 공개 일정 단건 조회 오류:", err);
     return res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+
+
+// ✅ 상세 HTML만 반환하는 전용 라우트
+router.get("/:id/detail", serverTiming, async (req, res) => {
+  req.mark("parse");
+  const { id } = req.params;
+
+  try {
+    req.mark("db:start");
+    const [rows] = await pool.execute(
+      `SELECT detail
+       FROM schedules
+       WHERE id = ?
+         AND status = 'open'
+         AND is_active = 1`,
+      [id]
+    );
+    req.mark("db:end");
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: "일정 없음" });
+    }
+
+    res.set("Cache-Control", "public, max-age=60");
+    return res.json({ success: true, detail: rows[0].detail });
+
+  } catch (err) {
+    console.error("❌ 공개 일정 detail 조회 오류:", err);
+    return res.status(500).json({ success: false, message: "서버 오류" });
+  }
+});
+
 // ✅ 캘린더 전용 라이트 응답: 필요한 필드만 반환 (session_id, schedule_id, title, type, start_date, end_date)
 router.get("/public/calendar", serverTiming, async (req, res) => {
   let { type, start_date, end_date, limit } = req.query;

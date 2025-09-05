@@ -11,6 +11,7 @@ import ImageUploader from "@/components/common/ImageUploader";
 import FormSection from "@/components/common/FormSection";
 import FormField from "@/components/common/FormField";
 import FormFooterBar from "@/components/common/FormFooterBar";
+const isDataUrl = (u) => typeof u === "string" && u.startsWith("data:image/");
 
 const TiptapEditor = dynamic(
   () => import("@/components/editor/TiptapEditor"),
@@ -68,13 +69,14 @@ export default function ProductFormPage() {
             title: p.title ?? "",
             category: p.category ?? "",
             type: p.type ?? "",
-            image_url: p.image_url ?? "",
+            image_url: isDataUrl(p.image_url) ? "" : (p.image_url ?? ""),
             description: p.description ?? "",
             price: typeof p.price === "number" ? p.price : (p.price ?? ""),
             is_active: typeof p.is_active === "number" ? p.is_active : 1,
             created_at: p.created_at ?? "",
             updated_at: p.updated_at ?? "",
           });
+          
           setDetail(p.detail ?? "");
         } else {
           showAlert("상품 정보를 불러오지 못했습니다.");
@@ -117,12 +119,42 @@ export default function ProductFormPage() {
     try {
       const method = isEdit ? "put" : "post";
       const url = isEdit ? `/admin/products/${pid}` : "/admin/products";
+  
+      // (1) image_url이 data:image면 업로드 먼저 수행
+      let resolvedImageUrl = form.image_url || null;
+      if (resolvedImageUrl && resolvedImageUrl.startsWith("data:image/")) {
+        const dataURLtoBlob = (dataURL) => {
+          const [meta, b64] = dataURL.split(",");
+          const mime = (meta.match(/data:(.*?);base64/) || [])[1] || "image/png";
+          const bin = atob(b64);
+          const len = bin.length;
+          const u8 = new Uint8Array(len);
+          for (let i = 0; i < len; i++) u8[i] = bin.charCodeAt(i);
+          return new Blob([u8], { type: mime });
+        };
+  
+        const fd = new FormData();
+        fd.append("files", dataURLtoBlob(resolvedImageUrl), "product.png");
+  
+        const uploadRes = await api.post("upload/image", fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        });
+        resolvedImageUrl = uploadRes?.data?.urls?.[0]?.original || null;
+        if (!resolvedImageUrl) return showAlert("이미지 업로드에 실패했습니다.");
+      }
+  
+      // (2) payload 구성
       const payload = {
         ...form,
         detail,
         type: String(form.type).trim(),
-        price: form.price === "" ? "" : Number(form.price), // ✅ 숫자 보장
+        price: form.price === "" ? "" : Number(form.price),
+        image_url: resolvedImageUrl,   // 반드시 치환
       };
+  
+      console.log("[FINAL PRODUCT PAYLOAD]", payload);
+  
       const res = await api[method](url, payload);
       if (res?.data?.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
@@ -136,6 +168,7 @@ export default function ProductFormPage() {
       setSaving(false);
     }
   }, [detail, form, isEdit, pid, router, showAlert, validate]);
+  
 
   const handleDelete = useCallback(async () => {
     if (!isEdit || !pid) return;

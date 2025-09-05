@@ -6,6 +6,7 @@ const {
   adminOnly,
 } = require("../../middlewares/authMiddleware");
 const adminController = require("../../controllers/adminController");
+const { upload, uploadToBlob } = require("../../middlewares/uploadBlob");
 
 // 전체 상품 목록 조회 (Node.js 기반 정렬/필터/페이징)
 router.get("/", authenticateToken, adminOnly, async (req, res) => {
@@ -28,14 +29,12 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
 
     // 🗂️ 상품 분류 필터 (탭에서 선택된 유형)
     if (!type || type === "전체") {
-      // 전체 탭 or 기본 상태 → 전체 유지
       filtered = rows;
     } else {
-      // 특정 유형 선택 시 필터링
       filtered = filtered.filter((p) => p.type === type);
     }
 
-    // 🔍 검색 필터 (지정된 필드에서 검색어 포함 여부)
+    // 🔍 검색 필터
     if (searchField && search) {
       filtered = filtered.filter((p) => {
         const value = p[searchField];
@@ -60,14 +59,13 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
       filtered = filtered.filter((p) => new Date(p.created_at) <= endOfDay);
     }
 
-    // 🔁 정렬
     // 🔁 정렬 (숫자/날짜 보강)
     const toTime = (v) => (v ? new Date(v).getTime() : NaN);
     const sorted = [...filtered].sort((a, b) => {
       const aVal = a[sort];
       const bVal = b[sort];
 
-      // 날짜 컬럼 처리
+      // 날짜
       if (sort === "created_at" || sort === "updated_at") {
         const at = toTime(aVal);
         const bt = toTime(bVal);
@@ -76,7 +74,7 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
         }
       }
 
-      // 숫자 컬럼 처리
+      // 숫자
       if (sort === "id" || sort === "price") {
         const an = Number(aVal);
         const bn = Number(bVal);
@@ -85,13 +83,13 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
         }
       }
 
-      // 문자열 기본
+      // 문자열
       const as = (aVal ?? "").toString();
       const bs = (bVal ?? "").toString();
       return order === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
     });
 
-    // 📄 페이징 (all=true면 전체, 아니면 slice)
+    // 📄 페이징
     const all = String(req.query.all) === "true";
     const pageNum = Math.max(parseInt(page, 10) || 1, 1);
     const pageSizeNum = Math.max(parseInt(pageSize, 10) || 20, 1);
@@ -110,6 +108,7 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+
 // 등록된 상품 유형 목록
 router.get("/types", authenticateToken, adminOnly, async (req, res) => {
   try {
@@ -126,6 +125,7 @@ router.get("/types", authenticateToken, adminOnly, async (req, res) => {
     return res.status(500).json({ success: false, message: "유형 조회 실패" });
   }
 });
+
 // 상품 현황 요약(총개수 + 유형별 개수)
 router.get("/stats", authenticateToken, adminOnly, async (req, res) => {
   try {
@@ -166,12 +166,7 @@ router.patch("/:id/active", authenticateToken, adminOnly, async (req, res) => {
 });
 
 // 선택 상품 삭제
-router.delete(
-  "/",
-  authenticateToken,
-  adminOnly,
-  adminController.deleteProducts
-);
+router.delete("/", authenticateToken, adminOnly, adminController.deleteProducts);
 
 // 상품별 일정 조회
 router.get("/:id/schedules", authenticateToken, adminOnly, async (req, res) => {
@@ -190,6 +185,8 @@ router.get("/:id/schedules", authenticateToken, adminOnly, async (req, res) => {
     res.status(500).json({ success: false, message: "일정 조회 실패" });
   }
 });
+
+// 상품 단건 조회
 router.get("/:id", authenticateToken, adminOnly, async (req, res) => {
   const { id } = req.params;
 
@@ -208,73 +205,106 @@ router.get("/:id", authenticateToken, adminOnly, async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
-router.put("/:id", authenticateToken, adminOnly, async (req, res) => {
-  const { id } = req.params;
-  const { title, type, image_url, description, detail, price, is_active } =
-    req.body;
 
-  if (!title || !type) {
-    return res.status(400).json({ success: false, message: "필수 항목 누락" });
-  }
-  // ✅ 바로 여기 로그 추가
-  console.log("📥 req.body.type =", type);
-  console.log("📥 typeof =", typeof type);
-  console.log("📥 length =", type?.length);
-  console.log("📥 전체 req.body =", req.body);
-  try {
-    // 0/1 안전 변환
-    const activeVal =
-      typeof is_active === "boolean"
-        ? is_active
-          ? 1
-          : 0
-        : Number(is_active ?? 1)
+// 상품 수정 (Blob 업로드 경유)
+router.put(
+  "/:id",
+  authenticateToken,
+  adminOnly,
+  upload.array("images", 1),
+  uploadToBlob,
+  async (req, res) => {
+    const { id } = req.params;
+    const { title, type, image_url, description, detail, price, is_active } =
+      req.body;
+
+    if (!title || !type) {
+      return res.status(400).json({ success: false, message: "필수 항목 누락" });
+    }
+
+    try {
+      // 0/1 안전 변환
+      const activeVal =
+        typeof is_active === "boolean"
+          ? is_active
+            ? 1
+            : 0
+          : Number(is_active ?? 1)
           ? 1
           : 0;
 
-    await pool.execute(
-      `UPDATE products SET title=?, type=?, image_url=?, description=?, detail=?, price=?, is_active=?, updated_at=NOW() WHERE id=?`,
-      [
-        title,
-        type,
-        image_url,
-        description,
-        detail,
-        Number(price ?? 0),
-        activeVal,
-        id,
-      ]
-    );
+      // ✅ 파일이 올라왔으면 Blob URL 사용, 아니면 body 유지
+      const resolvedImageUrl =
+        Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
+          ? req.uploadedImageUrls[0].original
+          : image_url;
 
-    res.json({ success: true });
-  } catch (err) {
-    console.error("상품 수정 오류:", err);
-    res.status(500).json({ success: false, message: "수정 실패" });
+      await pool.execute(
+        `UPDATE products 
+           SET title=?, type=?, image_url=?, description=?, detail=?, price=?, is_active=?, updated_at=NOW()
+         WHERE id=?`,
+        [
+          title,
+          type,
+          resolvedImageUrl,
+          description,
+          detail,
+          Number(price ?? 0),
+          activeVal,
+          id,
+        ]
+      );
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("상품 수정 오류:", err);
+      res.status(500).json({ success: false, message: "수정 실패" });
+    }
   }
-});
-router.post("/", authenticateToken, adminOnly, async (req, res) => {
-  const { title, type, image_url, description, detail, price, is_active } =
-    req.body;
-  console.log("📥 [POST] type =", type);
-  console.log("📥 typeof =", typeof type);
-  console.log("📥 length =", type?.length);
-  console.log("📥 전체 req.body =", req.body);
+);
 
-  if (!title || !type) {
-    return res.status(400).json({ success: false, message: "필수 항목 누락" });
+// 상품 등록 (Blob 업로드 경유)
+router.post(
+  "/",
+  authenticateToken,
+  adminOnly,
+  upload.array("images", 1),
+  uploadToBlob,
+  async (req, res) => {
+    const { title, type, image_url, description, detail, price, is_active } =
+      req.body;
+
+    if (!title || !type) {
+      return res.status(400).json({ success: false, message: "필수 항목 누락" });
+    }
+
+    try {
+      // ✅ 파일이 올라왔으면 Blob URL 사용, 아니면 body 유지
+      const resolvedImageUrl =
+        Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
+          ? req.uploadedImageUrls[0].original
+          : image_url;
+
+      await pool.execute(
+        `INSERT INTO products (title, type, image_url, description, detail, price, is_active, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          title,
+          type,
+          resolvedImageUrl,
+          description,
+          detail,
+          Number(price || 0),
+          is_active ?? 1,
+        ]
+      );
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("상품 등록 오류:", err);
+      res.status(500).json({ success: false, message: "등록 실패" });
+    }
   }
+);
 
-  try {
-    await pool.execute(
-      `INSERT INTO products (title, type, image_url, description, detail, price, is_active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [title, type, image_url, description, detail, price || 0, is_active ?? 1]
-    );
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("상품 등록 오류:", err);
-    res.status(500).json({ success: false, message: "등록 실패" });
-  }
-});
 module.exports = router;

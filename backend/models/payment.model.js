@@ -33,22 +33,26 @@ exports.getPaymentHistoryByUser = async (userId) => {
 
   // 2) order_id 기준으로 items 조회
   const orderIds = orders.map(o => o.order_id);
-  const [items] = await db.query(
-    `
-    SELECT 
-      oi.order_id,
-      s.id AS schedule_id,
-      s.title AS schedule_title,
-      s.image_url,
-      p.type AS product_type,
-      oi.quantity
-    FROM order_items oi
-    LEFT JOIN schedules s ON oi.schedule_id = s.id
-    LEFT JOIN products p ON s.product_id = p.id
-    WHERE oi.order_id IN (?)
-    `,
-    [orderIds]
-  );
+  let items = [];
+  if (orderIds.length > 0) {
+    const placeholders = orderIds.map(() => "?").join(",");
+    const [rows] = await db.query(
+      `
+      SELECT 
+        oi.order_id,
+        s.id    AS schedule_id,
+        s.title AS schedule_title,
+        p.type  AS product_type,
+        oi.quantity
+      FROM order_items oi
+      LEFT JOIN schedules s ON oi.schedule_id = s.id
+      LEFT JOIN products p ON s.product_id = p.id
+      WHERE oi.order_id IN (${placeholders})
+      `,
+      orderIds
+    );
+    items = rows;
+  }
 
   // 3) orderId별 items 합치기
   const itemsByOrder = {};
