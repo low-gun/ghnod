@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
-import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import Image from "next/legacy/image";
+import { useQuery } from "@tanstack/react-query";
+import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 
 const SearchFilterBox = dynamic(
   () => import("@/components/common/SearchFilterBox"),
@@ -36,20 +37,28 @@ export default function CertificationPage() {
   const type = "certification";
   const isMobileOrTablet = useIsTabletOrBelow();
 
-  const subTabs = useMemo(() => [
-    { label: "followup", href: "/education/followup" },
-    { label: "certification", href: "/education/certification" },
-    { label: "공개교육", href: "/education/opencourse" },
-    { label: "facilitation", href: "/education/facilitation" },
-  ], []);
+  const subTabs = useMemo(
+    () => [
+      { label: "followup", href: "/education/followup" },
+      { label: "certification", href: "/education/certification" },
+      { label: "공개교육", href: "/education/opencourse" },
+      { label: "facilitation", href: "/education/facilitation" },
+    ],
+    []
+  );
 
-  // fetchSchedules useCallback
   const fetchSchedules = useCallback(async ({ queryKey }) => {
     const [_key, type, sort, order] = queryKey;
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${type}&sort=${sort}&order=${order}`,
-      { credentials: "include" }
-    );
+    const url =
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public` +
+      `?type=${encodeURIComponent(type)}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;
+    const res = await fetch(url, { credentials: "include" });
+
+    if (res.status === 404) return { schedules: [] };
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`fetchSchedules failed: ${res.status} ${res.statusText} ${text}`);
+    }
     return res.json();
   }, []);
 
@@ -63,7 +72,6 @@ export default function CertificationPage() {
   const schedules = data?.schedules || [];
   const today = useMemo(() => new Date(), []);
 
-  // useMemo로 필터링 캐싱
   const filteredSchedules = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     return schedules.filter((s) => {
@@ -84,21 +92,21 @@ export default function CertificationPage() {
     });
   }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);
 
-  // 스타일 상수화
+  // 스타일
   const imgTitleBoxStyle = {
     position: "relative",
     textAlign: "left",
     marginBottom: 16,
-    width: "100%",              // ← maxWidth 대신 width 100%
-    maxWidth: "100%",           // ← 모바일/PC 모두 동일
-    margin: 0,                  // ← auto 중앙정렬 해제
-  };
-  const imgStyle = {
     width: "100%",
-    height: "auto",
-    borderRadius: 8,
-    display: "block",
+    maxWidth: "100%",
     margin: 0,
+  };
+  const heroImgBoxStyle = {
+    position: "relative",
+    width: "100%",
+    height: "clamp(220px, 28vw, 360px)",
+    borderRadius: 8,
+    overflow: "hidden",
   };
   const imgTextStyle = {
     position: "absolute",
@@ -106,36 +114,30 @@ export default function CertificationPage() {
     left: "clamp(16px, 4vw, 32px)",
     color: "#222",
   };
-  const h1Style = {
-    margin: 0,
-    fontSize: "clamp(18px, 4vw, 24px)",
-    fontWeight: "bold",
-  };
-  const pStyle = {
-    margin: 0,
-    fontSize: "clamp(12px, 2.8vw, 14px)",
-    color: "#555",
-  };
+  const h1Style = { margin: 0, fontSize: "clamp(18px, 4vw, 24px)", fontWeight: "bold" };
+  const pStyle = { margin: 0, fontSize: "clamp(12px, 2.8vw, 14px)", color: "#555" };
 
   return (
-<div
-  style={{
-    paddingTop: isMobileOrTablet ? "32px" : "32px",
-    paddingLeft: isMobileOrTablet ? 0 : 32,
-    paddingRight: isMobileOrTablet ? 0 : 32,
-    paddingBottom: isMobileOrTablet ? 0 : 32,
-  }}
->
-
+    <div
+      style={{
+        paddingTop: "32px",
+        paddingLeft: isMobileOrTablet ? 0 : 32,
+        paddingRight: isMobileOrTablet ? 0 : 32,
+        paddingBottom: isMobileOrTablet ? 0 : 32,
+      }}
+    >
       <ScheduleSubTabs tabs={subTabs} />
 
-      {/* 이미지 + 타이틀 */}
       <div style={imgTitleBoxStyle}>
-        <img
-          src="/images/certification.webp"
-          alt="certification 페이지에서는 자격/써티 관련 교육을 소개합니다."
-          style={imgStyle}
-        />
+        <div style={heroImgBoxStyle}>
+          <Image
+            src="/images/certification.webp"
+            alt="certification 페이지에서는 자격/써티 관련 교육을 소개합니다."
+            layout="fill"
+            objectFit="cover"
+          />
+        </div>
+
         <div style={imgTextStyle}>
           <h1 style={h1Style}>certification</h1>
           <p style={pStyle}>써티 안내</p>
@@ -143,31 +145,28 @@ export default function CertificationPage() {
       </div>
 
       {!isMobileOrTablet && (
-  <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-    <SearchFilterBox
-      searchType={searchType}
-      setSearchType={setSearchType}
-      searchKeyword={searchKeyword}
-      setSearchKeyword={setSearchKeyword}
-      dateRange={dateRange}
-      setDateRange={setDateRange}
-      sort={sort}
-      setSort={setSort}
-      order={order}
-      setOrder={setOrder}
-      showPast={showPast}
-      setShowPast={setShowPast}
-    />
-  </div>
-)}
-
+        <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
+          <SearchFilterBox
+            searchType={searchType}
+            setSearchType={setSearchType}
+            searchKeyword={searchKeyword}
+            setSearchKeyword={setSearchKeyword}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            sort={sort}
+            setSort={setSort}
+            order={order}
+            setOrder={setOrder}
+            showPast={showPast}
+            setShowPast={setShowPast}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
       ) : filteredSchedules.length === 0 ? (
-        <p style={{ textAlign: "center", padding: "40px 0" }}>
-          등록된 일정이 없습니다.
-        </p>
+        <p style={{ textAlign: "center", padding: "40px 0" }}>등록된 일정이 없습니다.</p>
       ) : (
         <ScheduleCardGrid schedules={filteredSchedules} type={type} />
       )}

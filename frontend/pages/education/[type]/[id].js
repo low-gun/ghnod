@@ -5,7 +5,8 @@ import api from "@/lib/api";
 import { useCartContext } from "@/context/CartContext";
 import { useUserContext } from "@/context/UserContext";
 import ProductTabs from "@/components/product/ProductTabs";
-import dynamic from "next/dynamic";
+import dynamic from "next/dynamic"; // 이미 있음
+const NextImage = dynamic(() => import("next/image").then(m => m.default), { ssr: false });
 
 const TabProductDetail = dynamic(() => import("@/components/product/TabProductDetail"), { ssr: false });
 const TabProductReviews = dynamic(() => import("@/components/product/TabProductReviews"), { ssr: false });
@@ -63,10 +64,7 @@ export default function EducationScheduleDetailPage() {
   const isTabOrBelow980 = useIsTabletOrBelow980();
 
   const { showAlert } = useGlobalAlert();
-
-const tabsRef = useRef(null);
-
-  
+ 
   // 데이터 로드
   useEffect(() => {
     if (!id) return;
@@ -328,11 +326,18 @@ const disableTitle = useMemo(() => {
         {/* 썸네일 */}
         <div className="left">
           <div className="thumbWrap">
-            <img
-              src={schedule.image_url || schedule.product_image || "/images/no-image.png"}
-              alt={schedule.title}
-              className="thumbImg"
-            />
+          {(schedule?.image_url || schedule?.product_image) ? (
+  <NextImage
+    src={schedule.image_url || schedule.product_image}
+    alt={schedule.title}
+    fill
+    sizes="(max-width: 1024px) 100vw, 50vw"
+    className="thumbImg"
+    priority
+  />
+) : (
+  <div className="noImage">이미지 없음</div>
+)}
           </div>
         </div>
   
@@ -537,56 +542,51 @@ const disableTitle = useMemo(() => {
           </div>
 
           {/* 수량 + CTA */}
-          <div className="qtyRow">
-            <span className="qtyLabel">수량</span>
-            <div className="qtyBox">
-              <button onClick={() => setQuantity((p) => Math.max(1, p - 1))} className="qtyBtn">
-                –
-              </button>
-              <div className="qtyVal">{quantity}</div>
-              <button onClick={() => setQuantity((p) => p + 1)} className="qtyBtn">
-                +
-              </button>
-            </div>
-          </div>
+          {/* 수량 — 마감(isSoldOut)일 땐 숨김 */}
+{!isSoldOut && (
+  <div className="qtyRow">
+    <span className="qtyLabel">수량</span>
+    <div className="qtyBox">
+      <button onClick={() => setQuantity((p) => Math.max(1, p - 1))} className="qtyBtn">
+        –
+      </button>
+      <div className="qtyVal">{quantity}</div>
+      <button onClick={() => setQuantity((p) => p + 1)} className="qtyBtn">
+        +
+      </button>
+    </div>
+  </div>
+)}
 
-          <div className="ctaRow">
-          {disableActions ? (
-  <button
-    type="button"
-    style={{
-      flex: 1,
-      minWidth: isMobile ? undefined : "40%",
-      padding: isMobile ? "14px 0" : "12px 16px",
-      border: "none",
-      backgroundColor: "#d1d5db",   // ✅ 회색 배경
-      color: "#6b7280",             // ✅ 글씨도 어두운 회색
-      borderRadius: 6,
-      fontWeight: 600,
-      cursor: "not-allowed",
-      fontSize: 15,
-    }}
-    disabled
-    aria-disabled="true"
-    title={disableTitle || "마감된 일정입니다."}
-  >
-    마감
-  </button>
-) : (
-  <>
-      <button
-        onClick={handleAddToCart}
-        style={actionBtnStyle(false, false)}
-        title={disableTitle}
-      >
+<div className="ctaRow">
+  {disableActions ? (
+    <button
+      type="button"
+      style={{
+        flex: 1,
+        minWidth: isMobile ? undefined : "40%",
+        padding: isMobile ? "14px 0" : "12px 16px",
+        border: "none",
+        backgroundColor: "#d1d5db",
+        color: "#6b7280",
+        borderRadius: 6,
+        fontWeight: 600,
+        cursor: "not-allowed",
+        fontSize: 15,
+      }}
+      disabled
+      aria-disabled="true"
+      title={disableTitle || "마감된 일정입니다."}
+    >
+      마감
+    </button>
+  ) : (
+    <>
+      <button onClick={handleAddToCart} style={actionBtnStyle(false, false)} title={disableTitle}>
         <ShoppingCart size={16} style={{ marginRight: 4 }} />
         장바구니
       </button>
-      <button
-        onClick={handleBuyNow}
-        style={actionBtnStyle(true, false)}
-        title={disableTitle}
-      >
+      <button onClick={handleBuyNow} style={actionBtnStyle(true, false)} title={disableTitle}>
         바로 구매
       </button>
     </>
@@ -594,15 +594,15 @@ const disableTitle = useMemo(() => {
 </div>
 
 
+
         </div>
       </div>
 
  {/* 탭 영역 */}
-<div
-  ref={tabsRef}
+ <div
   style={{
     position: "sticky",
-    top: isTabOrBelow980 ? 48 : 80,  // ✅ 980 기준 고정
+    top: isTabOrBelow980 ? 48 : 80,
     zIndex: 100,
     background: "#fff",
     borderBottom: "1px solid #eee",
@@ -653,17 +653,26 @@ const disableTitle = useMemo(() => {
 
   /* ✅ 썸네일: 정사각 + 축소 표시(잘림 방지) */
   .thumbWrap {
-    width: 100%;
-    aspect-ratio: 1/1;
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-  }
+  position: relative;           /* ✅ 추가 */
+  width: 100%;
+  aspect-ratio: 1/1;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 8px;
+  /* flex 정렬 제거 */
+}
+.noImage{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#999;
+  font-size:14px;
+  background:#f7f7f7;
+}
   .thumbImg {
     width: 100%;
     height: 100%;

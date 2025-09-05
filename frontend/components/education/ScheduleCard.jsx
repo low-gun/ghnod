@@ -113,14 +113,17 @@ export default function ScheduleCard({
         }}
       >
         <Image
-          src={imgSrc}
-          alt={schedule.title}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
-          placeholder={hasImg ? "blur" : undefined}
-          blurDataURL={hasImg ? EMPTY_PX : undefined}
-          style={{ objectFit: "contain" }}
-        />
+  src={imgSrc}
+  alt={schedule.title}
+  fill
+  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
+  placeholder={hasImg ? "blur" : undefined}
+  blurDataURL={hasImg ? EMPTY_PX : undefined}
+  style={{ objectFit: "contain" }}
+  priority
+  loading="eager"
+/>
+
         {!hasImg && (
           <div
             style={{

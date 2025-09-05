@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import Image from "next/legacy/image";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 
 const SearchFilterBox = dynamic(
@@ -72,12 +73,13 @@ export default function FacilitationPage() {
   });
 
   const schedules = data?.schedules || [];
-  const today = useMemo(() => new Date(), []);
+const today = useMemo(() => new Date(), []);
 
-  // useMemo로 필터 캐싱
-  const filteredSchedules = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
-    return schedules.filter((s) => {
+const filteredSchedules = useMemo(() => {
+  const keyword = searchKeyword.trim().toLowerCase();
+  return schedules
+    .filter((s) => s.type === type)   // ✅ 탭별 type 필터 추가
+    .filter((s) => {
       const isPast = new Date(s.start_date) < today;
       if (!showPast && isPast) return false;
 
@@ -93,7 +95,8 @@ export default function FacilitationPage() {
       }
       return true;
     });
-  }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);
+}, [schedules, type, searchType, searchKeyword, dateRange, showPast, today]);
+
 
   // 스타일 상수화
   const imgTitleBoxStyle = {
@@ -101,16 +104,16 @@ export default function FacilitationPage() {
     textAlign: "left",
     marginBottom: 16,
   };
-  const imgStyle = {
+  const heroImgBoxStyle = {
+    position: "relative",
     width: "100%",
     maxWidth: 1200,
-    height: "clamp(220px, 28vw, 360px)",  // ✅ 뷰포트에 따라 높이 커짐(모바일~데스크톱)
-    objectFit: "cover",                    // ✅ 비율 유지 + 영역 꽉 채움(필요 시 크롭)
-    objectPosition: "center",
+    height: "clamp(220px, 28vw, 360px)",
     borderRadius: 8,
-    display: "block",
+    overflow: "hidden",
     margin: "0 auto",
   };
+  
   const imgTextStyle = {
     position: "absolute",
     top: "clamp(12px, 3vw, 24px)",
@@ -143,16 +146,20 @@ export default function FacilitationPage() {
 
       {/* 이미지 + 타이틀 */}
       <div style={imgTitleBoxStyle}>
-        <img
-          src="/images/facilitation.webp"
-          alt="facilitation 페이지에서는 퍼실리테이션 기법과 활용 사례 등을 다룹니다."
-          style={imgStyle}
-        />
-        <div style={imgTextStyle}>
-          <h1 style={h1Style}>facilitation</h1>
-          <p style={pStyle}>퍼실리테이션 기법 및 활용</p>
-        </div>
-      </div>
+      <div style={heroImgBoxStyle}>
+  <Image
+    src="/images/facilitation.webp"
+    alt="facilitation 페이지에서는 퍼실리테이션 기법과 활용 사례 등을 다룹니다."
+    layout="fill"
+    objectFit="cover"
+  />
+</div>
+  <div style={imgTextStyle}>
+    <h1 style={h1Style}>facilitation</h1>
+    <p style={pStyle}>퍼실리테이션 기법 및 활용</p>
+  </div>
+</div>
+
 
       {!isMobileOrTablet && (
   <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>

@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
+import Image from "next/legacy/image";
+import { useQuery } from "@tanstack/react-query";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 
 const SearchFilterBox = dynamic(
@@ -25,8 +27,6 @@ const ScheduleCardGrid = dynamic(
   }
 );
 
-import { useQuery } from "@tanstack/react-query";
-
 export default function OpenCoursePage() {
   const [sort, setSort] = useState("start_date");
   const [order, setOrder] = useState("asc");
@@ -48,12 +48,19 @@ export default function OpenCoursePage() {
   // fetchSchedules useCallback (불필요한 함수 재생성 방지)
   const fetchSchedules = useCallback(async ({ queryKey }) => {
     const [_key, type, sort, order] = queryKey;
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${type}&sort=${sort}&order=${order}`,
-      { credentials: "include" }
-    );
+    const url =
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public` +
+      `?type=${encodeURIComponent(type)}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;
+    const res = await fetch(url, { credentials: "include" });
+  
+    if (res.status === 404) return { schedules: [] };
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`fetchSchedules failed: ${res.status} ${res.statusText} ${text}`);
+    }
     return res.json();
   }, []);
+  
 
   const { data, isLoading } = useQuery({
     queryKey: ["schedules", type, sort, order],
@@ -92,14 +99,16 @@ export default function OpenCoursePage() {
     textAlign: "left",
     marginBottom: 16,
   };
-  const imgStyle = {
+  const heroImgBoxStyle = {
+    position: "relative",
     width: "100%",
     maxWidth: 1200,
-    height: "auto",
+    height: "clamp(220px, 28vw, 360px)",
     borderRadius: 8,
-    display: "block",
+    overflow: "hidden",
     margin: "0 auto",
   };
+  
   const imgTextStyle = {
     position: "absolute",
     top: "clamp(12px, 3vw, 24px)",
@@ -131,18 +140,21 @@ export default function OpenCoursePage() {
 
       {/* 이미지 + 타이틀 */}
       <div style={imgTitleBoxStyle}>
-        <img
-          src="/images/opencourse.webp"
-          alt="opencourse 페이지에서는 누구나 참여할 수 있는 공개교육 프로그램을 소개합니다."
-          style={imgStyle}
-        />
-        <div style={imgTextStyle}>
-          <h1 style={h1Style}>opencourse</h1>
-          <p style={pStyle}>공개교육 안내</p>
-        </div>
-      </div>
+      <div style={heroImgBoxStyle}>
+  <Image
+    src="/images/opencourse.webp"
+    alt="opencourse 페이지에서는 누구나 참여할 수 있는 공개교육 프로그램을 소개합니다."
+    layout="fill"
+    objectFit="cover"
+  />
+</div>
 
-      {/* SearchFilterBox */}
+  <div style={imgTextStyle}>
+    <h1 style={h1Style}>opencourse</h1>
+    <p style={pStyle}>공개교육 안내</p>
+  </div>
+</div>
+     {/* SearchFilterBox */}
       {!isMobileOrTablet && (
   <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
     <SearchFilterBox

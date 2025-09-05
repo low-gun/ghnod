@@ -6,9 +6,16 @@ const nextConfig = {
   output: "standalone",
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-    NEXT_PUBLIC_OAUTH_BASE_URL: process.env.NEXT_PUBLIC_OAUTH_BASE_URL,  // ⭐️ 꼭 명시!
+    NEXT_PUBLIC_OAUTH_BASE_URL: process.env.NEXT_PUBLIC_OAUTH_BASE_URL,
     API_BASE_URL: process.env.API_BASE_URL,
-      },
+  },
+
+  // ✅ 외부 이미지 도메인 허용 + 포맷 최적화
+  images: {
+    domains: ["ghnoduploads.blob.core.windows.net"],
+    formats: ["image/avif", "image/webp"],
+  },
+
   experimental: {
     isrMemoryCacheSize: 0,
   },

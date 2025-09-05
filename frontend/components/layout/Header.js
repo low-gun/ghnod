@@ -74,17 +74,18 @@ export default function Header({
         {leftGroup.map((item, idx) => {
           if (item.isLogo) {
             return (
-              <Link key="logo" href={item.link || "/"} legacyBehavior>
-                <img
-                  src="/logo_blue.png"
-                  alt="Logo"
-                  style={{
-                    width: isCompactNav ? "85px" : "150px",
-                    height: "auto",
-                    cursor: "pointer",
-                  }}
-                />
-              </Link>
+              <Link key="logo" href={item.link || "/"} aria-label="홈으로">
+  <img
+    src="/logo_blue.png"
+    alt="Logo"
+    style={{
+      width: isCompactNav ? "85px" : "150px",
+      height: "auto",
+      cursor: "pointer",
+    }}
+  />
+</Link>
+
             );
           }
           return item.link ? (
