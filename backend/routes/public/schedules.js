@@ -43,7 +43,7 @@ router.get("/public", serverTiming, async (req, res) => {
   s.title,
   s.start_date,
   s.end_date,
-  COALESCE(s.image_url, p.image_url) AS image_url,  -- ✅ 추가
+COALESCE(s.thumbnail_url, p.thumbnail_url, s.image_url, p.image_url) AS image_url,
   p.type  AS type,
   p.title AS product_title
 FROM schedules s
@@ -112,7 +112,7 @@ router.get("/public/sessions", serverTiming, async (req, res) => {
         s.title               AS title,
         p.type                AS type,
         p.title               AS product_title,
-        COALESCE(s.image_url, p.image_url) AS image_url,
+        COALESCE(s.thumbnail_url, p.thumbnail_url, s.image_url, p.image_url) AS image_url,
         ss.start_date, ss.end_date, ss.start_time, ss.end_time,
         s.location, s.instructor
       FROM schedule_sessions ss

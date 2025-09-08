@@ -444,15 +444,20 @@ const resolvedImageUrl = uploadedUrl || (image_url || null);
     // ▼ data:image → Blob(1200px webp) 업로드 후 URL 치환
     const safeDetail = await normalizeDetailHtml(detail);
 
-    await conn.beginTransaction();
-    const [r] = await conn.execute(
-      `INSERT INTO schedules
-         (product_id, title, start_date, end_date, location, instructor,
-          description, total_spots, price, detail, image_url, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-       [product_id, title, startDt, endDt, location, instructor,
-        description, total_spots, price, safeDetail, resolvedImageUrl]      
-    );
+// 업로드 결과에서 1200w/400w 우선 사용
+const up0 = Array.isArray(req.uploadedImageUrls) ? req.uploadedImageUrls[0] : null;
+const imageUrlDetail = up0?.detail || resolvedImageUrl;   // 1200w(히어로/상세)
+const thumbUrl       = up0?.thumbnail || null;            // 400w(리스트)
+
+await conn.beginTransaction();
+const [r] = await conn.execute(
+  `INSERT INTO schedules
+     (product_id, title, start_date, end_date, location, instructor,
+      description, total_spots, price, detail, thumbnail_url, image_url, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+   [product_id, title, startDt, endDt, location, instructor,
+    description, total_spots, price, safeDetail, thumbUrl, imageUrlDetail]
+);
 
     const newId = r.insertId;
 
@@ -535,14 +540,19 @@ exports.updateSchedule = async (req, res) => {
 
     await conn.beginTransaction();
 
+    const up0 = Array.isArray(req.uploadedImageUrls) ? req.uploadedImageUrls[0] : null;
+    const imageUrlDetail = up0?.detail || resolvedImageUrl;   // 1200w
+    const thumbUrl       = up0?.thumbnail ?? null;            // 400w
+    
     await conn.execute(
       `UPDATE schedules
           SET product_id=?, title=?, start_date=?, end_date=?, location=?, instructor=?,
-              description=?, total_spots=?, price=?, detail=?, image_url=?, updated_at=NOW()
+              description=?, total_spots=?, price=?, detail=?, thumbnail_url=?, image_url=?, updated_at=NOW()
         WHERE id=?`,
-        [product_id, title, startDt, endDt, location, instructor,
-          description, total_spots, price, safeDetail, resolvedImageUrl, id]       
+      [product_id, title, startDt, endDt, location, instructor,
+        description, total_spots, price, safeDetail, thumbUrl, imageUrlDetail, id]
     );
+    
 
 
     await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
@@ -570,16 +580,136 @@ await conn.execute(
       }
       
 
+      await conn.commit();
+      return res.json({ success: true });
+    } catch (err) {
+      await conn.rollback();
+      console.error("일정 수정 오류:", err);
+      return res.status(500).json({ success: false, message: "수정 실패" });
+    } finally {
+      conn.release();
+    }
+  };
+  
+  /* ===== 부분 수정 ===== */
+exports.patchSchedule = async (req, res) => {
+  const { id } = req.params;
+  const body = req.body;
+
+  const conn = await pool.getConnection();
+  try {
+    // 1) 현재 데이터 조회
+    const [rows] = await conn.execute(`SELECT * FROM schedules WHERE id = ?`, [id]);
+    if (!rows.length) {
+      conn.release();
+      return res.status(404).json({ success: false, message: "일정 없음" });
+    }
+    const current = rows[0];
+
+    // 2) body.sessions 정규화 및 기간 재계산(있는 경우만)
+    const normSessions = normalizeSessions(body.sessions);
+    let startDt = body.start_date ?? current.start_date;
+    let endDt   = body.end_date   ?? current.end_date;
+    if (normSessions.length) {
+      const starts = normSessions.map((s) => toDT(s.start_date, s.start_time)).sort();
+      const ends   = normSessions.map((s) => toDT(s.end_date,   s.end_time)).sort();
+      startDt = starts[0];
+      endDt   = ends[ends.length - 1];
+    }
+
+    // 3) 기존 데이터와 body 병합(기간은 위에서 계산된 값 우선)
+    const merged = {
+      ...current,
+      ...body,
+      start_date: startDt,
+      end_date: endDt,
+    };
+
+    // 4) data:image 차단 + 업로드 우선
+    const up0 =
+      Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]
+        ? req.uploadedImageUrls[0]
+        : null;
+
+    if (!up0 && typeof merged.image_url === "string" && /^data:image\//i.test(merged.image_url)) {
+      return res.status(400).json({
+        success: false,
+        message: "data:image URL은 허용하지 않습니다. 파일 업로드를 사용하세요.",
+      });
+    }
+
+    const imageUrlDetail = up0?.detail || merged.image_url || null;  // 1200w
+    const thumbUrl       = up0?.thumbnail ?? merged.thumbnail_url ?? null; // 400w
+
+    // 5) 필수 항목 확인(머지 후 최종값 기준)
+    if (!merged.product_id || !merged.title || !merged.start_date || !merged.end_date || merged.price == null) {
+      return res.status(400).json({ success: false, message: "필수 항목 누락" });
+    }
+
+    // 6) DB 업데이트
+    await conn.beginTransaction();
+
+    // 6-1) 본문 업데이트
+    const safeDetail = await normalizeDetailHtml(merged.detail);
+    await conn.execute(
+      `UPDATE schedules
+         SET product_id=?, title=?, start_date=?, end_date=?, location=?, instructor=?,
+             description=?, total_spots=?, price=?, detail=?, thumbnail_url=?, image_url=?, updated_at=NOW()
+       WHERE id=?`,
+      [
+        merged.product_id,
+        merged.title,
+        merged.start_date,
+        merged.end_date,
+        merged.location,
+        merged.instructor,
+        merged.description,
+        merged.total_spots,
+        merged.price,
+        safeDetail,
+        thumbUrl,
+        imageUrlDetail,
+        id,
+      ]
+    );
+
+    // 6-2) 세션이 넘어온 경우에만 갱신(넘어오지 않으면 기존 유지)
+    if (Array.isArray(body.sessions)) {
+      await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
+      if (normSessions.length) {
+        for (const s of normSessions) {
+          const ts = s.total_spots; // 숫자 또는 null
+          await conn.execute(
+            `INSERT INTO schedule_sessions
+               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              id,
+              s.session_date || s.start_date,
+              s.start_date,
+              s.end_date,
+              s.start_time,
+              s.end_time,
+              ts,
+              ts,
+            ]
+          );
+        }
+      }
+    }
+
     await conn.commit();
     return res.json({ success: true });
   } catch (err) {
     await conn.rollback();
-    console.error("일정 수정 오류:", err);
-    return res.status(500).json({ success: false, message: "수정 실패" });
+    console.error("일정 부분 수정 오류:", err);
+    return res.status(500).json({ success: false, message: "부분 수정 실패" });
   } finally {
     conn.release();
   }
 };
+
+  
 /* ===== 활성/비활성 ===== */
 exports.toggleActive = async (req, res) => {
   const { id } = req.params;

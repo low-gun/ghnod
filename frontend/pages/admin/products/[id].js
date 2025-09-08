@@ -44,9 +44,14 @@ export default function ProductFormPage() {
   const { showAlert } = useGlobalAlert();
 
   const [form, setForm] = useState(INITIAL_FORM);
-  const [detail, setDetail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+const [detail, setDetail] = useState("");
+const [loading, setLoading] = useState(false);
+const [saving, setSaving] = useState(false);
+
+// ✅ 변경 감지를 위한 원본 상태 보관
+const [origForm, setOrigForm] = useState(INITIAL_FORM);
+const [origDetail, setOrigDetail] = useState("");
+
 
   const subtypeOptions = useMemo(
     () => (form.category ? CATEGORY_MAP[form.category] ?? [] : []),
@@ -78,6 +83,21 @@ export default function ProductFormPage() {
           });
           
           setDetail(p.detail ?? "");
+          
+          // ✅ 원본 상태도 동일하게 보관(이후 diff 기반 전송에 사용)
+          setOrigForm({
+            title: p.title ?? "",
+            category: p.category ?? "",
+            type: p.type ?? "",
+            image_url: isDataUrl(p.image_url) ? "" : (p.image_url ?? ""),
+            description: p.description ?? "",
+            price: typeof p.price === "number" ? p.price : (p.price ?? ""),
+            is_active: typeof p.is_active === "number" ? p.is_active : 1,
+            created_at: p.created_at ?? "",
+            updated_at: p.updated_at ?? "",
+          });
+          setOrigDetail(p.detail ?? "");
+          
         } else {
           showAlert("상품 정보를 불러오지 못했습니다.");
         }
@@ -117,12 +137,40 @@ export default function ProductFormPage() {
     if (msg) return showAlert(msg);
     setSaving(true);
     try {
-      const method = isEdit ? "put" : "post";
+      // ✅ 수정 시 PATCH, 신규 등록 시 POST
+      const method = isEdit ? "patch" : "post";
       const url = isEdit ? `/admin/products/${pid}` : "/admin/products";
   
-      // (1) image_url이 data:image면 업로드 먼저 수행
-      let resolvedImageUrl = form.image_url || null;
-      if (resolvedImageUrl && resolvedImageUrl.startsWith("data:image/")) {
+      // ✅ 변경된 필드만 추출
+      const changed = {};
+      const keysToCheck = ["title","category","type","description","price","is_active","image_url"];
+      keysToCheck.forEach((k) => {
+        const prev = origForm[k];
+        const next = form[k];
+        if (JSON.stringify(prev) !== JSON.stringify(next)) {
+          changed[k] = next;
+        }
+      });
+      if (origDetail !== detail) {
+        changed.detail = detail;
+      }
+  
+      // 변경 없으면 종료
+      if (Object.keys(changed).length === 0) {
+        setSaving(false);
+        return showAlert("변경된 내용이 없습니다.");
+      }
+  
+      // 숫자 필드 보정
+      if ("price" in changed) {
+        changed.price = changed.price === "" ? "" : Number(changed.price);
+      }
+      if ("type" in changed) {
+        changed.type = String(changed.type || "").trim();
+      }
+  
+      // ✅ 이미지가 dataURL로 변경된 경우에만 업로드
+      if ("image_url" in changed && typeof changed.image_url === "string" && changed.image_url.startsWith("data:image/")) {
         const dataURLtoBlob = (dataURL) => {
           const [meta, b64] = dataURL.split(",");
           const mime = (meta.match(/data:(.*?);base64/) || [])[1] || "image/png";
@@ -132,32 +180,29 @@ export default function ProductFormPage() {
           for (let i = 0; i < len; i++) u8[i] = bin.charCodeAt(i);
           return new Blob([u8], { type: mime });
         };
-  
         const fd = new FormData();
-        fd.append("files", dataURLtoBlob(resolvedImageUrl), "product.png");
-  
+        fd.append("files", dataURLtoBlob(changed.image_url), "product.png");
         const uploadRes = await api.post("upload/image", fd, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         });
-        resolvedImageUrl = uploadRes?.data?.urls?.[0]?.original || null;
-        if (!resolvedImageUrl) return showAlert("이미지 업로드에 실패했습니다.");
+        const uploaded = uploadRes?.data?.urls?.[0]?.original || null;
+        if (!uploaded) {
+          setSaving(false);
+          return showAlert("이미지 업로드에 실패했습니다.");
+        }
+        changed.image_url = uploaded;
       }
   
-      // (2) payload 구성
-      const payload = {
-        ...form,
-        detail,
-        type: String(form.type).trim(),
-        price: form.price === "" ? "" : Number(form.price),
-        image_url: resolvedImageUrl,   // 반드시 치환
-      };
+      console.log("[PRODUCT CHANGED PAYLOAD]", changed);
   
-      console.log("[FINAL PRODUCT PAYLOAD]", payload);
-  
-      const res = await api[method](url, payload);
+      // ✅ 변경된 필드만 전송
+      const res = await api[method](url, changed);
       if (res?.data?.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
+        // 성공 시 원본 상태 동기화
+        setOrigForm((prev) => ({ ...prev, ...changed }));
+        if ("detail" in changed) setOrigDetail(changed.detail);
         router.push("/admin/products");
       } else {
         showAlert("저장 실패: " + (res?.data?.message || "서버 오류"));
@@ -167,8 +212,7 @@ export default function ProductFormPage() {
     } finally {
       setSaving(false);
     }
-  }, [detail, form, isEdit, pid, router, showAlert, validate]);
-  
+  }, [detail, form, isEdit, origDetail, origForm, pid, router, showAlert, validate]);  
 
   const handleDelete = useCallback(async () => {
     if (!isEdit || !pid) return;

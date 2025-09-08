@@ -22,14 +22,23 @@ router.post(
     uploadToBlob,                // ★ 추가
     ctrl.createSchedule
   );
-// 일정 수정
-router.put(
+  router.put(
     "/:id",
     authenticateToken,
     adminOnly,
-    upload.array("images", 1),   // ★ 추가
-    uploadToBlob,                // ★ 추가
+    upload.array("images", 1),
+    uploadToBlob,
     ctrl.updateSchedule
+  );
+
+// 일정 부분 수정 (변경된 필드만 반영)
+router.patch(
+    "/:id",
+    authenticateToken,
+    adminOnly,
+    upload.array("images", 1),
+    uploadToBlob,
+    ctrl.patchSchedule   // ★ 새 함수
   );
 // 일정 활성/비활성 토글
 router.patch("/:id/active", authenticateToken, adminOnly, ctrl.toggleActive);

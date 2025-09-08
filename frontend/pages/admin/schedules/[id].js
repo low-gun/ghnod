@@ -54,9 +54,11 @@ export default function ScheduleFormPage() {
     lecture_hours: "",
   });
   const [originalForm, setOriginalForm] = useState({});
-  const [sessions, setSessions] = useState([
-    { start_date: "", end_date: "", total_spots: "" },
-  ]);
+const [originalSessions, setOriginalSessions] = useState([]); // ✅ 원본 세션 보관
+const [sessions, setSessions] = useState([
+  { start_date: "", end_date: "", total_spots: "" },
+]);
+
 
   const [priceInput, setPriceInput] = useState("");
   const [products, setProducts] = useState([]);
@@ -114,19 +116,18 @@ export default function ScheduleFormPage() {
         setSelectedType(data.product_type || "");
 
         if (Array.isArray(data.sessions) && data.sessions.length) {
-          setSessions(
-            data.sessions.map((s) => ({
-              start_date: (s.start_date || s.session_date || "").slice(0, 10),
-              end_date:   (s.end_date   || s.session_date || "").slice(0, 10),
-              // ✅ null/undefined만 빈칸으로. 숫자 0은 0, 20은 20 그대로. 문자열로 고정해 입력값 흔들림 방지
-              total_spots:
-                s.total_spots === null || s.total_spots === undefined
-                  ? ""
-                  : String(s.total_spots),
-            }))
-          );
-          
+          const norm = data.sessions.map((s) => ({
+            start_date: (s.start_date || s.session_date || "").slice(0, 10),
+            end_date:   (s.end_date   || s.session_date || "").slice(0, 10),
+            total_spots:
+              s.total_spots === null || s.total_spots === undefined
+                ? ""
+                : String(s.total_spots),
+          }));
+          setSessions(norm);
+          setOriginalSessions(norm); // ✅ 원본 세션 동일 포맷으로 보관
         }
+        
       })
       .finally(() => setLoading(false));
   }, [id, isEdit, showAlert]);
@@ -177,26 +178,46 @@ export default function ScheduleFormPage() {
     if (sessions.length === 1) {
       setSessions([{ start_date: "", end_date: "", start_time: "", end_time: "" }]);
     } else {
-      console.log("[DEBUG] 업로드 조건 불충족, image_url 값:", resolvedImageUrl);
       setSessions((prev) => prev.filter((_, i) => i !== idx));
     }
   };
-
   const handleSave = async () => {
-    console.log("[handleSave] raw image_url:", form.image_url);
-console.log("[handleSave] startsWith check:", form.image_url?.startsWith("data:image/"));
-    console.log("[handleSave] form.image_url", form.image_url?.slice(0, 50));
-  console.log("[handleSave] type", typeof form.image_url);
     if (hasAnyError) return showAlert("입력값을 확인하세요.");
     try {
-      const method = isEdit ? "put" : "post";
+      // ✅ 수정 시에는 PATCH 사용, 신규 등록 시에는 POST 사용
+      const method = isEdit ? "patch" : "post";
       const url = isEdit ? `admin/schedules/${id}` : "admin/schedules";
   
-      // (1) data:image이면 먼저 업로드 → 공개 URL 확보
-      let resolvedImageUrl = form.image_url || null;
+      // 1) 변경된 필드만 추출
+      const changed = {};
+      const keysToCheck = [
+        "product_id","title","location","instructor",
+        "description","total_spots","price","detail",
+        "image_url","lecture_hours","status"
+      ];
+      keysToCheck.forEach((k) => {
+        const prev = originalForm?.[k];
+        const next = form?.[k];
+        if (JSON.stringify(prev) !== JSON.stringify(next)) {
+          changed[k] = next;
+        }
+      });
   
-      if (resolvedImageUrl && resolvedImageUrl.startsWith("data:image/")) {
-        console.log("[DEBUG] 업로드 조건 충족, dataURL 감지:", resolvedImageUrl.slice(0, 30));
+      // 2) price 숫자 보정
+      if ("price" in changed) {
+        changed.price =
+          typeof changed.price === "string"
+            ? Number(changed.price.replace(/,/g, ""))
+            : Number(changed.price);
+        if (!Number.isFinite(changed.price)) changed.price = 0;
+      }
+  
+      // 3) image_url이 실제 변경되었고 dataURL이면 업로드
+      if (
+        "image_url" in changed &&
+        typeof changed.image_url === "string" &&
+        changed.image_url.startsWith("data:image/")
+      ) {
         const dataURLtoBlob = (dataURL) => {
           const [meta, b64] = dataURL.split(",");
           const mime = (meta.match(/data:(.*?);base64/) || [])[1] || "image/png";
@@ -206,57 +227,58 @@ console.log("[handleSave] startsWith check:", form.image_url?.startsWith("data:i
           for (let i = 0; i < len; i++) u8[i] = bin.charCodeAt(i);
           return new Blob([u8], { type: mime });
         };
-  
         const fd = new FormData();
-        fd.append("files", dataURLtoBlob(resolvedImageUrl), "schedule.png"); // 필드명: files
+        fd.append("files", dataURLtoBlob(changed.image_url), "schedule.png");
   
         const uploadRes = await api.post("upload/image", fd, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         });
-  
-        resolvedImageUrl = uploadRes?.data?.urls?.[0]?.original || null;
-        if (!resolvedImageUrl) return showAlert("이미지 업로드에 실패했습니다.");
+        const uploaded = uploadRes?.data?.urls?.[0]?.original || null;
+        if (!uploaded) return showAlert("이미지 업로드에 실패했습니다.");
+        changed.image_url = uploaded;
       }
   
-      // (2) 유틸
+      // 4) 세션 변경 여부 판단(정규화 동일 포맷으로 비교)
       const toIntOrNull = (v) => {
         if (v === undefined || v === null) return null;
         if (typeof v === "string" && v.trim() === "") return null;
         const n = Number(v);
         return Number.isFinite(n) ? n : null;
       };
+      const normSessions = sessions.map((s) => ({
+        start_date: s.start_date,
+        end_date: s.end_date,
+        total_spots:
+          toIntOrNull(s.total_spots) ??
+          toIntOrNull(form.total_spots) ??
+          null,
+      }));
   
-      // (3) payload 구성: price 숫자화 + 이미지 URL 치환 + 세션
-      const priceNum =
-        typeof form.price === "string"
-          ? Number(form.price.replace(/,/g, ""))
-          : Number(form.price);
+      const sessionsChanged =
+        JSON.stringify(normSessions) !== JSON.stringify(originalSessions);
   
-      const payload = {
-        ...form,
-        price: Number.isFinite(priceNum) ? priceNum : 0,
-        image_url: resolvedImageUrl,
-        sessions: sessions.map((s) => {
-          const rowSpots = toIntOrNull(s.total_spots);
-          const defaultSpots = toIntOrNull(form.total_spots);
-          return {
-            start_date: s.start_date,
-            end_date: s.end_date,
-            start_time: "00:00",
-            end_time: "00:00",
-            total_spots: rowSpots ?? defaultSpots ?? null,
-          };
-        }),
-      };
-      console.log("[FINAL PAYLOAD]", payload);  // ← 이 줄 추가
-
-      console.log("[DEBUG save payload] form.total_spots:", form.total_spots);
-      console.log("[DEBUG save payload] sessions:", JSON.stringify(payload.sessions, null, 2));
+      if (sessionsChanged) {
+        // ✅ 세션이 실제로 바뀐 경우에만 포함
+        changed.sessions = normSessions.map((s) => ({
+          start_date: s.start_date,
+          end_date: s.end_date,
+          start_time: "00:00",
+          end_time: "00:00",
+          total_spots: s.total_spots,
+        }));
+      }
   
-      const res = await api[method](url, payload);
+      // 5) 변경이 하나도 없으면 종료
+      if (Object.keys(changed).length === 0) {
+        return showAlert("변경된 내용이 없습니다.");
+      }
   
-      if (res.data.success) {
+      console.log("[SCHEDULE CHANGED PAYLOAD]", changed);
+  
+      // 6) 변경된 필드만 전송
+      const res = await api[method](url, changed);
+      if (res?.data?.success) {
         showAlert(isEdit ? "수정 완료!" : "등록 완료!");
         router.push("/admin/schedules");
       }
@@ -269,9 +291,6 @@ console.log("[handleSave] startsWith check:", form.image_url?.startsWith("data:i
       showAlert(`${msg}${details}`);
     }
   };
-  
-  
-
   if (!router.isReady) return null;
 
   return (

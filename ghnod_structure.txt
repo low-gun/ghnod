@@ -49,8 +49,11 @@
 ./backend/routes/upload.js
 ./backend/routes/user.js
 ./backend/routes/userSchedules.js
+./backend/scripts
+./backend/scripts/migrate_detail_images.js
 ./backend/server.js
 ./backend/services
+./backend/services/normalizeDetailHtml.js
 ./backend/services/txCheckout.js
 ./backend/test-db.js
 ./backend/test-env.js

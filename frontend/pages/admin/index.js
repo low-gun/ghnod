@@ -1,17 +1,17 @@
+// pages/admin/index.js
 import { useEffect, useContext } from "react";
 import { useRouter } from "next/router";
-import AdminLayout from "../../components/layout/AdminLayout";
-import { UserContext } from "@/context/UserContext";
 import dynamic from "next/dynamic";
-const AdminDashboard = dynamic(
-  () => import("@/components/admin/AdminDashboard"),
-  {
-    ssr: false,
-    loading: () => (
-      <div style={{ padding: 100, textAlign: "center" }}>대시보드 불러오는 중…</div>
-    ),
-  }
-);
+import AdminLayout from "@/components/layout/AdminLayout";
+import { UserContext } from "@/context/UserContext";
+
+const AdminDashboard = dynamic(() => import("@/components/admin/AdminDashboard"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: 100, textAlign: "center" }}>대시보드 불러오는 중…</div>
+  ),
+});
+
 export default function AdminPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);
@@ -23,16 +23,27 @@ export default function AdminPage() {
     }
   }, [user, router]);
 
-  if (user === undefined) return null; // 🚩 제일 먼저 undefined 체크
-  // (1) user null → 로딩중
-  if (user === null) return <div style={{ padding: 100, textAlign: "center" }}>로딩중...</div>;
-  // (2) user는 있는데 admin이 아님
-  if (user.role !== "admin") return null; // useEffect에서 이미 replace
+  // 컨텍스트 초기화 대기
+  if (user === undefined) return null;
 
-  // (3) 진짜 관리자만 보여줌
+  // 로그인 안 됨 → 로그인 페이지로 유도(필요 시 경로 변경)
+  if (user === null) {
+    if (typeof window !== "undefined") {
+      router.replace("/login?next=/admin");
+    }
+    return null;
+  }
+
+  // 관리자 아님 → useEffect에서 리다이렉트, 여기서는 렌더 막음
+  if (user.role !== "admin") return null;
+
+  // 관리자만 접근
   return (
     <AdminLayout>
+      <h1 style={{ padding: "24px 24px 0" }}>관리자 대시보드</h1>
       <AdminDashboard />
     </AdminLayout>
   );
 }
+
+// ✅ getServerSideProps 없음 (CSR 기반)
