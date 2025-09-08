@@ -26,13 +26,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   ssl: isProduction
-    ? {
-        rejectUnauthorized: true,
-        ca: fs.readFileSync(
-          path.join(__dirname, "../certs/DigiCertGlobalRootCA.crt")
-        ),
-      }
-    : undefined,
+  ? { rejectUnauthorized: true }   // CA 제거
+  : undefined,
 });
 
 
