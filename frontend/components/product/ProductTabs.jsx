@@ -1,7 +1,19 @@
 // ✅ ProductTabs를 스크롤 이동형 탭으로 리팩터링
 import { useState, useEffect } from "react";
 
+// [AFTER]
+const getDebug = () => {
+  if (typeof window === "undefined") return false;
+  const sp = new URLSearchParams(window.location.search);
+  return sp.get("debug") === "1";
+};
+const dbg = getDebug();
+
 export default function ProductTabs({ tabs }) {
+  useEffect(() => {
+    if (dbg) console.log("[Tabs] mounted");
+    return () => { if (dbg) console.log("[Tabs] unmounted"); };
+  }, [dbg]);
   const [active, setActive] = useState(tabs[0]?.id || "");
 
   // scroll시 active tab 변경 감지

@@ -7,21 +7,30 @@ export default function TabProductDetail({ scheduleId }) {
   const [limitHeight, setLimitHeight] = useState(1200);
   const [canExpand, setCanExpand] = useState(false);
   const [html, setHtml] = useState("");
+  const dbg = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1";
 
-  // ✅ 상세 HTML만 별도 API에서 로드
-  useEffect(() => {
-    if (!scheduleId) return;
-    api
-      .get(`/education/schedules/${scheduleId}/detail`)
-      .then((res) => {
-        if (res.data.success) {
-          setHtml(res.data.detail || "");
-        } else {
-          setHtml("");
-        }
-      })
-      .catch(() => setHtml(""));
-  }, [scheduleId]);
+// ✅ 상세 HTML만 별도 API에서 로드 + 디버그 로깅(기능 영향 없음)
+useEffect(() => {
+  if (!scheduleId) return;
+  dbg && console.time("[Detail] fetch");
+  api
+    .get(`/education/schedules/${scheduleId}/detail`)
+    .then((res) => {
+      dbg && console.timeEnd("[Detail] fetch");
+      dbg && console.log("[Detail] fetch size(bytes-rough):", res?.data?.detail?.length ?? 0);
+      if (res.data.success) {
+        setHtml(res.data.detail || "");
+      } else {
+        setHtml("");
+      }
+    })
+    .catch((e) => {
+      dbg && console.timeEnd("[Detail] fetch");
+      dbg && console.warn("[Detail] fetch error", e?.message);
+      setHtml("");
+    });
+}, [scheduleId, dbg]);
+
 
   const isEmptyDetail =
     !html ||
@@ -83,7 +92,7 @@ export default function TabProductDetail({ scheduleId }) {
           {!expanded && canExpand && (
             <div className="fade-overlay">
               <button className="detail-toggle" onClick={handleToggle}>
-                상품상세 더보기 ▼
+                더보기 ▼
               </button>
             </div>
           )}
