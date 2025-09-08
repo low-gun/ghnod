@@ -3,7 +3,6 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
 import Script from "next/script";
-import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
 import { CartProvider, useCartContext } from "../context/CartContext";
 import UserProvider from "../context/UserContext";
@@ -14,7 +13,11 @@ import GlobalAgreements from "@/components/common/GlobalAgreements";
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../styles/adminTable.css";
-
+import dynamic from "next/dynamic";
+const MainLayout = dynamic(
+  () => import("../components/layout/MainLayout"),
+  { ssr: true } // 레이아웃은 SSR 유지, 단 번들은 분리됨
+);
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
 
