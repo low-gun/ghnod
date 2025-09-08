@@ -7,7 +7,6 @@ import MainLayout from "../components/layout/MainLayout";
 import "../styles/globals.css";
 import { CartProvider, useCartContext } from "../context/CartContext";
 import UserProvider from "../context/UserContext";
-import api from "@/lib/api";
 import GlobalLoadingBar from "@/components/common/GlobalLoadingBar";
 import GlobalConfirmModal from "@/components/common/GlobalConfirmModal";
 import GlobalAlert from "@/components/common/GlobalAlert";
@@ -29,6 +28,7 @@ function CartInitializer() {
       }
 
       try {
+        const { default: api } = await import("@/lib/api"); // ✅ 필요 시점에만 로드
         const res = await api.get("/cart/items", {
           headers: {
             "x-guest-token": guestToken,
@@ -45,7 +45,6 @@ function CartInitializer() {
 
     fetchCart();
   }, []);
-
   return null;
 }
 
