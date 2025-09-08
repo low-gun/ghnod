@@ -1,3 +1,6 @@
+console.log("🔎 NODE_ENV =", process.env.NODE_ENV);
+console.log("🔎 AZURE_STORAGE_CONNECTION_STRING =", JSON.stringify(process.env.AZURE_STORAGE_CONNECTION_STRING));
+
 const multer = require("multer");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { v4: uuidv4 } = require("uuid");
@@ -10,8 +13,9 @@ const CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER_NAME || "uploads";
 
 let upload, uploadToBlob;
 
-if (AZURE_STORAGE_CONNECTION_STRING) {
-  // 운영 환경: Azure Blob Storage 업로드
+// ✅ NODE_ENV가 production일 때만 Azure 분기 실행
+if (process.env.NODE_ENV === "production" && AZURE_STORAGE_CONNECTION_STRING) {
+  console.log("✅ Azure 업로드 분기 실행됨");
   upload = multer({ storage: multer.memoryStorage() });
 
   const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
@@ -20,6 +24,7 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
   uploadToBlob = async (req, res, next) => {
     try {
       if (!req.files || req.files.length === 0) {
+        console.warn("⚠️ Azure 업로드 요청에 파일이 없음");
         return next();
       }
 
@@ -27,7 +32,9 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
       const sharp = require("sharp");
 
       for (const file of req.files) {
-        // original (원본 그대로 WebP 변환)
+        console.log("📤 업로드 파일:", file.originalname);
+
+        // original
         const originalBuffer = await sharp(file.buffer).webp({ quality: 90 }).toBuffer();
         const originalBlobName = `${Date.now()}-${uuidv4()}-original-${file.originalname}.webp`;
         const originalClient = containerClient.getBlockBlobClient(originalBlobName);
@@ -35,7 +42,7 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
           blobHTTPHeaders: { blobContentType: "image/webp" },
         });
 
-        // 썸네일(WebP, 400px)
+        // thumbnail
         const thumbBuffer = await sharp(file.buffer)
           .resize({ width: 400 })
           .webp({ quality: 80 })
@@ -46,7 +53,7 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
           blobHTTPHeaders: { blobContentType: "image/webp" },
         });
 
-        // 상세(detail, WebP, 1200px)
+        // detail
         const detailBuffer = await sharp(file.buffer)
           .resize({ width: 1200 })
           .webp({ quality: 80 })
@@ -72,7 +79,7 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
     }
   };
 } else {
-  // 로컬 개발: uploads/images 폴더에 저장
+  console.log("✅ 로컬 업로드 분기 실행됨");
   const localStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       const dir = path.join(__dirname, "..", "uploads", "images");
@@ -88,10 +95,12 @@ if (AZURE_STORAGE_CONNECTION_STRING) {
   uploadToBlob = async (req, res, next) => {
     try {
       if (!req.files || req.files.length === 0) {
+        console.warn("⚠️ 로컬 업로드 요청에 파일이 없음");
         return next();
       }
 
       req.uploadedImageUrls = req.files.map((file) => {
+        console.log("📥 로컬 업로드 파일:", file.originalname, "→", file.filename);
         const url = `/uploads/images/${file.filename}`;
         return {
           original: url,

@@ -1,10 +1,19 @@
 const path = require("path");
 
+console.log("🔎 NODE_ENV =", process.env.NODE_ENV);
+console.log("🔎 envPath (before load) =", 
+  process.env.NODE_ENV === "production"
+    ? path.resolve(__dirname, ".env.production")
+    : path.resolve(__dirname, ".env.local")
+);
+console.log("🔎 AZURE_STORAGE_CONNECTION_STRING (before dotenv) =", JSON.stringify(process.env.AZURE_STORAGE_CONNECTION_STRING));
+
 // ✅ 예기치 않은 에러 캐치
 console.log("🟢 server.js 진입");
 process.on("uncaughtException", (err) => {
   console.error("🔥 uncaughtException:", err);
 });
+
 process.on("unhandledRejection", (reason) => {
   console.error("🔥 unhandledRejection:", reason);
 });
@@ -14,8 +23,10 @@ const envPath =
     ? path.resolve(__dirname, ".env.production")
     : path.resolve(__dirname, ".env.local");
 
-require("dotenv").config({ path: envPath });
+// override 옵션을 줘서 .env.local 값이 .env 내용을 덮어쓰도록 강제
+require("dotenv").config({ path: envPath, override: true });
 console.log("✅ .env 로딩됨:", envPath);
+
 
 const express = require("express");
 const cors = require("cors");

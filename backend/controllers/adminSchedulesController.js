@@ -1,5 +1,6 @@
 // backend/controllers/adminSchedulesController.js
 const pool = require("../config/db");
+const { normalizeDetailHtml } = require("../services/normalizeDetailHtml");
 
 /* ===== 공통 유틸 ===== */
 function toKstDate(y, m, d, hh, mm, ss, ms) {
@@ -440,6 +441,9 @@ const resolvedImageUrl = uploadedUrl || (image_url || null);
 
   const conn = await pool.getConnection();
   try {
+    // ▼ data:image → Blob(1200px webp) 업로드 후 URL 치환
+    const safeDetail = await normalizeDetailHtml(detail);
+
     await conn.beginTransaction();
     const [r] = await conn.execute(
       `INSERT INTO schedules
@@ -447,8 +451,9 @@ const resolvedImageUrl = uploadedUrl || (image_url || null);
           description, total_spots, price, detail, image_url, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
        [product_id, title, startDt, endDt, location, instructor,
-        description, total_spots, price, detail, resolvedImageUrl]      
+        description, total_spots, price, safeDetail, resolvedImageUrl]      
     );
+
     const newId = r.insertId;
 
     if (normSessions.length) {
@@ -525,6 +530,9 @@ exports.updateSchedule = async (req, res) => {
 
   const conn = await pool.getConnection();
   try {
+    // ▼ data:image → Blob(1200px webp) 업로드 후 URL 치환
+    const safeDetail = await normalizeDetailHtml(detail);
+
     await conn.beginTransaction();
 
     await conn.execute(
@@ -533,8 +541,9 @@ exports.updateSchedule = async (req, res) => {
               description=?, total_spots=?, price=?, detail=?, image_url=?, updated_at=NOW()
         WHERE id=?`,
         [product_id, title, startDt, endDt, location, instructor,
-          description, total_spots, price, detail, resolvedImageUrl, id]       
+          description, total_spots, price, safeDetail, resolvedImageUrl, id]       
     );
+
 
     await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
     if (normSessions.length) {

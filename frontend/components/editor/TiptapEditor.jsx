@@ -4,7 +4,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
+import TiptapImage from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import api from "@/lib/api";
@@ -14,7 +14,7 @@ export default function TiptapEditor({
   onChange,
   height = 280,
   disabled = false,
-  uploadEndpoint = "/upload/images",
+  uploadEndpoint = "/upload/image",
 }) {
   const fileRef = useRef(null);
   const rafRef = useRef(null);
@@ -40,7 +40,7 @@ export default function TiptapEditor({
         linkOnPaste: true,
         protocols: ["http", "https", "mailto", "tel"],
       }),
-      Image.configure({
+      TiptapImage.configure({
         inline: false,
         allowBase64: true,
         HTMLAttributes: {
@@ -50,7 +50,7 @@ export default function TiptapEditor({
         },
       }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Placeholder.configure({ placeholder: "상세설명을 입력하세요…" }),
+      Placeholder.configure({ placeholder: "상세설명을 입력하세요." }),
     ],
     content: value || "",
     onUpdate: ({ editor }) => {
@@ -117,8 +117,9 @@ editor.chain().focus().insertContent({
   // 업로드 전 다운스케일(최대 변 1600px)
   const maybeDownscaleImage = useCallback((file, maxDim = 1600, quality = 0.85) => {
     return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
+      const img = typeof window !== "undefined" ? new window.Image() : null;
+if (!img) return resolve(file);
+const url = URL.createObjectURL(file);
       img.onload = () => {
         let { width, height } = img;
         const scale = Math.min(1, maxDim / Math.max(width, height));
@@ -143,58 +144,66 @@ editor.chain().focus().insertContent({
   }, []);
 
   // 단일 업로드
-  const uploadImageFile = useCallback(
-    async (file, progressCb) => {
-      if (!file) return;
-      if (!/^image\//.test(file.type)) return alert("이미지 파일만 업로드 가능합니다.");
-      if (file.size > 10 * 1024 * 1024) return alert("이미지 용량이 10MB를 초과합니다.");
+ // 단일 업로드
+const uploadImageFile = useCallback(
+  async (file, progressCb) => {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) return alert("이미지 파일만 업로드 가능합니다.");
+    if (file.size > 10 * 1024 * 1024) return alert("이미지 용량이 10MB를 초과합니다.");
 
-      try {
-        const toUpload = await maybeDownscaleImage(file, 1600, 0.85);
-        const fd = new FormData();
-        fd.append("file", toUpload, toUpload.name || file.name);
+    try {
+      const toUpload = await maybeDownscaleImage(file, 1600, 0.85);
+      const fd = new FormData();
+      // ✅ 백엔드: upload.array("files") → key는 "files"
+      fd.append("files", toUpload, toUpload.name || file.name);
 
-        const res = await api.post(uploadEndpoint, fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (e) => {
-            if (!e.total) return;
-            const pct = Math.round((e.loaded / e.total) * 100);
-            progressCb?.(pct);
-          },
-        });
+      const res = await api.post(uploadEndpoint, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (e) => {
+          if (!e.total) return;
+          const pct = Math.round((e.loaded / e.total) * 100);
+          progressCb?.(pct);
+        },
+      });
 
-        const { success, url } = res?.data || {};
-        if (!success || !url) throw new Error("업로드 실패");
+      // ✅ 응답: { success, urls: [{ original, thumbnail, detail }, ...] }
+      const { success, urls } = res?.data || {};
+      const first = Array.isArray(urls) ? urls[0] : null;
+      const picked =
+        typeof first === "string"
+          ? first
+          : (first?.detail || first?.original || first?.thumbnail);
 
+      if (!success || !picked) throw new Error("업로드 실패");
+
+      placeCursorAtEnd();
+      editor?.chain().focus().insertContent({
+        type: "image",
+        attrs: {
+          src: picked,
+          alt: toUpload.name,
+          style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+        }
+      }).run();
+    } catch (e) {
+      console.error("[TiptapEditor] 이미지 업로드 실패:", e);
+      const reader = new FileReader();
+      reader.onload = () => {
         placeCursorAtEnd();
-editor?.chain().focus().insertContent({
-  type: "image",
-  attrs: {
-    src: url,
-    alt: toUpload.name,
-    style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
-  }
-}).run();
-      } catch (e) {
-        console.error("[TiptapEditor] 이미지 업로드 실패:", e);
-        // 실패 시 Base64 임시 삽입
-        const reader = new FileReader();
-        reader.onload = () => {
-            placeCursorAtEnd();
-            editor?.chain().focus().insertContent({
-              type: "image",
-              attrs: {
-                src: String(reader.result),
-                alt: file.name,
-                style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
-              }
-            }).run();
-          };
-   reader.readAsDataURL(file);
-      }
-    },
-    [editor, uploadEndpoint, maybeDownscaleImage]
-  );
+        editor?.chain().focus().insertContent({
+          type: "image",
+          attrs: {
+            src: String(reader.result),
+            alt: file.name,
+            style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+          }
+        }).run();
+      };
+      reader.readAsDataURL(file);
+    }
+  },
+  [editor, uploadEndpoint, maybeDownscaleImage]
+);
 
   // 다중 업로드(순차)
   const uploadMany = useCallback(
@@ -222,22 +231,29 @@ editor?.chain().focus().insertContent({
         });
   
         const { success, urls } = res?.data || {};
-        if (!success || !Array.isArray(urls) || urls.length === 0) throw new Error("batch unsupported");
+if (!success || !Array.isArray(urls) || urls.length === 0) throw new Error("batch unsupported");
+
+// urls 원소: 문자열 또는 { original, thumbnail, detail }
+for (const u of urls) {
+  const picked =
+    typeof u === "string"
+      ? u
+      : (u?.detail || u?.original || u?.thumbnail);
+  if (!picked) continue;
+
+  placeCursorAtEnd();
+  editor?.chain().focus().insertContent({
+    type: "image",
+    attrs: {
+      src: picked,
+      alt: "",
+      style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
+    }
+  }).run();
+}
+setUploadInfo(null);
+return;
   
-        // 서버가 urls 배열을 준 경우: 전부 연속 삽입
-        for (const u of urls) {
-          placeCursorAtEnd();
-          editor?.chain().focus().insertContent({
-            type: "image",
-            attrs: {
-              src: u,
-              alt: "",
-              style: "width:100%;max-width:100%;height:auto;display:block;object-fit:contain;"
-            }
-          }).run();
-        }
-        setUploadInfo(null);
-        return;
       } catch (_) {
         // 2) 배치 미지원 또는 실패 → 개별 업로드 폴백
       }

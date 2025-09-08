@@ -15,7 +15,7 @@ export default function TabProductDetail({ scheduleId }) {
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("debug") === "1";
 
-  // ▼ 상세 섹션이 뷰포트 근처에 올 때만 로드 (초기 TTI 개선)
+  // 상세 섹션이 뷰포트 근처에 올 때만 로드 (초기 TTI 개선)
   useEffect(() => {
     if (shouldLoad) return;
     const el = sentinelRef.current;
@@ -29,13 +29,14 @@ export default function TabProductDetail({ scheduleId }) {
           io.disconnect();
         }
       },
-      { root: null, rootMargin: "300px 0px 300px 0px", threshold: 0.01 }
+      // 스크롤 도달 전에 미리 가져오도록 여유 마진
+      { root: null, rootMargin: "800px 0px 600px 0px", threshold: 0.01 }
     );
     io.observe(el);
     return () => io.disconnect();
   }, [shouldLoad]);
 
-  // ▼ 상세 HTML만 별도 API에서 로드 + 디버그 로깅(기능 영향 없음)
+  // 상세 HTML 로드 + 디버그
   useEffect(() => {
     if (!scheduleId || !shouldLoad) return;
     dbg && console.time("[Detail] fetch");
@@ -67,27 +68,32 @@ export default function TabProductDetail({ scheduleId }) {
       String(html).replace(/<[^>]*>/g, "").trim()
     );
 
-  // ▼ 이미지 태그 보강(지연/비동기/참조정책) + 빈 문단 제거 + data URI 방지(placeholder로 대체)
+  // 이미지/링크 보강 + 불필요한 태그 제거 + original→detail 치환
   const processedHtml = (html || "<p>상세 설명이 없습니다.</p>")
-    // data:image 방지(거대한 base64 → placeholder)
+    // 1) data:image 방지(거대한 base64 → placeholder)
     .replace(
       /<img\b([^>]*?)\bsrc=["']data:image\/[^"']+["']([^>]*)>/gi,
       '<img $1 src="/images/no-image.png"$2>'
     )
-    // img에 lazy/async/referrerpolicy/sizes(style 안전) 주입(이미 있으면 유지)
+    // 2) (레거시) blob 파일명 내 -original- → -detail- 치환
+    .replace(
+      /(<img[^>]+src=["'][^"']*)-original-([^"']+["'][^>]*>)/gi,
+      "$1-detail-$2"
+    )
+    // 3) img 속성 강화: lazy/async + 낮은 우선순위 + referrer 정책
     .replace(
       /<img\b(?![^>]*\bloading=)/gi,
-      '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" '
+      '<img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" '
     )
-    // 외부 링크 새탭/보안 속성
+    // 4) 외부 링크 보안 속성
     .replace(
       /<a\b(?![^>]*\btarget=)/gi,
       '<a target="_blank" rel="noopener noreferrer" '
     )
-    // 쓸모없는 빈 문단 제거
+    // 5) 빈 문단 제거
     .replace(/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, "");
 
-  // ▼ 높이 측정: 이미지 로딩 등 컨텐츠 변화 즉시 반영(더보기 지연 해소)
+  // 높이 측정: 불필요한 re-render 최소화(값이 바뀔 때만 setState)
   useEffect(() => {
     const h = window.innerHeight ? Math.round(window.innerHeight * 2.5) : 1200;
     setLimitHeight(h);
@@ -96,16 +102,30 @@ export default function TabProductDetail({ scheduleId }) {
     if (!el) return;
 
     let raf = 0;
+    const prevRef = { overflow: null, can: null, h };
+
     const measure = () => {
       raf = requestAnimationFrame(() => {
         const overflow = el.scrollHeight > h + 1;
-        setCanExpand(!isEmptyDetail && overflow);
-        dbg &&
-          console.log("[Detail] measure:", {
-            h,
-            scrollHeight: el.scrollHeight,
-            overflow,
-          });
+        const nextCan = !isEmptyDetail && overflow;
+
+        if (
+          prevRef.overflow !== overflow ||
+          prevRef.can !== nextCan ||
+          prevRef.h !== h
+        ) {
+          setCanExpand(nextCan);
+          prevRef.overflow = overflow;
+          prevRef.can = nextCan;
+          prevRef.h = h;
+          dbg &&
+            console.log("[Detail] measure:", {
+              h,
+              scrollHeight: el.scrollHeight,
+              overflow,
+              canExpand: nextCan,
+            });
+        }
       });
     };
 
@@ -157,7 +177,6 @@ export default function TabProductDetail({ scheduleId }) {
               overflow: expanded ? "visible" : "hidden",
               transition: "max-height 0.3s ease",
             }}
-            // 주의: HTML 그대로 삽입
             dangerouslySetInnerHTML={{ __html: processedHtml }}
           />
 
@@ -233,7 +252,6 @@ export default function TabProductDetail({ scheduleId }) {
           margin: 0 !important;
           padding: 0 !important;
           border: 0;
-          /* 안전한 기본 스타일(폭 제한) */
           width: 100%;
         }
         .detail-box p,
