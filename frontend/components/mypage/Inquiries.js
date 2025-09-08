@@ -33,7 +33,7 @@ export default function Inquiries({ data }) {
     alignItems: isMobile ? "stretch" : "center",
     justifyContent: "space-between",
     gap: "10px",
-    marginBottom: 18,
+    marginBottom: 0, // ← 타이틀의 marginBottom(20px)만 사용해 통일
   };
   const topButtonStyle = {
     padding: isMobile ? "10px 0" : "7px 20px",

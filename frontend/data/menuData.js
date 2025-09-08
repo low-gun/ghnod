@@ -41,7 +41,7 @@ export const centerGroup = [
     link: "/consulting",
     sub: [
       { label: "워크숍", slug: "workshop" },
-      { label: "숙의토론", slug: "discussion" },
+      { label: "공론화", slug: "discussion" },
       { label: "조직개발", slug: "orgdev" },
     ],
   },

@@ -8,7 +8,7 @@ export default function DiscussionPage() {
 
   const subTabs = [
     { label: "워크숍", href: "/consulting/workshop" },
-    { label: "숙의토론", href: "/consulting/discussion" },
+    { label: "공론화", href: "/consulting/discussion" },
     { label: "조직개발", href: "/consulting/orgdev" },
   ];
 
@@ -24,7 +24,7 @@ export default function DiscussionPage() {
           fontWeight: "bold",
         }}
       >
-        숙의토론(Deliberative Discussion)
+        공론화(Deliberative Discussion)
       </h1>
 
       <h2

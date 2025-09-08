@@ -20,7 +20,7 @@ const TiptapEditor = dynamic(
 
 const CATEGORY_MAP = {
   교육: ["followup", "certification", "opencourse", "facilitation"],
-  컨설팅: ["워크숍", "숙의토론", "조직개발"],
+  컨설팅: ["워크숍", "공론화", "조직개발"],
   진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
 };
 

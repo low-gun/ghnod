@@ -8,7 +8,7 @@ export default function WorkshopPage() {
 
   const subTabs = [
     { label: "워크숍", href: "/consulting/workshop" },
-    { label: "숙의토론", href: "/consulting/discussion" },
+    { label: "공론화", href: "/consulting/discussion" },
     { label: "조직개발", href: "/consulting/orgdev" },
   ];
 
