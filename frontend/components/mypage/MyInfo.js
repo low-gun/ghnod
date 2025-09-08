@@ -164,7 +164,7 @@ export default function MyInfo({ data }) {
     <div style={containerStyle}>
       <h2
         style={{
-          fontSize: "1.32rem",
+          fontSize: "1.2rem",
           fontWeight: 700,
           marginTop: "20px",
           marginBottom: "8px",

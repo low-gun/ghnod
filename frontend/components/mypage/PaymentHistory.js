@@ -206,18 +206,14 @@ export default function PaymentHistory() {
       }}
     >
       <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}></span>
-      결제내역이 없습니다
-      <div style={{ fontSize: "0.97rem", color: "#ccc", marginTop: 4 }}>
-        첫 결제를 진행해보세요!
-      </div>
+      결제내역이 없습니다.
     </div>
   );
 
   // 카드형/테이블 분기
   return (
     <div style={containerStyle}>
-      {!isMobile && <h2 style={titleStyle}>결제내역</h2>}
-
+<h2 style={titleStyle}>결제내역</h2>
       {/* 필터 (카드형일 때는 숨김) */}
       {!isCardLayout && filteredData.length > 0 && (
         <SearchFilter
@@ -375,41 +371,35 @@ export default function PaymentHistory() {
         )
       ) : (
         // PC(테이블형)
-        <div style={{ overflowX: "auto" }}>
-          <table style={tableStyle}>
-            <thead style={{ background: "#f9f9f9" }}>
-              <tr>
-                {columnDefs.map((col) => {
-                  const isActive = sortConfig.key === col.key;
-                  return (
-                    <th
-                      key={col.key}
-                      style={thCenter}
-                      onClick={
-                        col.sortable ? () => handleSort(col.key) : undefined
-                      }
-                    >
-                      {col.label}
-                      {/* 정렬화살표: ↕ 제거, isActive일 때만 ▲▼ 표시 */}
-                      {col.sortable && isActive && (
-                        <span style={{ ...sortArrowStyle, color: "#000" }}>
-                          {sortConfig.direction === "asc" ? "▲" : "▼"}
-                        </span>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {pagedData.length === 0 ? (
+        (pagedData.length === 0) ? (
+          // ✅ 데이터가 없으면 테이블/헤더를 렌더하지 않고 안내만 표시
+          renderEmpty()
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={tableStyle}>
+              <thead style={{ background: "#f9f9f9" }}>
                 <tr>
-                  <td colSpan={columnDefs.length} style={tdCenter}>
-                    {renderEmpty()}
-                  </td>
+                  {columnDefs.map((col) => {
+                    const isActive = sortConfig.key === col.key;
+                    return (
+                      <th
+                        key={col.key}
+                        style={thCenter}
+                        onClick={col.sortable ? () => handleSort(col.key) : undefined}
+                      >
+                        {col.label}
+                        {col.sortable && isActive && (
+                          <span style={{ ...sortArrowStyle, color: "#000" }}>
+                            {sortConfig.direction === "asc" ? "▲" : "▼"}
+                          </span>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
-              ) : (
-                pagedData.map((item, idx) => (
+              </thead>
+              <tbody>
+                {pagedData.map((item, idx) => (
                   <tr
                     key={item.order_id + "-" + idx}
                     style={{
@@ -418,7 +408,7 @@ export default function PaymentHistory() {
                     }}
                     onClick={() => router.push(`/orders/${item.order_id}`)}
                   >
-                    {columnDefs.map((col, colIdx) => {
+                    {columnDefs.map((col) => {
                       if (col.key === "No") {
                         return (
                           <td key={col.key} style={tdCenter}>
@@ -428,10 +418,7 @@ export default function PaymentHistory() {
                       }
                       if (col.key === "order_id") {
                         return (
-                          <td
-                            key={col.key}
-                            style={{ ...tdCenter, color: "#0070f3" }}
-                          >
+                          <td key={col.key} style={{ ...tdCenter, color: "#0070f3" }}>
                             {item.order_id}
                           </td>
                         );
@@ -457,21 +444,22 @@ export default function PaymentHistory() {
                             }
                           >
                             {formatPrice(item.amount)}원
-                            {/* 아이콘/표시도 가능: discount > 0 && <span style={{marginLeft:4,color:"#888"}}>ⓘ</span> */}
                           </td>
                         );
                       }
                       if (col.key === "quantity") {
                         const sumQty = Array.isArray(item.items)
-                          ? item.items.reduce((acc, it) => acc + Number(it.quantity || 0), 0)
-                          : (item.quantity || 0);
+                          ? item.items.reduce(
+                              (acc, it) => acc + Number(it.quantity || 0),
+                              0
+                            )
+                          : item.quantity || 0;
                         return (
                           <td key={col.key} style={tdCenter}>
                             {sumQty}명
                           </td>
                         );
                       }
-                      
                       if (col.key === "payment_method") {
                         return (
                           <td key={col.key} style={tdCenter}>
@@ -489,36 +477,33 @@ export default function PaymentHistory() {
                       return <td key={col.key} style={tdCenter}></td>;
                     })}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          {/* 페이지네이션 */}
-          {pagedData.length !== 0 && (
+                ))}
+              </tbody>
+            </table>
+      
+            {/* 페이지네이션 */}
             <div style={{ marginTop: "20px", textAlign: "center" }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    style={{
-                      padding: "6px 10px",
-                      fontSize: "14px",
-                      border: "1px solid #ccc",
-                      borderRadius: "4px",
-                      margin: "0 4px",
-                      cursor: "pointer",
-                      fontWeight: currentPage === page ? "bold" : "normal",
-                      backgroundColor: currentPage === page ? "#eee" : "#fff",
-                    }}
-                  >
-                    {page}
-                  </button>
-                )
-              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    padding: "6px 10px",
+                    fontSize: "14px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    margin: "0 4px",
+                    cursor: "pointer",
+                    fontWeight: currentPage === page ? "bold" : "normal",
+                    backgroundColor: currentPage === page ? "#eee" : "#fff",
+                  }}
+                >
+                  {page}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )
       )}
     </div>
   );
@@ -531,6 +516,7 @@ const inputStyle = {
   fontSize: "14px",
   width: "140px",
 };
+
 
 const tableStyle = {
   width: "100%",
@@ -557,7 +543,7 @@ const sortArrowStyle = {
   verticalAlign: "middle",
 };
 const titleStyle = {
-  fontSize: "1.4rem",
+  fontSize: "1.2rem",
   fontWeight: "bold",
   marginBottom: "20px",
 };

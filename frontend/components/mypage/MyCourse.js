@@ -64,7 +64,7 @@ const reviewButtonStyle = {
   transition: "all 0.2s",
 };
 const titleStyle = {
-  fontSize: "1.4rem",
+  fontSize: "1.2rem",
   fontWeight: "bold",
   marginBottom: "20px",
 };
@@ -243,12 +243,8 @@ export default function MyCourse() {
       }}
     >
       <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>
-        📚
       </span>
-      아직 수강내역이 없습니다
-      <div style={{ fontSize: "0.97rem", color: "#ccc", marginTop: 4 }}>
-        첫 강의를 신청해보세요!
-      </div>
+      수강내역이 없습니다.
     </div>
   );
 

@@ -50,20 +50,26 @@ export default function Inquiries({ data }) {
   return (
     <div style={containerStyle}>
       <div style={headerRow}>
-        {!isMobile && <h2 style={titleStyle}>1:1 문의내역</h2>}
-        <button onClick={() => setShowModal(true)} style={topButtonStyle}>
-          문의하기
-        </button>
-      </div>
+  <h2 style={titleStyle}>1:1 문의내역</h2>
+</div>
 
-      {inquiries.length === 0 ? (
-        <p
-          style={{ marginTop: 22, fontSize: isMobile ? 15 : 16, color: "#888" }}
-        >
-          1:1 문의 내역이 없습니다.
-        </p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+
+{inquiries.length === 0 ? (
+  <div
+    style={{
+      padding: isMobile ? "56px 0 40px 0" : "70px 0 60px 0",
+      textAlign: "center",
+      color: "#bbb",
+      fontSize: isMobile ? "1rem" : "1.1rem",
+      minHeight: 200,
+      fontWeight: 400,
+    }}
+  >
+    <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}></span>
+    1:1 문의 내역이 없습니다.
+  </div>
+) : (
+  <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
           {inquiries.map((inquiry, index) => {
             const isOpen = openIndex === index;
             return (
@@ -227,6 +233,25 @@ export default function Inquiries({ data }) {
           })}
         </div>
       )}
+{/* 하단 액션 영역 */}
+<div
+  style={{
+    marginTop: 16,
+    display: "flex",
+    justifyContent: "center",   // ← 가운데 정렬
+  }}
+>
+  <button
+    onClick={() => setShowModal(true)}
+    style={{
+      ...topButtonStyle,
+       // ← 버튼 폭 자동
+      alignSelf: "center",       // ← 수직도 중앙(혹시 높이 변동 시)
+    }}
+  >
+    문의하기
+  </button>
+</div>
 
       {showModal && (
         <InquiryModal
@@ -241,6 +266,7 @@ export default function Inquiries({ data }) {
   );
 }
 
+
 // ────────────── 유틸 ──────────────
 const formatDate = (dateStr) =>
   new Date(dateStr).toLocaleDateString("ko-KR", {
@@ -250,8 +276,11 @@ const formatDate = (dateStr) =>
   });
 
 // ────────────── 공통 스타일 ──────────────
-const titleStyle = { fontSize: "1.2rem", margin: 0 };
-
+const titleStyle = {
+  fontSize: "1.2rem",
+  fontWeight: "bold",
+  marginBottom: "20px",
+};
 const sectionTitle = {
   fontWeight: 600,
   fontSize: "14.5px",

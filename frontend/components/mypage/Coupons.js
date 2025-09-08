@@ -34,13 +34,22 @@ export default function Coupons({ data }) {
 
   return (
     <div style={{ padding: isMobile ? 0 : 20 }}>
-      {!isMobile && <h2 style={titleStyle}>쿠폰</h2>}
-
-      {filtered.length === 0 ? (
-        <div style={{ color: "#888", padding: "40px 0", textAlign: "center" }}>
-          사용 가능한 쿠폰이 없습니다.
-        </div>
-      ) : (
+<h2 style={titleStyle}>쿠폰</h2>
+   {filtered.length === 0 ? (
+  <div
+    style={{
+      padding: isMobile ? "56px 0 40px 0" : "70px 0 60px 0", // ← PaymentHistory와 동일 패딩
+      textAlign: "center",
+      color: "#bbb",
+      fontSize: isMobile ? "1rem" : "1.1rem",
+      minHeight: 200,
+      fontWeight: 400,
+    }}
+  >
+    <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}></span>
+    사용 가능한 쿠폰이 없습니다.
+  </div>
+) : (
         <div
           style={{
             display: "grid",
@@ -157,9 +166,11 @@ export default function Coupons({ data }) {
 }
 
 const titleStyle = {
-  fontSize: "1.2rem",
-  marginBottom: "16px",
+  fontSize: "1.2rem",   // ← PaymentHistory와 통일
+  fontWeight: "bold",   // ← 섹션 타이틀 굵기 통일
+  marginBottom: "20px",
 };
+
 
 const cardStyle = {
   border: "1px solid #ddd",

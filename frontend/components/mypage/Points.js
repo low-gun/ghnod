@@ -117,9 +117,7 @@ const isMobile = useIsMobile();
   // 본문
   return (
     <div style={containerStyle}>
-      {!isMobile && (
-        <h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>포인트</h2>
-      )}
+<h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>포인트</h2>
 
       {/* 상단 요약카드 */}
       <div style={cardStyle}>

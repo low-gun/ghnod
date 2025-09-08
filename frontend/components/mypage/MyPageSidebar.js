@@ -33,15 +33,16 @@ export default function MyPageSidebar({ activeMenu, setActiveMenu }) {
   }}
 >
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {MENUS.map((menu) => {
-          const isActive = menu.label === activeMenu;
-          return (
-            <li
-              key={menu.label}
-              onClick={() => {
-                setActiveMenu(menu.label);
-                router.push({ pathname: "/mypage", query: { menu: menu.label } });
-              }}
+      {MENUS.map((menu) => {
+  const isActive = menu.label === activeMenu;
+  const Icon = menu.icon; // ← 선언을 JSX 바깥(콜백 상단)으로 이동
+  return (
+    <li
+      key={menu.label}
+      onClick={() => {
+        setActiveMenu(menu.label);
+        router.push({ pathname: "/mypage", query: { menu: menu.label } });
+      }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -60,10 +61,8 @@ export default function MyPageSidebar({ activeMenu, setActiveMenu }) {
               onMouseOver={e => e.currentTarget.style.background = isActive ? "#e5eeff" : "#f1f6ff"}
               onMouseOut={e => e.currentTarget.style.background = isActive ? "#e5eeff" : "transparent"}
             >
-              const Icon = menu.icon;
-<Icon size={18} />
-<span>{menu.label}</span>
-
+              <Icon size={18} />
+              <span>{menu.label}</span>
             </li>
           );
         })}
