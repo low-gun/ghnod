@@ -24,8 +24,7 @@ const GlobalAgreements = dynamic(
 );
 import useGlobalLoading from "@/stores/globalLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "../styles/adminTable.css";
-
+const AdminStyles = dynamic(() => import("@/components/admin/AdminStyles"), { ssr: true });
 function CartInitializer() {
   const { setCartItems, setCartReady } = useCartContext();
 
@@ -172,9 +171,12 @@ function MyApp({ Component, pageProps }) {
 
             {!isAdmin && <CartInitializer />}
 
-            <LayoutWrapper>
-              <Component {...pageProps} />
-            </LayoutWrapper>
+            {isAdmin && <AdminStyles />}
+
+<LayoutWrapper>
+  <Component {...pageProps} />
+</LayoutWrapper>
+
           </CartProvider>
         </UserProvider>
       </QueryClientProvider>
