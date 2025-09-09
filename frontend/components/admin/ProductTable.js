@@ -169,30 +169,48 @@ export default function ProductTable({
     try {
       setIsFetching(true);
       setLoadError("");
-
+  
       const toDate = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v || undefined);
-
+  
       const params = {
         page,
         pageSize,
-        // 정렬 호환
         sortKey: sortConfig.key,
         sortDir: sortConfig.direction,
         sort: sortConfig.key,
         order: sortConfig.direction,
-        // 검색
         searchField,
         searchQuery,
       };
-
+  
       if (["created_at", "updated_at"].includes(searchField)) {
         const sd = toDate(startDate);
         const ed = toDate(endDate);
         if (sd) params.start_date = sd;
         if (ed) params.end_date = ed;
       }
-
+  
+      // === 콘솔 트레이싱 시작 ===
+      const fetchKey = `[FETCH /admin/products] ${JSON.stringify(params)}`;
+      console.log(fetchKey, { refreshKey, isNarrow, autoFetchEnabled });
+      console.time(fetchKey);
+  
       const res = await api.get("admin/products", { params, signal });
+  
+      console.timeEnd(fetchKey);
+      try {
+        const approxKB = Math.round(
+          new Blob([JSON.stringify(res?.data ?? {})]).size / 1024
+        );
+        console.log(`${fetchKey} ~ response size ~ approx ${approxKB} KB`);
+        const count =
+          Array.isArray(res?.data?.products) ? res.data.products.length :
+          Array.isArray(res?.data?.items) ? res.data.items.length :
+          Array.isArray(res?.data?.rows) ? res.data.rows.length : -1;
+        console.log(`${fetchKey} ~ rows.length =`, count);
+      } catch {}
+      // === 콘솔 트레이싱 끝 ===
+  
       if (res.data?.success) {
         const list = res.data.products || res.data.items || res.data.rows || [];
         const tc =
@@ -200,7 +218,7 @@ export default function ProductTable({
           res.data.totalCount ??
           res.data.pagination?.total ??
           (Array.isArray(list) ? list.length : 0);
-
+  
         setRows(list);
         setTotal(Number(tc) || 0);
         onLoaded?.({ totalCount: Number(tc) || 0 });
@@ -214,6 +232,7 @@ export default function ProductTable({
       setIsFetching(false);
     }
   };
+  
 
   useEffect(() => {
     if (!mounted || !autoFetchEnabled) return;
