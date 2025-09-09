@@ -10,8 +10,7 @@ import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
 import dynamic from "next/dynamic";
 import SelectableCard from "@/components/common/SelectableCard";
-
-// ✅ 내부 툴바/필터/엑셀/페이지네이션
+import VirtualizedTable from "@/components/common/VirtualizedTable"; // ✅ 추가
 import AdminToolbar from "@/components/common/AdminToolbar";
 import AdminSearchFilter from "@/components/common/AdminSearchFilter";
 import PaginationControls from "@/components/common/PaginationControls";
@@ -349,37 +348,7 @@ export default function ProductTable({
   };
 
   // 페이징
-  const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pageSize]);
-
-  // 열 너비(colgroup)
-  const COL_W = {
-    sel: 44,
-    no: 60,
-    code: 100,
-    thumb: 84,
-    title: 240,
-    type: 120,
-    price: 120,
-    created: 160,
-    updated: 160,
-    schedule: 100,
-    status: 96,
-  };
-  const renderColGroup = () => (
-    <colgroup>
-      <col style={{ width: COL_W.sel, minWidth: COL_W.sel }} />
-      <col style={{ width: COL_W.no, minWidth: COL_W.no }} />
-      <col style={{ width: COL_W.code, minWidth: COL_W.code }} />
-      <col style={{ width: COL_W.thumb, minWidth: COL_W.thumb }} />
-      <col style={{ width: COL_W.title, minWidth: COL_W.title }} />
-      <col style={{ width: COL_W.type, minWidth: COL_W.type }} />
-      <col style={{ width: COL_W.price, minWidth: COL_W.price }} />
-      <col style={{ width: COL_W.created, minWidth: COL_W.created }} />
-      <col style={{ width: COL_W.updated, minWidth: COL_W.updated }} />
-      <col style={{ width: COL_W.schedule, minWidth: COL_W.schedule }} />
-      <col style={{ width: COL_W.status, minWidth: COL_W.status }} />
-    </colgroup>
-  );
+const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pageSize]);
 
   return (
     <div>
@@ -487,215 +456,208 @@ export default function ProductTable({
       ) : total === 0 && rows.length === 0 ? (
         <div style={emptyBox}>상품이 없습니다. 필터를 변경하거나 검색어를 조정해 보세요.</div>
       ) : !isNarrow ? (
-        // 데스크톱: 테이블
-        <>
-          <div className="admin-table-wrap" style={{ overflowX: "auto" }}>
-            <table className="admin-table" style={{ tableLayout: "fixed", width: "100%" }}>
-              {renderColGroup()}
-              <thead style={{ backgroundColor: "#f9f9f9" }}>
-                <tr>
-                  <th className="admin-th">
-                    <input
-                      type="checkbox"
-                      checked={isAllChecked}
-                      onChange={(e) => toggleAll(e.target.checked)}
-                    />
-                  </th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "id",
-                        direction: p.key === "id" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    No
-                  </th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "code",
-                        direction: p.key === "code" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    코드
-                  </th>
-                  <th className="admin-th">썸네일</th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "title",
-                        direction: p.key === "title" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    상품명
-                  </th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "type",
-                        direction: p.key === "type" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    유형
-                  </th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "price",
-                        direction: p.key === "price" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    가격
-                  </th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "created_at",
-                        direction: p.key === "created_at" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    등록일시
-                  </th>
-                  <th
-                    className="admin-th"
-                    onClick={() => {
-                      setPage(1);
-                      setSortConfig((p) => ({
-                        key: "updated_at",
-                        direction: p.key === "updated_at" && p.direction === "asc" ? "desc" : "asc",
-                      }));
-                    }}
-                  >
-                    수정일시
-                  </th>
-                  <th className="admin-th">일정</th>
-                  <th className="admin-th">상태</th>
-                </tr>
-              </thead>
+      // 데스크톱: 테이블
+<>
+  <VirtualizedTable
+    tableClassName="admin-table"
+    height={560}               // 필요 시 조정
+    rowHeight={48}             // .admin-td 스타일과 맞춰주세요
+    resetKey={refreshKey}      // 검색/정렬/페이지 변경 시 스크롤 상단 복귀
+    columns={[
+      {
+        key: "sel",
+        title: (
+          <input
+            type="checkbox"
+            checked={isAllChecked}
+            onChange={(e) => toggleAll(e.target.checked)}
+          />
+        ),
+        width: 44,
+      },
+      {
+        key: "no",
+        title: "No",
+        width: 60,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "id",
+            direction: p.key === "id" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      {
+        key: "code",
+        title: "코드",
+        width: 100,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "code",
+            direction: p.key === "code" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      { key: "thumb", title: "썸네일", width: 84 },
+      {
+        key: "title",
+        title: "상품명",
+        width: 240,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "title",
+            direction: p.key === "title" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      {
+        key: "type",
+        title: "유형",
+        width: 120,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "type",
+            direction: p.key === "type" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      {
+        key: "price",
+        title: "가격",
+        width: 120,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "price",
+            direction: p.key === "price" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      {
+        key: "created_at",
+        title: "등록일시",
+        width: 160,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "created_at",
+            direction: p.key === "created_at" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      {
+        key: "updated_at",
+        title: "수정일시",
+        width: 160,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "updated_at",
+            direction: p.key === "updated_at" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      { key: "schedule", title: "일정", width: 100 },
+      { key: "status", title: "상태", width: 96 },
+    ]}
+    items={processedRows}
+    renderRowCells={({ item: p, index: idx }) => (
+      <>
+        <td className="admin-td">
+          <input
+            type="checkbox"
+            checked={selectedIds.includes(p.id)}
+            onChange={(e) => toggleOne(p.id, e.target.checked)}
+          />
+        </td>
+        <td className="admin-td">{(page - 1) * pageSize + (idx + 1)}</td>
+        <td
+          className="admin-td"
+          title={p.code}
+          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        >
+          {p.code}
+        </td>
+        <td className="admin-td">
+          {p.thumb ? (
+            <img
+              src={p.thumb}
+              alt="thumbnail"
+              style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, border: "1px solid #eee" }}
+              loading="lazy"
+            />
+          ) : (
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 6,
+                border: "1px dashed #ddd",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#aaa",
+                fontSize: 12,
+              }}
+            >
+              썸네일
+              <br />
+              없음
+            </div>
+          )}
+        </td>
+        <td
+          className="admin-td"
+          title={p.title}
+          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        >
+          <span
+            role="link"
+            tabIndex={0}
+            onClick={() => onEdit?.(p)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") onEdit?.(p);
+            }}
+            style={{ color: "#0070f3", cursor: "pointer", textDecoration: "none" }}
+          >
+            {p.title}
+          </span>
+        </td>
+        <td className="admin-td">{p.type}</td>
+        <td className="admin-td">{p.priceText}</td>
+        <td className="admin-td">{formatDateLocal(p.created_at)}</td>
+        <td className="admin-td">{formatDateLocal(p.updated_at)}</td>
+        <td className="admin-td">
+          <button style={ghostBtn} onClick={() => setScheduleProductId(p.id)}>
+            일정
+          </button>
+        </td>
+        <td className="admin-td">
+          {typeof ToggleSwitch === "function" ? (
+            <ToggleSwitch
+              size="sm"
+              checked={p.isActive}
+              onChange={() => handleToggleActive(p)}
+              onLabel="ON"
+              offLabel="OFF"
+            />
+          ) : (
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <input type="checkbox" checked={p.isActive} onChange={() => handleToggleActive(p)} />
+              <span style={{ fontSize: 12, color: "#555" }}>{p.isActive ? "ON" : "OFF"}</span>
+            </label>
+          )}
+        </td>
+      </>
+    )}
+  />
 
-              <tbody>
-                {processedRows.map((p, idx) => (
-                  <tr
-                    key={p.id}
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                      opacity: p.isActive ? 1 : 0.6,
-                    }}
-                  >
-                    <td className="admin-td">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(p.id)}
-                        onChange={(e) => toggleOne(p.id, e.target.checked)}
-                      />
-                    </td>
-                    <td className="admin-td">{(page - 1) * pageSize + (idx + 1)}</td>
-                    <td
-                      className="admin-td"
-                      title={p.code}
-                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {p.code}
-                    </td>
+  <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
+</>
 
-                    <td className="admin-td">
-  {p.thumb ? (
-    <img
-      src={p.thumb}
-      alt="thumbnail"
-      style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, border: "1px solid #eee" }}
-      loading="lazy"
-    />
-  ) : (
-                        <div
-                          style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 6,
-                            border: "1px dashed #ddd",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#aaa",
-                            fontSize: 12,
-                          }}
-                        >
-                          썸네일
-                          <br />
-                          없음
-                        </div>
-                      )}
-                    </td>
-
-                    <td
-                      className="admin-td"
-                      title={p.title}
-                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      <span
-                        role="link"
-                        tabIndex={0}
-                        onClick={() => onEdit?.(p)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") onEdit?.(p);
-                        }}
-                        style={{ color: "#0070f3", cursor: "pointer", textDecoration: "none" }}
-                      >
-                        {p.title}
-                      </span>
-                    </td>
-                    <td className="admin-td">{p.type}</td>
-                    <td className="admin-td">{p.priceText}</td>
-                    <td className="admin-td">{formatDateLocal(p.created_at)}</td>
-                    <td className="admin-td">{formatDateLocal(p.updated_at)}</td>
-                    <td className="admin-td">
-                      <button style={ghostBtn} onClick={() => setScheduleProductId(p.id)}>
-                        일정
-                      </button>
-                    </td>
-
-                    <td className="admin-td">
-                      {typeof ToggleSwitch === "function" ? (
-                        <ToggleSwitch
-                          size="sm"
-                          checked={p.isActive}
-                          onChange={() => handleToggleActive(p)}
-                          onLabel="ON"
-                          offLabel="OFF"
-                        />
-                      ) : (
-                        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                          <input type="checkbox" checked={p.isActive} onChange={() => handleToggleActive(p)} />
-                          <span style={{ fontSize: 12, color: "#555" }}>{p.isActive ? "ON" : "OFF"}</span>
-                        </label>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
-        </>
     ) : (
       // 모바일/태블릿: 카드형
       <>
@@ -860,27 +822,6 @@ export default function ProductTable({
       {scheduleProductId && typeof ProductSchedulesModal === "function" && (
         <ProductSchedulesModal productId={scheduleProductId} onClose={() => setScheduleProductId(null)} />
       )}
-    </div>
-  );
-}
-
-/* 공통 카드 라벨/값 한 줄 */
-function Row({ label, value }) {
-  const toText = (v) =>
-    v == null ? "-" : typeof v === "string" || typeof v === "number" ? String(v) : v?.label ?? v?.name ?? "-";
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 12,
-        padding: "6px 0",
-        borderBottom: "1px dashed #f0f0f0",
-      }}
-    >
-      <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>{toText(label)}</span>
-      <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>{toText(value)}</span>
     </div>
   );
 }

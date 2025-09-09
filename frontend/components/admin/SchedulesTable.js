@@ -15,6 +15,7 @@ import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
 import ToggleSwitch from "@/components/common/ToggleSwitch";
 import SelectableCard from "@/components/common/SelectableCard";
+import VirtualizedTable from "@/components/common/VirtualizedTable"; // ✅ 추가
 
 /** ✅ 로컬시간 포맷(UTC 표기 제거) */
 function formatDateLocal(iso) {
@@ -566,246 +567,103 @@ if (!ok) return;
   </div>
 ) : !isNarrow ? (
         // 데스크톱: 테이블
+       // 데스크톱: 테이블
+<>
+  <VirtualizedTable
+    tableClassName="admin-table"
+    height={560}            // 필요 시 조정
+    rowHeight={64}          // 썸네일 60px 기준
+    resetKey={refreshKey}
+    columns={[
+      { key: "sel", title: <input type="checkbox" onChange={(e)=>toggleAll(e.target.checked)} checked={isAllChecked} />, width: 50 },
+      { key: "no",  title: "No", width: 70, onClickHeader: () => handleSort("id") },
+      { key: "thumb", title: "썸네일", width: 80 },
+      { key: "title", title: "일정명", width: 260, onClickHeader: () => handleSort("title") },
+      { key: "instructor", title: "강사", width: 110, onClickHeader: () => handleSort("instructor") },
+      { key: "period", title: "기간", width: 170, onClickHeader: () => handleSort("start_date") },
+      {
+        key: "seats",
+        title: <>모집인원<br/>(잔여/전체)</>,
+        width: 130,
+        onClickHeader: () => handleSort("seats_remaining"),
+      },
+      { key: "price", title: "가격", width: 110, onClickHeader: () => handleSort("price") },
+      { key: "product_title", title: "상품명", width: 160, onClickHeader: () => handleSort("product_title") },
+      { key: "product_type",  title: "유형", width: 120, onClickHeader: () => handleSort("product_type") },
+      { key: "created_at",    title: "등록일시", width: 150, onClickHeader: () => handleSort("created_at") },
+      { key: "updated_at",    title: "수정일시", width: 150, onClickHeader: () => handleSort("updated_at") },
+      { key: "status", title: "상태", width: 90 },
+    ]}
+    items={viewRows}
+    renderRowCells={({ item: s, index: idx }) => {
+      const rowNo = (page - 1) * pageSize + (idx + 1);
+      const sessionsCount = Number(s.sessions_count || 0);
+      const thumbSrc = s.thumbnail || s.image_url || s.product_image;
+      return (
         <>
-          <div className="admin-table-wrap" style={{ overflowX: "auto" }}>
-            <table
-              className="admin-table"
-              style={{ tableLayout: "fixed", width: "100%" }}
+          <td className="admin-td" style={{ width: 50 }}>
+            <input type="checkbox" checked={selectedIds.includes(s.id)} onChange={(e)=>toggleOne(s.id, e.target.checked)} />
+          </td>
+          <td className="admin-td" style={{ width: 70 }}>{rowNo}</td>
+          <td className="admin-td" style={{ width: 80 }}>
+            {thumbSrc ? (
+              <img src={thumbSrc} alt="일정 썸네일" style={{ width: 60, height: 60, objectFit: "cover" }} loading="lazy" />
+            ) : (
+              <div style={thumbEmpty}>썸네일<br/>없음</div>
+            )}
+          </td>
+          <td className="admin-td" style={{ width: 260, textAlign: "center" }}>
+            <span
+              onClick={() => router.push(`/admin/schedules/${s.id}`)}
+              style={{ color: "#0070f3", textDecoration: "none", cursor: "pointer", fontWeight: 500, display: "block" }}
             >
-              <thead style={{ backgroundColor: "#f9f9f9" }}>
-                <tr>
-                  <th className="admin-th" style={{ width: "50px" }}>
-                    <input
-                      type="checkbox"
-                      onChange={(e) => toggleAll(e.target.checked)}
-                      checked={isAllChecked}
-                    />
-                  </th>
-                  <th className="admin-th" style={{ width: "70px" }}>No</th>
-
-                  {/* 순서: 썸네일 → 일정명 → 강사 → 기간 → 모집인원 → 가격 → 상품명 → 유형 → 등록일시 → 수정일시 → 상태 */}
-                  <th className="admin-th" style={{ width: "80px" }}>썸네일</th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "260px" }}
-                    onClick={() => handleSort("title")}
-                  >
-                    일정명
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "110px" }}
-                    onClick={() => handleSort("instructor")}
-                  >
-                    강사
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "170px" }}
-                    onClick={() => handleSort("start_date")}
-                  >
-                    기간
-                  </th>
-                  <th
-  className="admin-th"
-  style={{ width: "130px", lineHeight: 1.2 }}
-  onClick={() => handleSort("seats_remaining")}   // ✅ 잔여 기준 정렬
->
-  모집인원<br/>(잔여/전체)
-</th>
-
-                  <th
-                    className="admin-th"
-                    style={{ width: "110px" }}
-                    onClick={() => handleSort("price")}
-                  >
-                    가격
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "160px" }}
-                    onClick={() => handleSort("product_title")}
-                  >
-                    상품명
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "120px" }}
-                    onClick={() => handleSort("product_type")}
-                  >
-                    유형
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "150px" }}
-                    onClick={() => handleSort("created_at")}
-                  >
-                    등록일시
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "150px" }}
-                    onClick={() => handleSort("updated_at")}
-                  >
-                    수정일시
-                  </th>
-                  <th className="admin-th" style={{ width: "90px" }}>상태</th>
-                </tr>
-              </thead>
-
-              <tbody>
-              {viewRows.map((s, idx) => {
-                  const rowNo = (page - 1) * pageSize + (idx + 1);
-                  const sessionsCount = Number(s.sessions_count || 0);
-                  return (
-                    <tr
-                      key={s.id}
-                      style={{
-                        backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
-                        borderBottom: "1px solid #eee",
-                        opacity: s.is_active ? 1 : 0.4,
-                        height: "auto", // ✅ 고정 높이 해제
-                      }}
-                    >
-                      {/* 체크박스 / No */}
-                      <td className="admin-td" style={{ width: "50px" }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(s.id)}
-                          onChange={(e) => toggleOne(s.id, e.target.checked)}
-                        />
-                      </td>
-                      <td className="admin-td" style={{ width: "70px" }}>
-                        {rowNo}
-                      </td>
-
-                      {/* 썸네일 */}
-                      <td className="admin-td" style={{ width: "80px" }}>
-                        {s.thumbnail || s.image_url || s.product_image ? (
-                          <img
-                            src={
-                              s.thumbnail || s.image_url || s.product_image
-                            }
-                            alt="일정 썸네일"
-                            style={{
-                              width: 60,
-                              height: 60,
-                              objectFit: "cover",
-                            }}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div style={thumbEmpty}>
-                            썸네일
-                            <br />
-                            없음
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 일정명 */}
-                      <td
-                        className="admin-td"
-                        style={{ width: "260px", textAlign: "center" }}
-                      >
-                        <span
-                          onClick={() =>
-                            router.push(`/admin/schedules/${s.id}`)
-                          }
-                          style={{
-                            color: "#0070f3",
-                            textDecoration: "none",
-                            cursor: "pointer",
-                            fontWeight: "500",
-                            display: "block",
-                          }}
-                        >
-                          {s.title}
-                        </span>
-                      </td>
-
-                      {/* 강사 */}
-                      <td className="admin-td" style={{ width: "110px" }}>
-                        {s.instructor || "-"}
-                      </td>
-
-                      {/* 기간: 1회차 → 줄바꿈, 2회차 이상 → n회차 + 툴팁 */}
-                      {/* 기간: 1회차 → 줄바꿈, 2회차 이상 → n회차 + 툴팁 (동일) */}
-                      <td className="admin-td" style={{ width: "170px", whiteSpace: "normal" }}>
-  {sessionsCount <= 1 ? (
-    <div style={{ lineHeight: 1.3 }}>
-      {formatDateOnly(s.start_date)}
-      <br />~{formatDateOnly(s.end_date)}
-    </div>
-  ) : (
-    <span
-      title={s.__sessionsTooltip || ""}
-      style={{ display: "inline-block", cursor: "help" }}
-    >
-      {`${sessionsCount}회차`}
-    </span>
-  )}
-</td>
-
-
-{/* 모집인원(잔여/전체) → 2회차 이상이면 n회차 + 툴팁 */}
-<td className="admin-td" style={{ width: "130px" }}>
-  {sessionsCount > 1 ? (
-    <span title={s.__seatsTooltip || ""} style={{ cursor: "help" }}>
-      {`${sessionsCount}회차`}
-    </span>
-  ) : (
-    s.__seatsText
-  )}
-</td>
-                      {/* 가격 */}
-                      <td className="admin-td" style={{ width: "110px" }}>
-                        {s.price != null
-                          ? `${Number(s.price).toLocaleString()}원`
-                          : "-"}
-                      </td>
-
-                      {/* 상품명 */}
-                      <td className="admin-td" style={{ width: "160px" }}>
-                        {s.product_title ?? "-"}
-                      </td>
-
-                      {/* 유형 */}
-                      <td className="admin-td" style={{ width: "120px" }}>
-                        {s.product_type ?? "-"}
-                      </td>
-
-                      {/* 등록/수정/상태 */}
-                      <td className="admin-td" style={{ width: "150px" }}>
-                        {formatDateLocal(s.created_at)}
-                      </td>
-                      <td className="admin-td" style={{ width: "150px" }}>
-                        {s.updated_at ? formatDateLocal(s.updated_at) : "-"}
-                      </td>
-                      <td className="admin-td" style={{ width: "90px" }}>
-                        <ToggleSwitch
-                          checked={!!s.is_active}
-                          onChange={() =>
-                            handleToggleActive(s.id, !!s.is_active)
-                          }
-                          size="sm"
-                          onLabel="ON"
-                          offLabel="OFF"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <PaginationControls
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+              {s.title}
+            </span>
+          </td>
+          <td className="admin-td" style={{ width: 110 }}>{s.instructor || "-"}</td>
+          <td className="admin-td" style={{ width: 170, whiteSpace: "normal" }}>
+            {sessionsCount <= 1 ? (
+              <div style={{ lineHeight: 1.3 }}>
+                {formatDateOnly(s.start_date)}
+                <br />~{formatDateOnly(s.end_date)}
+              </div>
+            ) : (
+              <span title={s.__sessionsTooltip || ""} style={{ display: "inline-block", cursor: "help" }}>
+                {`${sessionsCount}회차`}
+              </span>
+            )}
+          </td>
+          <td className="admin-td" style={{ width: 130 }}>
+            {sessionsCount > 1 ? (
+              <span title={s.__seatsTooltip || ""} style={{ cursor: "help" }}>{`${sessionsCount}회차`}</span>
+            ) : (
+              s.__seatsText
+            )}
+          </td>
+          <td className="admin-td" style={{ width: 110 }}>
+            {s.price != null ? `${Number(s.price).toLocaleString()}원` : "-"}
+          </td>
+          <td className="admin-td" style={{ width: 160 }}>{s.product_title ?? "-"}</td>
+          <td className="admin-td" style={{ width: 120 }}>{s.product_type ?? "-"}</td>
+          <td className="admin-td" style={{ width: 150 }}>{formatDateLocal(s.created_at)}</td>
+          <td className="admin-td" style={{ width: 150 }}>{s.updated_at ? formatDateLocal(s.updated_at) : "-"}</td>
+          <td className="admin-td" style={{ width: 90 }}>
+            <ToggleSwitch
+              checked={!!s.is_active}
+              onChange={() => handleToggleActive(s.id, !!s.is_active)}
+              size="sm"
+              onLabel="ON"
+              offLabel="OFF"
+            />
+          </td>
         </>
+      );
+    }}
+  />
+
+  <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
+</>
+
       ) : (
         // 모바일/태블릿: 카드형
         <>
@@ -1018,16 +876,6 @@ if (!ok) return;
     </div>
   );
 }
-
-/* 테이블 공통 */
-const tdCenter = {
-  padding: "12px",
-  textAlign: "center",
-  height: "60px",
-  verticalAlign: "middle",
-};
-const thCenter = { ...tdCenter, fontWeight: "bold", cursor: "pointer" };
-
 /* 버튼 */
 const resetBtn = {
   padding: "8px 14px",
