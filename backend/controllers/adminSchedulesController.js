@@ -69,18 +69,32 @@ exports.listSchedules = async (req, res) => {
   const tabType = qTabType ?? legacyType;
 
   try {
-    const [rows] = await pool.execute(`
-      SELECT
-        s.*,
-        s.image_url     AS schedule_image,
-        s.thumbnail_url AS thumbnail,
-        p.title         AS product_title,
-        p.type          AS product_type,
-        p.category      AS product_category,
-        p.image_url     AS product_image
-      FROM schedules s
-      LEFT JOIN products p ON s.product_id = p.id
-    `);
+    // LIMIT/OFFSET 적용 + totalCount 쿼리 추가 + 필요한 필드만 SELECT
+const limit = Math.max(parseInt(pageSize, 10) || 20, 1);
+const offset = (Math.max(parseInt(page, 10), 1) - 1) * limit;
+
+const [rows] = await pool.execute(`
+  SELECT
+    s.id, s.product_id, s.title, s.start_date, s.end_date,
+    s.total_spots, s.is_active, s.created_at, s.updated_at,
+    s.image_url     AS schedule_image,
+    s.thumbnail_url AS thumbnail,
+    p.title         AS product_title,
+    p.type          AS product_type,
+    p.category      AS product_category,
+    p.image_url     AS product_image
+  FROM schedules s
+  LEFT JOIN products p ON s.product_id = p.id
+  ORDER BY s.${sort} ${order}
+  LIMIT ? OFFSET ?
+`, [limit, offset]);
+
+const [[{ totalCount }]] = await pool.execute(`
+  SELECT COUNT(*) AS totalCount
+  FROM schedules s
+  LEFT JOIN products p ON s.product_id = p.id
+`);
+
 
     let filtered = rows;
     if (String(include_sessions) === "1") {
