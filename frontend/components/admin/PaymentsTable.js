@@ -5,12 +5,12 @@ import dynamic from "next/dynamic";
 const PaymentDetailModal = dynamic(() => import("./PaymentDetailModal"), { ssr: false });
 import { formatPrice } from "@/lib/format";
 import "react-datepicker/dist/react-datepicker.css";
-import PaginationControls from "@/components/common/PaginationControls";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import StatusBadge from "@/components/common/StatusBadge";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
+import VirtualizedTable from "@/components/common/VirtualizedTable"; // ✅ 추가
 
 /** 로컬시간 포맷 (YYYY-MM-DD HH:mm:ss) */
 function formatDateLocal(iso) {
@@ -224,13 +224,7 @@ export default function PaymentsTable({
     setCurrentPage(1);
   };
 
-  // 페이징 계산
-  const totalPages = useMemo(
-    () => Math.ceil(totalCount / itemsPerPage),
-    [totalCount, itemsPerPage]
-  );
-
-  // ① 계산 캐싱: 렌더링에서 반복 호출되는 계산을 한 번만 수행
+    // ① 계산 캐싱: 렌더링에서 반복 호출되는 계산을 한 번만 수행
   const processedPayments = useMemo(() => {
     return payments.map((p) => {
       const { coupon, point, total } = getDiscountParts(p);
@@ -526,195 +520,141 @@ export default function PaymentsTable({
               );
             })}
           </div>
-
-          <PaginationControls
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </>
+                 </>
       ) : (
         // 데스크톱
         <>
-          <div className="admin-table-wrap" style={{ overflowX: "auto" }}>
-            <table
-              className="admin-table"
-              style={{ tableLayout: "fixed", width: "100%" }} // ✅ 고정 레이아웃
-            >
-              <thead style={{ backgroundColor: "#f9f9f9" }}>
-                <tr>
-                  <th className="admin-th" style={{ width: "40px" }}>
+          <VirtualizedTable
+            tableClassName="admin-table"
+            height={560}           // 필요 시 조정
+            rowHeight={56}         // 내용 높이에 맞게
+            resetKey={`${currentPage}|${itemsPerPage}|${sortConfig.key}|${sortConfig.direction}|${searchSyncKey}`}
+            columns={[
+              {
+                key: "sel",
+                title: (
+                  <input
+                    type="checkbox"
+                    checked={isAllChecked}
+                    onChange={(e) => toggleAll(e.target.checked)}
+                  />
+                ),
+                width: 40,
+              },
+              { key: "payment_id", title: "주문번호", width: 100, onClickHeader: () => handleSort("payment_id") },
+              { key: "username",   title: "사용자",   width: 160, onClickHeader: () => handleSort("username") },
+              { key: "qty",        title: "수량",     width: 80,  onClickHeader: () => handleSort("total_quantity") },
+              { key: "amount",     title: "결제금액", width: 120, onClickHeader: () => handleSort("amount") },
+              { key: "discount",   title: "할인적용", width: 120, onClickHeader: () => handleSort("discount_total") },
+              { key: "method",     title: "결제수단", width: 100, onClickHeader: () => handleSort("payment_method") },
+              { key: "created_at", title: "결제일시", width: 160, onClickHeader: () => handleSort("created_at") },
+              { key: "status",     title: "상태",     width: 100, onClickHeader: () => handleSort("status") },
+            ]}
+            items={pagedPayments}
+            renderRowCells={({ item: p, index: idx }) => {
+              const id = p.payment_id ?? p.id;
+              return (
+                <>
+                  <td className="admin-td" style={{ width: 40 }}>
                     <input
                       type="checkbox"
-                      checked={isAllChecked}
-                      onChange={(e) => toggleAll(e.target.checked)}
+                      checked={selectedIds.includes(id)}
+                      onChange={(e) => toggleOne(id, e.target.checked)}
                     />
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "100px" }}
-                    onClick={() => handleSort("payment_id")}
-                  >
-                    주문번호
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "160px" }}
-                    onClick={() => handleSort("username")}
-                  >
-                    사용자
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "80px" }}
-                    onClick={() => handleSort("total_quantity")}
-                  >
-                    수량
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "120px" }}
-                    onClick={() => handleSort("amount")}
-                  >
-                    결제금액
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "120px" }}
-                    onClick={() => handleSort("discount_total")}
-                  >
-                    할인적용
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "100px" }}
-                    onClick={() => handleSort("payment_method")}
-                  >
-                    결제수단
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "160px" }}
-                    onClick={() => handleSort("created_at")}
-                  >
-                    결제일시
-                  </th>
-                  <th
-                    className="admin-th"
-                    style={{ width: "100px" }}
-                    onClick={() => handleSort("status")}
-                  >
-                    상태
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {pagedPayments.map((p, idx) => {
-                  const id = p.payment_id ?? p.id;
-                  return (
-                    <tr
-                      key={id}
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 100 }}>#{id}</td>
+      
+                  <td className="admin-td" style={{ width: 160 }}>
+                    {p.username || "-"}
+                    <br />
+                    <span style={{ fontSize: 13, color: "#888" }}>
+                      {p.email || "-"}
+                    </span>
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 80 }}>
+                    <span
                       style={{
-                        backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                        ...(p.integrity !== "OK"
+                          ? { color: "#b91c1c", fontWeight: 600 }
+                          : {}),
                       }}
+                      title={
+                        p.integrity !== "OK"
+                          ? p.integrity === "NO_ORDER"
+                            ? "결제는 있으나 연결된 주문 없음 (NO_ORDER)"
+                            : "주문은 있으나 아이템 없음 (NO_ITEMS)"
+                          : ""
+                      }
                     >
-                      <td className="admin-td">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(id)}
-                          onChange={(e) => toggleOne(id, e.target.checked)}
-                        />
-                      </td>
-                      <td className="admin-td">#{id}</td>
-                      <td className="admin-td">
-                        {p.username || "-"}
-                        <br />
-                        <span style={{ fontSize: 13, color: "#888" }}>
-                          {p.email || "-"}
+                      {p.total_quantity ?? 0}개
+                      {p.integrity !== "OK" && (
+                        <span style={{ marginLeft: 6, fontSize: 12 }}>
+                          ({p.integrity})
                         </span>
-                      </td>
-                      <td className="admin-td">
-                        <span
-                          style={{
-                            ...(p.integrity !== "OK"
-                              ? { color: "#b91c1c", fontWeight: 600 }
-                              : {}),
-                          }}
-                          title={
-                            p.integrity !== "OK"
-                              ? p.integrity === "NO_ORDER"
-                                ? "결제는 있으나 연결된 주문 없음 (NO_ORDER)"
-                                : "주문은 있으나 아이템 없음 (NO_ITEMS)"
-                              : ""
-                          }
-                        >
-                          {p.total_quantity ?? 0}개
-                          {p.integrity !== "OK" && (
-                            <span style={{ marginLeft: 6, fontSize: 12 }}>
-                              ({p.integrity})
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="admin-td">{formatPrice(p.amount)}원</td>
-                      <td className="admin-td">
-                        <div
-                          title={
-                            p.discountTotal > 0
-                              ? `쿠폰할인 ${formatPrice(p.coupon)}원\n포인트 ${formatPrice(p.point)}원`
-                              : ""
-                          }
-                          onClick={() =>
-                            setOpenDiscountId((prev) =>
-                              prev === id ? null : id
-                            )
-                          }
-                          style={{ cursor: p.discountTotal > 0 ? "pointer" : "default" }}
-                        >
-                          {p.discountTotal > 0
-                            ? `-${formatPrice(p.discountTotal)}원`
-                            : "미적용"}
-                        </div>
-
-                        {openDiscountId === id && p.discountTotal > 0 && (
-                          <div
-                            style={{
-                              marginTop: 6,
-                              color: "#555",
-                              fontSize: 13,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {p.coupon > 0 && (
-                              <div>쿠폰할인 {formatPrice(p.coupon)}원</div>
-                            )}
-                            {p.point > 0 && (
-                              <div>포인트 {formatPrice(p.point)}원</div>
-                            )}
-                          </div>
+                      )}
+                    </span>
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 120 }}>
+                    {formatPrice(p.amount)}원
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 120 }}>
+                    <div
+                      title={
+                        p.discountTotal > 0
+                          ? `쿠폰할인 ${formatPrice(p.coupon)}원\n포인트 ${formatPrice(p.point)}원`
+                          : ""
+                      }
+                      onClick={() =>
+                        setOpenDiscountId((prev) => (prev === id ? null : id))
+                      }
+                      style={{ cursor: p.discountTotal > 0 ? "pointer" : "default" }}
+                    >
+                      {p.discountTotal > 0
+                        ? `-${formatPrice(p.discountTotal)}원`
+                        : "미적용"}
+                    </div>
+      
+                    {openDiscountId === id && p.discountTotal > 0 && (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          color: "#555",
+                          fontSize: 13,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {p.coupon > 0 && (
+                          <div>쿠폰할인 {formatPrice(p.coupon)}원</div>
                         )}
-                      </td>
-                      <td className="admin-td">{p.methodLabel}</td>
-                      <td className="admin-td">{formatDateLocal(p.created_at)}</td>
-
-                      <td className="admin-td">
-                        <StatusBadge status={p.statusKey}>{p.statusLabel}</StatusBadge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <PaginationControls
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+                        {p.point > 0 && (
+                          <div>포인트 {formatPrice(p.point)}원</div>
+                        )}
+                      </div>
+                    )}
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 100 }}>
+                    {p.methodLabel}
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 160 }}>
+                    {formatDateLocal(p.created_at)}
+                  </td>
+      
+                  <td className="admin-td" style={{ width: 100 }}>
+                    <StatusBadge status={p.statusKey}>{p.statusLabel}</StatusBadge>
+                  </td>
+                </>
+              );
+            }}
           />
         </>
-      )}
+      )
+      }
 
       {modalPaymentId && (
         <PaymentDetailModal

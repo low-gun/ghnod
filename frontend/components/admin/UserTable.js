@@ -7,10 +7,10 @@ import { formatLocalReadable, formatPrice } from "@/lib/format";
 import AdminToolbar from "@/components/common/AdminToolbar";
 import AdminSearchFilter from "@/components/common/AdminSearchFilter";
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
-import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
+import VirtualizedTable from "@/components/common/VirtualizedTable"; // ✅ 추가
 import ToggleSwitch from "@/components/common/ToggleSwitch";
 import SelectableCard from "@/components/common/SelectableCard"; // ← 추가
 import dynamic from "next/dynamic";
@@ -166,11 +166,7 @@ export default function UserTable({
   const normalizeDate = (d) =>
     d instanceof Date ? d.toISOString().slice(0, 10) : d || undefined;
 
-  const totalPages = useMemo(
-    () => Math.ceil(totalCount / pageSize),
-    [totalCount, pageSize]
-  );
-
+  
   const getSummaryByUser = useCallback(
     (u) => {
       const ov =
@@ -570,115 +566,7 @@ export default function UserTable({
     externalStartDate,
     externalEndDate,
   ]);
-  // 렌더링
-  // 헤더 th를 만드는 헬퍼 (정렬 가능 헤더)
-  const ThSort = ({ label, keyName }) => (
-    <th
-      key={keyName}
-      onClick={() => handleSort(keyName)}
-      style={{ cursor: "pointer" }}
-    >
-      {label}
-    </th>
-  );
-  // ✅ 공통 열 너비(px) — 탭 전환해도 바뀌지 않도록 고정
-  const COL_W = {
-    sel: 44, // 체크박스
-    no: 64, // No
-    code: 110, // 코드
-    name: 180, // 이름
-    email: 260, // 이메일
-    phone: 140, // 전화번호
-    // 목록 전용
-    role: 110, // 권한
-    created: 160, // 생성일시
-    updated: 160, // 수정일시
-    password: 100, // 비밀번호
-    status: 96, // 상태
-    // 구매내역(요약) 전용
-    courseCount: 110, // 수강횟수
-    paymentTotal: 130, // 결제합계
-    pointBalance: 130, // 잔여포인트
-    couponBalance: 110, // 잔여쿠폰
-    inquiryCount: 110, // 문의내역
-  };
-
-  // ✅ 표 열 그룹: 데스크톱에서 열 너비 고정
-  const renderColGroup = () => {
-    // 공통 6개(체크박스, No, 코드, 이름, 이메일, 전화번호)
-    const common = [
-      COL_W.sel,
-      COL_W.no,
-      COL_W.code,
-      COL_W.name,
-      COL_W.email,
-      COL_W.phone,
-    ];
-    const listExtra = [
-      COL_W.role,
-      COL_W.created,
-      COL_W.updated,
-      COL_W.password,
-      COL_W.status,
-    ];
-    const summaryExtra = [
-      COL_W.courseCount,
-      COL_W.paymentTotal,
-      COL_W.pointBalance,
-      COL_W.couponBalance,
-      COL_W.inquiryCount,
-    ];
-
-    const widths =
-      activeTab === "list"
-        ? [...common, ...listExtra]
-        : [...common, ...summaryExtra];
-
-    return (
-      <colgroup>
-        {widths.map((w, i) => (
-          <col key={i} style={{ width: w, minWidth: w }} />
-        ))}
-      </colgroup>
-    );
-  };
-  const renderTableHead = () => {
-    if (activeTab === "list") {
-      const cells = [
-        <th key="sel">
-          <input type="checkbox" onChange={handleSelectAll} />
-        </th>,
-        <th key="no">No</th>,
-        <ThSort key="code" label="코드" keyName="id" />,
-        <ThSort key="username" label="이름" keyName="username" />,
-        <ThSort key="email" label="이메일" keyName="email" />,
-        <ThSort key="phone" label="전화번호" keyName="phone" />,
-        <ThSort key="role" label="권한" keyName="role" />,
-        <ThSort key="created" label="생성일시" keyName="created_at" />,
-        <ThSort key="updated" label="수정일시" keyName="updated_at" />,
-        <th key="pw">비밀번호</th>,
-        <th key="status">상태</th>,
-      ];
-      return <tr>{cells}</tr>;
-    }
-
-    const cells = [
-      <th key="sel">
-        <input type="checkbox" onChange={handleSelectAll} />
-      </th>,
-      <th key="no">No</th>,
-      <th key="code">코드</th>,
-      <ThSort key="username" label="이름" keyName="username" />,
-      <ThSort key="email" label="이메일" keyName="email" />,
-      <th key="phone">전화번호</th>,
-      <ThSort key="courseCount" label="수강횟수" keyName="courseCount" />,
-      <ThSort key="paymentTotal" label="결제합계" keyName="paymentTotal" />,
-      <ThSort key="pointBalance" label="잔여포인트" keyName="pointBalance" />,
-      <ThSort key="couponBalance" label="잔여쿠폰" keyName="couponBalance" />,
-      <ThSort key="inquiryCount" label="문의내역" keyName="inquiryCount" />,
-    ];
-    return <tr>{cells}</tr>;
-  };
+   
   // 🔹 모바일/태블릿 카드 렌더러: 목록 탭
   const renderCardsList = () =>
     users.map((user, index) => {
@@ -1051,134 +939,7 @@ export default function UserTable({
     );
   }
 
-  const renderTableBody = () => {
-    if (activeTab === "list") {
-      return users.map((user, index) => {
-        const active = Number(user.is_deleted) !== 1;
-        return (
-          <tr key={user.id} style={{ opacity: active ? 1 : 0.6 }}>
-            <td>
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(user.id)}
-                onChange={() => handleSelectOne(user.id)}
-              />
-            </td>
-            <td>{(currentPage - 1) * pageSize + index + 1}</td>
-            <td>user-{user.id}</td>
-            <td className="admin-td">
-              <span
-                role="link"
-                tabIndex={0}
-                onClick={() => handleOpenDetailClick(user.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ")
-                    handleOpenDetailClick(user.id);
-                }}
-                style={{
-                  color: "#0070f3",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                }}
-              >
-                {user.username}
-              </span>
-            </td>
-
-            <td>{user.email}</td>
-            <td>{user.phone}</td>
-            <td>{user.role}</td>
-            <td>{formatLocalReadable(user.created_at)}</td>
-            <td>{formatLocalReadable(user.updated_at)}</td>
-            <td>
-              <button
-                style={resetButtonStyle}
-                onClick={() => handleResetPassword(user)}
-                disabled={confirming}
-              >
-                {confirming ? "처리 중..." : "초기화"}
-              </button>
-            </td>
-            <td>
-              <ToggleSwitch
-                size="sm"
-                checked={active}
-                disabled={togglingId === user.id}
-                onChange={async () => {
-                  const ok = await showConfirm("계정 상태를 변경하시겠습니까?");
-                  if (!ok) return;
-                  handleToggleUserStatus(user.id, Number(user.is_deleted));
-                }}
-                onLabel="ON"
-                offLabel="OFF"
-              />
-            </td>
-          </tr>
-        );
-      });
-    }
-    return users.map((user, index) => {
-      const s = getSummaryByUser(user);
-      const active = Number(user.is_deleted) !== 1;
-      return (
-        <tr key={user.id} style={{ opacity: active ? 1 : 0.6 }}>
-          <td>
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(user.id)}
-              onChange={() => handleSelectOne(user.id)}
-            />
-          </td>
-          <td>{(currentPage - 1) * pageSize + index + 1}</td>
-          <td>user-{user.id}</td>
-          <td className="admin-td">
-            <span
-              role="link"
-              tabIndex={0}
-              onClick={() => handleOpenDetailClick(user.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ")
-                  handleOpenDetailClick(user.id);
-              }}
-              style={{
-                color: "#0070f3",
-                cursor: "pointer",
-                textDecoration: "none",
-              }}
-            >
-              {user.username}
-            </span>
-          </td>
-
-          <td>{user.email}</td>
-          <td>{user.phone ?? summariesMap[user.id]?.phone ?? "-"}</td>
-          <td>{s.courseCount ?? 0}건</td>
-
-          <td>{formatPrice(s.paymentTotal ?? 0)}원</td>
-
-          <td
-            className="admin-td-link"
-            onClick={() => setSelectedUserForPoint(user)}
-          >
-            {formatPrice(s.pointBalance ?? 0)}P
-          </td>
-          <td
-            className="admin-td-link"
-            onClick={() => setSelectedUserForCoupon(user)}
-          >
-            {s.couponBalance ?? 0}장
-          </td>
-          <td
-            className="admin-td-link"
-            onClick={() => setSelectedUserForInquiry(user)}
-          >
-            {s.inquiryCount ?? 0}건
-          </td>
-        </tr>
-      );
-    });
-  };
-
+  
   return (
     <div>
       {/* 내부 툴바: 외부 필터 사용 시 비활성화 */}
@@ -1347,28 +1108,129 @@ export default function UserTable({
             </div>
           ) : (
             // 🔹 데스크톱: 테이블
-            <div className="admin-table-wrap">
-              <table
-                className="admin-table"
-                style={{ tableLayout: "fixed", width: "100%" }} // ✅ 고정 레이아웃
-              >
-                {renderColGroup()}
-                {/* ✅ 열 너비 고정 */}
-                <thead style={adminTableHeadStyle}>{renderTableHead()}</thead>
-                <tbody>{renderTableBody()}</tbody>
-              </table>
-            </div>
+<VirtualizedTable
+  tableClassName="admin-table"
+  height={560}
+  rowHeight={48}
+  resetKey={`${activeTab}|${currentPage}|${pageSize}|${sortConfig.key}|${sortConfig.direction}|${searchSyncKey}`}
+  columns={
+    activeTab === "list"
+      ? [
+          { key: "sel",     title: <input type="checkbox" onChange={handleSelectAll} />, width: 44 },
+          { key: "no",      title: "No",        width: 64, onClickHeader: () => handleSort("id") },
+          { key: "code",    title: "코드",      width: 110, onClickHeader: () => handleSort("id") },
+          { key: "name",    title: "이름",      width: 180, onClickHeader: () => handleSort("username") },
+          { key: "email",   title: "이메일",    width: 260, onClickHeader: () => handleSort("email") },
+          { key: "phone",   title: "전화번호",  width: 140, onClickHeader: () => handleSort("phone") },
+          { key: "role",    title: "권한",      width: 110, onClickHeader: () => handleSort("role") },
+          { key: "created", title: "생성일시",  width: 160, onClickHeader: () => handleSort("created_at") },
+          { key: "updated", title: "수정일시",  width: 160, onClickHeader: () => handleSort("updated_at") },
+          { key: "pw",      title: "비밀번호",  width: 100 },
+          { key: "status",  title: "상태",      width: 96 },
+        ]
+      : [
+          { key: "sel",     title: <input type="checkbox" onChange={handleSelectAll} />, width: 44 },
+          { key: "no",      title: "No",        width: 64, onClickHeader: () => handleSort("id") },
+          { key: "code",    title: "코드",      width: 110 },
+          { key: "name",    title: "이름",      width: 180, onClickHeader: () => handleSort("username") },
+          { key: "email",   title: "이메일",    width: 260, onClickHeader: () => handleSort("email") },
+          { key: "phone",   title: "전화번호",  width: 140 },
+          { key: "course",  title: "수강횟수",  width: 110, onClickHeader: () => handleSort("courseCount") },
+          { key: "paytot",  title: "결제합계",  width: 130, onClickHeader: () => handleSort("paymentTotal") },
+          { key: "point",   title: "잔여포인트",width: 130, onClickHeader: () => handleSort("pointBalance") },
+          { key: "coupon",  title: "잔여쿠폰",  width: 110, onClickHeader: () => handleSort("couponBalance") },
+          { key: "inq",     title: "문의내역",  width: 110, onClickHeader: () => handleSort("inquiryCount") },
+        ]
+  }
+  items={users}
+  renderRowCells={({ item: user, index }) => {
+    const rowNo = index + 1;
+    const s = getSummaryByUser(user);
+    const active = Number(user.is_deleted) !== 1;
+
+    if (activeTab === "list") {
+      return (
+        <>
+          <td><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => handleSelectOne(user.id)} /></td>
+          <td>{rowNo}</td>
+          <td>{`user-${user.id}`}</td>
+          <td className="admin-td">
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={() => handleOpenDetailClick(user.id)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleOpenDetailClick(user.id); }}
+              style={{ color: "#0070f3", cursor: "pointer", textDecoration: "none" }}
+            >
+              {user.username}
+            </span>
+          </td>
+          <td>{user.email}</td>
+          <td>{user.phone}</td>
+          <td>{user.role}</td>
+          <td>{formatLocalReadable(user.created_at)}</td>
+          <td>{formatLocalReadable(user.updated_at)}</td>
+          <td>
+            <button
+              style={resetButtonStyle}
+              onClick={() => handleResetPassword(user)}
+              disabled={confirming}
+            >
+              {confirming ? "처리 중..." : "초기화"}
+            </button>
+          </td>
+          <td>
+            <ToggleSwitch
+              size="sm"
+              checked={active}
+              disabled={togglingId === user.id}
+              onChange={async () => {
+                const ok = await showConfirm("계정 상태를 변경하시겠습니까?");
+                if (!ok) return;
+                handleToggleUserStatus(user.id, Number(user.is_deleted));
+              }}
+              onLabel="ON"
+              offLabel="OFF"
+            />
+          </td>
+        </>
+      );
+    }
+
+    // summary 탭
+    return (
+      <>
+        <td><input type="checkbox" checked={selectedIds.includes(user.id)} onChange={() => handleSelectOne(user.id)} /></td>
+        <td>{rowNo}</td>
+        <td>{`user-${user.id}`}</td>
+        <td className="admin-td">
+          <span
+            role="link"
+            tabIndex={0}
+            onClick={() => handleOpenDetailClick(user.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleOpenDetailClick(user.id); }}
+            style={{ color: "#0070f3", cursor: "pointer", textDecoration: "none" }}
+          >
+            {user.username}
+          </span>
+        </td>
+        <td>{user.email}</td>
+        <td>{user.phone ?? summariesMap[user.id]?.phone ?? "-"}</td>
+        <td>{s.courseCount ?? 0}건</td>
+        <td>{formatPrice(s.paymentTotal ?? 0)}원</td>
+        <td className="admin-td-link" onClick={() => setSelectedUserForPoint(user)}>{formatPrice(s.pointBalance ?? 0)}P</td>
+        <td className="admin-td-link" onClick={() => setSelectedUserForCoupon(user)}>{s.couponBalance ?? 0}장</td>
+        <td className="admin-td-link" onClick={() => setSelectedUserForInquiry(user)}>{s.inquiryCount ?? 0}건</td>
+      </>
+    );
+  }}
+/>
+
           )}
         </>
       )}
 
-      <PaginationControls
-        page={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
-
-      {/* 모달 */}
+            {/* 모달 */}
       {showCouponModal && (
         <CouponTemplateModal onClose={() => setShowCouponModal(false)} />
       )}
@@ -1429,7 +1291,6 @@ const resetButtonStyle = {
   borderRadius: "6px",
   cursor: "pointer",
 };
-const adminTableHeadStyle = { background: "#f9f9f9" };
 const emptyBoxStyle = { padding: 18, textAlign: "center" };
 const skeletonGridStyle = { display: "grid", gap: 12 };
 const actionBtnStyle = {

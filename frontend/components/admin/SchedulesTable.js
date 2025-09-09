@@ -2,14 +2,11 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import SearchFilter from "@/components/common/SearchFilter";
 import api from "@/lib/api";
-import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
-
-// ✅ 공통 UI
 import AdminToolbar from "@/components/common/AdminToolbar";
 import TableSkeleton from "@/components/common/skeletons/TableSkeleton";
 import CardSkeleton from "@/components/common/skeletons/CardSkeleton";
@@ -428,13 +425,7 @@ if (!ok) return;
     setTabType("전체");
   };
 
-  // ✅ 페이징
-  const totalPages = useMemo(
-    () => Math.ceil((total || 0) / pageSize),
-    [total, pageSize]
-  );
-
-  // ========== 렌더 ==========
+    // ========== 렌더 ==========
   return (
     <div>
       {/* 상단 툴바 */}
@@ -596,7 +587,7 @@ if (!ok) return;
     ]}
     items={viewRows}
     renderRowCells={({ item: s, index: idx }) => {
-      const rowNo = (page - 1) * pageSize + (idx + 1);
+      const rowNo = idx + 1;
       const sessionsCount = Number(s.sessions_count || 0);
       const thumbSrc = s.thumbnail || s.image_url || s.product_image;
       return (
@@ -660,8 +651,6 @@ if (!ok) return;
       );
     }}
   />
-
-  <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
 </>
 
       ) : (
@@ -669,8 +658,8 @@ if (!ok) return;
         <>
           <div style={{ display: "grid", gap: 12 }}>
           {viewRows.map((s, idx) => {
-              const rowNo = (page - 1) * pageSize + (idx + 1);
-              const isSelected = selectedIds.includes(s.id);
+const rowNo = idx + 1;
+const isSelected = selectedIds.includes(s.id);
               const toggleSelected = () => toggleOne(s.id, !isSelected);
               const sessionsCount = Number(s.sessions_count || 0);
 
@@ -865,13 +854,7 @@ if (!ok) return;
               );
             })}
           </div>
-
-          <PaginationControls
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
-        </>
+                </>
       )}
     </div>
   );

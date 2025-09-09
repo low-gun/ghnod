@@ -13,7 +13,6 @@ import SelectableCard from "@/components/common/SelectableCard";
 import VirtualizedTable from "@/components/common/VirtualizedTable"; // ✅ 추가
 import AdminToolbar from "@/components/common/AdminToolbar";
 import AdminSearchFilter from "@/components/common/AdminSearchFilter";
-import PaginationControls from "@/components/common/PaginationControls";
 import PageSizeSelector from "@/components/common/PageSizeSelector";
 import ExcelDownloadButton from "@/components/common/ExcelDownloadButton";
 
@@ -347,9 +346,6 @@ export default function ProductTable({
     setEndDate(null);
   };
 
-  // 페이징
-const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pageSize]);
-
   return (
     <div>
       {/* 상단 툴바 */}
@@ -573,7 +569,7 @@ const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pag
             onChange={(e) => toggleOne(p.id, e.target.checked)}
           />
         </td>
-        <td className="admin-td">{(page - 1) * pageSize + (idx + 1)}</td>
+        <td className="admin-td">{idx + 1}</td>
         <td
           className="admin-td"
           title={p.code}
@@ -654,8 +650,6 @@ const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pag
       </>
     )}
   />
-
-  <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
 </>
 
     ) : (
@@ -696,8 +690,8 @@ const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pag
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div style={{ fontSize: 13, color: "#666" }}>
-                      No. {(page - 1) * pageSize + (idx + 1)}
-                    </div>
+  No. {idx + 1}
+</div>
                     <div style={{ fontSize: 13, color: "#999" }}>
                       P-{p.id}
                     </div>
@@ -813,8 +807,7 @@ const totalPages = useMemo(() => Math.ceil((total || 0) / pageSize), [total, pag
           })}
         </div>
     
-        <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
-      </>
+             </>
     )}
     
 
