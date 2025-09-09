@@ -26,7 +26,6 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
     const [rows] = await pool.execute(`
       SELECT
         id,
-        code,
         title,
         type,
         price,
@@ -36,7 +35,7 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
         image_url,
         thumbnail_url
       FROM products
-    `);
+    `); 
     
     let filtered = rows;
 
