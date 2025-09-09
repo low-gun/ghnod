@@ -23,8 +23,21 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
   } = req.query;
 
   try {
-    const [rows] = await pool.execute("SELECT * FROM products");
-
+    const [rows] = await pool.execute(`
+      SELECT
+        id,
+        code,
+        title,
+        type,
+        price,
+        is_active,
+        created_at,
+        updated_at,
+        image_url,
+        thumbnail_url
+      FROM products
+    `);
+    
     let filtered = rows;
 
     // 🗂️ 상품 분류 필터 (탭에서 선택된 유형)
