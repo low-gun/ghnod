@@ -213,50 +213,72 @@ const [selectedIds, setSelectedIds] = useState([]);
   // ✅ 목록 조회
   const abortRef = useRef(null);
 
-const fetchSchedules = async (signal) => {
-  try {
-    setIsLoading(true);
-    setLoadError("");
-    const params = {
-      pageSize,
-      page,
-      sortKey: sortConfig.key,
-      sortDir: sortConfig.direction,
-      searchField: effSearchField,
-      searchQuery: effSearchQuery,
-      include_sessions: 0, // 항상 0으로 (진입 시 가볍게)
-    };
-    
-    if (effStartDate) params.start_date = effStartDate;
-    if (effEndDate) params.end_date = effEndDate;
-    if (tabType && tabType !== "전체") params.type = tabType;
-
-    // 진행중: 기간 파라미터 제거 + in_progress=1
-    if (useExternalToolbar && externalInProgress) {
-      delete params.start_date;
-      delete params.end_date;
-      params.in_progress = 1;
+  const fetchSchedules = async (signal) => {
+    try {
+      setIsLoading(true);
+      setLoadError("");
+  
+      const params = {
+        pageSize,
+        page,
+        sortKey: sortConfig.key,
+        sortDir: sortConfig.direction,
+        searchField: effSearchField,
+        searchQuery: effSearchQuery,
+        include_sessions: !isNarrow ? 1 : 0, // 실제 상황 그대로 관찰(일단 유지)
+      };
+  
+      if (effStartDate) params.start_date = effStartDate;
+      if (effEndDate) params.end_date = effEndDate;
+      if (tabType && tabType !== "전체") params.type = tabType;
+  
+      // 진행중: 기간 파라미터 제거 + in_progress=1
+      if (useExternalToolbar && externalInProgress) {
+        delete params.start_date;
+        delete params.end_date;
+        params.in_progress = 1;
+      }
+  
+      // === 콘솔 트레이싱 시작 ===
+      const fetchKey = `[FETCH /admin/schedules] ${JSON.stringify(params)}`;
+      console.log(fetchKey, { refreshKey, isNarrow, autoFetchEnabled });
+      console.time(fetchKey);
+  
+      const res = await api.get("admin/schedules", { params, signal });
+  
+      console.timeEnd(fetchKey);
+      try {
+        const approxKB = Math.round(
+          new Blob([JSON.stringify(res?.data ?? {})]).size / 1024
+        );
+        console.log(`${fetchKey} ~ response size ~ approx ${approxKB} KB`);
+        const count =
+          res?.data?.schedules && Array.isArray(res.data.schedules)
+            ? res.data.schedules.length
+            : -1;
+        console.log(`${fetchKey} ~ schedules.length =`, count);
+      } catch {}
+      // === 콘솔 트레이싱 끝 ===
+  
+      if (res.data?.success) {
+        setSchedules(res.data.schedules || []);
+        const t =
+          res.data.total ??
+          res.data.totalCount ??
+          res.data.pagination?.total ??
+          (Array.isArray(res.data.schedules) ? res.data.schedules.length : 0);
+        setTotal(Number(t) || 0);
+      } else {
+        setLoadError("일정 목록을 불러오지 못했습니다.");
+      }
+    } catch (e) {
+      if (e?.name === "CanceledError" || e?.name === "AbortError") return;
+      setLoadError("일정 목록 조회 실패");
+    } finally {
+      setIsLoading(false);
     }
-
-    const res = await api.get("admin/schedules", { params, signal });
-    if (res.data?.success) {
-      setSchedules(res.data.schedules || []);
-      const t =
-        res.data.total ??
-        res.data.totalCount ??
-        res.data.pagination?.total ??
-        (Array.isArray(res.data.schedules) ? res.data.schedules.length : 0);
-      setTotal(Number(t) || 0);
-    } else {
-      setLoadError("일정 목록을 불러오지 못했습니다.");
-    }
-  } catch (e) {
-    if (e?.name === "CanceledError" || e?.name === "AbortError") return;
-    setLoadError("일정 목록 조회 실패");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+  
   useEffect(() => {
     if (!mounted || !autoFetchEnabled) return;
     if (abortRef.current) abortRef.current.abort();
