@@ -224,7 +224,7 @@ const fetchSchedules = async (signal) => {
       sortDir: sortConfig.direction,
       searchField: effSearchField,
       searchQuery: effSearchQuery,
-      include_sessions: !isNarrow ? 1 : 0, // 데스크톱만 세션 상세 포함
+      include_sessions: 0, // 항상 0으로 (진입 시 가볍게)
     };
     
     if (effStartDate) params.start_date = effStartDate;
