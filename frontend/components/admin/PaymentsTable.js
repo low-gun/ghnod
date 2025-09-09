@@ -1,5 +1,5 @@
 // frontend/components/admin/PaymentsTable.js
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import dynamic from "next/dynamic";
 const PaymentDetailModal = dynamic(() => import("./PaymentDetailModal"), { ssr: false });
@@ -258,116 +258,109 @@ export default function PaymentsTable({
   const toggleOne = (id, checked) =>
     setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
 
-  // 데이터 호출
-  const fetchPayments = async () => {
-    setIsFetching(true);
-    try {
-      // (fetchPayments 내부)
-      const baseParams = {
-        page: currentPage,
-        pageSize: itemsPerPage,
-        sort: sortConfig.key,
-        order: sortConfig.direction,
-        // 기존 스펙
-        type: externalSearchType,
-        search: externalSearchQuery,
-      };
+// 데이터 호출 (단순 패턴)
+const fetchPayments = async (signal) => {
+  setIsFetching(true);
+  try {
+    const baseParams = {
+      page: currentPage,
+      pageSize: itemsPerPage,
+      sort: sortConfig.key,
+      order: sortConfig.direction,
+      type: externalSearchType,
+      search: externalSearchQuery,
+    };
 
-      // 백엔드 호환 스펙(동시 전송)
-      const compatParams = {
-        field: externalSearchType, // e.g. "username" | "payment_method" | "created_at"
-        keyword: externalSearchQuery, // e.g. "박현준" | "card" | "2025-08-01|2025-08-18"
-      };
+    const compatParams = { field: externalSearchType, keyword: externalSearchQuery };
 
-      // 날짜 검색이면 start_date / end_date도 전송
-      const rangeParams = {};
-      if (externalSearchType === "created_at" && typeof externalSearchQuery === "string") {
-        const [start, end] = externalSearchQuery.split("|");
-        if (start) rangeParams.start_date = start; // "YYYY-MM-DD"
-        if (end) rangeParams.end_date = end; // "YYYY-MM-DD"
-      }
+    const rangeParams = {};
+    if (externalSearchType === "created_at" && typeof externalSearchQuery === "string") {
+      const [start, end] = externalSearchQuery.split("|");
+      if (start) rangeParams.start_date = start;
+      if (end) rangeParams.end_date = end;
+    }
 
-      const params = { ...baseParams, ...compatParams, ...rangeParams };
-      // ✅ 상세 로그 제거 → 필요한 경우만 간단히 확인
-      console.log("🔎[PaymentsTable] fetch params", params);
+    const params = { ...baseParams, ...compatParams, ...rangeParams };
+    const tkey = `[FETCH /admin/payments #${Date.now()}]`;
+    console.log(tkey, params);
+    console.time(tkey);
+    
+    const res = await api.get("admin/payments", { params, signal });
+    
+    console.timeEnd(tkey);
+    
+try {
+  const approxKB = Math.round(new Blob([JSON.stringify(res?.data ?? {})]).size / 1024);
+  const count = Array.isArray(res?.data?.payments) ? res.data.payments.length : 0;
+  console.log(`[FETCH /admin/payments] ~ size ~ ${approxKB} KB, rows=${count}, total=${res?.data?.totalCount ?? -1}`);
+} catch {}
 
-      const res = await api.get("admin/payments", { params });
 
-      // ✅ 결과 요약만 출력
-      console.log("✅[PaymentsTable] result:", {
-        success: res?.data?.success,
-        totalCount: res?.data?.totalCount,
-        received: Array.isArray(res?.data?.payments) ? res.data.payments.length : 0,
+
+    if (res.data?.success) {
+      const list = res.data.payments || [];
+      setPayments(list);
+      setTotalCount(res.data.totalCount || 0);
+
+      onLoaded?.({
+        totalCount: res.data.totalCount ?? 0,
+        totalAmount: res.data.totalAmount ?? 0,
       });
 
-      if (res.data?.success) {
-        const list = res.data.payments || [];
-        setPayments(list);
-        setTotalCount(res.data.totalCount || 0);
+      if (typeof onExcelData === "function") {
+        const processedRows = list.map((p) => {
+          const { coupon, point, total } = getDiscountParts(p);
+          const statusKey = getStatusKey(p);
+          return {
+            ...p,
+            coupon,
+            point,
+            discountTotal: total,
+            statusLabel: getStatusLabel(p),
+            integrity: getIntegrityStatus(p),
+            methodLabel: getMethodLabel(p),
+            canRefund: statusKey === "paid",
+          };
+        });
 
-        // 상단 카드 동기화
-        if (typeof onLoaded === "function") {
-          onLoaded({
-            totalCount: res.data.totalCount ?? 0,
-            totalAmount: res.data.totalAmount ?? 0,
-          });
-        }
-
-        // 엑셀: 동일 로직으로 현 응답 기준의 가공 데이터를 만들어 전달
-        if (typeof onExcelData === "function") {
-          const processedRows = list.map((p) => {
-            const { coupon, point, total } = getDiscountParts(p);
-            const statusKey = getStatusKey(p);
-            return {
-              ...p,
-              coupon,
-              point,
-              discountTotal: total,
-              statusLabel: getStatusLabel(p),
-              integrity: getIntegrityStatus(p),
-              methodLabel: getMethodLabel(p),
-              canRefund: statusKey === "paid",
-            };
-          });
-
-          onExcelData({
-            headers: [
-              "주문번호",
-              "사용자",
-              "수량",
-              "결제금액",
-              "할인적용",
-              "결제수단",
-              "결제일시",
-              "상태",
-              "정합성",
-            ],
-            data: processedRows.map((p) => ({
-              주문번호: `pay-${p.payment_id ?? p.id}`,
-              사용자: p.username || "",
-              수량: p.total_quantity ?? 0,
-              결제금액: p.amount ?? 0,
-              할인적용: p.discountTotal,
-              결제수단: p.methodLabel,
-              결제일시: formatDateLocal(p.created_at),
-              상태: p.statusLabel,
-              정합성: p.integrity,
-            })),
-          });
-        }
+        onExcelData({
+          headers: [
+            "주문번호","사용자","수량","결제금액","할인적용",
+            "결제수단","결제일시","상태","정합성",
+          ],
+          data: processedRows.map((p) => ({
+            주문번호: `pay-${p.payment_id ?? p.id}`,
+            사용자: p.username || "",
+            수량: p.total_quantity ?? 0,
+            결제금액: p.amount ?? 0,
+            할인적용: p.discountTotal,
+            결제수단: p.methodLabel,
+            결제일시: formatDateLocal(p.created_at),
+            상태: p.statusLabel,
+            정합성: p.integrity,
+          })),
+        });
       }
-    } catch (err) {
-      console.error("❌ 결제내역 조회 오류:", err?.response?.data ?? err);
-    } finally {
-      setIsFetching(false);
     }
-  };
-
+  } catch (err) {
+    if (err?.name !== "CanceledError" && err?.name !== "AbortError") {
+      console.error("❌ 결제내역 조회 오류:", err?.response?.data ?? err);
+    }
+  } finally {
+    setIsFetching(false);
+  }
+};
+  
   // ✅ 외부 툴바 전용: 버튼 클릭 시 올려준 searchSyncKey 변화에만 반응
   useEffect(() => {
-    fetchPayments();
+    if (!mounted) return; // ✅ 하이드레이션 완료 후에만 호출
+
+    const controller = new AbortController();
+    fetchPayments(controller.signal);
+
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, sortConfig, searchSyncKey]);
+  }, [mounted, currentPage, itemsPerPage, sortConfig, searchSyncKey]);
 
   return (
     <div>
