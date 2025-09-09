@@ -70,17 +70,28 @@ exports.listSchedules = async (req, res) => {
   try {
     const [rows] = await pool.execute(`
       SELECT
-        s.*,
-        s.image_url     AS schedule_image,
-        s.thumbnail_url AS thumbnail,
-        p.title         AS product_title,
-        p.type          AS product_type,
-        p.category      AS product_category,
-        p.image_url     AS product_image
+        s.id,
+        s.product_id,
+        s.title,
+        s.start_date,
+        s.end_date,
+        s.location,
+        s.instructor,
+        s.total_spots,
+        s.price,
+        s.is_active,
+        s.created_at,
+        s.updated_at,
+        s.image_url           AS image_url,
+        s.thumbnail_url       AS thumbnail,
+        p.title               AS product_title,
+        p.type                AS product_type,
+        p.category            AS product_category,
+        p.image_url           AS product_image
       FROM schedules s
       LEFT JOIN products p ON s.product_id = p.id
     `);
-
+    
     let filtered = rows;
     if (String(include_sessions) === "1") {
       // 1) 회차 수/첫날/마지막날
