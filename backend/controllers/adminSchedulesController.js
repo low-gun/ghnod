@@ -571,6 +571,111 @@ await conn.execute(
     conn.release();
   }
 };
+// ===== 부분 수정(PATCH) : 들어온 필드만 동적 UPDATE, sessions 전달 시에만 세션 교체 =====
+exports.patchSchedule = async (req, res) => {
+  const { id } = req.params;
+
+  // 업로드 이미지 우선, data:image 차단
+  const uploadedUrl =
+    Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
+      ? req.uploadedImageUrls[0].original
+      : null;
+
+  const incoming = req.body || {};
+  const {
+    product_id, title, start_date, end_date,
+    location, instructor, description, total_spots,
+    price, detail, image_url, sessions,
+  } = incoming;
+  
+  // 이미지 URL 결정 및 data:image 차단
+  if (!uploadedUrl && typeof image_url === "string" && /^data:image\//i.test(image_url)) {
+    return res.status(400).json({
+      success: false,
+      message: "data:image URL은 허용하지 않습니다. 파일 업로드를 사용하세요.",
+    });
+  }
+  const resolvedImageUrl =
+    uploadedUrl !== null ? uploadedUrl
+    : image_url !== undefined ? image_url
+    : undefined; // undefined면 SET에 포함 안 함
+  
+  // 숫자 필드 정규화(빈 문자열 → null, 미전달은 undefined 유지)
+  const pricePatched = (price === '' ? null : price);
+  
+  const allowed = {
+    product_id, title, start_date, end_date,
+    location, instructor, description, total_spots,
+    price: pricePatched, detail,
+  };
+  if (resolvedImageUrl !== undefined) {
+    // 빈 문자열 등은 null 저장
+    allowed.image_url = resolvedImageUrl || null;
+  }
+  
+
+  // sessions 정규화 및 start/end 자동 보정(필요 시)
+  let normSessions = [];
+  if (Array.isArray(sessions)) {
+    normSessions = normalizeSessions(sessions);
+    if ((!allowed.start_date || !allowed.end_date) && normSessions.length) {
+      const starts = normSessions.map((s) => toDT(s.start_date, s.start_time)).sort();
+      const ends   = normSessions.map((s) => toDT(s.end_date,   s.end_time)).sort();
+      if (!allowed.start_date) allowed.start_date = starts[0];
+      if (!allowed.end_date)   allowed.end_date   = ends[ends.length - 1];
+    }
+  }
+
+  // undefined 키 제거
+  const keys = Object.keys(allowed).filter((k) => allowed[k] !== undefined);
+  if (keys.length === 0 && !Array.isArray(sessions)) {
+    return res.status(400).json({ success: false, message: "변경할 필드가 없습니다." });
+  }
+
+  // 동적 UPDATE
+  const setClauses = keys.map((k) => `${k} = ?`);
+  const values = keys.map((k) => allowed[k]);
+  // 항상 updated_at 갱신
+  setClauses.push("updated_at = NOW()");
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    if (keys.length > 0) {
+      await conn.execute(
+        `UPDATE schedules SET ${setClauses.join(", ")} WHERE id = ?`,
+        [...values, id]
+      );
+    }
+
+    // sessions가 전달된 경우에만 세션 테이블 교체
+    if (Array.isArray(sessions) && normSessions.length > 0) {
+      await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
+    
+      for (const s of normSessions) {
+        const ts = s.total_spots;
+        await conn.execute(
+          `INSERT INTO schedule_sessions
+             (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts ]
+        );
+      }
+    }
+    
+
+    await conn.commit();
+    return res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error("❌ patchSchedule 오류:", err);
+    return res.status(500).json({ success: false, message: "부분 수정 실패" });
+  } finally {
+    conn.release();
+  }
+};
+
 /* ===== 활성/비활성 ===== */
 exports.toggleActive = async (req, res) => {
   const { id } = req.params;
