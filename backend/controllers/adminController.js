@@ -108,79 +108,99 @@ function buildUserFilters(query) {
 /** ======================= 대시보드 요약 ======================= */
 exports.getDashboardSummary = async (req, res) => {
   try {
-    // 모든 쿼리를 병렬로 실행
-    const [
-      [[userRow]],
-      [[orderRow]],
-      [[totalRevenue]],
-      [[paymentRevenue]],
-      [[pendingInquiries]],
-      [[refundWait]],
-      [[weekRevenue]],
-      [[monthRevenue]],
-      [[todayVisitorsRow]],
-      [[newUsersThisMonth]],
-      [topProducts],
-      [recentOrdersFull],
-      [recentInquiriesFull],
-      [recentReviewsFull],
-    ] = await Promise.all([
-      pool.query("SELECT COUNT(*) AS count FROM users WHERE is_deleted = 0"),
-      pool.query(`
-        SELECT COUNT(*) AS count
-        FROM orders 
-        WHERE DATE(created_at) = CURDATE() AND order_status = 'paid'`),
-      pool.query(`
-        SELECT COALESCE(SUM(total_amount), 0) AS total
-        FROM orders WHERE order_status = 'paid'`),
-      pool.query(`
-        SELECT COALESCE(SUM(amount), 0) AS total
-        FROM payments WHERE TRIM(LOWER(status)) IN ('paid','완료')`),
-      pool.query(`SELECT COUNT(*) AS count FROM inquiries WHERE status = '접수'`),
-      pool.query(`SELECT COUNT(*) AS count FROM orders WHERE order_status = 'refunded'`),
-      pool.query(`
-        SELECT COALESCE(SUM(total_amount), 0) AS total
-        FROM orders
-        WHERE order_status = 'paid' 
-          AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)`),
-      pool.query(`
-        SELECT COALESCE(SUM(total_amount), 0) AS total
-        FROM orders
-        WHERE order_status = 'paid' 
-          AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`),
-      pool.query(`
-        SELECT COUNT(DISTINCT ip_address) AS count
-        FROM visit_logs WHERE DATE(visited_at) = CURDATE()`),
-      pool.query(`
-        SELECT COUNT(*) AS count
-        FROM users
-        WHERE is_deleted = 0
-          AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`),
-      pool.query(`
-        SELECT s.id AS productId, s.title, SUM(oi.quantity) AS total_sold
-        FROM order_items oi
-        JOIN schedules s ON oi.schedule_id = s.id
-        JOIN orders o ON oi.order_id = o.id
-        WHERE o.order_status = 'paid'
-        GROUP BY s.id, s.title
-        ORDER BY total_sold DESC
-        LIMIT 5`),
-      pool.query(`
-        SELECT o.id AS orderId, u.username, o.created_at
-        FROM orders o
-        JOIN users u ON o.user_id = u.id
-        WHERE o.order_status = 'paid'
-        ORDER BY o.created_at DESC
-        LIMIT 5`),
-      pool.query(`
-        SELECT id, title, status, created_at
-        FROM inquiries ORDER BY created_at DESC LIMIT 5`),
-      pool.query(`
-        SELECT id, comment, created_at
-        FROM reviews ORDER BY created_at DESC LIMIT 5`),
-    ]);
+    const [[userRow]] = await pool.query(
+      "SELECT COUNT(*) AS count FROM users WHERE is_deleted = 0"
+    );
+
+    const [[orderRow]] = await pool.query(
+      `SELECT COUNT(*) AS count
+       FROM orders 
+       WHERE DATE(created_at) = CURDATE() AND order_status = 'paid'`
+    );
+
+    const [[totalRevenue]] = await pool.query(`
+      SELECT COALESCE(SUM(total_amount), 0) AS total
+      FROM orders
+      WHERE order_status = 'paid'
+    `);
+
+    // 상태 공백/대소문자 혼용 대응
+    const [[paymentRevenue]] = await pool.query(`
+      SELECT COALESCE(SUM(amount), 0) AS total
+      FROM payments
+      WHERE TRIM(LOWER(status)) IN ('paid', '완료')
+    `);
+
+    const [[pendingInquiries]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM inquiries WHERE status = '접수'`
+    );
+
+    const [[refundWait]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM orders WHERE order_status = 'refunded'`
+    );
+
+    const [[weekRevenue]] = await pool.query(`
+      SELECT COALESCE(SUM(total_amount), 0) AS total
+      FROM orders
+      WHERE order_status = 'paid' 
+        AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)
+    `);
+
+    const [[monthRevenue]] = await pool.query(`
+      SELECT COALESCE(SUM(total_amount), 0) AS total
+      FROM orders
+      WHERE order_status = 'paid' 
+        AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+    `);
+
+    const [[todayVisitorsRow]] = await pool.query(`
+      SELECT COUNT(DISTINCT ip_address) AS count
+      FROM visit_logs
+      WHERE DATE(visited_at) = CURDATE()
+    `);
 
     const alertMessage = `답변 안 된 문의 ${pendingInquiries.count}건, 환불 대기 ${refundWait.count}건`;
+
+    const [[newUsersThisMonth]] = await pool.query(`
+      SELECT COUNT(*) AS count
+      FROM users
+      WHERE is_deleted = 0
+        AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+    `);
+
+    const [topProducts] = await pool.query(`
+      SELECT s.id AS productId, s.title, SUM(oi.quantity) AS total_sold
+      FROM order_items oi
+      JOIN schedules s ON oi.schedule_id = s.id
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.order_status = 'paid'
+      GROUP BY s.id, s.title
+      ORDER BY total_sold DESC
+      LIMIT 5
+    `);
+
+    const [recentOrdersFull] = await pool.query(`
+      SELECT o.id AS orderId, u.username, o.created_at
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      WHERE o.order_status = 'paid'
+      ORDER BY o.created_at DESC
+      LIMIT 5
+    `);
+
+    const [recentInquiriesFull] = await pool.query(`
+      SELECT id, title, status, created_at
+      FROM inquiries
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
+
+    const [recentReviewsFull] = await pool.query(`
+      SELECT id, comment, created_at
+      FROM reviews
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
 
     res.json({
       userCount: userRow.count,
@@ -202,7 +222,6 @@ exports.getDashboardSummary = async (req, res) => {
     res.status(500).json({ success: false, message: "요약 데이터 조회 실패" });
   }
 };
-
 
 /** ======================= 사용자 목록 조회 ======================= */
 exports.getUsers = async (req, res) => {
