@@ -1,7 +1,6 @@
 // /frontend/components/admin/AdminDashboard.js
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/router";
-import AdminTopPanels from "@/components/common/AdminTopPanels";
 import api from "@/lib/api";
 import dynamic from "next/dynamic";
 
@@ -355,42 +354,6 @@ setKpiTodayRevenue(Number(rToday.data?.totalAmount || 0));
 
   return (
     <div>
-      <AdminTopPanels
-        stats={stats}
-        onStatClick={handleStatClick}
-        activeKey={activeStatKey}
-        searchComponent={rangeChips}
-        actions={[
-          {
-            label: "일정 등록",
-            color: "blue",
-            onClick: () => router.push("/admin/schedules/new"),
-          },
-          {
-            label: "상품 등록",
-            color: "green",
-            onClick: () => router.push("/admin/products/new"),
-          },
-          {
-            label: "포인트 지급",
-            color: "yellow",
-            onClick: () => setShowPointGrant(true),
-          },
-          {
-            label: "쿠폰 지급",
-            color: "red",
-            onClick: () => setShowCouponGrant(true),
-          },
-          {
-            label: "미답변 문의",
-            color: "custom",
-            onClick: () => setShowUnanswered(true),
-          },
-          
-        ]}
-        excel={{ visible: false }}
-      />
-
       {/* 작업 큐 */}
       <section style={sectionBox}>
         <h3 style={sectionTitle}>작업 큐</h3>

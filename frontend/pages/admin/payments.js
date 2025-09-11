@@ -60,7 +60,7 @@ export default function AdminPaymentsPage() {
   if (isBlocked) return null;
 
   return (
-    <AdminLayout pageTitle="💳 결제내역">
+    <AdminLayout pageTitle="결제내역">
       <AdminTopPanels
         stats={stats}
         searchComponent={

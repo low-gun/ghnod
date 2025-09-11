@@ -197,7 +197,7 @@ export default function AdminProductsPage() {
   if (!user || user.role !== "admin") return null;
 
   return (
-    <AdminLayout pageTitle="📦 상품관리">
+    <AdminLayout pageTitle="상품관리">
       {/* 상단 패널(공통) */}
       <AdminTopPanels
         stats={stats}

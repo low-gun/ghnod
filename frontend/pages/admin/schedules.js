@@ -204,7 +204,7 @@ export default function AdminSchedulesPage() {
   if (isBlocked) return null;
 
   return (
-    <AdminLayout pageTitle="📅 교육일정">
+    <AdminLayout pageTitle="교육일정">
       <AdminTopPanels
         stats={stats}
         onStatClick={handleStatClick}

@@ -39,11 +39,11 @@ export default function AdminPage() {
 
   // 관리자만 접근
   return (
-    <AdminLayout>
-      <h1 style={{ padding: "24px 24px 0" }}>관리자 대시보드</h1>
+    <AdminLayout pageTitle="대시보드">
       <AdminDashboard />
     </AdminLayout>
   );
+
 }
 
 // ✅ getServerSideProps 없음 (CSR 기반)
