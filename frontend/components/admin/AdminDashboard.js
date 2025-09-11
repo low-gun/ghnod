@@ -109,17 +109,28 @@ export default function AdminDashboard() {
         const mEnd = fmt(endOfMonth(todayDate));
 
         // 오늘 결제/매출
-        const rToday = await api.get("admin/payments", {
-          params: {
-            page: 1,
-            pageSize: 1,
-            type: "created_at",
-            start_date: t,
-            end_date: t,
-          },
-        });
-        setKpiTodayOrders(Number(rToday.data?.totalCount || 0));
-        setKpiTodayRevenue(Number(rToday.data?.totalAmount || 0));
+        // 오늘 결제/매출
+const todayParams = {
+  page: 1,
+  pageSize: 1,
+  type: "created_at",
+  start_date: t,
+  end_date: t,
+};
+console.log("[FETCH Dashboard.todayPayments]", todayParams);
+console.time("[FETCH Dashboard.todayPayments]");
+
+const rToday = await api.get("admin/payments", { params: todayParams });
+
+console.timeEnd("[FETCH Dashboard.todayPayments]");
+try {
+  const approxKB = Math.round(new Blob([JSON.stringify(rToday?.data ?? {})]).size / 1024);
+  const count = rToday?.data?.totalCount ?? -1;
+  console.log(`[FETCH Dashboard.todayPayments] ~ size ~ ${approxKB} KB, total=${count}`);
+} catch {}
+
+setKpiTodayOrders(Number(rToday.data?.totalCount || 0));
+setKpiTodayRevenue(Number(rToday.data?.totalAmount || 0));
 
         // 이번 달 매출
         const rMonth = await api.get("admin/payments", {
