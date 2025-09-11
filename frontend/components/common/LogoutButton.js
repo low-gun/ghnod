@@ -7,8 +7,8 @@ export default function LogoutButton({ collapsed = false }) {
   const { logout, user } = useContext(UserContext);
   const router = useRouter();
 
-  const KAKAO_LOGOUT_URL = `https://kauth.kakao.com/oauth/logout?client_id=${process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY}&logout_redirect_uri=https://ghnod.vercel.app/logout/callback`;
-  const NAVER_LOGOUT_URL = `https://nid.naver.com/nidlogin.logout?returl=https://ghnod.vercel.app/logout/callback`;
+  const KAKAO_LOGOUT_URL = `https://kauth.kakao.com/oauth/logout?client_id=${process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY}&logout_redirect_uri=https://orpconsulting.co.kr/logout/callback`;
+  const NAVER_LOGOUT_URL = `https://nid.naver.com/nidlogin.logout?returl=https://orpconsulting.co.kr/logout/callback`;
   const { showAlert } = useGlobalAlert(); // ✅ 추가
 
   const handleLogout = async () => {

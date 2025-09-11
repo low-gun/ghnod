@@ -43,7 +43,7 @@ console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
 console.log("✅ PORT:", PORT);
 
 // ✅ CORS 허용 도메인 리스트
-const allowedOrigins = ["https://ghnod.vercel.app", "http://localhost:3000"];
+const allowedOrigins = ["https://orpconsulting.co.kr", "http://localhost:3000"];
 
 // ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 추가
 const corsOptions = {
@@ -65,11 +65,11 @@ app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (
       !origin ||
-      ["https://ghnod.vercel.app", "http://localhost:3000"].includes(origin)
+      ["https://orpconsulting.co.kr", "http://localhost:3000"].includes(origin)
     ) {
       res.header(
         "Access-Control-Allow-Origin",
-        origin || "https://ghnod.vercel.app"
+        origin || "https://orpconsulting.co.kr"
       );
       res.header("Vary", "Origin");
       res.header("Access-Control-Allow-Credentials", "true");

@@ -1,9 +1,9 @@
 {
   "lighthouseVersion": "12.8.2",
-  "requestedUrl": "https://ghnod.vercel.app/admin",
-  "mainDocumentUrl": "https://ghnod.vercel.app/admin",
-  "finalDisplayedUrl": "https://ghnod.vercel.app/admin",
-  "finalUrl": "https://ghnod.vercel.app/admin",
+  "requestedUrl": "https://orpconsulting.co.kr/admin",
+  "mainDocumentUrl": "https://orpconsulting.co.kr/admin",
+  "finalDisplayedUrl": "https://orpconsulting.co.kr/admin",
+  "finalUrl": "https://orpconsulting.co.kr/admin",
   "fetchTime": "2025-09-08T07:27:28.189Z",
   "gatherMode": "navigation",
   "runWarnings": [],
@@ -226,7 +226,7 @@
         ],
         "items": [
           {
-            "url": "https://ghnod.vercel.app/admin",
+            "url": "https://orpconsulting.co.kr/admin",
             "responseTime": 55.48999999999998
           }
         ],
@@ -351,7 +351,7 @@
         "chains": {
           "988FA7CAF8E777B68A707508C9415591": {
             "request": {
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "startTime": 949813.617069,
               "endTime": 949813.851026,
               "responseReceivedTime": 949813.8481289999,
@@ -500,19 +500,19 @@
             "scriptParseCompile": 0
           },
           {
-            "url": "https://ghnod.vercel.app/admin",
+            "url": "https://orpconsulting.co.kr/admin",
             "total": 102.93200000000002,
             "scripting": 3.2840000000000007,
             "scriptParseCompile": 0.504
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/framework-f31701c9d93f12a4.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/framework-f31701c9d93f12a4.js",
             "total": 68.36799999999998,
             "scripting": 57.11199999999998,
             "scriptParseCompile": 10.376
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
             "total": 64.02799999999999,
             "scripting": 55.50799999999999,
             "scriptParseCompile": 8.52
@@ -687,7 +687,7 @@
         ],
         "items": [
           {
-            "url": "https://ghnod.vercel.app/admin",
+            "url": "https://orpconsulting.co.kr/admin",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 0,
@@ -704,7 +704,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/css/4da9e22ec3a8b1ca.css",
+            "url": "https://orpconsulting.co.kr/_next/static/css/4da9e22ec3a8b1ca.css",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 244.25300002098083,
@@ -722,7 +722,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 244.7020000219345,
@@ -739,7 +739,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/framework-f31701c9d93f12a4.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/framework-f31701c9d93f12a4.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 244.84299993515015,
@@ -756,7 +756,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 244.95700001716614,
@@ -773,7 +773,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 245.05599999427795,
@@ -790,7 +790,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/9422-9a809f7837b9f2a6.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/9422-9a809f7837b9f2a6.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 245.1950000524521,
@@ -807,7 +807,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/pages/admin-4c87b888b33251e3.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/pages/admin-4c87b888b33251e3.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 245.30200004577637,
@@ -824,7 +824,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/G8D3GBsePfcPQWLeNWuC6/_buildManifest.js",
+            "url": "https://orpconsulting.co.kr/_next/static/G8D3GBsePfcPQWLeNWuC6/_buildManifest.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 245.44900000095367,
@@ -841,7 +841,7 @@
             "entity": "vercel.app"
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/G8D3GBsePfcPQWLeNWuC6/_ssgManifest.js",
+            "url": "https://orpconsulting.co.kr/_next/static/G8D3GBsePfcPQWLeNWuC6/_ssgManifest.js",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 245.5680000782013,
@@ -875,7 +875,7 @@
             "entity": "Google Fonts"
           },
           {
-            "url": "https://ghnod.vercel.app/favicon.ico",
+            "url": "https://orpconsulting.co.kr/favicon.ico",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 860.2460000514984,
@@ -966,61 +966,61 @@
           "initiators": [
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 380
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 664
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 747
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 825
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 909
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 987
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 1072
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 1158
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/admin",
+              "url": "https://orpconsulting.co.kr/admin",
               "lineNumber": 0,
               "columnNumber": 1242
             },
             {
               "type": "parser",
-              "url": "https://ghnod.vercel.app/_next/static/css/4da9e22ec3a8b1ca.css",
+              "url": "https://orpconsulting.co.kr/_next/static/css/4da9e22ec3a8b1ca.css",
               "lineNumber": 0,
               "columnNumber": 0
             },
@@ -1074,7 +1074,7 @@
             "rtt": 71.19200000000001
           },
           {
-            "origin": "https://ghnod.vercel.app",
+            "origin": "https://orpconsulting.co.kr",
             "rtt": 40.94500000000001
           },
           {
@@ -1121,7 +1121,7 @@
             "serverResponseTime": 36.21399999999997
           },
           {
-            "origin": "https://ghnod.vercel.app",
+            "origin": "https://orpconsulting.co.kr",
             "serverResponseTime": 30.44699999999999
           }
         ],
@@ -1592,7 +1592,7 @@
         ],
         "items": [
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
             "duration": 173,
             "startTime": 2430.842
           }
@@ -1606,7 +1606,7 @@
         "debugData": {
           "type": "debugdata",
           "urls": [
-            "https://ghnod.vercel.app/_next/static/chunks/webpack-fef6a0127ca78e7b.js"
+            "https://orpconsulting.co.kr/_next/static/chunks/webpack-fef6a0127ca78e7b.js"
           ],
           "tasks": [
             {
@@ -1696,49 +1696,49 @@
         "type": "treemap-data",
         "nodes": [
           {
-            "name": "https://ghnod.vercel.app/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
+            "name": "https://orpconsulting.co.kr/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
             "resourceBytes": 6996,
             "encodedBytes": 0,
             "unusedBytes": 4926
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/chunks/framework-f31701c9d93f12a4.js",
+            "name": "https://orpconsulting.co.kr/_next/static/chunks/framework-f31701c9d93f12a4.js",
             "resourceBytes": 139835,
             "encodedBytes": 46402,
             "unusedBytes": 50854
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+            "name": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
             "resourceBytes": 134571,
             "encodedBytes": 36778,
             "unusedBytes": 60755
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
+            "name": "https://orpconsulting.co.kr/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
             "resourceBytes": 136459,
             "encodedBytes": 49214,
             "unusedBytes": 93907
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/chunks/9422-9a809f7837b9f2a6.js",
+            "name": "https://orpconsulting.co.kr/_next/static/chunks/9422-9a809f7837b9f2a6.js",
             "resourceBytes": 14831,
             "encodedBytes": 5572,
             "unusedBytes": 10542
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/chunks/pages/admin-4c87b888b33251e3.js",
+            "name": "https://orpconsulting.co.kr/_next/static/chunks/pages/admin-4c87b888b33251e3.js",
             "resourceBytes": 888,
             "encodedBytes": 0,
             "unusedBytes": 181
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/G8D3GBsePfcPQWLeNWuC6/_buildManifest.js",
+            "name": "https://orpconsulting.co.kr/_next/static/G8D3GBsePfcPQWLeNWuC6/_buildManifest.js",
             "resourceBytes": 5504,
             "encodedBytes": 1822,
             "unusedBytes": 0
           },
           {
-            "name": "https://ghnod.vercel.app/_next/static/G8D3GBsePfcPQWLeNWuC6/_ssgManifest.js",
+            "name": "https://orpconsulting.co.kr/_next/static/G8D3GBsePfcPQWLeNWuC6/_ssgManifest.js",
             "resourceBytes": 77,
             "encodedBytes": 0,
             "unusedBytes": 0
@@ -1810,15 +1810,15 @@
             "totalBytes": 116539
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
             "totalBytes": 49421
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/framework-f31701c9d93f12a4.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/framework-f31701c9d93f12a4.js",
             "totalBytes": 46566
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
             "totalBytes": 40202
           },
           {
@@ -1838,11 +1838,11 @@
             "totalBytes": 14791
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/9422-9a809f7837b9f2a6.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/9422-9a809f7837b9f2a6.js",
             "totalBytes": 5753
           },
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/webpack-fef6a0127ca78e7b.js",
             "totalBytes": 3949
           }
         ],
@@ -2115,7 +2115,7 @@
         ],
         "items": [
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/pages/_app-4917613a6cff9d5b.js",
             "totalBytes": 47061,
             "wastedBytes": 32386,
             "wastedPercent": 68.81700730622384
@@ -2372,7 +2372,7 @@
         ],
         "items": [
           {
-            "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+            "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
             "wastedBytes": 11966,
             "subItems": {
               "type": "subitems",
@@ -2381,7 +2381,7 @@
                   "signal": "Array.prototype.at",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 32863
@@ -2391,7 +2391,7 @@
                   "signal": "Array.prototype.flat",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 32251
@@ -2401,7 +2401,7 @@
                   "signal": "Array.prototype.flatMap",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 32364
@@ -2411,7 +2411,7 @@
                   "signal": "Object.fromEntries",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 32740
@@ -2421,7 +2421,7 @@
                   "signal": "Object.hasOwn",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 32998
@@ -2431,7 +2431,7 @@
                   "signal": "String.prototype.trimEnd",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 31993
@@ -2441,7 +2441,7 @@
                   "signal": "String.prototype.trimStart",
                   "location": {
                     "type": "source-location",
-                    "url": "https://ghnod.vercel.app/_next/static/chunks/main-bcd028dbb66805af.js",
+                    "url": "https://orpconsulting.co.kr/_next/static/chunks/main-bcd028dbb66805af.js",
                     "urlProvider": "network",
                     "line": 0,
                     "column": 31908
@@ -2650,7 +2650,7 @@
               "type": "subitems",
               "items": [
                 {
-                  "frameUrl": "https://ghnod.vercel.app/admin"
+                  "frameUrl": "https://orpconsulting.co.kr/admin"
                 }
               ]
             },
@@ -2663,7 +2663,7 @@
               "type": "subitems",
               "items": [
                 {
-                  "frameUrl": "https://ghnod.vercel.app/admin"
+                  "frameUrl": "https://orpconsulting.co.kr/admin"
                 }
               ]
             },
@@ -3204,7 +3204,7 @@
               "type": "network-tree",
               "chains": {
                 "988FA7CAF8E777B68A707508C9415591": {
-                  "url": "https://ghnod.vercel.app/admin",
+                  "url": "https://orpconsulting.co.kr/admin",
                   "navStartToEndTime": 248,
                   "transferSize": 1004,
                   "isLongest": true,
@@ -3966,7 +3966,7 @@
     {
       "name": "vercel.app",
       "origins": [
-        "https://ghnod.vercel.app"
+        "https://orpconsulting.co.kr"
       ],
       "isFirstParty": true,
       "isUnrecognized": true
