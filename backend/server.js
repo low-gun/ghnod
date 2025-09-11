@@ -66,31 +66,10 @@ const corsOptions = {
   preflightContinue: false,
 };
 
-// ✅ preflight OPTIONS 응답을 allowedOrigins 기반으로 처리
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    const origin = req.headers.origin;
-    if (!origin || allowedOrigins.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin || allowedOrigins[0]);
-      res.header("Vary", "Origin");
-      res.header("Access-Control-Allow-Credentials", "true");
-      res.header(
-        "Access-Control-Allow-Methods",
-        "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-      );
-      res.header(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, x-guest-token"
-      );
-      return res.sendStatus(204);
-    }
-    return res.status(403).send("Not allowed by CORS");
-  }
-  next();
-});
-
+// ✅ CORS 미들웨어 "최상단" 배치
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
+
 
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
