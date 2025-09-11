@@ -1,19 +1,22 @@
 const path = require("path");
 
 console.log("🔎 NODE_ENV =", process.env.NODE_ENV);
-console.log("🔎 envPath (before load) =", 
+console.log(
+  "🔎 envPath (before load) =",
   process.env.NODE_ENV === "production"
     ? path.resolve(__dirname, ".env.production")
     : path.resolve(__dirname, ".env.local")
 );
-console.log("🔎 AZURE_STORAGE_CONNECTION_STRING (before dotenv) =", JSON.stringify(process.env.AZURE_STORAGE_CONNECTION_STRING));
+console.log(
+  "🔎 AZURE_STORAGE_CONNECTION_STRING (before dotenv) =",
+  JSON.stringify(process.env.AZURE_STORAGE_CONNECTION_STRING)
+);
 
 // ✅ 예기치 않은 에러 캐치
 console.log("🟢 server.js 진입");
 process.on("uncaughtException", (err) => {
   console.error("🔥 uncaughtException:", err);
 });
-
 process.on("unhandledRejection", (reason) => {
   console.error("🔥 unhandledRejection:", reason);
 });
@@ -23,10 +26,8 @@ const envPath =
     ? path.resolve(__dirname, ".env.production")
     : path.resolve(__dirname, ".env.local");
 
-// override 옵션을 줘서 .env.local 값이 .env 내용을 덮어쓰도록 강제
 require("dotenv").config({ path: envPath, override: true });
 console.log("✅ .env 로딩됨:", envPath);
-
 
 const express = require("express");
 const cors = require("cors");
@@ -43,9 +44,14 @@ console.log("✅ CLIENT_URL:", process.env.CLIENT_URL);
 console.log("✅ PORT:", PORT);
 
 // ✅ CORS 허용 도메인 리스트
-const allowedOrigins = ["https://orpconsulting.co.kr", "http://localhost:3000"];
+const allowedOrigins = [
+  "https://orpconsulting.co.kr",
+  "https://www.orpconsulting.co.kr", // www 도메인
+  "https://api.orpconsulting.co.kr", // api 서브도메인
+  "http://localhost:3000",
+];
 
-// ✅ CORS 미들웨어 "최상단" 배치 + options 핸들러 추가
+// ✅ CORS 미들웨어 "최상단" 배치
 const corsOptions = {
   origin: (origin, callback) => {
     console.log("📌 CORS 요청 origin:", origin);
@@ -54,23 +60,18 @@ const corsOptions = {
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // ✅
-  allowedHeaders: ["Content-Type", "Authorization", "x-guest-token"], // ✅
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-guest-token"],
   optionsSuccessStatus: 204,
   preflightContinue: false,
 };
 
+// ✅ preflight OPTIONS 응답을 allowedOrigins 기반으로 처리
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
     const origin = req.headers.origin;
-    if (
-      !origin ||
-      ["https://orpconsulting.co.kr", "http://localhost:3000"].includes(origin)
-    ) {
-      res.header(
-        "Access-Control-Allow-Origin",
-        origin || "https://orpconsulting.co.kr"
-      );
+    if (!origin || allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin || allowedOrigins[0]);
       res.header("Vary", "Origin");
       res.header("Access-Control-Allow-Credentials", "true");
       res.header(
@@ -89,7 +90,8 @@ app.use((req, res, next) => {
 });
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // ✅ 동일 옵션으로 응답
+app.options("*", cors(corsOptions));
+
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
 app.use(express.json({ limit: "10mb" }));
@@ -106,26 +108,24 @@ app.use((req, res, next) => {
 
 // ✅ API 라우터 등록
 console.log("✅ API 라우터 등록 시작");
-// ▼ 추가: 라우터 로딩 유틸 (default export 섞였는지/타입 확인)
 function loadRouter(p) {
   const mod = require(p);
-  const router = (mod && mod.default) ? mod.default : mod;
+  const router = mod && mod.default ? mod.default : mod;
   const type = typeof router;
   const keys = mod && typeof mod === "object" ? Object.keys(mod) : [];
   if (type !== "function") {
-    console.error(`❌ 라우터 로딩 실패: ${p} | type=${type} | keys=${keys.join(",")}`);
+    console.error(
+      `❌ 라우터 로딩 실패: ${p} | type=${type} | keys=${keys.join(",")}`
+    );
   } else {
     console.log(`✅ 라우터 OK: ${p}`);
   }
   return router;
 }
 
-// ✅ API 라우터 등록 시작
 app.use("/api/admin/schedules", loadRouter("./routes/admin/schedules"));
 app.use("/api/admin/products", loadRouter("./routes/admin/products"));
-// app.use("/api/admin/payments", loadRouter("./routes/payment")); // 🔥 제거 유지
-app.use("/api/admin", loadRouter("./routes/admin")); // ✅ admin.js가 /payments 처리
-
+app.use("/api/admin", loadRouter("./routes/admin"));
 app.use("/api/user", loadRouter("./routes/user"));
 app.use("/api/mypage", loadRouter("./routes/mypage"));
 app.use("/api/orders", loadRouter("./routes/order"));
@@ -134,12 +134,11 @@ app.use("/api/education/schedules", loadRouter("./routes/public/schedules"));
 app.use("/api/education", loadRouter("./routes/userSchedules"));
 app.use("/api/auth", loadRouter("./routes/auth"));
 app.use("/api", loadRouter("./routes/productReviews"));
-
 app.use("/api/upload", loadRouter("./routes/upload"));
 console.log("✅ API 라우터 등록 완료");
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/payments", loadRouter("./routes/payments.public"));
-
 
 // ✅ DB 연결 테스트용
 app.get("/test-db", async (req, res) => {

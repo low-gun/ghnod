@@ -61,13 +61,13 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "https://ghnod-backend.azurewebsites.net/api/:path*",
+        destination: "https://api.orpconsulting.co.kr/api/:path*",
       },
       {
         source: "/uploads/:path*",
-        destination: "https://ghnod-backend.azurewebsites.net/uploads/:path*",
+        destination: "https://api.orpconsulting.co.kr/uploads/:path*",
       },
-    ];
+    ]; 
   },
 
   webpack: (config) => {
