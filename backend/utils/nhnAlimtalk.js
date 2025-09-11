@@ -46,7 +46,7 @@ async function sendAlimtalkVerify(phone, verifyCode) {
     plusFriendId: "",
     altSendType: "SMS",
     altSendNo: sendNo,
-    altContent: `[오알피컨설팅]\n본인확인 인증번호 : ${verifyCode}`,
+    altContent: `[ORP컨설팅]\n본인확인 인증번호 : ${verifyCode}`,
   };
 
   try {
