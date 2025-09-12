@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/legacy/image";
 import { useQuery } from "@tanstack/react-query";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import Head from "next/head";
 
 const SearchFilterBox = dynamic(
   () => import("@/components/common/SearchFilterBox"),
@@ -38,29 +39,34 @@ export default function OpenCoursePage() {
   const type = "opencourse";
   const isMobileOrTablet = useIsTabletOrBelow();
 
-  const subTabs = useMemo(() => [
-    { label: "followup", href: "/education/followup" },
-    { label: "certification", href: "/education/certification" },
-    { label: "공개교육", href: "/education/opencourse" },
-    { label: "facilitation", href: "/education/facilitation" },
-  ], []);
+  const subTabs = useMemo(
+    () => [
+      { label: "followup", href: "/education/followup" },
+      { label: "certification", href: "/education/certification" },
+      { label: "공개교육", href: "/education/opencourse" },
+      { label: "facilitation", href: "/education/facilitation" },
+    ],
+    []
+  );
 
-  // fetchSchedules useCallback (불필요한 함수 재생성 방지)
   const fetchSchedules = useCallback(async ({ queryKey }) => {
     const [_key, type, sort, order] = queryKey;
     const url =
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public` +
-      `?type=${encodeURIComponent(type)}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;
+      `?type=${encodeURIComponent(type)}&sort=${encodeURIComponent(
+        sort
+      )}&order=${encodeURIComponent(order)}`;
     const res = await fetch(url, { credentials: "include" });
-  
+
     if (res.status === 404) return { schedules: [] };
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`fetchSchedules failed: ${res.status} ${res.statusText} ${text}`);
+      throw new Error(
+        `fetchSchedules failed: ${res.status} ${res.statusText} ${text}`
+      );
     }
     return res.json();
   }, []);
-  
 
   const { data, isLoading } = useQuery({
     queryKey: ["schedules", type, sort, order],
@@ -72,7 +78,6 @@ export default function OpenCoursePage() {
   const schedules = data?.schedules || [];
   const today = useMemo(() => new Date(), []);
 
-  // 필터링 useMemo로 캐싱
   const filteredSchedules = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     return schedules.filter((s) => {
@@ -82,18 +87,27 @@ export default function OpenCoursePage() {
       if (searchType === "전체" || searchType === "교육명") {
         return s.title?.toLowerCase().includes(keyword);
       }
-      if (searchType === "교육기간" && dateRange.startDate && dateRange.endDate) {
-        const selectedStart = dateRange.startDate.toDate?.() || dateRange.startDate;
-        const selectedEndRaw = dateRange.endDate.toDate?.() || dateRange.endDate;
-        const selectedEnd = new Date(selectedEndRaw.getTime() + 86400000 - 1);
+      if (
+        searchType === "교육기간" &&
+        dateRange.startDate &&
+        dateRange.endDate
+      ) {
+        const selectedStart =
+          dateRange.startDate.toDate?.() || dateRange.startDate;
+        const selectedEndRaw =
+          dateRange.endDate.toDate?.() || dateRange.endDate;
+        const selectedEnd = new Date(
+          selectedEndRaw.getTime() + 86400000 - 1
+        );
         const scheduleStart = new Date(s.start_date);
-        return scheduleStart >= selectedStart && scheduleStart <= selectedEnd;
+        return (
+          scheduleStart >= selectedStart && scheduleStart <= selectedEnd
+        );
       }
       return true;
     });
   }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);
 
-  // 스타일 상수화
   const imgTitleBoxStyle = {
     position: "relative",
     textAlign: "left",
@@ -108,7 +122,7 @@ export default function OpenCoursePage() {
     overflow: "hidden",
     margin: "0 auto",
   };
-  
+
   const imgTextStyle = {
     position: "absolute",
     top: "clamp(12px, 3vw, 24px)",
@@ -127,64 +141,77 @@ export default function OpenCoursePage() {
   };
 
   return (
-<div
-  style={{
-    paddingTop: isMobileOrTablet ? "32px" : "32px",
-    paddingLeft: isMobileOrTablet ? 0 : 32,
-    paddingRight: isMobileOrTablet ? 0 : 32,
-    paddingBottom: isMobileOrTablet ? 0 : 32,
-  }}
->
+    <>
+      <Head>
+        <title>공개교육 | ORP컨설팅</title>
+        <meta
+          name="description"
+          content="ORP컨설팅의 공개교육 과정 - 누구나 참여할 수 있는 다양한 교육 프로그램을 제공합니다."
+        />
+        <meta property="og:title" content="공개교육 | ORP컨설팅" />
+        <meta
+          property="og:description"
+          content="ORP컨설팅 공개교육 프로그램 - 개인과 조직의 성장을 위한 맞춤형 공개교육 안내"
+        />
+        <meta property="og:image" content="/images/opencourse.webp" />
+        <meta property="og:url" content="https://orpconsulting.co.kr/education/opencourse" />
+      </Head>
 
-      <ScheduleSubTabs tabs={subTabs} />
+      <div
+        style={{
+          paddingTop: isMobileOrTablet ? "32px" : "32px",
+          paddingLeft: isMobileOrTablet ? 0 : 32,
+          paddingRight: isMobileOrTablet ? 0 : 32,
+          paddingBottom: isMobileOrTablet ? 0 : 32,
+        }}
+      >
+        <ScheduleSubTabs tabs={subTabs} />
 
-      {/* 이미지 + 타이틀 */}
-      <div style={imgTitleBoxStyle}>
-      <div style={heroImgBoxStyle}>
-  <Image
-    src="/images/opencourse.webp"
-    alt="opencourse 페이지에서는 누구나 참여할 수 있는 공개교육 프로그램을 소개합니다."
-    layout="fill"
-    objectFit="cover"
-  />
-</div>
+        <div style={imgTitleBoxStyle}>
+          <div style={heroImgBoxStyle}>
+            <Image
+              src="/images/opencourse.webp"
+              alt="opencourse 페이지에서는 누구나 참여할 수 있는 공개교육 프로그램을 소개합니다."
+              layout="fill"
+              objectFit="cover"
+            />
+          </div>
 
-  <div style={imgTextStyle}>
-    <h1 style={h1Style}>opencourse</h1>
-    <p style={pStyle}>공개교육 안내</p>
-  </div>
-</div>
-     {/* SearchFilterBox */}
-      {!isMobileOrTablet && (
-  <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-    <SearchFilterBox
-      searchType={searchType}
-      setSearchType={setSearchType}
-      searchKeyword={searchKeyword}
-      setSearchKeyword={setSearchKeyword}
-      dateRange={dateRange}
-      setDateRange={setDateRange}
-      sort={sort}
-      setSort={setSort}
-      order={order}
-      setOrder={setOrder}
-      showPast={showPast}
-      setShowPast={setShowPast}
-    />
-  </div>
-)}
+          <div style={imgTextStyle}>
+            <h1 style={h1Style}>opencourse</h1>
+            <p style={pStyle}>공개교육 안내</p>
+          </div>
+        </div>
 
+        {!isMobileOrTablet && (
+          <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
+            <SearchFilterBox
+              searchType={searchType}
+              setSearchType={setSearchType}
+              searchKeyword={searchKeyword}
+              setSearchKeyword={setSearchKeyword}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              sort={sort}
+              setSort={setSort}
+              order={order}
+              setOrder={setOrder}
+              showPast={showPast}
+              setShowPast={setShowPast}
+            />
+          </div>
+        )}
 
-      {/* 일정 카드 리스트 */}
-      {isLoading ? (
-        <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
-      ) : filteredSchedules.length === 0 ? (
-        <p style={{ textAlign: "center", padding: "40px 0" }}>
-          등록된 일정이 없습니다.
-        </p>
-      ) : (
-        <ScheduleCardGrid schedules={filteredSchedules} type={type} />
-      )}
-    </div>
+        {isLoading ? (
+          <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
+        ) : filteredSchedules.length === 0 ? (
+          <p style={{ textAlign: "center", padding: "40px 0" }}>
+            등록된 일정이 없습니다.
+          </p>
+        ) : (
+          <ScheduleCardGrid schedules={filteredSchedules} type={type} />
+        )}
+      </div>
+    </>
   );
 }

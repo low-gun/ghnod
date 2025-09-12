@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/legacy/image";
 import { useQuery } from "@tanstack/react-query";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import Head from "next/head";
 
 const SearchFilterBox = dynamic(
   () => import("@/components/common/SearchFilterBox"),
@@ -118,58 +119,75 @@ export default function CertificationPage() {
   const pStyle = { margin: 0, fontSize: "clamp(12px, 2.8vw, 14px)", color: "#555" };
 
   return (
-    <div
-      style={{
-        paddingTop: "32px",
-        paddingLeft: isMobileOrTablet ? 0 : 32,
-        paddingRight: isMobileOrTablet ? 0 : 32,
-        paddingBottom: isMobileOrTablet ? 0 : 32,
-      }}
-    >
-      <ScheduleSubTabs tabs={subTabs} />
+    <>
+      <Head>
+        <title>자격/써티 교육 | ORP컨설팅</title>
+        <meta
+          name="description"
+          content="ORP컨설팅의 Certification 교육 - 전문 자격 과정 및 써티 프로그램을 소개합니다."
+        />
+        <meta property="og:title" content="자격/써티 교육 | ORP컨설팅" />
+        <meta
+          property="og:description"
+          content="ORP컨설팅에서 제공하는 Certification(써티) 과정 - 전문성을 인증하는 교육 프로그램"
+        />
+        <meta property="og:image" content="/images/certification.webp" />
+        <meta property="og:url" content="https://orpconsulting.co.kr/education/certification" />
+      </Head>
 
-      <div style={imgTitleBoxStyle}>
-        <div style={heroImgBoxStyle}>
-          <Image
-            src="/images/certification.webp"
-            alt="certification 페이지에서는 자격/써티 관련 교육을 소개합니다."
-            layout="fill"
-            objectFit="cover"
-          />
+      <div
+        style={{
+          paddingTop: "32px",
+          paddingLeft: isMobileOrTablet ? 0 : 32,
+          paddingRight: isMobileOrTablet ? 0 : 32,
+          paddingBottom: isMobileOrTablet ? 0 : 32,
+        }}
+      >
+        <ScheduleSubTabs tabs={subTabs} />
+
+        <div style={imgTitleBoxStyle}>
+          <div style={heroImgBoxStyle}>
+            <Image
+              src="/images/certification.webp"
+              alt="certification 페이지에서는 자격/써티 관련 교육을 소개합니다."
+              layout="fill"
+              objectFit="cover"
+            />
+          </div>
+
+          <div style={imgTextStyle}>
+            <h1 style={h1Style}>certification</h1>
+            <p style={pStyle}>써티 안내</p>
+          </div>
         </div>
 
-        <div style={imgTextStyle}>
-          <h1 style={h1Style}>certification</h1>
-          <p style={pStyle}>써티 안내</p>
-        </div>
+        {!isMobileOrTablet && (
+          <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
+            <SearchFilterBox
+              searchType={searchType}
+              setSearchType={setSearchType}
+              searchKeyword={searchKeyword}
+              setSearchKeyword={setSearchKeyword}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              sort={sort}
+              setSort={setSort}
+              order={order}
+              setOrder={setOrder}
+              showPast={showPast}
+              setShowPast={setShowPast}
+            />
+          </div>
+        )}
+
+        {isLoading ? (
+          <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
+        ) : filteredSchedules.length === 0 ? (
+          <p style={{ textAlign: "center", padding: "40px 0" }}>등록된 일정이 없습니다.</p>
+        ) : (
+          <ScheduleCardGrid schedules={filteredSchedules} type={type} />
+        )}
       </div>
-
-      {!isMobileOrTablet && (
-        <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 24 }}>
-          <SearchFilterBox
-            searchType={searchType}
-            setSearchType={setSearchType}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            sort={sort}
-            setSort={setSort}
-            order={order}
-            setOrder={setOrder}
-            showPast={showPast}
-            setShowPast={setShowPast}
-          />
-        </div>
-      )}
-
-      {isLoading ? (
-        <p style={{ textAlign: "center", padding: "40px 0" }}>불러오는 중...</p>
-      ) : filteredSchedules.length === 0 ? (
-        <p style={{ textAlign: "center", padding: "40px 0" }}>등록된 일정이 없습니다.</p>
-      ) : (
-        <ScheduleCardGrid schedules={filteredSchedules} type={type} />
-      )}
-    </div>
+    </>
   );
 }

@@ -84,17 +84,18 @@ const SocialLoginButtons = () => {
         type="button"
       >
         <img
-          src="/btnG_official.png"
-          alt="네이버로 로그인"
-          style={{
-            width: "100%",
-            height: "44px",
-            objectFit: "contain",
-            display: "block",
-            borderRadius: "6px",
-          }}
-          draggable={false}
-        />
+  src="/btnG_official.png"
+  alt="네이버로 로그인"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    display: "block",
+    borderRadius: "6px",
+  }}
+  draggable={false}
+/>
+
       </button>
 
       {/* Google */}
@@ -158,17 +159,18 @@ const SocialLoginButtons = () => {
         type="button"
       >
         <img
-          src="/kakao_login_large_wide.png"
-          alt="카카오로 로그인"
-          style={{
-            width: "100%",
-            height: "44px",
-            objectFit: "contain",
-            display: "block",
-            borderRadius: "6px",
-          }}
-          draggable={false}
-        />
+  src="/kakao_login_large_wide.png"
+  alt="카카오로 로그인"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    display: "block",
+    borderRadius: "6px",
+  }}
+  draggable={false}
+/>
+
       </button>
     </div>
   );

@@ -1,4 +1,5 @@
 import ConsultingSubTabs from "@/components/consulting/ConsultingSubTabs";
+import Head from "next/head";
 
 export default function OrgDevPage() {
   const paragraphs = [
@@ -13,35 +14,58 @@ export default function OrgDevPage() {
   ];
 
   return (
-    <div style={{ padding: 32 }}>
-      <ConsultingSubTabs tabs={subTabs} />
+    <>
+      <Head>
+        <title>조직개발(Organization Development) | ORP컨설팅</title>
+        <meta
+          name="description"
+          content="ORP컨설팅의 조직개발(Organization Development) 컨설팅 - 조직의 성과와 만족도를 동시에 향상시키기 위한 전략적 접근과 실행"
+        />
+        <meta
+          property="og:title"
+          content="조직개발(Organization Development) | ORP컨설팅"
+        />
+        <meta
+          property="og:description"
+          content="조직의 성과와 지속적 성장을 위한 ORP컨설팅의 조직개발 컨설팅"
+        />
+        <meta property="og:image" content="/images/orgdev.webp" />
+        <meta
+          property="og:url"
+          content="https://orpconsulting.co.kr/consulting/orgdev"
+        />
+      </Head>
 
-      <h1
-        style={{
-          marginTop: 32,
-          marginBottom: 8,
-          fontSize: "clamp(20px, 4vw, 28px)",
-          fontWeight: "bold",
-        }}
-      >
-        조직개발(Organization Development)
-      </h1>
+      <div style={{ padding: 32 }}>
+        <ConsultingSubTabs tabs={subTabs} />
 
-      <h2
-        style={{
-          marginBottom: 24,
-          color: "#666",
-          fontSize: "clamp(16px, 3vw, 22px)",
-        }}
-      >
-        조직의 장기적 성장을 이끄는 전략적 접근
-      </h2>
+        <h1
+          style={{
+            marginTop: 32,
+            marginBottom: 8,
+            fontSize: "clamp(20px, 4vw, 28px)",
+            fontWeight: "bold",
+          }}
+        >
+          조직개발(Organization Development)
+        </h1>
 
-      {paragraphs.map((para, idx) => (
-        <p key={idx} style={{ marginBottom: "1em", lineHeight: 1.6 }}>
-          {para}
-        </p>
-      ))}
-    </div>
+        <h2
+          style={{
+            marginBottom: 24,
+            color: "#666",
+            fontSize: "clamp(16px, 3vw, 22px)",
+          }}
+        >
+          조직의 장기적 성장을 이끄는 전략적 접근
+        </h2>
+
+        {paragraphs.map((para, idx) => (
+          <p key={idx} style={{ marginBottom: "1em", lineHeight: 1.6 }}>
+            {para}
+          </p>
+        ))}
+      </div>
+    </>
   );
 }
