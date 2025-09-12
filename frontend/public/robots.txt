@@ -1,9 +1,27 @@
-# *
+# 모든 크롤러 공통 규칙
 User-agent: *
 Allow: /
 
-# Host
+# ❌ 검색 노출 불필요한 내부 경로 차단
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /auth
+Disallow: /auth/*
+Disallow: /logout
+Disallow: /logout/*
+Disallow: /mypage
+Disallow: /mypage/*
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /orders/*
+Disallow: /payments
+Disallow: /payments/*
+Disallow: /api
+Disallow: /api/*
+
+# Host 정보
 Host: https://orpconsulting.co.kr
 
-# Sitemaps
+# Sitemap 경로
 Sitemap: https://orpconsulting.co.kr/sitemap.xml
