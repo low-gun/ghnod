@@ -8,15 +8,15 @@ export default function Document() {
   <meta name="theme-color" content="#ffffff" />
 
   {/* SEO 기본 메타 */}
-  <meta name="description" content="GHNOD - 교육, 컨설팅, FTShop을 제공하는 전문 플랫폼" />
-  <meta name="keywords" content="교육, 컨설팅, FTShop, GHNOD" />
-  <meta name="author" content="주식회사 오알피연구소" />
+  <meta name="description" content="ORP컨설팅 - 진단, 교육, 컨설팅, 조직개발, Hogan, 숙의토론, 공개교육, 팀빌딩" />
+  <meta name="keywords" content="ORP컨설팅, 교육, 컨설팅, 공개교육, 팀빌딩, 숙의토론, 공론화, Hogan, Hogan진단" />
+  <meta name="author" content="주식회사 오알피컨설팅" />
 
   {/* Open Graph */}
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="GHNOD" />
-  <meta property="og:description" content="교육, 컨설팅, FTShop을 제공하는 전문 플랫폼" />
-  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:title" content="ORP컨설팅" />
+  <meta property="og:description" content="진단, 교육, 컨설팅, 조직개발, Hogan, 숙의토론, 공개교육, 팀빌딩" />
+  <meta property="og:image" content="/logo_blue.png" />
   <meta property="og:url" content="https://orpconsulting.co.kr" />
 </Head>
 
