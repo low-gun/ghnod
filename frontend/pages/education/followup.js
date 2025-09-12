@@ -81,34 +81,30 @@ export default function FollowupPage() {
 
   const filteredSchedules = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
-    return schedules
-      .filter((s) => s.type === type)
-      .filter((s) => {
-        const isPast = new Date(s.start_date) < today;
-        if (!showPast && isPast) return false;
-
-        if (searchType === "전체" || searchType === "교육명") {
-          return s.title?.toLowerCase().includes(keyword);
-        }
-        if (
-          searchType === "교육기간" &&
-          dateRange.startDate &&
-          dateRange.endDate
-        ) {
-          const selectedStart =
-            dateRange.startDate.toDate?.() || dateRange.startDate;
-          const selectedEndRaw =
-            dateRange.endDate.toDate?.() || dateRange.endDate;
-          const selectedEnd = new Date(
-            selectedEndRaw.getTime() + 86400000 - 1
-          );
-          const scheduleStart = new Date(s.start_date);
-          return scheduleStart >= selectedStart && scheduleStart <= selectedEnd;
-        }
-        return true;
-      });
-  }, [schedules, type, searchType, searchKeyword, dateRange, showPast, today]);
-
+    return schedules.filter((s) => {
+      const isPast = new Date(s.start_date) < today;
+      if (!showPast && isPast) return false;
+  
+      if (searchType === "전체" || searchType === "교육명") {
+        return s.title?.toLowerCase().includes(keyword);
+      }
+      if (
+        searchType === "교육기간" &&
+        dateRange.startDate &&
+        dateRange.endDate
+      ) {
+        const selectedStart =
+          dateRange.startDate.toDate?.() || dateRange.startDate;
+        const selectedEndRaw =
+          dateRange.endDate.toDate?.() || dateRange.endDate;
+        const selectedEnd = new Date(selectedEndRaw.getTime() + 86400000 - 1);
+        const scheduleStart = new Date(s.start_date);
+        return scheduleStart >= selectedStart && scheduleStart <= selectedEnd;
+      }
+      return true;
+    });
+  }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);
+  
   const imgTitleBoxStyle = {
     position: "relative",
     textAlign: "left",

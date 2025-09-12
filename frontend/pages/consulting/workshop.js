@@ -19,15 +19,18 @@ export default function WorkshopPage() {
         <title>워크숍(Workshop) | ORP컨설팅</title>
         <meta
           name="description"
-          content="ORP컨설팅의 워크숍 컨설팅 - 조직 내 문제 해결, 아이디어 발굴, 팀 빌딩을 위한 체계적인 협업 프로세스"
+          content="ORP컨설팅의 워크숍(Workshop) 컨설팅 - 조직 문제 해결, 아이디어 발굴, 팀 빌딩을 위한 협업과 퍼실리테이션"
         />
         <meta property="og:title" content="워크숍(Workshop) | ORP컨설팅" />
         <meta
           property="og:description"
-          content="ORP컨설팅 워크숍 - 퍼실리테이션 기법과 협업 방식을 통해 조직의 문제 해결과 성장을 촉진합니다."
+          content="조직 문제 해결과 협업을 촉진하는 ORP컨설팅의 워크숍 프로그램"
         />
         <meta property="og:image" content="/images/workshop.webp" />
-        <meta property="og:url" content="https://orpconsulting.co.kr/consulting/workshop" />
+        <meta
+          property="og:url"
+          content="https://orpconsulting.co.kr/consulting/workshop"
+        />
       </Head>
 
       <div style={{ padding: 32 }}>

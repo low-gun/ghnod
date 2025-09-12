@@ -183,30 +183,72 @@ if (hasRedirect) {
             required
           />
           <div className="login-extra-bar">
-            <label className="auto-login-checkbox">
-              <input
-                type="checkbox"
-                checked={autoLogin}
-                onChange={(e) => {
-                  setAutoLogin(e.target.checked);
-                  localStorage.setItem("autoLogin", e.target.checked);
-                }}
-              />
-              <span>자동로그인</span>
-            </label>
+          <label className="auto-login-checkbox">
+  <input
+    type="checkbox"
+    checked={autoLogin}
+    onChange={(e) => {
+      setAutoLogin(e.target.checked);
+      localStorage.setItem("autoLogin", e.target.checked);
+    }}
+  />
+  <span
+    style={{
+      fontWeight: 400,   // 🔹 얇게
+      fontSize: "13px",  // 🔹 한 단계 작은 글씨
+    }}
+  >
+    자동로그인
+  </span>
+</label>
+
             <div className="find-links">
               <a href="/find-email">이메일 찾기</a>
               <span className="bar">|</span>
               <a href="/find-password">비밀번호 찾기</a>
             </div>
           </div>
-          <button type="submit" className="login-btn desktop-only">
-            로그인
-          </button>
+          <button
+  type="submit"
+  className="login-btn desktop-only"
+  style={{
+    width: "100%",
+    height: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#3577f1",            // 🔹 브랜드 블루
+    color: "#fff",                    // 🔹 글씨 흰색
+    border: "1px solid #dadce0",
+    borderRadius: "6px",
+    fontSize: "16px",
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.2s ease-in-out",
+  }}
+  onMouseOver={(e) => (e.currentTarget.style.filter = "brightness(0.95)")}
+  onMouseOut={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+>
+  로그인
+</button>
+
         </form>
         <p className="login-footer">
-          아직 회원이 아니신가요? <a href="/register">회원가입</a>
-        </p>
+  아직 회원이 아니신가요?{" "}
+  <a
+    href="/register"
+    style={{
+      color: "#3577f1",
+      textDecoration: "none",
+      fontWeight: 500,     // 🔹 추가: 이메일/비번 찾기와 동일
+    }}
+    onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
+    onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
+  >
+    회원가입
+  </a>
+</p>
+
         <div className="login-social-box desktop-only">
           <div className="social-label">소셜 계정으로 로그인</div>
           <SocialLoginButtons />
@@ -218,9 +260,31 @@ if (hasRedirect) {
           <div className="social-label">소셜 계정으로 로그인</div>
           <SocialLoginButtons />
         </div>
-        <button type="submit" className="login-btn" form="login-form">
-          로그인
-        </button>
+        <button
+  type="submit"
+  className="login-btn"
+  form="login-form"
+  style={{
+    width: "100%",
+    height: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#3577f1",            // 🔹 브랜드 블루
+    color: "#fff",                    // 🔹 글씨 흰색
+    border: "1px solid #dadce0",
+    borderRadius: "6px",
+    fontSize: "16px",
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.2s ease-in-out",
+  }}
+  onMouseOver={(e) => (e.currentTarget.style.filter = "brightness(0.95)")}
+  onMouseOut={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+>
+  로그인
+</button>
+
       </div>
 
       {showPasswordResetModal && (
