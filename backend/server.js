@@ -70,15 +70,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
-
-const compression = require("compression");   // ✅ 추가
-
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
-
-// ✅ 응답 압축 (작은 응답은 제외, threshold 기본값 1KB)
-app.use(compression());
-
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
