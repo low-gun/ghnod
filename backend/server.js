@@ -119,25 +119,12 @@ console.log("✅ API 라우터 등록 완료");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/payments", loadRouter("./routes/payments.public"));
 
-// ✅ DB 연결 테스트용
-app.get("/test-db", async (req, res) => {
-  console.log("📌 /test-db 요청 도착");
-  try {
-    const [rows] = await db.query("SELECT '✅ DB 연결 테스트 성공' AS message");
-    res.json(rows[0]);
-  } catch (error) {
-    console.error("❌ DB 연결 오류:", error);
-    res.status(500).json({ error: "DB 연결 실패" });
-  }
-});
-
 // ✅ favicon 무시
 app.use((req, res, next) => {
   if (req.url === "/favicon.ico") return res.status(204).end();
   next();
 });
 
-app.use("/debug", require("./routes/debug"));
 app.use("/api", require("./routes/public/inquiry"));
 
 // ✅ (선택) /api가 아닌 나머지 경로는 404 JSON 응답

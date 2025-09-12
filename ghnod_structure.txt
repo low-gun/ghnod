@@ -37,7 +37,6 @@
 ./backend/routes/admin.js
 ./backend/routes/auth.js
 ./backend/routes/cart.js
-./backend/routes/debug.js
 ./backend/routes/mypage.js
 ./backend/routes/order.js
 ./backend/routes/payment.js
@@ -55,11 +54,7 @@
 ./backend/services
 ./backend/services/normalizeDetailHtml.js
 ./backend/services/txCheckout.js
-./backend/test-db.js
-./backend/test-env.js
 ./backend/uploads
-./backend/uploads/certificates
-./backend/uploads/certificates/backgrounds
 ./backend/uploads/images
 ./backend/utils
 ./backend/utils/nhnAlimtalk.js
@@ -132,6 +127,7 @@
 ./frontend/components/common/skeletons/TableSkeleton.jsx
 ./frontend/components/common/StatusBadge.jsx
 ./frontend/components/common/ToggleSwitch.jsx
+./frontend/components/common/VirtualizedTable.jsx
 ./frontend/components/consulting
 ./frontend/components/consulting/ConsultingSubTabs.jsx
 ./frontend/components/content
@@ -212,6 +208,7 @@
 ./frontend/lib/hooks/useDataTable.js
 ./frontend/lib/hooks/useIsDeviceSize.js
 ./frontend/lib/session.js
+./frontend/next-sitemap.config.js
 ./frontend/node_modules
 ./frontend/pages
 ./frontend/pages/admin
@@ -289,3 +286,4 @@
 ./frontend/utils/processEvents.js
 ./frontend/utils/session.js
 ./ghnod-clean
+./node_modules

@@ -19,10 +19,13 @@ passport.use(
       try {
         // ✅ 디버깅용 로그 추가 (여기부터)
         console.log("==== [GoogleStrategy 콜백 진입] ====");
-        console.log("accessToken:", accessToken);
-        console.log("refreshToken:", refreshToken);
-        console.log("profile:", JSON.stringify(profile, null, 2));
-
+        if (process.env.NODE_ENV !== "production") {
+          console.log("==== [GoogleStrategy 콜백 진입] ====");
+          console.log("accessToken:", accessToken);
+          console.log("refreshToken:", refreshToken);
+          console.log("profile:", JSON.stringify(profile, null, 2));
+        }
+        
         const email = profile.emails?.[0]?.value || "";
         const username = profile.displayName;
         // 기존 유저 조회
@@ -37,7 +40,7 @@ passport.use(
           socialProvider: "google",
           googleId: profile.id,
           email: email,
-          name: naver.name || "",   // 실명만, 없으면 빈 문자열 ("")
+          name: profile.displayName || "",   // ✅ profile 기반으로 수정
           phone: profile.phoneNumber || "",
           photo: profile.photos?.[0]?.value || "",
         };
@@ -76,13 +79,13 @@ passport.use(
         const kakaoAccount = profile._json.kakao_account || {};
         const tempPayload = {
           socialProvider: "kakao",
-          kakaoId: kakao.id,
+          kakaoId: profile.id,   // ✅ profile.id 사용
           email: kakaoAccount.email || "",
-          name: "", // 무조건 빈 문자열(실명 직접 입력)
+          name: "",
           phone: kakaoAccount.phone_number || "",
           photo: kakaoAccount.profile?.profile_image_url || "",
-          // 닉네임이 필요하면 별도 nickname 필드에 저장
         };
+        
         const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: "15m" });
         return done(null, false, { message: "NEED_ADDITIONAL_INFO", tempToken });
       } catch (error) {
@@ -120,11 +123,11 @@ passport.use(
 
         const tempPayload = {
           socialProvider: "naver",
-          naverId: naver.id,
-          email: naver.email || "",
-          name: naver.name || "",  // 실명만, 없으면 빈값
-          phone: naver.mobile || naver.phone || "",
-          photo: naver.profile_image || "",
+          naverId: profile.id,                          // ✅ profile 사용
+          email: profile.email || "",
+          name: profile._json?.response?.name || "",
+          phone: profile._json?.response?.mobile || "",
+          photo: profile._json?.response?.profile_image || "",
         };
         console.log("[Naver tempToken payload]", tempPayload);
         // === 여기까지 ===

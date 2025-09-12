@@ -27,6 +27,8 @@ const ScheduleCardGrid = dynamic(
   }
 );
 
+import Head from "next/head";
+
 export default function FacilitationPage() {
   const [sort, setSort] = useState("start_date");
   const [order, setOrder] = useState("asc");
