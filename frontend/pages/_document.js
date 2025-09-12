@@ -8,8 +8,7 @@ export default function Document() {
   <meta name="theme-color" content="#ffffff" />
 
   {/* 네이버 소유권 확인 */}
-  <meta name="naver-site-verification" content="af88184daaa76d1b3f39f3811a604129cffc" />
-
+  <meta name="naver-site-verification" content="af88184d6aaad76d1b3f339f3811a6401429cffc" />
   {/* SEO 기본 메타 */}
   <meta name="description" content="ORP컨설팅 - 진단, 교육, 컨설팅, 조직개발, Hogan, 숙의토론, 공개교육, 팀빌딩" />
   <meta name="keywords" content="ORP컨설팅, 교육, 컨설팅, 공개교육, 팀빌딩, 숙의토론, 공론화, Hogan, Hogan진단" />
