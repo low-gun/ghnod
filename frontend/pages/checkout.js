@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
+import Head from "next/head"; // 👈 추가
 import { loadTossPayments } from "@tosspayments/payment-sdk";
 import CartItemCard from "@/components/cart/CartItemCard";
 import CartSummary from "@/components/cart/CartSummary";
@@ -324,8 +325,13 @@ export default function CheckoutPage() {
       ? selectedCoupon.amount
       : 0;
 
-  return (
-    <div style={{ padding: 20 }}>
+      return (
+        <>
+          <Head>
+            <meta name="robots" content="noindex, nofollow" />
+          </Head>
+          <div style={{ padding: 20 }}>
+    
       <h2 style={{ fontSize: "19.2px", marginBottom: 16 }}>주문 확인</h2>
 
       {cartItems.length === 0 ? (
@@ -595,5 +601,6 @@ export default function CheckoutPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

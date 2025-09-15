@@ -1,6 +1,7 @@
 // frontend/pages/logout/callback.js
 import { useEffect } from "react";
 import { useUserContext } from "@/context/UserContext";
+import Head from "next/head"; // 👈 추가
 
 export default function LogoutCallback() {
   const { logout } = useUserContext();
@@ -10,5 +11,11 @@ export default function LogoutCallback() {
     logout?.();
   }, [logout]);
 
-  return null;
-}
+  return (
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      {/* 로그아웃 콜백 페이지는 UI 없음 */}
+    </>
+  );}

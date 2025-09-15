@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
+import Head from "next/head"; // 👈 추가
 import CartSummary from "@/components/cart/CartSummary";
 import { useCartContext } from "@/context/CartContext";
 import CartItemCard from "@/components/cart/CartItemCard";
@@ -131,7 +132,11 @@ export default function CartPage() {
   );
 
   return (
-    <div style={{ padding: "20px" }}>
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div style={{ padding: "20px" }}>
       <h2 style={{ fontSize: "1.2rem", marginBottom: "16px" }}>장바구니</h2>
 
       {!cartReady ? null : cartItems.length === 0 ? (
@@ -376,5 +381,6 @@ export default function CartPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

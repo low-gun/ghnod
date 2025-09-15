@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { ChevronLeft, Mail } from "lucide-react";
 import api from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert";
+import Head from "next/head"; // 👈 추가
 
 export default function FindEmailPage() {
   const router = useRouter();
@@ -151,7 +152,11 @@ export default function FindEmailPage() {
   };
 
   return (
-    <div className="login-root">
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div className="login-root">
       <div className="login-card">
         <div className="title-bar">
           <button
@@ -485,7 +490,7 @@ export default function FindEmailPage() {
           transition: background 0.14s, color 0.14s, border 0.14s;
         }
         .verify-btn:disabled,
-        .confirm-btn:disabled {
+        .confirm-btn:disabled {f
           border: 1.2px solid #ccc;
           background: #f5f5f5;
           color: #aaa;
@@ -528,6 +533,7 @@ export default function FindEmailPage() {
           cursor: not-allowed;
         }
       `}</style>
-    </div>
+ </div>
+    </>
   );
 }

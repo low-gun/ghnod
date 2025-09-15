@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import api from "@/lib/api";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
+import Head from "next/head"; // 👈 추가
 
 // ✅ 동적 로딩: 필요할 때만 다운로드
 const MyPageSidebar = dynamic(
@@ -224,7 +225,12 @@ useEffect(() => {
   };
 
   return (
-    <div style={{ background: "#fefefe", minHeight: "100vh" }}>
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div style={{ background: "#fefefe", minHeight: "100vh" }}>
+
       <div
         style={{
           display: "flex",
@@ -281,5 +287,6 @@ useEffect(() => {
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
 import { useGlobalAlert } from "@/stores/globalAlert";
+import Head from "next/head"; // 👈 추가
 
 // 안전 경로 유틸
 const getSafePath = (p) => {
@@ -70,5 +71,12 @@ if (accessToken && user) {
       });
   }, []); // 의도적으로 빈 deps
 
-  return null; // 표시 없음 (자동 처리)
+  return (
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      {/* UI 없음, 자동 처리 */}
+    </>
+  );// 표시 없음 (자동 처리)
 }

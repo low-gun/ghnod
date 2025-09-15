@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
+import Head from "next/head"; // 👈 추가
 
 export default function TossSuccessPage() {
   const router = useRouter();
@@ -101,7 +102,11 @@ const prettyError = (raw) => {
   }, [router.isReady, router.query, router]);
 
   return (
-    <div style={styles.wrap}>
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div style={styles.wrap}>
       <div style={styles.card}>
         <h2 style={styles.title}>결제 완료 처리</h2>
         {status && <p style={{ color: "#3577f1" }}>{status}</p>}
@@ -125,7 +130,8 @@ const prettyError = (raw) => {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

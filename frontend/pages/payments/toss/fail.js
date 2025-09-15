@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head"; // 👈 추가
 
 export default function TossFailPage() {
   const router = useRouter();
@@ -10,7 +11,11 @@ export default function TossFailPage() {
   }, [router.isReady]);
 
   return (
-    <div style={styles.wrap}>
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div style={styles.wrap}>
       <div style={styles.card}>
         <h2 style={styles.title}>결제 실패</h2>
         <p style={{ margin: "8px 0", color: "#e53935" }}>
@@ -39,9 +44,11 @@ export default function TossFailPage() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
+
 
 const styles = {
   wrap: {

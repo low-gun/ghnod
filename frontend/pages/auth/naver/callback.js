@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
 import { useGlobalAlert } from "@/stores/globalAlert";
-
+import Head from "next/head"; // 👈 추가
 export default function NaverCallbackPage() {
   const router = useRouter();
   const { login } = useUserContext();
@@ -70,5 +70,13 @@ const getSafePath = (p) => {
       });
   }, []); // 의도적으로 빈 deps
 
-  return null;
+  return (
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      {/* 처리 중에는 아무것도 표시하지 않음 */}
+    </>
+  );
+  
 }

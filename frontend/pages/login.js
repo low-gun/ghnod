@@ -1,6 +1,7 @@
 import { useRef, useState, useContext, useEffect } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";               // ✅ 추가
+import Head from "next/head"; // 👈 추가
 import { UserContext } from "../context/UserContext";
 import { useCartContext } from "../context/CartContext";
 import api from "@/lib/api";
@@ -142,7 +143,12 @@ if (hasRedirect) {
   if (user?.id) return null;
 
   return (
-    <div className="login-root">
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div className="login-root">
+
       <div className="login-card">
         <div className="title-bar">
         <button
@@ -294,6 +300,7 @@ if (hasRedirect) {
           isForcedReset={true}
         />
       )}
-    </div>
+        </div>
+    </>
   );
 }

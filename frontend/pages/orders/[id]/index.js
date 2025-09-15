@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
+import Head from "next/head"; // 👈 추가
 import { formatPrice } from "@/lib/format";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import ScheduleCardGrid from "@/components/education/ScheduleCardGrid";
@@ -107,7 +108,11 @@ export default function OrderDetailPage() {
   if (!items.length) return <p style={{ padding: 40 }}>주문 내역이 없습니다.</p>;
 
   return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: 24 }}>
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: 24 }}>
       {/* 헤더 라인 */}
       <div
         style={{
@@ -244,6 +249,7 @@ export default function OrderDetailPage() {
 />
 
     </div>
+    </>
   );
 }
 
@@ -260,7 +266,7 @@ function MetaRow({ label, value }) {
       <span style={{ color: "#6B7280", fontSize: 13 }}>{label}</span>
       <span style={{ color: "#111827", fontSize: 14 }}>{value}</span>
     </div>
-  );
+      );
 }
 
 function PriceRow({ label, value, highlight, dim }) {

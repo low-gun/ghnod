@@ -8,21 +8,18 @@ module.exports = {
 
   // ❌ 검색 노출 불필요한 경로들
   exclude: [
-    "/admin",       // 루트도 제외
-    "/admin/*",
-    "/auth",        // 루트도 제외
-    "/auth/*",
-    "/logout",
-    "/logout/*",
-    "/mypage",
-    "/mypage/*",
-    "/cart",
-    "/checkout",
-    "/orders",
-    "/orders/*",
-    "/payments",
-    "/payments/*",
+    "/admin", "/admin/*",
+    "/auth", "/auth/*",
+    "/logout", "/logout/*",
+    "/mypage", "/mypage/*",
+    "/cart", "/checkout",
+    "/orders", "/orders/*",
+    "/payments", "/payments/*",
     "/api/*",
+    "/find-email",        // 👈 추가
+    "/find-password",     // 👈 추가
+    "/login",             // 👈 추가
+    "/register/social",   // 👈 추가
   ],
 
   // ✅ 중요 페이지 우선순위 조정

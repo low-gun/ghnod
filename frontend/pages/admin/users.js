@@ -2,6 +2,7 @@
 import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import "react-datepicker/dist/react-datepicker.css";
+import Head from "next/head"; // 👈 추가
 
 import AdminLayout from "../../components/layout/AdminLayout";
 import AdminTopPanels from "@/components/common/AdminTopPanels";
@@ -315,8 +316,12 @@ export default function AdminUsersPage() {
   ].join("|");
 
   return (
-    <AdminLayout pageTitle="사용자관리">
-      <div>
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <AdminLayout pageTitle="사용자관리">
+        <div>
         {/* 상단 패널 + 검색 */}
         <AdminTopPanels
           stats={[{ title: "사용자 수", value: `${totalUsers}명` }]}
@@ -533,6 +538,7 @@ export default function AdminUsersPage() {
         />
       )}
     </AdminLayout>
+    </>
   );
 }
 

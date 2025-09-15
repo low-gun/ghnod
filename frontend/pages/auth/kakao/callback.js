@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import api from "@/lib/api";
 import { useUserContext } from "@/context/UserContext";
 import { useGlobalAlert } from "@/stores/globalAlert";
+import Head from "next/head"; // 👈 추가
 
 // 안전 경로 유틸
 const getSafePath = (p) => {
@@ -69,5 +70,12 @@ export default function KakaoCallbackPage() {
       });
   }, []); // 의도적으로 빈 deps
 
-  return null; // 처리 중에는 아무것도 표시하지 않음
+  return (
+    <>
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      {/* 처리 중에는 아무것도 표시하지 않음 */}
+    </>
+  ); // 처리 중에는 아무것도 표시하지 않음
 }

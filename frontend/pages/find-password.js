@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { ChevronLeft, Key } from "lucide-react";
 import api from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert";
+import Head from "next/head"; // 👈 추가
 
 export default function FindPasswordPage() {
   const router = useRouter();
@@ -147,8 +148,12 @@ export default function FindPasswordPage() {
     normalizePhone(phone).length < 10 ||
     (hasRequestedCode && timeLeft > 0);
 
-  return (
-    <div className="login-root">
+    return (
+      <>
+        <Head>
+          <meta name="robots" content="noindex, nofollow" />
+        </Head>
+        <div className="login-root">
       <div className="login-card">
         <div className="title-bar">
           <button
@@ -507,5 +512,6 @@ export default function FindPasswordPage() {
         }
       `}</style>
     </div>
+    </>
   );
 }

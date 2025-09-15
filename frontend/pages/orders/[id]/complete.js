@@ -6,7 +6,7 @@ import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
 import OrderCompleteSkeleton from "@/components/orders/OrderCompleteSkeleton";
 import OrderCompleteStyles from "@/components/orders/OrderCompleteStyles"; // ⬅️ 추가
-
+import Head from "next/head"; // 👈 추가
 export default function OrderCompletePage() {
   const router = useRouter();
   const { id: orderId } = router.query;
@@ -129,8 +129,12 @@ export default function OrderCompletePage() {
   // PG 주문번호(결제 키/거래번호 등) 후보들
   const displayPgNo = extractPgNo(order);
 
-  return (
-    <div className="oc-wrap">
+   return (
+      <>
+         <Head>
+           <meta name="robots" content="noindex, nofollow" />
+         </Head>
+         <div className="oc-wrap">
       <div className="oc-card">
         {/* 헤더 */}
         <div className="oc-header">
@@ -341,6 +345,7 @@ export default function OrderCompletePage() {
       </div>
       <OrderCompleteStyles /> {/* ⬅️ 공통 스타일 주입 */}
     </div>
+    </>
   );
 }
 
