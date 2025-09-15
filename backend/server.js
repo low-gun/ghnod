@@ -84,6 +84,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// ✅ robots.txt 추가 (API 전체 크롤링 차단)
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send("User-agent: *\nDisallow: /");
+});
+
 // ✅ API 라우터 등록
 console.log("✅ API 라우터 등록 시작");
 function loadRouter(p) {
