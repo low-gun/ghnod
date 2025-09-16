@@ -90,8 +90,8 @@ export default function MainLayout({ children }) {
          <div
         style={{
           position: "fixed",
-          right: "14%",   // ✅ 원래 위치 유지
-          bottom: "20%",
+          right: "5%",   // ✅ 원래 위치 유지
+          bottom: "10%",
           zIndex: 1000,
           display: "flex",
           flexDirection: "column",
