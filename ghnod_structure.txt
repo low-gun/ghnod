@@ -143,6 +143,8 @@
 ./frontend/components/education/ScheduleCard.jsx
 ./frontend/components/education/ScheduleCardGrid.jsx
 ./frontend/components/education/ScheduleSubTabs.jsx
+./frontend/components/inquiry
+./frontend/components/inquiry/InquiryModal.jsx
 ./frontend/components/layout
 ./frontend/components/layout/AdminLayout.js
 ./frontend/components/layout/AdminSidebar.js
@@ -159,7 +161,6 @@
 ./frontend/components/mypage/ChangePasswordModal.js
 ./frontend/components/mypage/Coupons.js
 ./frontend/components/mypage/Inquiries.js
-./frontend/components/mypage/InquiryModal.js
 ./frontend/components/mypage/MyCourse.js
 ./frontend/components/mypage/MyInfo.js
 ./frontend/components/mypage/MyPageMenuDrawer.js
@@ -173,7 +174,6 @@
 ./frontend/components/policy
 ./frontend/components/policy/policyText.js
 ./frontend/components/product
-./frontend/components/product/ProductInquiryModal.jsx
 ./frontend/components/product/ProductReviewModal.jsx
 ./frontend/components/product/ProductTabs.jsx
 ./frontend/components/product/TabProductDetail.jsx

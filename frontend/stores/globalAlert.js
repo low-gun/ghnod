@@ -6,14 +6,19 @@ export const useGlobalAlert = create((set) => ({
   type: "toast", // "toast" | "bottomsheet"
   isHtml: false, // ★ 추가
 
-  showAlert: (message, options = {}) =>
-    set({
+  showAlert: (message, options = {}) => {
+    console.log("[GlobalAlert][showAlert] call", { message, options });
+    return set({
       show: true,
       message,
       type: options.type || "toast",
-      isHtml: options.isHtml || false, // ★ 옵션으로 HTML 허용 여부
-    }),
-
-  hideAlert: () =>
-    set({ show: false, message: "", type: "toast", isHtml: false }),
+      isHtml: options.isHtml || false,
+    });
+  },
+  
+  hideAlert: () => {
+    console.log("[GlobalAlert][hideAlert] call");
+    return set({ show: false, message: "", type: "toast", isHtml: false });
+  },
+  
 }));

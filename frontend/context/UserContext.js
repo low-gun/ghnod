@@ -20,7 +20,7 @@ export function UserProvider({ children }) {
     };
   }, []);
 
-  const [user, setUser] = useState(undefined);
+  const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
 // 안전한 경로 유틸 (외부 URL 차단)
 const getSafePath = (p) => {

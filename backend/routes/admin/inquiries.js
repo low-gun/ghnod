@@ -14,7 +14,7 @@ router.get(
   "/",
   authenticateToken,
   authenticateAdmin,
-  adminController.getUnansweredInquiries
+  adminController.getAllInquiries // ← 함수명 변경
 );
 
 // 관리자 답변 등록/수정

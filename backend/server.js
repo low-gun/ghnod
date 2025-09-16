@@ -131,7 +131,6 @@ app.use((req, res, next) => {
 });
 
 app.use("/api", require("./routes/public/inquiry"));
-
 // ✅ (선택) /api가 아닌 나머지 경로는 404 JSON 응답
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api")) {

@@ -1475,91 +1475,56 @@ exports.getUserSummaryByIds = async (req, res) => {
       .json({ success: false, message: "요약 데이터 조회 실패" });
   }
 };
-// ✅ 모든 미답변 문의 조회 (검색/정렬/페이징)
-// GET /api/admin/inquiries?page=1&pageSize=20&search=&sort=created_at&order=desc&status=unanswered
-exports.getUnansweredInquiries = async (req, res) => {
+// ✅ 모든 문의(회원 + 비회원 + 전역) 조회 (inquiries 하나로 통합)
+exports.getAllInquiries = async (req, res) => {
   try {
-    let {
-      page = 1,
-      pageSize = 20,
-      search = "",
-      sort = "created_at", // created_at | answered_at | username | email
-      order = "desc",
-      status = "unanswered", // unanswered(기본) | all
-    } = req.query;
+    let { page = 1, pageSize = 20, search = "", sort = "created_at", order = "desc", status = "unanswered" } = req.query;
 
     const limit = Math.max(parseInt(pageSize, 10) || 20, 1);
     const offset = Math.max((parseInt(page, 10) - 1) * limit, 0);
-
-    const ALLOWED_SORT = new Set(["created_at","answered_at","username","email"]);
-    const sortKey = ALLOWED_SORT.has(String(sort)) ? String(sort) : "created_at";
     const sortOrder = String(order).toLowerCase() === "asc" ? "ASC" : "DESC";
-    const SORT_EXPR = {
-      created_at: "i.created_at",
-      answered_at: "i.answered_at",
-      username: "u.username",
-      email: "u.email",
-    };
-    const sortExpr = SORT_EXPR[sortKey] || "i.created_at";
 
-    const where = [];
-    const vals = [];
-
-    // ✅ status 필터: all | unanswered | answered
-    const st = String(status || "unanswered");
-if (st === "unanswered") {
-  where.push("i.status = '접수'");
-} else if (st === "answered") {
-  where.push("i.status = '답변완료'");
-}
-
-    // (all 은 추가 where 없음)
-
-    if (search) {
-      where.push(
-        "(u.username LIKE ? OR u.email LIKE ? OR i.title LIKE ? OR i.message LIKE ?)"
-      );
-      vals.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
-    }
-
-    const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
-
-    const listSql = `
-SELECT
-  i.id, i.user_id, i.product_id, i.title, i.message, i.answer, i.status,
-  i.created_at, i.answered_at, i.answered_by,
-  u.username, u.email,
-  au.username AS answered_by_name,
-  au.email    AS answered_by_email,
-  p.title     AS product_title,
-  p.type      AS product_type,                                    -- ✅ 추가
-  CONCAT('/education/', p.type, '/', i.product_id) AS product_public_url  -- ✅ 추가
-FROM inquiries i
-JOIN users u  ON u.id = i.user_id
-LEFT JOIN users au ON au.id = i.answered_by
-LEFT JOIN products p ON p.id = i.product_id
-
-      ${whereSql}
-ORDER BY ${sortExpr} ${sortOrder}
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        i.id, i.user_id, i.product_id, i.title, i.message, i.answer, i.status,
+        i.created_at, i.answered_at, i.answered_by,
+        u.username, u.email,
+        i.guest_name, i.guest_email, i.guest_phone,
+        i.company_name, i.department, i.position,
+        p.title AS product_title, p.type AS product_type
+      FROM inquiries i
+      LEFT JOIN users u ON u.id = i.user_id
+      LEFT JOIN products p ON p.id = i.product_id
+      ${status === "unanswered" ? "WHERE i.status = '접수'" : status === "answered" ? "WHERE i.status = '답변완료'" : ""}
+      ORDER BY i.${sort} ${sortOrder}
       LIMIT ? OFFSET ?
-
-    `;
-    const countSql = `
+      `,
+      [limit, offset]
+    );
+    
+    // ✅ 전체 개수 별도 조회
+    const [[{ totalCount }]] = await pool.query(
+      `
       SELECT COUNT(*) AS totalCount
       FROM inquiries i
-      JOIN users u ON u.id = i.user_id
-      ${whereSql}
-    `;
-
-    const [rows] = await pool.query(listSql, [...vals, limit, offset]);
-    const [[{ totalCount }]] = await pool.query(countSql, vals);
-
-    res.json({ success: true, inquiries: rows, totalCount: totalCount || 0 });
+      LEFT JOIN users u ON u.id = i.user_id
+      LEFT JOIN products p ON p.id = i.product_id
+      ${status === "unanswered" ? "WHERE i.status = '접수'" : status === "answered" ? "WHERE i.status = '답변완료'" : ""}
+      `
+    );
+    
+    res.json({
+      success: true,
+      inquiries: rows,
+      totalCount: totalCount || 0,   // ✅ 전체 개수 반환
+    });
   } catch (err) {
-    console.error("❌ getUnansweredInquiries 오류:", err);
+    console.error("❌ getAllInquiries 오류:", err);
     res.status(500).json({ success: false, message: "문의 조회 실패" });
   }
 };
+
 // ✅ 관리자 답변 등록
 // PUT /api/admin/users/inquiries/:id/answer { answer: "..." }
 exports.answerInquiryByAdmin = async (req, res) => {

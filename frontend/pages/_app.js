@@ -115,8 +115,8 @@ function MyApp({ Component, pageProps }) {
   const needsKakao =
   !isAdmin &&
   (router.pathname.startsWith("/auth/") ||
-    router.pathname === "/register/social");
-
+    router.pathname === "/register/social" ||
+    router.pathname.startsWith("/education/"));
   return (
     <>
       {/* 전역 viewport 설정 */}

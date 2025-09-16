@@ -30,10 +30,9 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
   const [submitting, setSubmitting] = useState(false);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(totalCount / pageSize)),
-    [totalCount]
+    () => Math.max(1, Math.ceil(totalCount / pageSize)), // ✅ 이제 백엔드 totalCount 사용
+    [totalCount, pageSize]
   );
-
   const fetchAll = async () => {
     setLoading(true);
     try {
@@ -236,30 +235,32 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {list.map((q) => {
-            const answered = !!q.answer;
-            return (
-              <article key={q.id} style={card(answered)}>
-                <header style={cardHeader}>
-  <div style={{display:"flex",alignItems:"center",gap:8}}>
-    <strong style={{fontSize:15,color:"#111827",overflowWrap:"anywhere"}}>{q.title}</strong>
-    {q.product_id ? (
-  <a
-    className="badgeLink"
-    href={`/admin/products/${q.product_id}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    title={q.product_title ? `상품: ${q.product_title}` : "상품 상세로 이동"}
-    aria-label={q.product_title ? `상품 ${q.product_title} 상세로 이동` : "상품 상세로 이동"}
-  >
-    상품: {q.product_title || "알 수 없음"}
-  </a>
-) : (
-  <span className="badgeStatic" title="1:1문의">1:1문의</span>
-)}
-
-  </div>
-  <StatusPill answered={answered} />
-</header>
+  const answered = !!q.answer;
+  return (
+    <article key={q.id} style={card(answered)}>
+      <header style={cardHeader}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <strong style={{fontSize:15,color:"#111827",overflowWrap:"anywhere"}}>{q.title}</strong>
+          {q.product_id ? (
+            <a
+              className="badgeLink"
+              href={`/admin/products/${q.product_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={q.product_title ? `상품: ${q.product_title}` : "상품 상세로 이동"}
+              aria-label={q.product_title ? `상품 ${q.product_title} 상세로 이동` : "상품 상세로 이동"}
+            >
+              상품: {q.product_title || "알 수 없음"}
+            </a>
+          ) : (q.company_name || q.department || q.position) ? (
+            <span className="badgeStatic" title="일반문의">일반문의</span>
+          ) : (
+            <span className="badgeStatic" title="1:1문의">1:1문의</span>
+          )}
+        </div>
+        <StatusPill answered={answered} />
+      </header>
+  
                 <section style={{ padding: "12px 14px" }}>
                   <div style={sectTitle}>문의 내용</div>
                   <p style={message}>{q.message}</p>
@@ -273,8 +274,23 @@ export default function UnansweredInquiriesModal({ open, onClose }) {
 )}
 <div style={metaLines}>
   <div style={{fontWeight:600,color:"#111827"}}>작성자(작성일시)</div>
-  <div>{(q.email || "-")} ({q.username || "-"})</div>
+  {q.user_id ? (
+    <div>{(q.email || "-")} ({q.username || "-"})</div>
+  ) : (
+    <div>
+      {q.guest_name || "-"} / {q.guest_email || "-"} / {q.guest_phone || "-"}
+    </div>
+  )}
   <div style={{color:"#6b7280"}}>{toDateTime(q.created_at)}</div>
+
+  {/* ✅ 일반문의일 경우 상세정보 노출 */}
+  {q.company_name && (
+    <div style={{marginTop:6, color:"#374151"}}>
+      <strong>기업명:</strong> {q.company_name}{" "}
+      {q.department && <> | <strong>부서:</strong> {q.department}</>}
+      {q.position && <> | <strong>직책:</strong> {q.position}</>}
+    </div>
+  )}
 
   {answered && (
     <>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import ProductInquiryModal from "@/components/product/ProductInquiryModal";
+import InquiryModal from "@/components/inquiry/InquiryModal";
+import GlobalDialog from "@/components/common/GlobalDialog"; // ✅ 추가
 import { useRouter } from "next/router";
 import { useUserContext } from "@/context/UserContext";
 import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
@@ -91,13 +92,8 @@ export default function TabProductInquiry({ productId }) {
         </h2>
 
         <button
-          onClick={() => {
-            if (!user) {
-              showAlert("로그인 후 문의를 작성하실 수 있습니다.");
-              return router.push("/login");
-            }
-            setShowModal(true);
-          }}
+  onClick={() => setShowModal(true)} 
+          
           style={{
             padding: "8px 16px",
             backgroundColor: "#0070f3",
@@ -293,23 +289,31 @@ export default function TabProductInquiry({ productId }) {
         </ul>
       )}
 
-      {showModal && (
-        <ProductInquiryModal
-          productId={productId}
-          initialData={editTarget}
-          onClose={() => {
-            setShowModal(false);
-            setEditTarget(null);
-          }}
-          onSubmitSuccess={() => {
-            setShowModal(false);
-            setEditTarget(null);
-            api.get(`/products/${productId}/inquiries`).then((res) => {
-              if (res.data.success) setInquiries(res.data.inquiries);
-            });
-          }}
-        />
-      )}
+<GlobalDialog
+  open={showModal}
+  onClose={() => {
+    setShowModal(false);
+    setEditTarget(null);
+  }}
+  title="상품 문의"
+>
+  <InquiryModal
+    mode="product"
+    productId={productId}
+    initialData={editTarget}
+    onClose={() => {
+      setShowModal(false);
+      setEditTarget(null);
+    }}
+    onSubmitSuccess={() => {
+      setShowModal(false);
+      setEditTarget(null);
+      api.get(`/products/${productId}/inquiries`).then((res) => {
+        if (res.data.success) setInquiries(res.data.inquiries);
+      });
+    }}
+  />
+</GlobalDialog>
     </section>
   );
 }

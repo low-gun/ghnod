@@ -45,8 +45,7 @@ router.get(
   "/inquiries",
   authenticateToken,
   authenticateAdmin,
-  adminController.getUnansweredInquiries
-);
+  adminController.getAllInquiries);
 // ======================= 사용자 기본 정보 조회 API =======================
 router.get("/users/:id", authenticateToken, authenticateAdmin, getUserById);
 router.get(

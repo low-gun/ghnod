@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "@/lib/api";
-import InquiryModal from "./InquiryModal";
+import InquiryModal from "@/components/inquiry/InquiryModal";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
@@ -253,15 +253,29 @@ export default function Inquiries({ data }) {
   </button>
 </div>
 
-      {showModal && (
-        <InquiryModal
-          onClose={() => setShowModal(false)}
-          onSubmitted={() => {
-            fetchData();
-            setShowModal(false);
-          }}
-        />
-      )}
+<GlobalDialog
+  open={showModal}
+  onClose={() => {
+    setShowModal(false);
+    setEditTarget(null);
+  }}
+  title="1:1 문의"
+>
+  <InquiryModal
+    mode="mypage"
+    initialData={editTarget}
+    onClose={() => {
+      setShowModal(false);
+      setEditTarget(null);
+    }}
+    onSubmitSuccess={() => {
+      setShowModal(false);
+      setEditTarget(null);
+      fetchInquiries();
+    }}
+  />
+</GlobalDialog>
+
     </div>
   );
 }

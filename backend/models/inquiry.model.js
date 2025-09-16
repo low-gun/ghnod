@@ -1,15 +1,29 @@
 const db = require("../config/db");
 
-exports.createInquiry = async (userId, title, message, attachment) => {
-  const [rows] = await db.query(
-    `
-    INSERT INTO inquiries (user_id, title, message, status, created_at, attachment)
-    VALUES (?, ?, ?, '접수', NOW(), ?)
-    `,
-    [userId, title, message, attachment]
-  );
+// 회원/비회원 모두 지원
+exports.createInquiry = async ({ userId, title, message, attachment, guest_name, guest_email, guest_phone }) => {
+  let query, params;
+
+  if (userId) {
+    // ✅ 회원 문의
+    query = `
+      INSERT INTO inquiries (user_id, title, message, status, created_at, attachment)
+      VALUES (?, ?, ?, '접수', NOW(), ?)
+    `;
+    params = [userId, title, message, attachment];
+  } else {
+    // ✅ 비회원 문의 (이름, 이메일, 휴대폰 필수)
+    query = `
+      INSERT INTO inquiries (title, message, status, created_at, attachment, guest_name, guest_email, guest_phone)
+      VALUES (?, ?, '접수', NOW(), ?, ?, ?, ?)
+    `;
+    params = [title, message, attachment, guest_name, guest_email, guest_phone];
+  }
+
+  const [rows] = await db.query(query, params);
   return rows;
 };
+
 
 exports.getInquiriesByUser = async (userId) => {
   const [rows] = await db.query(
