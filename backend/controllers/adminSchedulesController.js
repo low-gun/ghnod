@@ -693,8 +693,16 @@ const allowed = {
     return res.json({ success: true });
   } catch (err) {
     await conn.rollback();
-    console.error("❌ patchSchedule 오류:", err);
-    return res.status(500).json({ success: false, message: "부분 수정 실패" });
+    console.error("❌ patchSchedule 오류:", err?.stack || err, {
+      allowed,
+      keys,
+      values
+    });
+    return res.status(500).json({
+      success: false,
+      message: "부분 수정 실패",
+      error: err?.message
+    });
   } finally {
     conn.release();
   }
