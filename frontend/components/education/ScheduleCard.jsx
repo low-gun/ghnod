@@ -67,8 +67,24 @@ export default function ScheduleCard({
   showDetailButton = false,
 }) {
   const router = useRouter();
-  const { start, end } = getScheduleRange(schedule);
-  const status = getScheduleStatus(start, end);
+  // ✅ 대표 일정: sessions 중 가장 가까운 미래 회차 선택
+function getRepresentativeSession(sessions, today = new Date()) {
+  if (!Array.isArray(sessions) || sessions.length === 0) return null;
+  const future = sessions.filter(sess => new Date(sess.start_date) >= today);
+  if (future.length > 0) {
+    return future.sort((a, b) => new Date(a.start_date) - new Date(b.start_date))[0];
+  }
+  // 모두 지난 경우 → 가장 마지막 회차
+  return sessions.sort((a, b) => new Date(b.start_date) - new Date(a.start_date))[0];
+}
+
+const today = new Date();
+const representative = getRepresentativeSession(schedule.sessions, today);
+
+const repStart = representative ? new Date(representative.start_date) : new Date(schedule.start_date);
+const repEnd = representative ? new Date(representative.end_date || representative.start_date) : new Date(schedule.end_date || schedule.start_date);
+const status = getScheduleStatus(repStart, repEnd);
+
 
   // 이미지 소스
   const imgSrc = schedule.image_url || schedule.product_image || EMPTY_PX;
@@ -204,8 +220,19 @@ export default function ScheduleCard({
         </div>
 
         <p style={{ margin: "6px 0 0", fontSize: 13, color: "#666" }}>
-          {formatRangeWithWeekday(start, end)}
-        </p>
+  {formatRangeWithWeekday(repStart, repEnd)}
+  {Array.isArray(schedule.sessions) && schedule.sessions.length > 1 && (
+    <span
+      style={{ marginLeft: 6, cursor: "pointer", color: "#555", fontWeight: "bold" }}
+      title={schedule.sessions
+        .map(sess => formatRangeWithWeekday(sess.start_date, sess.end_date || sess.start_date))
+        .join("\n")}
+    >
+      ❕
+    </span>
+  )}
+</p>
+
 
         {/* 종료 문구 */}
         {status === "ended" && !hideEndMessage && (

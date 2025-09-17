@@ -4,6 +4,7 @@ import InquiryModal from "@/components/inquiry/InquiryModal";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
 import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
+import GlobalDialog from "@/components/common/GlobalDialog";
 
 export default function Inquiries({ data }) {
   const [inquiries, setInquiries] = useState(data || []);
@@ -12,6 +13,7 @@ export default function Inquiries({ data }) {
   const isMobile = useIsMobile();
   const { showAlert } = useGlobalAlert(); // ✅ 추가
   const { showConfirm } = useGlobalConfirm(); // ✅ 추가
+  const [editTarget, setEditTarget] = useState(null);
 
   // 목록 새로고침
   const fetchData = async () => {
@@ -271,7 +273,7 @@ export default function Inquiries({ data }) {
     onSubmitSuccess={() => {
       setShowModal(false);
       setEditTarget(null);
-      fetchInquiries();
+      fetchData();  {/* ✅ 함수 이름 맞춤 */}
     }}
   />
 </GlobalDialog>

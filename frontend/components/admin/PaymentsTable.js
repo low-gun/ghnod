@@ -560,7 +560,7 @@ try {
               { key: "method",     title: "결제수단", width: 100, onClickHeader: () => handleSort("payment_method") },
               { key: "created_at", title: "결제일시", width: 160, onClickHeader: () => handleSort("created_at") },
               { key: "status",     title: "상태",     width: 100, onClickHeader: () => handleSort("status") },
-            ]}
+{ key: "actions",    title: "환불",     width: 120 },            ]}
             items={pagedPayments}
             renderRowCells={({ item: p, index: idx }) => {
               const id = p.payment_id ?? p.id;
@@ -657,8 +657,20 @@ try {
                   </td>
       
                   <td className="admin-td" style={{ width: 100 }}>
-                    <StatusBadge status={p.statusKey}>{p.statusLabel}</StatusBadge>
-                  </td>
+  <StatusBadge status={p.statusKey}>{p.statusLabel}</StatusBadge>
+</td>
+
+<td className="admin-td" style={{ width: 120 }}>
+  {p.canRefund && (
+    <button
+      onClick={() => handleRefund(p.order_id)}
+      style={dangerBtn}
+    >
+      환불
+    </button>
+  )}
+</td>
+
                 </>
               );
             }}

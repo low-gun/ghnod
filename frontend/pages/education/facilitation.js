@@ -81,9 +81,26 @@ export default function FacilitationPage() {
   const filteredSchedules = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     return schedules.filter((s) => {
-      const isPast = new Date(s.start_date) < today;
-      if (!showPast && isPast) return false;
+      // ✅ 대표 일정: sessions 중 가장 가까운 미래 회차
+      const futureSessions = (s.sessions || []).filter(
+        (sess) => new Date(sess.start_date) >= today
+      );
+      const representative = futureSessions.length
+        ? futureSessions.sort(
+            (a, b) => new Date(a.start_date) - new Date(b.start_date)
+          )[0]
+        : null;
   
+      const effectiveStart = representative
+        ? new Date(representative.start_date)
+        : new Date(s.start_date);
+      const effectiveEnd = representative
+        ? new Date(representative.end_date || representative.start_date)
+        : new Date(s.end_date || s.start_date);
+  
+      const isPast = effectiveEnd < today;
+      if (!showPast && isPast) return false;
+    
       if (searchType === "전체" || searchType === "교육명") {
         return s.title?.toLowerCase().includes(keyword);
       }
@@ -97,13 +114,11 @@ export default function FacilitationPage() {
         const selectedEndRaw =
           dateRange.endDate.toDate?.() || dateRange.endDate;
         const selectedEnd = new Date(selectedEndRaw.getTime() + 86400000 - 1);
-        const scheduleStart = new Date(s.start_date);
-        return scheduleStart >= selectedStart && scheduleStart <= selectedEnd;
+        return effectiveStart >= selectedStart && effectiveStart <= selectedEnd;
       }
       return true;
     });
   }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);
-  
 
   const imgTitleBoxStyle = {
     position: "relative",

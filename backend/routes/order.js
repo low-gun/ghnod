@@ -88,7 +88,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
     const [payRes] = await conn.query(
       `INSERT INTO payments 
          (user_id, amount, currency, payment_method, status, created_at, updated_at)
-       VALUES (?, ?, 'KRW', ?, '완료', NOW(), NOW())`,
+       VALUES (?, ?, 'KRW', ?, 'paid', NOW(), NOW())`,
       [userId, orderRow.calc_total, orderRow.payment_method || "card"]
     );
     const paymentId = payRes.insertId;

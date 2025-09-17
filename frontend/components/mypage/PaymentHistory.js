@@ -29,9 +29,12 @@ function getPaymentMethodLabel(method) {
   if (!method) return "-";
   if (method === "card") return "카드결제";
   if (method === "bank") return "무통장입금";
-  // 필요 시 기타 추가
+  if (method === "easyPay" || method === "easypay") return "간편결제"; // ✅ 추가
+  if (method === "transfer") return "계좌이체";
+  if (method === "virtualAccount") return "가상계좌";
   return method;
 }
+
 
 export default function PaymentHistory() {
   const router = useRouter();

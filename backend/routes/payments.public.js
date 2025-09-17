@@ -293,18 +293,29 @@ const secretKey = `${process.env.TOSS_SECRET_KEY.trim()}:`;
 const auth = Buffer.from(secretKey).toString("base64");
 
 
-    const { data } = await axios.post(
-      url,
-      { paymentKey, orderId: orderIdStr, amount: Number(amount) },
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": `confirm-${paymentKey}`,
-        },
-        timeout: 10000,
-      }
-    );
+console.log("📤 [CONFIRM] axios POST body:", {
+  paymentKey, orderId: orderIdStr, amount: Number(amount)
+});
+console.log("📤 [CONFIRM] axios POST headers:", {
+  Authorization: `Basic ${auth}`.slice(0, 20) + "...",
+  "Content-Type": "application/json",
+  "Idempotency-Key": `confirm-${paymentKey}`
+});
+
+const { data } = await axios.post(
+  url,
+  { paymentKey, orderId: orderIdStr, amount: Number(amount) },
+  {
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `confirm-${paymentKey}`,
+    },
+    timeout: 10000,
+  }
+);
+
+console.log("✅ [CONFIRM] axios RES data:", data);
 
     if (data.status !== "DONE") {
       return res
@@ -313,7 +324,14 @@ const auth = Buffer.from(secretKey).toString("base64");
     }
 
     // 승인 정보
-    const payMethod = data.method || "toss";
+    // Toss 응답 method를 DB에 맞게 매핑
+const methodMap = {
+  카드: "card",
+  간편결제: "easyPay",
+  가상계좌: "virtualAccount",
+  계좌이체: "transfer",
+};
+const payMethod = methodMap[data.method] || "toss";
     const approvalCode =
       (data.card && data.card.approveNo) ??
       (data.easyPay && data.easyPay.approvalNo) ??
@@ -360,19 +378,24 @@ try {
   }
 
   // (c) 결제 레코드 생성
+  const statusValue = "paid"; // DB enum 값에 맞춤
+
   const [payIns] = await conn.query(
     `INSERT INTO payments
        (user_id, amount, currency, payment_method, status, approval_code, toss_payment_key, toss_order_id, created_at, updated_at)
-     VALUES (?, ?, 'KRW', ?, '완료', ?, ?, ?, NOW(), NOW())`,
+     VALUES (?, ?, 'KRW', ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       order.user_id,
       data.totalAmount,
       payMethod,
+      statusValue,
       approvalCode,
       data.paymentKey,
       orderIdStr,
     ]
   );
+  
+
   paymentId = payIns.insertId;
 
   // (d) 주문 업데이트
@@ -412,17 +435,16 @@ try {
 
     return res.json({ success: true, payment: data, paymentId });
   } catch (err) {
-    console.error("❌ Toss confirm error:", {
-      status: err.response?.status,
-      data: err.response?.data,
-    });
+    console.error("❌ Toss confirm error (raw):", err);
+    console.error("❌ Toss confirm error (response):", err.response?.data);
     const status = err.response?.status || 500;
     const payload = err.response?.data || {
       code: "UNKNOWN",
-      message: "Toss confirm failed",
+      message: err.message || "Toss confirm failed",
     };
     return res.status(status).json({ success: false, ...payload });
   }
+  
 });
 
 /**
@@ -522,7 +544,7 @@ for (const it of items) {
       const [pmt] = await conn.query(
         `INSERT INTO payments
            (user_id, amount, currency, payment_method, status, created_at, updated_at)
-         VALUES (?, 0, 'KRW', 'free', '완료', NOW(), NOW())`,
+         VALUES (?, 0, 'KRW', 'free', 'paid', NOW(), NOW())`,
         [userId]
       );
 

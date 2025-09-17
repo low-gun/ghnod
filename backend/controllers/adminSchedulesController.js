@@ -452,14 +452,17 @@ const resolvedImageUrl = uploadedUrl || (image_url || null);
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [r] = await conn.execute(
-      `INSERT INTO schedules
-         (product_id, title, start_date, end_date, location, instructor,
-          description, total_spots, price, detail, image_url, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-       [product_id, title, startDt, endDt, location, instructor,
-        description, total_spots, price, detail, resolvedImageUrl]      
-    );
+    const { normalizeDetailHtml } = require("../services/normalizeDetailHtml");
+
+const normDetail = await normalizeDetailHtml(detail || "");
+const [r] = await conn.execute(
+  `INSERT INTO schedules
+     (product_id, title, start_date, end_date, location, instructor,
+      description, total_spots, price, detail, image_url, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+   [product_id, title, startDt, endDt, location, instructor,
+    description, total_spots, price, normDetail, resolvedImageUrl]      
+);
     const newId = r.insertId;
 
     if (normSessions.length) {
@@ -538,14 +541,18 @@ exports.updateSchedule = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    await conn.execute(
-      `UPDATE schedules
-          SET product_id=?, title=?, start_date=?, end_date=?, location=?, instructor=?,
-              description=?, total_spots=?, price=?, detail=?, image_url=?, updated_at=NOW()
-        WHERE id=?`,
-        [product_id, title, startDt, endDt, location, instructor,
-          description, total_spots, price, detail, resolvedImageUrl, id]       
-    );
+    const { normalizeDetailHtml } = require("../services/normalizeDetailHtml");
+
+const normDetail = await normalizeDetailHtml(detail || "");
+await conn.execute(
+  `UPDATE schedules
+      SET product_id=?, title=?, start_date=?, end_date=?, location=?, instructor=?,
+          description=?, total_spots=?, price=?, detail=?, image_url=?, updated_at=NOW()
+    WHERE id=?`,
+  [product_id, title, startDt, endDt, location, instructor,
+    description, total_spots, price, normDetail, resolvedImageUrl, id]       
+);
+
 
     await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
     if (normSessions.length) {
@@ -614,11 +621,15 @@ exports.patchSchedule = async (req, res) => {
   // 숫자 필드 정규화(빈 문자열 → null, 미전달은 undefined 유지)
   const pricePatched = (price === '' ? null : price);
   
-  const allowed = {
-    product_id, title, start_date, end_date,
-    location, instructor, description, total_spots,
-    price: pricePatched, detail,
-  };
+  const { normalizeDetailHtml } = require("../services/normalizeDetailHtml");
+
+const normDetail = await normalizeDetailHtml(detail || "");
+const allowed = {
+  product_id, title, start_date, end_date,
+  location, instructor, description, total_spots,
+  price: pricePatched, detail: normDetail,
+};
+
   if (resolvedImageUrl !== undefined) {
     // 빈 문자열 등은 null 저장
     allowed.image_url = resolvedImageUrl || null;

@@ -29,6 +29,12 @@ const envPath =
 require("dotenv").config({ path: envPath, override: true });
 console.log("✅ .env 로딩됨:", envPath);
 
+// ✅ Toss 관련 환경변수 로깅
+console.log("🔑 TOSS_SECRET_KEY prefix:", process.env.TOSS_SECRET_KEY?.slice(0, 10));
+console.log("🔑 TOSS_SECRET_KEY length:", process.env.TOSS_SECRET_KEY?.length);
+console.log("🔑 TOSS_CLIENT_KEY prefix:", process.env.TOSS_CLIENT_KEY?.slice(0, 10));
+console.log("🔑 TOSS_CLIENT_KEY length:", process.env.TOSS_CLIENT_KEY?.length);
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
