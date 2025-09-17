@@ -1261,30 +1261,83 @@ exports.refundOrderByAdmin = async (req, res) => {
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    await conn.query(
-      `UPDATE orders 
-       SET order_status = 'refunded', updated_at = NOW()
-       WHERE id = ?`,
-      [orderId]
+    // 1. 주문 + 결제 + 일정 시작일 + 쿠폰/포인트 조회
+    const [[order]] = await conn.query(`
+      SELECT o.id, o.user_id, o.total_amount, o.used_point, o.coupon_id,
+             o.order_status, o.created_at, s.start_date,
+             p.id AS payment_id, p.amount AS paid_amount, p.toss_payment_key
+      FROM orders o
+      JOIN payments p ON o.payment_id = p.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN schedules s ON oi.schedule_id = s.id
+      WHERE o.id = ? FOR UPDATE
+    `, [orderId]);
+
+    if (!order) {
+      throw new Error("주문을 찾을 수 없습니다.");
+    }
+    if (order.order_status !== "paid") {
+      throw new Error("결제 완료 상태만 환불할 수 있습니다.");
+    }
+
+    // 2. 약관 환불 정책 적용 (서비스 시작일 기준)
+    const now = new Date();
+    const startDate = order.start_date ? new Date(order.start_date) : null;
+    let refundRate = 1;
+
+    if (startDate) {
+      const diffDays = Math.ceil((startDate - now) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 7) refundRate = 1;         // 7일 전까지: 100%
+      else if (diffDays >= 3) refundRate = 0.5;  // 3일 전까지: 50%
+      else refundRate = 0;                       // 이후: 환불 불가
+    }
+    if (refundRate === 0) {
+      throw new Error("약관에 따라 환불 불가합니다.");
+    }
+
+    const refundAmount = Math.floor(order.paid_amount * refundRate);
+
+    // 3. PG사(토스) 환불 API 호출 (샘플, 실제 연동 필요)
+    if (order.toss_payment_key) {
+      // await axios.post(`https://api.tosspayments.com/v1/payments/${order.toss_payment_key}/cancel`, {
+      //   cancelReason: req.body.reason || "관리자 환불",
+      //   cancelAmount: refundAmount,
+      // }, { headers: { Authorization: `Basic ${Buffer.from(`${process.env.TOSS_SECRET_KEY}:`).toString("base64")}` }});
+    }
+
+    // 4. DB 업데이트
+    await conn.query(`
+      UPDATE orders 
+      SET order_status = 'refunded',
+          refund_amount = ?,
+          refund_reason = ?,
+          refunded_at = NOW(),
+          updated_at = NOW()
+      WHERE id = ?`,
+      [refundAmount, req.body.reason || "관리자 환불 처리", orderId]
     );
 
-    await conn.query(
-      `UPDATE payments 
-       SET status = 'refunded', updated_at = NOW()
-       WHERE id = (SELECT payment_id FROM orders WHERE id = ?)`,
-      [orderId]
-    );
+    await conn.query(`
+      UPDATE payments 
+      SET status = 'refunded', refunded_at = NOW(), updated_at = NOW()
+      WHERE id = ?`, [order.payment_id]);
+
+    await conn.query(`
+      INSERT INTO payment_history (payment_id, old_status, new_status, changed_at)
+      VALUES (?, 'paid', 'refunded', NOW())`,
+      [order.payment_id]);
 
     await conn.commit();
-    res.json({ success: true, message: "✅ 관리자 환불 처리 완료" });
+    res.json({ success: true, message: "✅ 환불 처리 완료", refundAmount });
   } catch (err) {
     if (conn) await conn.rollback();
-    console.error("❌ 관리자 환불 처리 실패:", err);
-    res.status(500).json({ success: false, message: "관리자 환불 실패" });
+    console.error("❌ 관리자 환불 처리 실패:", err.message);
+    res.status(400).json({ success: false, message: err.message || "관리자 환불 실패" });
   } finally {
     if (conn) conn.release();
   }
 };
+
 
 /** ======================= 관리자 결제 단건 조회 ======================= */
 exports.getPaymentDetail = async (req, res) => {

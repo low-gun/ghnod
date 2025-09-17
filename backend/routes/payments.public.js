@@ -197,26 +197,25 @@ await conn.query(
     }
 
     // 6) 토스 파라미터
-    const orderName = await makeOrderName(items);
-    const clientKey = (process.env.TOSS_CLIENT_KEY || "").trim();
+const orderName = await makeOrderName(items);
+// Toss 규격: 6~64자 (영숫자/-/_), 내부 주문 id 패딩
+const orderIdStr = String(orderId).padStart(6, "0");
 
-    // Toss 규격: 6~64자 (영숫자/-/_), 내부 주문 id 패딩
-    const orderIdStr = String(orderId).padStart(6, "0");
+// Toss가 success/fail 시 자동으로 ?paymentKey&orderId&amount 붙여줌
+const successUrl = `${process.env.CLIENT_URL}/payments/toss/success`;
+const failUrl = `${process.env.CLIENT_URL}/payments/toss/fail`;
 
-    // Toss가 success/fail 시 자동으로 ?paymentKey&orderId&amount 붙여줌
-    const successUrl = `${process.env.CLIENT_URL}/payments/toss/success`;
-    const failUrl = `${process.env.CLIENT_URL}/payments/toss/fail`;
+return res.json({
+  orderId: orderIdStr,
+  orderName,
+  amount: finalAmount,
+  successUrl,
+  failUrl,
+  customerName: req.user?.username || "",
+  customerEmail: req.user?.email || "",
+});
 
-    return res.json({
-      orderId: orderIdStr,
-      orderName,
-      amount: finalAmount,
-      clientKey,
-      successUrl,
-      failUrl,
-      customerName: req.user?.username || "",
-      customerEmail: req.user?.email || "",
-    });
+    
   } catch (err) {
     console.error("❌ /toss/prepare error:", err?.message || err);
     return res.status(500).json({ error: "결제 준비 중 오류가 발생했습니다." });
@@ -234,7 +233,11 @@ router.post("/toss/confirm", authenticateToken, async (req, res) => {
   const amount = Number(req.body?.amount);
   const orderId = parseInt(orderIdStr, 10); // DB 조회용 숫자
 
+  console.log("📥 [CONFIRM REQ] raw body:", req.body);
+  console.log("📥 [CONFIRM REQ] parsed:", { paymentKey, orderIdStr, amount, orderId });
+
   if (!paymentKey || !orderIdStr || !Number.isFinite(amount)) {
+    console.error("❌ [CONFIRM] 필수 파라미터 누락", { paymentKey, orderIdStr, amount });
     return res
       .status(400)
       .json({ success: false, error: "필수 파라미터 누락" });
@@ -248,6 +251,8 @@ router.post("/toss/confirm", authenticateToken, async (req, res) => {
         WHERE id = ?`,
       [orderId]
     );
+
+    console.log("🔎 [CONFIRM] DB order lookup:", ordRows);
     if (!ordRows.length) {
       return res
         .status(404)
@@ -272,14 +277,21 @@ router.post("/toss/confirm", authenticateToken, async (req, res) => {
     }
 
     // 2) Toss 승인
-    if (!process.env.TOSS_SECRET_KEY) {
-      return res
-        .status(500)
-        .json({ success: false, error: "서버 결제키 미설정" });
-    }
-    const url = "https://api.tosspayments.com/v1/payments/confirm";
-    const secretKey = `${process.env.TOSS_SECRET_KEY.trim()}:`;
-    const auth = Buffer.from(secretKey).toString("base64");
+    // 2) Toss 승인
+if (!process.env.TOSS_SECRET_KEY) {
+  return res
+    .status(500)
+    .json({ success: false, error: "서버 결제키 미설정" });
+}
+
+// ✅ 실제 런타임에 어떤 키가 읽히는지 확인
+console.log("🔑 [CONFIRM] TOSS_SECRET_KEY (len):", process.env.TOSS_SECRET_KEY?.length);
+console.log("🔑 [CONFIRM] TOSS_SECRET_KEY (prefix):", process.env.TOSS_SECRET_KEY?.slice(0, 10));
+
+const url = "https://api.tosspayments.com/v1/payments/confirm";
+const secretKey = `${process.env.TOSS_SECRET_KEY.trim()}:`;
+const auth = Buffer.from(secretKey).toString("base64");
+
 
     const { data } = await axios.post(
       url,

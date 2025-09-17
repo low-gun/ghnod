@@ -204,119 +204,106 @@ export default function CheckoutPage() {
     setSelectedCoupon({ ...found, _ts: Date.now() });
   }, [couponId, availableCoupons, cartItems]);
 
-  /** 주문 처리 */
-  const handleOrder = async () => {
-    if (!userInfo?.id) {
-      showAlert("로그인이 필요합니다.");
+ /** 주문 처리 (정석 리셋: 프론트는 위젯 호출만 담당) */
+const handleOrder = async () => {
+  if (!userInfo?.id) {
+    showAlert("로그인이 필요합니다.");
+    return;
+  }
+  if (!selectedIds) return;
+
+  setIsLoading(true);
+  setMessage("");
+
+  try {
+    const amount = calcFinalAmount(
+      cartItems,
+      selectedCoupon && typeof selectedCoupon.amount === "number" ? selectedCoupon.amount : 0,
+      pointUsed
+    );
+
+    // 0원 결제는 위젯 불가 → 별도 플로우로 이후 단계에서 처리
+    if (amount <= 0) {
+      setMessage("결제금액이 0원입니다. 무료결제는 이후 단계에서 별도 처리합니다.");
+      setIsLoading(false);
       return;
     }
-    if (!selectedIds) return;
 
-    setIsLoading(true);
-    setMessage("");
+    // 결제창 SDK는 ck 키 사용
+const envClientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+if (!envClientKey || !/^test_ck_|^live_ck_/.test(envClientKey)) {
+  setIsLoading(false);
+  setMessage("결제키 로딩 실패: 환경변수를 확인하세요.");
+  return;
+}
 
-    try {
-      const couponAmount =
-        selectedCoupon && typeof selectedCoupon.amount === "number"
-          ? selectedCoupon.amount
-          : 0;
-      const amount = calcFinalAmount(cartItems, couponAmount, pointUsed);
-
-      // 무료결제
-      if (amount <= 0) {
-        try {
-          const res = await api.post("/payments/free-checkout", {
-            cart_item_ids: selectedIds.split(",").map(Number),
-            coupon_id: selectedCoupon?.id || null,
-            used_point: pointUsed || 0,
-          });
-          const { orderId } = res.data;
-          router.replace(`/orders/${orderId}/complete`);
-        } catch (e) {
-          setMessage(e?.response?.data?.error || "무료 결제 처리 실패");
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      // 토스 결제 준비
-      const prepareRes = await api.post("/payments/toss/prepare", {
-        cart_item_ids: selectedIds.split(",").map((id) => Number(id)),
-        coupon_id: selectedCoupon?.id || null,
-        used_point: pointUsed || 0,
-      });
-
-      const {
-        orderId: preparedOrderId,
-        orderName,
-        customerName,
-        customerEmail,
-        amount: serverAmount,
-        clientKey,
-        successUrl,
-        failUrl,
-      } = prepareRes.data;
-
-      const safeOrderId = String(preparedOrderId || "")
-        .replace(/[^A-Za-z0-9_-]/g, "")
-        .slice(0, 64);
-
-      if (safeOrderId.length < 6) {
-        setIsLoading(false);
-        setMessage("주문번호 형식 오류: 관리자에게 문의하세요.");
-        return;
-      }
-
-      if (Number(serverAmount) !== Number(amount)) {
-        setMessage("금액 검증 실패. 페이지를 새로고침 후 다시 시도하세요.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (!clientKey) {
-        setIsLoading(false);
-        setMessage("결제키 로딩 실패: clientKey가 없습니다.");
-        return;
-      }
-
-      const toss = await loadTossPayments(clientKey);
-      if (!toss || typeof toss.requestPayment !== "function") {
-        setIsLoading(false);
-        setMessage("결제 모듈 초기화 실패");
-        return;
-      }
-
-      try {
-        await toss.requestPayment("카드", {
-          amount,
-          orderId: safeOrderId,
-          orderName,
-          successUrl,
-          failUrl,
-          customerName: customerName || userInfo?.username || "",
-          customerEmail: customerEmail || userInfo?.email || "",
-        });
-      } catch (e) {
-        const msg = String(e?.message || "");
-        const code = String(e?.code || "");
-        const isUserCancel =
-          code === "USER_CANCEL" ||
-          code === "PAY_PROCESS_CANCELED" ||
-          /취소/.test(msg);
-        if (isUserCancel) {
-          setIsLoading(false);
-          return;
-        }
-        throw e;
-      }
-    } catch (err) {
-      console.error("❌ 결제 시작 실패:", err);
-      setMessage(err?.response?.data?.error || "결제 시작에 실패했습니다.");
+// TossPayments SDK 로드
+const toss = await loadTossPayments(envClientKey);
+    if (!toss || typeof toss.requestPayment !== "function") {
       setIsLoading(false);
+      setMessage("결제 모듈 초기화 실패");
+      return;
     }
-  };
 
+    // ✅ 임시 orderId로 위젯 호출 (승인/DB 저장은 성공 페이지에서 서버로)
+   // Toss 요청 파라미터 확인 로그 추가
+// ✅ 서버에서 orderId 발급 (prepare API 호출)
+const prepareRes = await api.post("/payments/toss/prepare", {
+  cart_item_ids: selectedIds.split(",").map(Number),
+  coupon_id: selectedCoupon?.id || null,
+  used_point: pointUsed || 0,
+});
+
+const {
+  orderId: preparedOrderId,
+  orderName,
+  customerName,
+  customerEmail,
+  amount: serverAmount,
+  successUrl,
+  failUrl,
+} = prepareRes.data;
+
+// 서버 금액과 프론트 계산 금액 검증
+if (Number(serverAmount) !== Number(amount)) {
+  setIsLoading(false);
+  setMessage("금액 검증 실패. 다시 시도해주세요.");
+  return;
+}
+
+console.log("🔑 Toss ClientKey:", envClientKey);
+console.log("💳 amount:", serverAmount);
+console.log("🧾 orderId:", preparedOrderId);
+console.log("📦 orderName:", orderName);
+console.log("✅ successUrl:", successUrl);
+console.log("❌ failUrl:", failUrl);
+
+await toss.requestPayment("카드", {
+  amount: serverAmount,
+  orderId: preparedOrderId,
+  orderName,
+  successUrl,
+  failUrl,
+  customerName: customerName || userInfo.username || "",
+  customerEmail: customerEmail || userInfo.email || "",
+});
+
+
+  } catch (err) {
+    // 사용자가 창을 닫거나 취소하는 경우 등
+    const code = String(err?.code || "");
+    const msg = String(err?.message || "");
+    const isUserCancel =
+      code === "USER_CANCEL" ||
+      code === "PAY_PROCESS_CANCELED" ||
+      /취소/.test(msg);
+    if (!isUserCancel) {
+      console.error("결제 요청 실패:", err);
+      setMessage("결제를 시작할 수 없습니다.");
+    }
+    setIsLoading(false);
+  }
+};
   const validCouponDiscount =
     selectedCoupon &&
     typeof selectedCoupon.amount === "number" &&

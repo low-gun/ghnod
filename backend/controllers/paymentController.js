@@ -11,6 +11,8 @@ exports.confirmToss = async (req, res) => {
   }
 
   const secret = process.env.TOSS_SECRET_KEY; // test_sk_... (Azure 환경변수)
+  console.log("🔑 TOSS_SECRET_KEY =", process.env.TOSS_SECRET_KEY);
+console.log("📥 confirmToss input =", { paymentKey, orderId, amount });
   if (!secret) {
     return res
       .status(500)
@@ -20,6 +22,11 @@ exports.confirmToss = async (req, res) => {
   const basic = Buffer.from(`${secret}:`).toString("base64");
 
   try {
+    console.log("📡 Toss confirm 요청", {
+      url: "https://api.tosspayments.com/v1/payments/confirm",
+      headers: { Authorization: `Basic ${basic}` },
+      body: { paymentKey, orderId, amount }
+    }); 
     // 1) PG 승인(토스 confirm) 먼저 수행 (외부 I/O)
     const { data } = await axios.post(
       "https://api.tosspayments.com/v1/payments/confirm",
@@ -220,11 +227,12 @@ exports.confirmToss = async (req, res) => {
   } catch (e) {
     const r = e.response;
     if (r) {
-      console.error("[TOSS FAIL]", {
+      console.error("[TOSS FAIL 응답]", {
         status: r?.status,
         code: r?.data?.code,
         message: r?.data?.message,
         trace: r?.headers?.["x-tosspayments-trace-id"],
+        data: r?.data,
       });
       return res.status(r?.status || 500).json({
         success: false,
@@ -232,7 +240,21 @@ exports.confirmToss = async (req, res) => {
         error: r?.data?.message || e.message,
       });
     }
-    console.error("❌ confirmToss tx error:", e);
+  
+    // 👉 여기서 네트워크 계층 에러 잡음
+    console.error("❌ Toss API 요청 자체 실패", {
+      message: e.message,
+      code: e.code,               // ECONNREFUSED, ETIMEDOUT, ENOTFOUND 등
+      name: e.name,               // AxiosError
+      config: {
+        url: e.config?.url,
+        method: e.config?.method,
+        headers: e.config?.headers,
+        data: e.config?.data,
+      },
+      stack: e.stack?.split("\n").slice(0, 3), // 상위 3줄만
+    });
+  
     return res.status(500).json({
       success: false,
       error: e?.message || "결제 처리 실패",

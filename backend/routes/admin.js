@@ -334,11 +334,11 @@ router.delete("/users/coupons/:couponId", async (req, res) => {
 });
 
 // 문의 답변 등록 (관리자 전용)
-router.put(
-  "/users/inquiries/:id/answer",
+router.post(
+  "/orders/:id/refund",
   authenticateToken,
   authenticateAdmin,
-  adminController.answerInquiryByAdmin
+  adminController.refundOrderByAdmin
 );
 
 router.get("/users/:id/inquiries", async (req, res) => {

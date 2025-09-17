@@ -51,8 +51,8 @@ export default function ScheduleFormPage() {
     price: "",
     detail: "",
     image_url: "",
-    lecture_hours: "",
   });
+  
   const [originalForm, setOriginalForm] = useState({});
 const [originalSessions, setOriginalSessions] = useState([]); // ✅ 원본 세션 보관
 const [sessions, setSessions] = useState([
@@ -103,14 +103,12 @@ const [sessions, setSessions] = useState([
     .then((res) => {
         if (!res.data.success) return showAlert("일정 정보를 불러오지 못했습니다.");
         const data = res.data.schedule;
-
         setForm({
           ...data,
           total_spots: data.total_spots ?? "",
           price: data.price ?? "",
           image_url: data.image_url || "",
-          lecture_hours: data.lecture_hours ?? "",
-        });
+        });     
         setOriginalForm(data);
         setPriceInput(fmtKRW(data.price ?? ""));
         setSelectedType(data.product_type || "");
@@ -142,11 +140,6 @@ const [sessions, setSessions] = useState([
       const digits = value.replace(/[^0-9]/g, "");
       setPriceInput(digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",")); // 보기용
       setForm((prev) => ({ ...prev, price: digits === "" ? "" : Number(digits) })); // 실제 값
-      return;
-    }
-    if (name === "lecture_hours") {
-      const clean = value.replace(/[^0-9]/g, "");
-      setForm((prev) => ({ ...prev, lecture_hours: clean }));
       return;
     }
     if (name === "product_type") {
@@ -193,7 +186,7 @@ const [sessions, setSessions] = useState([
       const keysToCheck = [
         "product_id","title","location","instructor",
         "description","total_spots","price","detail",
-        "image_url","lecture_hours","status"
+        "image_url","status"
       ];
       keysToCheck.forEach((k) => {
         const prev = originalForm?.[k];

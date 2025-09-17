@@ -210,9 +210,27 @@ export default function PaymentsTable({
   const [openDiscountId, setOpenDiscountId] = useState(null);
 
   // 환불 (샘플)
-  const handleRefund = (orderId) => {
-    showAlert(`환불 처리 기능은 미구현 상태입니다.\n환불 대상: ${orderId}`);
-  };
+  // 환불 (API 연동)
+const handleRefund = async (orderId) => {
+  if (!orderId) return showAlert("유효하지 않은 주문 ID입니다.");
+  if (!confirm("정말 환불 처리하시겠습니까?")) return;
+
+  try {
+    const res = await api.post(`/admin/orders/${orderId}/refund`, {
+      reason: "관리자 환불 처리",
+    });
+    if (res.data?.success) {
+      showAlert(`환불 완료 (환불액: ${res.data.refundAmount}원)`);
+      fetchPayments(); // 목록 새로고침
+    } else {
+      showAlert(res.data?.message || "환불 실패");
+    }
+  } catch (err) {
+    console.error("❌ 환불 처리 오류:", err);
+    showAlert("환불 처리 중 오류가 발생했습니다.");
+  }
+};
+
 
   // 정렬 클릭
   const handleSort = (key) => {

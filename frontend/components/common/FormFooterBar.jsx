@@ -1,11 +1,27 @@
 // frontend/components/common/FormFooterBar.jsx
+import { useGlobalConfirm } from "@/stores/globalConfirm";
+
 export default function FormFooterBar({ onList, onDelete, onSave, isEdit, saveDisabled }) {
+    const { showConfirm } = useGlobalConfirm();
+
+    const handleDeleteClick = async () => {
+      if (!onDelete) return;
+      const ok = await showConfirm("정말 삭제하시겠습니까?");
+      if (ok) onDelete();
+    };
+
+    const handleSaveClick = async () => {
+      if (!onSave) return;
+      const ok = await showConfirm("정말 저장하시겠습니까?");
+      if (ok) onSave();
+    };
+
     return (
       <div className="footerBar">
         <button onClick={onList} className="btnGhost">목록</button>
         <div className="btnGroup">
-          {isEdit && <button onClick={onDelete} className="btnDanger">삭제</button>}
-          <button onClick={onSave} className="btnPrimary" disabled={saveDisabled}>저장</button>
+          {isEdit && <button onClick={handleDeleteClick} className="btnDanger">삭제</button>}
+          <button onClick={handleSaveClick} className="btnPrimary" disabled={saveDisabled}>저장</button>
         </div>
         <style jsx>{`
           .footerBar { margin-top:28px; display:flex; justify-content:space-between; gap:12px; }
