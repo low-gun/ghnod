@@ -1,5 +1,6 @@
 // backend/controllers/adminSchedulesController.js
 const pool = require("../config/db");
+const { normalizeDetailHtml } = require("../services/normalizeDetailHtml"); 
 
 /* ===== 공통 유틸 ===== */
 function toKstDate(y, m, d, hh, mm, ss, ms) {
@@ -493,8 +494,8 @@ await conn.execute(
     return res.json({ success: true, id: newId });
   } catch (err) {
     await conn.rollback();
-    console.error("일정 등록 오류:", err);
-    return res.status(500).json({ success: false, message: "등록 실패" });
+    console.error("❌ 일정 등록 오류:", err?.stack || err);
+    return res.status(500).json({ success: false, message: "등록 실패", error: err?.message });
   } finally {
     conn.release();
   }
@@ -583,9 +584,10 @@ await conn.execute(
     return res.json({ success: true });
   } catch (err) {
     await conn.rollback();
-    console.error("일정 수정 오류:", err);
-    return res.status(500).json({ success: false, message: "수정 실패" });
-  } finally {
+    console.error("❌ 일정 수정 오류:", err?.stack || err);
+    return res.status(500).json({ success: false, message: "수정 실패", error: err?.message });
+  }
+   finally {
     conn.release();
   }
 };
