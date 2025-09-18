@@ -30,7 +30,7 @@ function normalizeSessions(sessions) {
 
   const toIntOrNull = (v) => {
     if (v === undefined || v === null) return null;
-    if (typeof v === "string" && v.trim() === "") return null; // ""는 null 처리
+    if (typeof v === "string" && v.trim() === "") return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
@@ -38,18 +38,20 @@ function normalizeSessions(sessions) {
   return valid.map((s, idx) => {
     const sd = s.start_date || s.date;
     const ed = s.end_date || s.date;
-    const ts = toIntOrNull(s.total_spots);  // ← 강제 0 금지
+    const ts = toIntOrNull(s.total_spots);
     return {
+      id: s.id || null,          // ✅ 기존 세션 식별을 위해 id 유지
       start_date: sd,
       end_date: ed,
       start_time: s.start_time,
       end_time: s.end_time,
-      total_spots: ts,           // null 허용
+      total_spots: ts,
       session_date: sd,
       _idx: idx,
     };
   });
 }
+
 
 const toDT = (d, t) => `${d} ${t}:00`;
 
