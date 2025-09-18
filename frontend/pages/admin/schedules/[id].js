@@ -91,28 +91,32 @@ const [sessions, setSessions] = useState([
     form.price === "" ||
     form.price === null;
 
-  useEffect(() => {
-    api.get("admin/products").then((res) => {
-      if (res.data.success) setProducts(res.data.products);
-    });
-  }, []);
+    useEffect(() => {
+      api.get("admin/products").then((res) => {
+        console.log("[DEBUG products]", res.data.products); // ✅ 상품목록 확인
+        if (res.data.success) setProducts(res.data.products);
+      });
+    }, []);
+    
 
   useEffect(() => {
     if (!isEdit || !id) return;
     setLoading(true);
     api
-      .get(`admin/schedules/${id}`)
-      .then((res) => {
-        if (!res.data.success) return showAlert("일정 정보를 불러오지 못했습니다.");
-        const data = res.data.schedule;
-        setForm({
-          ...data,
-          product_type: data.product_type || "",   // ✅ 추가
-          product_title: data.product_title || "", // ✅ 추가
-          total_spots: data.total_spots ?? "",
-          price: data.price ?? "",
-          image_url: data.image_url || "",
-        });
+  .get(`admin/schedules/${id}`)
+  .then((res) => {
+    console.log("[DEBUG schedule]", res.data.schedule); // ✅ 일정 응답 확인
+    if (!res.data.success) return showAlert("일정 정보를 불러오지 못했습니다.");
+    const data = res.data.schedule;
+    setForm({
+      ...data,
+      product_type: data.product_type || "",
+      product_title: data.product_title || "",
+      total_spots: data.total_spots ?? "",
+      price: data.price ?? "",
+      image_url: data.image_url || "",
+    });
+
         
         setOriginalForm(data);
         setPriceInput(fmtKRW(data.price ?? ""));
