@@ -605,8 +605,63 @@ if (normSessions.length) {
     }
   }
 }
-    await conn.commit();
-    return res.json({ success: true });
+
+/* 🔻 추가: 세션 삭제(diff) 처리 (결제된 회차는 보호) */
+{
+  // 현재 스케줄의 기존 세션 id들
+  const [existRows] = await conn.execute(
+    `SELECT id FROM schedule_sessions WHERE schedule_id = ?`,
+    [id]
+  );
+  const existingIds = existRows.map(r => Number(r.id));
+
+  // 요청으로 넘어온(유지/수정될) 세션 id들
+  const incomingIds = (normSessions || [])
+    .map(s => s.id)
+    .filter(v => v !== null && v !== undefined)
+    .map(Number);
+
+  // 결제된(잠금) 세션 id들
+  const [lockedRows] = await conn.execute(
+    `SELECT ss.id
+       FROM schedule_sessions ss
+       JOIN order_items oi ON oi.schedule_session_id = ss.id
+       JOIN orders o ON o.id = oi.order_id
+      WHERE ss.schedule_id = ? AND o.order_status = 'paid'
+      GROUP BY ss.id`,
+    [id]
+  );
+  const lockedSet = new Set(lockedRows.map(r => Number(r.id)));
+
+  // 요청에서 빠졌지만 결제된 세션을 지우려한 경우 → 차단
+  const attemptedPaidDeletes = existingIds
+    .filter(x => !incomingIds.includes(x) && lockedSet.has(x));
+  if (attemptedPaidDeletes.length) {
+    await conn.rollback();
+    return res.status(409).json({
+      success: false,
+      code: "HAS_PAID_SESSIONS",
+      message: "결제된 회차는 삭제할 수 없습니다.",
+      details: { session_ids: attemptedPaidDeletes }
+    });
+  }
+
+  // 삭제 가능 세션(id NOT IN incomingIds AND NOT locked)
+  const deletableIds = existingIds
+    .filter(x => !incomingIds.includes(x) && !lockedSet.has(x));
+
+  if (deletableIds.length) {
+    const ph = deletableIds.map(() => "?").join(",");
+    await conn.execute(
+      `DELETE FROM schedule_sessions WHERE schedule_id = ? AND id IN (${ph})`,
+      [id, ...deletableIds]
+    );
+  }
+}
+
+await conn.commit();
+return res.json({ success: true });
+
   } catch (err) {
     await conn.rollback();
     console.error("❌ 일정 수정 오류:", err?.stack || err);
@@ -697,34 +752,80 @@ const allowed = {
         [...values, id]
       );
     }
-
+    
     // ✅ patchSchedule: 기존 세션은 UPDATE, 새 세션만 INSERT
-if (Array.isArray(sessions) && normSessions.length > 0) {
-  for (const s of normSessions) {
-    const ts = s.total_spots;
-    if (s.id) {
-      await conn.execute(
-        `UPDATE schedule_sessions
-           SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
-         WHERE id=? AND schedule_id=?`,
-        [s.start_date, s.end_date, s.start_time, s.end_time, ts, ts, s.id, id]
-      );
-    } else {
-      await conn.execute(
-        `INSERT INTO schedule_sessions
-           (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
-      );
+    if (Array.isArray(sessions) && normSessions.length > 0) {
+      for (const s of normSessions) {
+        const ts = s.total_spots;
+        if (s.id) {
+          await conn.execute(
+            `UPDATE schedule_sessions
+               SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
+             WHERE id=? AND schedule_id=?`,
+            [s.start_date, s.end_date, s.start_time, s.end_time, ts, ts, s.id, id]
+          );
+        } else {
+          await conn.execute(
+            `INSERT INTO schedule_sessions
+               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
+          );
+        }
+      }
     }
-  }
-}
-
     
+    /* 🔻 추가: 세션 삭제(diff) 처리 (sessions가 넘어온 경우에만) */
+    if (Array.isArray(sessions)) {
+      const [existRows] = await conn.execute(
+        `SELECT id FROM schedule_sessions WHERE schedule_id = ?`,
+        [id]
+      );
+      const existingIds = existRows.map(r => Number(r.id));
     
-
+      const incomingIds = (normSessions || [])
+        .map(s => s.id)
+        .filter(v => v !== null && v !== undefined)
+        .map(Number);
+    
+      const [lockedRows] = await conn.execute(
+        `SELECT ss.id
+           FROM schedule_sessions ss
+           JOIN order_items oi ON oi.schedule_session_id = ss.id
+           JOIN orders o ON o.id = oi.order_id
+          WHERE ss.schedule_id = ? AND o.order_status = 'paid'
+          GROUP BY ss.id`,
+        [id]
+      );
+      const lockedSet = new Set(lockedRows.map(r => Number(r.id)));
+    
+      const attemptedPaidDeletes = existingIds
+        .filter(x => !incomingIds.includes(x) && lockedSet.has(x));
+      if (attemptedPaidDeletes.length) {
+        await conn.rollback();
+        return res.status(409).json({
+          success: false,
+          code: "HAS_PAID_SESSIONS",
+          message: "결제된 회차는 삭제할 수 없습니다.",
+          details: { session_ids: attemptedPaidDeletes }
+        });
+      }
+    
+      const deletableIds = existingIds
+        .filter(x => !incomingIds.includes(x) && !lockedSet.has(x));
+    
+      if (deletableIds.length) {
+        const ph = deletableIds.map(() => "?").join(",");
+        await conn.execute(
+          `DELETE FROM schedule_sessions WHERE schedule_id = ? AND id IN (${ph})`,
+          [id, ...deletableIds]
+        );
+      }
+    }
+    
     await conn.commit();
     return res.json({ success: true });
+    
   } catch (err) {
     await conn.rollback();
     console.error("❌ patchSchedule 오류:", err?.stack || err, {
@@ -788,6 +889,7 @@ exports.getStudents = async (req, res) => {
 };
 
 /* ===== 일괄 삭제 ===== */
+/* ===== 일정 전체 삭제 ===== */
 exports.deleteSchedules = async (req, res) => {
   try {
     let ids = [];
@@ -806,26 +908,20 @@ exports.deleteSchedules = async (req, res) => {
     const placeholders = ids.map(() => "?").join(",");
 
     const [orderBlocks] = await pool.query(
-      `SELECT schedule_id, COUNT(*) AS order_count
-         FROM order_items
-        WHERE schedule_id IN (${placeholders})
-        GROUP BY schedule_id`,
-      ids
-    );
-    const [certBlocks] = await pool.query(
-      `SELECT schedule_id, COUNT(*) AS cert_count
-         FROM certificates
-        WHERE schedule_id IN (${placeholders})
-        GROUP BY schedule_id`,
+      `SELECT ss.schedule_id, COUNT(*) AS order_count
+         FROM order_items oi
+         JOIN schedule_sessions ss ON oi.schedule_session_id = ss.id
+        WHERE ss.schedule_id IN (${placeholders})
+        GROUP BY ss.schedule_id`,
       ids
     );
 
-    if ((orderBlocks?.length || 0) > 0 || (certBlocks?.length || 0) > 0) {
+    if ((orderBlocks?.length || 0) > 0) {
       return res.status(409).json({
         success: false,
         code: "HAS_DEPENDENCIES",
-        message: "연결된 주문/수료증 데이터가 있어 일정을 삭제할 수 없습니다. 관련 데이터를 먼저 정리하세요.",
-        details: { orderBlocks, certBlocks },
+        message: "연결된 주문 데이터가 있어 일정을 삭제할 수 없습니다.",
+        details: { orderBlocks },
       });
     }
 
