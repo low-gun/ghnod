@@ -31,7 +31,7 @@ export default function SessionRow({
     const nextEnd = !end ? start : (end < start ? start : end);
     onChange(index, { ...s, start_date: start, end_date: nextEnd });
   }}
-  className="input dateInput"
+  className={`input dateInput ${s.ref_count > 0 ? "disabledInput" : ""}`}
   disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 비활성화
 />
           <small
@@ -57,7 +57,7 @@ export default function SessionRow({
     const safeEnd = start && end < start ? start : end;
     onChange(index, { ...s, end_date: safeEnd });
   }}
-  className="input dateInput"
+  className={`input dateInput ${s.ref_count > 0 ? "disabledInput" : ""}`}
   disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 비활성화
 />
 
@@ -86,14 +86,14 @@ export default function SessionRow({
         e.target.value === "" ? null : Number(e.target.value),
     })
   }
-  className="sessionInput"
+  className={`sessionInput ${s.ref_count > 0 ? "disabledInput" : ""}`}
   disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 모집인원도 비활성화
 />
 
       </div>
 
       <button
-  className="btnIcon"
+  className={`btnIcon ${s.ref_count > 0 ? "disabledInput" : ""}`}
   onClick={() => onRemove(index)}
   aria-label="회차 삭제"
   disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 삭제 버튼 비활성화
