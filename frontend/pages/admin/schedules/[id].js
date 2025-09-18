@@ -99,8 +99,8 @@ const [sessions, setSessions] = useState([
     if (!isEdit || !id) return;
     setLoading(true);
     api
-    .get(`admin/schedules/${id}`)
-    .then((res) => {
+      .get(`admin/schedules/${id}`)
+      .then((res) => {
         if (!res.data.success) return showAlert("일정 정보를 불러오지 못했습니다.");
         const data = res.data.schedule;
         setForm({
@@ -111,7 +111,7 @@ const [sessions, setSessions] = useState([
         });     
         setOriginalForm(data);
         setPriceInput(fmtKRW(data.price ?? ""));
-        setSelectedType(data.product_type || "");
+        setSelectedType(data.product_type || "");   // 초기 세팅
 
         if (Array.isArray(data.sessions) && data.sessions.length) {
           const norm = data.sessions.map((s) => ({
@@ -129,7 +129,15 @@ const [sessions, setSessions] = useState([
       })
       .finally(() => setLoading(false));
   }, [id, isEdit, showAlert]);
-
+// ✅ products 로드 이후 product_id 기준으로 selectedType 보정
+useEffect(() => {
+  if (products.length && form.product_id) {
+    const selected = products.find(p => p.id === Number(form.product_id));
+    if (selected) {
+      setSelectedType(selected.type || "");
+    }
+  }
+}, [products, form.product_id]);
   useEffect(() => {
     setPriceInput(fmtKRW(form.price));
   }, [form.price]);

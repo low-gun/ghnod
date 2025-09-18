@@ -161,10 +161,12 @@ sessionsMap = rowsSess.reduce((m, r) => {
     total_spots: total,
     reserved_spots: reserved,
     remaining_spots: Math.max(total - reserved, 0),
+    order_count: reserved   // ✅ 프론트에서 공통으로 쓰도록 추가
   });
   m.set(r.schedule_id, list);
   return m;
 }, new Map());
+
 
       }
     
