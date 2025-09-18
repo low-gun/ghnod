@@ -150,18 +150,34 @@ const sessReservedMap = new Map(
 );
 
 // 2-B) 세션 배열 구성
+// 2-A) 세션별 결제 건수 집계 추가
+const [sessOrders] = await pool.query(
+  `
+  SELECT oi.schedule_session_id, COUNT(*) AS order_count
+  FROM order_items oi
+  JOIN orders o ON o.id = oi.order_id
+  WHERE o.order_status = 'paid'
+  GROUP BY oi.schedule_session_id
+  `
+);
+const sessOrdersMap = new Map(
+  sessOrders.map(r => [r.schedule_session_id, Number(r.order_count) || 0])
+);
+
+// 2-B) 세션 배열 구성
 sessionsMap = rowsSess.reduce((m, r) => {
   const list = m.get(r.schedule_id) || [];
-  const reserved = sessReservedMap.get(r.id) || 0;   // ✅ r.id = session id
+  const reserved = sessReservedMap.get(r.id) || 0;   // 예약 좌석 수량
   const total = Number(r.total_spots) || 0;
+  const orderCount = sessOrdersMap.get(r.id) || 0;   // ✅ 실제 결제 건수
   list.push({
-    id: r.id,  // 세션 id 반드시 내려줘야 프론트에서 selectedSessionId 매칭 가능
+    id: r.id,
     start_date: r.start_date,
     end_date:   r.end_date ?? r.start_date,
     total_spots: total,
     reserved_spots: reserved,
     remaining_spots: Math.max(total - reserved, 0),
-    order_count: reserved   // ✅ 프론트에서 공통으로 쓰도록 추가
+    order_count: orderCount    // ✅ 결제 건수 정확히 내려줌
   });
   m.set(r.schedule_id, list);
   return m;
