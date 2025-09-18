@@ -165,7 +165,17 @@ const [sessOrders] = await pool.query(
 const sessOrdersMap = new Map(
   sessOrders.map(r => [r.schedule_session_id, Number(r.order_count) || 0])
 );
-
+// ✅ 여기 밑에 추가
+const [sessRefs] = await pool.query(
+  `
+  SELECT oi.schedule_session_id, COUNT(*) AS ref_count
+  FROM order_items oi
+  GROUP BY oi.schedule_session_id
+  `
+);
+const refCountMap = new Map(
+  sessRefs.map(r => [r.schedule_session_id, Number(r.ref_count) || 0])
+);
 // 2-B) 세션 배열 구성
 sessionsMap = rowsSess.reduce((m, r) => {
   const list = m.get(r.schedule_id) || [];
@@ -180,8 +190,9 @@ sessionsMap = rowsSess.reduce((m, r) => {
     reserved_spots: reserved,
     remaining_spots: Math.max(total - reserved, 0),
     order_count: orderCount,   // ✅ paid 기준
-    ref_count: (reserved + (sessOrdersMap.get(r.id) || 0)) // ✅ order_items 참조 수 (상태 무관)
-  }); 
+    ref_count: (refCountMap.get(r.id) || 0) // ✅ order_items 참조 수 (상태 무관)
+  });
+  
   m.set(r.schedule_id, list);
   return m;
 }, new Map());

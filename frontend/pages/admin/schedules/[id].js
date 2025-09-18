@@ -122,14 +122,12 @@ const [sessions, setSessions] = useState([
               s.total_spots === null || s.total_spots === undefined
                 ? ""
                 : String(s.total_spots),
-            order_count: s.order_count || 0, // ✅ 안내/비활성화용
+            order_count: s.order_count || 0, // ✅ 안내용
+            ref_count: s.ref_count || 0,     // ✅ FK 참조 여부 → UI 비활성화 조건
           }));
           setSessions(norm);
           setOriginalSessions(norm);
-        }
-        
-        
-        
+        }      
       })
       .finally(() => setLoading(false));
   }, [id, isEdit, showAlert]);
