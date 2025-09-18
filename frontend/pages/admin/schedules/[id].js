@@ -397,13 +397,14 @@ useEffect(() => {
               <FormSection title={
   <>
     일정 정보
-    {Array.isArray(sessions) && sessions.some(s => s.order_count > 0) && (
+    {Array.isArray(sessions) && sessions.some(s => s.ref_count > 0) && (
       <span style={{ color: "red", marginLeft: "8px", fontSize: "13px" }}>
-        결제된 건이 {sessions.filter(s => s.order_count > 0).length}건 있습니다.
+        주문 참조가 {sessions.filter(s => s.ref_count > 0).length}건 있습니다.
       </span>
     )}
   </>
-}>                 <div className="fieldGrid2">
+}>
+          <div className="fieldGrid2">
                   <FormField label="일정명">
                     <input
                       name="title"
@@ -456,13 +457,14 @@ useEffect(() => {
               <FormSection title={
   <>
     스케줄
-    {Array.isArray(sessions) && sessions.some(s => s.order_count > 0) && (
+    {Array.isArray(sessions) && sessions.some(s => s.ref_count > 0) && (
       <span style={{ color: "red", marginLeft: "8px", fontSize: "13px" }}>
-        결제된 건이 {sessions.filter(s => s.order_count > 0).length}건 있습니다.
+        주문 참조가 {sessions.filter(s => s.ref_count > 0).length}건 있습니다.
       </span>
     )}
   </>
 }>
+
   <div className="scheduleWrap"> {/* ✅ 가로 스크롤 래퍼 추가 */}
     <div className="scheduleGrid">
       <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
