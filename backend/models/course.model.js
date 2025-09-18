@@ -28,10 +28,10 @@ exports.getCourseInfoByUser = async (userId) => {
     LEFT JOIN products p      ON p.id = s.product_id
     WHERE o.user_id = ?
       AND o.order_status = 'paid'
-      AND COALESCE(ss.end_date, s.end_date) >= CURDATE()  -- DATE 비교 일관화
     ORDER BY COALESCE(ss.start_date, s.start_date) ASC
     `,
     [userId]
   );
-  return rows; // rows가 빈 배열이어도 예외 없이 반환
+  return rows;
 };
+

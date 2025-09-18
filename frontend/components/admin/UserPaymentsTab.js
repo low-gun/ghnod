@@ -336,22 +336,29 @@ export default function UserPaymentsTab({ userId }) {
                     )}
                   </td>
 
-                  {/* 상품명 */}
-                  <td style={tdCenter}>
-                    <span
-                      style={{
-                        cursor: "pointer",
-                        color: "#0070f3",
-                        textDecoration: "underline",
-                      }}
-                      onClick={() => showAlert(p.product_titles)}
-                    >
-                      {p.product_titles
-                        ? p.product_titles.split(", ")[0] +
-                          (p.product_titles.includes(", ") ? " 등" : "")
-                        : "-"}
-                    </span>
-                  </td>
+                  {/* 일정명(없으면 상품명) */}
+<td style={tdCenter}>
+  <span
+    style={{
+      cursor: "pointer",
+      color: "#0070f3",
+      textDecoration: "underline",
+    }}
+    onClick={() =>
+      showAlert(
+        (p.items || [])
+          .map(it => it.schedule_title || it.product_title)
+          .join(", ")
+      )
+    }
+  >
+    {p.items && p.items.length > 0
+      ? (p.items[0].schedule_title || p.items[0].product_title) +
+        (p.items.length > 1 ? " 등" : "")
+      : "-"}
+  </span>
+</td>
+
 
                   {/* 금액 */}
                   <td style={tdCenter}>

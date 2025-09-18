@@ -314,12 +314,13 @@ exports.getUserSummary = async (req, res) => {
     // 🔸 공통 SELECT 블록 (alias 포함)
     const baseSelect = `
       SELECT 
-        u.id,
-        u.username,
-        u.email,
-        u.is_deleted,
-        (
-          SELECT COUNT(DISTINCT oi.schedule_id)
+  u.id,
+  u.username,
+  u.email,
+  u.phone,             -- ✅ 전화번호 추가
+  u.is_deleted,
+  (
+    SELECT COUNT(DISTINCT oi.schedule_id)
           FROM order_items oi
           JOIN orders o ON oi.order_id = o.id
           WHERE o.user_id = u.id AND o.order_status = 'paid'

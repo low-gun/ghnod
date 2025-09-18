@@ -573,8 +573,13 @@ try {
                       onChange={(e) => toggleOne(id, e.target.checked)}
                     />
                   </td>
-      
-                  <td className="admin-td" style={{ width: 100 }}>#{id}</td>
+                  <td
+  className="admin-td"
+  style={{ width: 100, color: "#0070f3", cursor: "pointer" }}
+  onClick={() => setModalPaymentId(id)}
+>
+  #{id}
+</td>
       
                   <td className="admin-td" style={{ width: 160 }}>
                     {p.username || "-"}
