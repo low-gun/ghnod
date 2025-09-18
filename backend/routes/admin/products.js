@@ -28,6 +28,7 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
         id,
         title,
         type,
+        category,          -- ✅ 누락된 category 추가
         price,
         is_active,
         created_at,
@@ -35,7 +36,7 @@ router.get("/", authenticateToken, adminOnly, async (req, res) => {
         image_url,
         thumbnail_url
       FROM products
-    `); 
+    `);
     
     let filtered = rows;
 
