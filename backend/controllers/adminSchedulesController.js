@@ -582,29 +582,29 @@ await conn.execute(
 );
 
 
-    await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
-    if (normSessions.length) {
-        for (const s of normSessions) {
-          console.log("🟢 updating session", s); // ✅ 로그 추가
-          const ts = s.total_spots; // 숫자 또는 null
-await conn.execute(
-  `INSERT INTO schedule_sessions
-     (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  [
-    id,
-    s.session_date || s.start_date,
-    s.start_date,
-    s.end_date,
-    s.start_time,
-    s.end_time,
-    ts,
-    ts
-  ]
-);
-     
-        }
-      }
+    // updateSchedule
+if (normSessions.length) {
+  for (const s of normSessions) {
+    if (s.id) {
+      // 기존 세션 → UPDATE
+      await conn.execute(
+        `UPDATE schedule_sessions
+           SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
+         WHERE id=? AND schedule_id=?`,
+        [s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots, s.id, id]
+      );
+    } else {
+      // 새 세션 → INSERT
+      await conn.execute(
+        `INSERT INTO schedule_sessions
+           (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots]
+      );
+    }
+  }
+}
+
       
 
     await conn.commit();
@@ -700,23 +700,28 @@ const allowed = {
       );
     }
 
-    // sessions가 전달된 경우에만 세션 테이블 교체
-    // sessions가 전달된 경우에만 세션 테이블 교체
-if (Array.isArray(sessions) && normSessions.length > 0) {
-  // ✅ 전체 삭제 대신 일단 다 지우고 다시 넣는 방식 유지
-  // (주문 걸린 세션도 그냥 유지할 수 있도록 DB에서 RESTRICT 해제했으므로 더 이상 500 안 터짐)
-  await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
-
-  for (const s of normSessions) {
-    const ts = s.total_spots;
-    await conn.execute(
-      `INSERT INTO schedule_sessions
-         (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [ id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts ]
-    );
-  }
-}
+    if (Array.isArray(sessions) && normSessions.length > 0) {
+      for (const s of normSessions) {
+        if (s.id) {
+          // 기존 세션 → UPDATE
+          await conn.execute(
+            `UPDATE schedule_sessions
+               SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
+             WHERE id=? AND schedule_id=?`,
+            [s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots, s.id, id]
+          );
+        } else {
+          // 새 세션 → INSERT
+          await conn.execute(
+            `INSERT INTO schedule_sessions
+               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots]
+          );
+        }
+      }
+    }
+    
     
 
     await conn.commit();

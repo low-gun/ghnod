@@ -115,16 +115,19 @@ const [sessions, setSessions] = useState([
 
         if (Array.isArray(data.sessions) && data.sessions.length) {
           const norm = data.sessions.map((s) => ({
+            id: s.id,
             start_date: (s.start_date || s.session_date || "").slice(0, 10),
             end_date:   (s.end_date   || s.session_date || "").slice(0, 10),
             total_spots:
               s.total_spots === null || s.total_spots === undefined
                 ? ""
                 : String(s.total_spots),
+            order_count: s.order_count || 0,   // ✅ 결제 건수 반영
           }));
           setSessions(norm);
-          setOriginalSessions(norm); // ✅ 원본 세션 동일 포맷으로 보관
+          setOriginalSessions(norm);
         }
+        
         
       })
       .finally(() => setLoading(false));

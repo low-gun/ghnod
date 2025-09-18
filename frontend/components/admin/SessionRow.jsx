@@ -74,30 +74,33 @@ export default function SessionRow({
 
       {/* ✅ 회차 모집인원 입력 */}
       <div className="cell">
-        <input
-          type="number"
-          min="0"
-          placeholder="모집인원"
-          value={displaySpots}
-          onChange={(e) =>
-            onChange(index, {
-              ...s,
-              total_spots:
-                e.target.value === "" ? null : Number(e.target.value),
-            })
-          }
-          className="sessionInput"
-        />
+      <input
+  type="number"
+  min="0"
+  placeholder="모집인원"
+  value={displaySpots}
+  onChange={(e) =>
+    onChange(index, {
+      ...s,
+      total_spots:
+        e.target.value === "" ? null : Number(e.target.value),
+    })
+  }
+  className="sessionInput"
+  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 모집인원도 비활성화
+/>
+
       </div>
 
-      {/* 삭제 버튼 */}
       <button
-        className="btnIcon"
-        onClick={() => onRemove(index)}
-        aria-label="회차 삭제"
-      >
-        ✕
-      </button>
+  className="btnIcon"
+  onClick={() => onRemove(index)}
+  aria-label="회차 삭제"
+  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 삭제 버튼 비활성화
+>
+  ✕
+</button>
+
 
       <style jsx>{`
         .sessionRow {
@@ -135,12 +138,22 @@ export default function SessionRow({
           padding: 0 4px;
         }
         .btnIcon {
-          height: 44px;
-          width: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
+  height: 44px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btnIcon:disabled {
+  opacity: 0.5;         /* ✅ 흐리게 표시 */
+  cursor: not-allowed;  /* ✅ 클릭 불가 표시 */
+}
+
         .sessionInput {
           height: 44px;
           line-height: 1.2;

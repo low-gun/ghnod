@@ -136,8 +136,9 @@ export default function PaymentDetailModal({ paymentId, onClose }) {
                       <td style={td}>{item.title}</td>
                       <td style={td}>{item.type}</td>
                       <td style={td}>
-                        {item.start_date} ~ {item.end_date}
-                      </td>
+  {item.start_date ? item.start_date.split(" ")[0] : ""} ~{" "}
+  {item.end_date ? item.end_date.split(" ")[0] : ""}
+</td>
                       <td style={td}>{item.quantity}</td>
                       <td style={td}>{formatPrice(item.unit_price)}</td>
                       <td style={td}>{formatPrice(item.discount_price)}</td>
