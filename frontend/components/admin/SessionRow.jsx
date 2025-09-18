@@ -32,7 +32,7 @@ export default function SessionRow({
     onChange(index, { ...s, start_date: start, end_date: nextEnd });
   }}
   className="input dateInput"
-  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 비활성화
+  disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 비활성화
 />
           <small
             className="fieldError"
@@ -58,7 +58,7 @@ export default function SessionRow({
     onChange(index, { ...s, end_date: safeEnd });
   }}
   className="input dateInput"
-  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 비활성화
+  disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 비활성화
 />
 
           <small
@@ -87,7 +87,7 @@ export default function SessionRow({
     })
   }
   className="sessionInput"
-  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 모집인원도 비활성화
+  disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 모집인원도 비활성화
 />
 
       </div>
@@ -96,7 +96,7 @@ export default function SessionRow({
   className="btnIcon"
   onClick={() => onRemove(index)}
   aria-label="회차 삭제"
-  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 삭제 버튼 비활성화
+  disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 삭제 버튼 비활성화
 >
   ✕
 </button>

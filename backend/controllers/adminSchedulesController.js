@@ -179,8 +179,9 @@ sessionsMap = rowsSess.reduce((m, r) => {
     total_spots: total,
     reserved_spots: reserved,
     remaining_spots: Math.max(total - reserved, 0),
-    order_count: orderCount
-  });
+    order_count: orderCount,   // ✅ paid 기준
+    ref_count: (reserved + (sessOrdersMap.get(r.id) || 0)) // ✅ order_items 참조 수 (상태 무관)
+  }); 
   m.set(r.schedule_id, list);
   return m;
 }, new Map());
@@ -372,17 +373,23 @@ exports.getScheduleById = async (req, res) => {
     }
     const [sess] = await pool.execute(
       `SELECT ss.id, ss.start_date, ss.end_date, ss.start_time, ss.end_time,
-              ss.total_spots, ss.remaining_spots,
-              (
-                SELECT COUNT(*)
-                FROM order_items oi
-                JOIN orders o ON o.id = oi.order_id
-                WHERE oi.schedule_session_id = ss.id
-                  AND o.order_status = 'paid'
-              ) AS order_count
-         FROM schedule_sessions ss
-        WHERE ss.schedule_id = ?
-        ORDER BY ss.start_date, ss.start_time`,
+       ss.total_spots, ss.remaining_spots,
+       (
+         SELECT COUNT(*)
+         FROM order_items oi
+         JOIN orders o ON o.id = oi.order_id
+         WHERE oi.schedule_session_id = ss.id
+           AND o.order_status = 'paid'
+       ) AS order_count,
+       (
+         SELECT COUNT(*)
+         FROM order_items oi
+         WHERE oi.schedule_session_id = ss.id
+       ) AS ref_count
+FROM schedule_sessions ss
+WHERE ss.schedule_id = ?
+ORDER BY ss.start_date, ss.start_time
+`,
       [id]
     );
     
