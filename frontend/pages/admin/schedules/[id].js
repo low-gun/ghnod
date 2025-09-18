@@ -74,6 +74,17 @@ const [sessions, setSessions] = useState([
       .filter(Boolean);
     return Array.from(new Set(types));
   }, [products]);
+  
+  useEffect(() => {
+    const cats = Array.from(new Set((products || []).map(p => String(p.category ?? "").trim())));
+    console.log("[DEBUG categories]", cats);
+    console.log("[DEBUG educationTypes]", educationTypes);
+    const sample = (products || []).slice(0, 5).map(p => ({
+      id: p.id, title: p.title, type: p.type, category: p.category
+    }));
+    console.log("[DEBUG products sample]", sample);
+  }, [products, educationTypes]);
+  
 
   const rowErrors = useMemo(
     () =>
@@ -149,9 +160,23 @@ useEffect(() => {
     }
   }
 }, [products, form.product_id]);
-  useEffect(() => {
-    setPriceInput(fmtKRW(form.price));
-  }, [form.price]);
+useEffect(() => {
+  setPriceInput(fmtKRW(form.price));
+}, [form.price]);
+
+useEffect(() => {
+  const current = (products || []).filter(
+    p => p.category === "교육" && p.type === selectedType
+  );
+  console.log("[DEBUG filtered current]", {
+    selectedType,
+    count: current.length,
+    sample: current.slice(0, 5).map(p => ({
+      id: p.id, title: p.title, type: p.type, category: p.category
+    }))
+  });
+}, [products, selectedType]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
