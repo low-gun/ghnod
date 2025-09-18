@@ -155,20 +155,28 @@ export default function SessionRow({
 }
 
         .sessionInput {
-          height: 44px;
-          line-height: 1.2;
-          padding: 12px 14px;
-          border: 1px solid #d0d5dd;
-          border-radius: 10px;
-          font-size: 14px;
-          background: #fff;
-          transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        .sessionInput:focus {
-          outline: none;
-          border-color: #0070f3;
-          box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15);
-        }
+  height: 44px;
+  line-height: 1.2;
+  padding: 12px 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sessionInput:focus {
+  outline: none;
+  border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15);
+}
+
+/* ✅ 추가 */
+.disabledInput {
+  background: #f5f5f5 !important;
+  color: #999 !important;
+  cursor: not-allowed !important;
+}
+
       `}</style>
     </div>
   );
