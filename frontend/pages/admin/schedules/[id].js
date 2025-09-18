@@ -274,16 +274,20 @@ useEffect(() => {
       const sessionsChanged =
         JSON.stringify(normSessions) !== JSON.stringify(normOriginal);
       
-      if (sessionsChanged) {
-        changed.sessions = normSessions.map((s) => ({
-          id: s.id || undefined,      // ✅ 있으면 UPDATE, 없으면 INSERT
-          start_date: s.start_date,
-          end_date: s.end_date,
-          start_time: "00:00",
-          end_time: "00:00",
-          total_spots: s.total_spots,
-        }));
-      }
+        if (sessionsChanged) {
+          changed.sessions = normSessions.map((s) => ({
+            id: s.id || undefined,      // ✅ 있으면 UPDATE, 없으면 INSERT
+            start_date: s.start_date,
+            end_date: s.end_date,
+            start_time: "00:00",
+            end_time: "00:00",
+            total_spots: s.total_spots,
+          }));
+        
+          // 🔎 세션 전송 데이터 확인용 로그
+          console.log("[DEBUG changed.sessions]", changed.sessions);
+        }
+        
       
   
       // 5) 변경이 하나도 없으면 종료
