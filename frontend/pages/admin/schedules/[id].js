@@ -43,6 +43,8 @@ export default function ScheduleFormPage() {
   const [editorMounted, setEditorMounted] = useState(false);
   const [form, setForm] = useState({
     product_id: "",
+    product_type: "",   // ✅ 추가
+    product_title: "",  // ✅ 추가
     title: "",
     location: "",
     instructor: "",
@@ -105,10 +107,13 @@ const [sessions, setSessions] = useState([
         const data = res.data.schedule;
         setForm({
           ...data,
+          product_type: data.product_type || "",   // ✅ 추가
+          product_title: data.product_title || "", // ✅ 추가
           total_spots: data.total_spots ?? "",
           price: data.price ?? "",
           image_url: data.image_url || "",
-        });     
+        });
+        
         setOriginalForm(data);
         setPriceInput(fmtKRW(data.price ?? ""));
         setSelectedType(data.product_type || "");   // 초기 세팅

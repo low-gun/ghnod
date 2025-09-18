@@ -86,9 +86,9 @@ export default function SessionRow({
         e.target.value === "" ? null : Number(e.target.value),
     })
   }
-  className={`sessionInput ${s.ref_count > 0 ? "disabledInput" : ""}`}
-  disabled={s.ref_count > 0}   // ✅ order_items에 참조 있으면 모집인원도 비활성화
+  className="sessionInput"   // ✅ 항상 수정 가능 (disabledInput 조건 제거)
 />
+
 
       </div>
 
