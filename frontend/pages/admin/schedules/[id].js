@@ -115,18 +115,19 @@ const [sessions, setSessions] = useState([
 
         if (Array.isArray(data.sessions) && data.sessions.length) {
           const norm = data.sessions.map((s) => ({
-            id: s.id,
+            id: s.id, // ✅ 유지
             start_date: (s.start_date || s.session_date || "").slice(0, 10),
             end_date:   (s.end_date   || s.session_date || "").slice(0, 10),
             total_spots:
               s.total_spots === null || s.total_spots === undefined
                 ? ""
                 : String(s.total_spots),
-            order_count: s.order_count || 0,   // ✅ 결제 건수 반영
+            order_count: s.order_count || 0, // ✅ 안내/비활성화용
           }));
           setSessions(norm);
           setOriginalSessions(norm);
         }
+        
         
         
       })
@@ -251,6 +252,7 @@ useEffect(() => {
         return Number.isFinite(n) ? n : null;
       };
       const normSessions = sessions.map((s) => ({
+        id: s.id || null, // ✅ UPDATE 판단을 위해 포함
         start_date: s.start_date,
         end_date: s.end_date,
         total_spots:
@@ -258,13 +260,23 @@ useEffect(() => {
           toIntOrNull(form.total_spots) ??
           null,
       }));
-  
+      
+      const normOriginal = originalSessions.map((s) => ({
+        id: s.id || null,
+        start_date: s.start_date,
+        end_date: s.end_date,
+        total_spots:
+          toIntOrNull(s.total_spots) ??
+          toIntOrNull(form.total_spots) ??
+          null,
+      }));
+      
       const sessionsChanged =
-        JSON.stringify(normSessions) !== JSON.stringify(originalSessions);
-  
+        JSON.stringify(normSessions) !== JSON.stringify(normOriginal);
+      
       if (sessionsChanged) {
-        // ✅ 세션이 실제로 바뀐 경우에만 포함
         changed.sessions = normSessions.map((s) => ({
+          id: s.id || undefined,      // ✅ 있으면 UPDATE, 없으면 INSERT
           start_date: s.start_date,
           end_date: s.end_date,
           start_time: "00:00",
@@ -272,6 +284,7 @@ useEffect(() => {
           total_spots: s.total_spots,
         }));
       }
+      
   
       // 5) 변경이 하나도 없으면 종료
       if (Object.keys(changed).length === 0) {
@@ -424,14 +437,15 @@ useEffect(() => {
                     />
                   </FormField>
                   <FormField label="가격">
-  <input
-    name="price"
-    value={priceInput}
-    onChange={handleChange}
-    className="input alignRight"
-    placeholder="숫자만 입력(쉼표 자동)"
-    disabled={Array.isArray(sessions) && sessions.some(s => s.order_count > 0)}
-  />
+                  <input
+  name="price"
+  value={priceInput}
+  onChange={handleChange}
+  className={`input alignRight ${Array.isArray(sessions) && sessions.some(s => s.order_count > 0) ? "disabledInput" : ""}`}
+  placeholder="숫자만 입력(쉼표 자동)"
+  disabled={Array.isArray(sessions) && sessions.some(s => s.order_count > 0)}
+/>
+
 </FormField>
 
                 </div>
@@ -674,6 +688,7 @@ useEffect(() => {
   .spacer{ display:block; width:12px; } /* 980px 규칙에서 숨긴 것을 모바일에선 복원 */
 }
 
+.disabledInput{ background:#f5f5f5; color:#999; cursor:not-allowed; }
 
 `}</style>
 

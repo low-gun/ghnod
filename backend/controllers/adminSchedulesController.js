@@ -582,31 +582,27 @@ await conn.execute(
 );
 
 
-    // updateSchedule
+// ✅ updateSchedule: 세션 개별 UPDATE/INSERT 처리
 if (normSessions.length) {
   for (const s of normSessions) {
+    const ts = s.total_spots;
     if (s.id) {
-      // 기존 세션 → UPDATE
       await conn.execute(
         `UPDATE schedule_sessions
            SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
          WHERE id=? AND schedule_id=?`,
-        [s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots, s.id, id]
+        [s.start_date, s.end_date, s.start_time, s.end_time, ts, ts, s.id, id]
       );
     } else {
-      // 새 세션 → INSERT
       await conn.execute(
         `INSERT INTO schedule_sessions
            (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots]
+        [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
       );
     }
   }
 }
-
-      
-
     await conn.commit();
     return res.json({ success: true });
   } catch (err) {
@@ -700,27 +696,28 @@ const allowed = {
       );
     }
 
-    if (Array.isArray(sessions) && normSessions.length > 0) {
-      for (const s of normSessions) {
-        if (s.id) {
-          // 기존 세션 → UPDATE
-          await conn.execute(
-            `UPDATE schedule_sessions
-               SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
-             WHERE id=? AND schedule_id=?`,
-            [s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots, s.id, id]
-          );
-        } else {
-          // 새 세션 → INSERT
-          await conn.execute(
-            `INSERT INTO schedule_sessions
-               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, s.total_spots, s.total_spots]
-          );
-        }
-      }
+    // ✅ patchSchedule: 기존 세션은 UPDATE, 새 세션만 INSERT
+if (Array.isArray(sessions) && normSessions.length > 0) {
+  for (const s of normSessions) {
+    const ts = s.total_spots;
+    if (s.id) {
+      await conn.execute(
+        `UPDATE schedule_sessions
+           SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
+         WHERE id=? AND schedule_id=?`,
+        [s.start_date, s.end_date, s.start_time, s.end_time, ts, ts, s.id, id]
+      );
+    } else {
+      await conn.execute(
+        `INSERT INTO schedule_sessions
+           (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
+      );
     }
+  }
+}
+
     
     
 
