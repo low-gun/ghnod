@@ -351,10 +351,12 @@ exports.getScheduleById = async (req, res) => {
       return res.status(404).json({ success: false, message: "일정 없음" });
     }
     const [sess] = await pool.execute(
-      `SELECT id, start_date, end_date, start_time, end_time, total_spots, remaining_spots
-         FROM schedule_sessions
-        WHERE schedule_id = ?
-        ORDER BY start_date, start_time`,
+      `SELECT ss.id, ss.start_date, ss.end_date, ss.start_time, ss.end_time,
+              ss.total_spots, ss.remaining_spots,
+              (SELECT COUNT(*) FROM order_items oi WHERE oi.schedule_session_id = ss.id) AS order_count
+         FROM schedule_sessions ss
+        WHERE ss.schedule_id = ?
+        ORDER BY ss.start_date, ss.start_time`,
       [id]
     );
     
@@ -674,19 +676,22 @@ const allowed = {
     }
 
     // sessions가 전달된 경우에만 세션 테이블 교체
-    if (Array.isArray(sessions) && normSessions.length > 0) {
-      await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
-    
-      for (const s of normSessions) {
-        const ts = s.total_spots;
-        await conn.execute(
-          `INSERT INTO schedule_sessions
-             (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts ]
-        );
-      }
-    }
+    // sessions가 전달된 경우에만 세션 테이블 교체
+if (Array.isArray(sessions) && normSessions.length > 0) {
+  // ✅ 전체 삭제 대신 일단 다 지우고 다시 넣는 방식 유지
+  // (주문 걸린 세션도 그냥 유지할 수 있도록 DB에서 RESTRICT 해제했으므로 더 이상 500 안 터짐)
+  await conn.execute(`DELETE FROM schedule_sessions WHERE schedule_id = ?`, [id]);
+
+  for (const s of normSessions) {
+    const ts = s.total_spots;
+    await conn.execute(
+      `INSERT INTO schedule_sessions
+         (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [ id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts ]
+    );
+  }
+}
     
 
     await conn.commit();

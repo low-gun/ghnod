@@ -22,17 +22,18 @@ export default function SessionRow({
       {/* 시작일 */}
       <div className="cell">
         <div className="inputWrap">
-          <input
-            type="date"
-            value={s.start_date}
-            onChange={(e) => {
-              const start = e.target.value;
-              const end = s.end_date;
-              const nextEnd = !end ? start : (end < start ? start : end);
-              onChange(index, { ...s, start_date: start, end_date: nextEnd });
-            }}
-            className="input dateInput"
-          />
+        <input
+  type="date"
+  value={s.start_date}
+  onChange={(e) => {
+    const start = e.target.value;
+    const end = s.end_date;
+    const nextEnd = !end ? start : (end < start ? start : end);
+    onChange(index, { ...s, start_date: start, end_date: nextEnd });
+  }}
+  className="input dateInput"
+  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 비활성화
+/>
           <small
             className="fieldError"
             style={{ visibility: missingStart ? "visible" : "hidden" }}
@@ -47,17 +48,19 @@ export default function SessionRow({
       {/* 종료일 */}
       <div className="cell">
         <div className="inputWrap">
-          <input
-            type="date"
-            value={s.end_date}
-            onChange={(e) => {
-              const end = e.target.value;
-              const start = s.start_date;
-              const safeEnd = start && end < start ? start : end;
-              onChange(index, { ...s, end_date: safeEnd });
-            }}
-            className="input dateInput"
-          />
+        <input
+  type="date"
+  value={s.end_date}
+  onChange={(e) => {
+    const end = e.target.value;
+    const start = s.start_date;
+    const safeEnd = start && end < start ? start : end;
+    onChange(index, { ...s, end_date: safeEnd });
+  }}
+  className="input dateInput"
+  disabled={s.order_count > 0}   // ✅ 결제된 세션이면 비활성화
+/>
+
           <small
             className="fieldError"
             style={{ visibility: (missingEnd || err.invalidDate) ? "visible" : "hidden" }}

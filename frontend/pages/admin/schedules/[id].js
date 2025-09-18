@@ -368,8 +368,16 @@ const [sessions, setSessions] = useState([
               </div>
 
               {/* 2단: 좌(일정정보) | 우(스케줄) */}
-              <FormSection title="일정 정보">
-                <div className="fieldGrid2">
+              <FormSection title={
+  <>
+    일정 정보
+    {Array.isArray(sessions) && sessions.some(s => s.order_count > 0) && (
+      <span style={{ color: "red", marginLeft: "8px", fontSize: "13px" }}>
+        결제된 건이 {sessions.filter(s => s.order_count > 0).length}건 있습니다.
+      </span>
+    )}
+  </>
+}>                 <div className="fieldGrid2">
                   <FormField label="일정명">
                     <input
                       name="title"
@@ -405,18 +413,29 @@ const [sessions, setSessions] = useState([
                     />
                   </FormField>
                   <FormField label="가격">
-                    <input
-                      name="price"
-                      value={priceInput}
-                      onChange={handleChange}
-                      className="input alignRight"
-                      placeholder="숫자만 입력(쉼표 자동)"
-                    />
-                  </FormField>
+  <input
+    name="price"
+    value={priceInput}
+    onChange={handleChange}
+    className="input alignRight"
+    placeholder="숫자만 입력(쉼표 자동)"
+    disabled={Array.isArray(sessions) && sessions.some(s => s.order_count > 0)}
+  />
+</FormField>
+
                 </div>
               </FormSection>
 
-              <FormSection title="스케줄">
+              <FormSection title={
+  <>
+    스케줄
+    {Array.isArray(sessions) && sessions.some(s => s.order_count > 0) && (
+      <span style={{ color: "red", marginLeft: "8px", fontSize: "13px" }}>
+        결제된 건이 {sessions.filter(s => s.order_count > 0).length}건 있습니다.
+      </span>
+    )}
+  </>
+}>
   <div className="scheduleWrap"> {/* ✅ 가로 스크롤 래퍼 추가 */}
     <div className="scheduleGrid">
       <div className="hdr">시작일</div><div className="spacer" aria-hidden="true"></div>
@@ -426,16 +445,18 @@ const [sessions, setSessions] = useState([
 
       {sessions.map((s, idx) => (
         <SessionRow
-          key={idx}
-          value={s}
-          index={idx}
-          error={rowErrors[idx]}
-          onChange={(i, next) =>
-            setSessions((prev) => prev.map((x, ii) => (ii === i ? next : x)))
-          }
-          onRemove={resetSession}
-          placeholderTotalSpots={form.total_spots || ""}
-        />
+        key={idx}
+        value={s}
+        index={idx}
+        error={rowErrors[idx]}
+        onChange={(i, next) =>
+          setSessions((prev) => prev.map((x, ii) => (ii === i ? next : x)))
+        }
+        onRemove={resetSession}
+        placeholderTotalSpots={form.total_spots || ""}
+        disabledDates={s.order_count > 0}   // ✅ 결제건이 있으면 날짜 인풋 비활성화
+      />
+      
       ))}
     </div>
   </div>
