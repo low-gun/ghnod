@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "@/lib/api";
 import { formatPrice } from "@/lib/format";
-import { useGlobalAlert } from "@/stores/globalAlert"; // 상단에 추가
+import { useIsMobile } from "@/lib/hooks/useIsDeviceSize"; // ✅ 반응형 훅 추가
 
 export default function PaymentDetailModal({ paymentId, onClose }) {
   const [payment, setPayment] = useState(null);
@@ -9,7 +9,7 @@ export default function PaymentDetailModal({ paymentId, onClose }) {
   const [items, setItems] = useState([]);
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
-  const { showAlert } = useGlobalAlert();
+  const isMobile = useIsMobile(); // ✅ 반응형 적용
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -59,8 +59,34 @@ export default function PaymentDetailModal({ paymentId, onClose }) {
   if (!payment) return null;
 
   return (
-    <div className="modal-backdrop" style={backdropStyle}>
-      <div className="modal-content" style={contentStyle}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        zIndex: 2001,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: isMobile ? "flex-end" : "center", // ✅ 모바일: 아래 정렬
+        padding: isMobile ? 0 : 20,                   // ✅ 모바일: 패딩 제거
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: isMobile ? "100%" : 560,                // ✅ 모바일: 전체 너비
+          background: "#fff",
+          borderRadius: isMobile ? "16px 16px 0 0" : 12,    // ✅ 모바일: 위쪽만 둥글게
+          boxShadow: "0 8px 30px rgba(0,0,0,0.25)",
+          padding: 20,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          position: "relative",
+          fontFamily: "'Apple SD Gothic Neo', sans-serif",
+          textAlign: "left",
+        }}
+      >
+  
         <button onClick={onClose} style={closeButtonStyle}>
           ×
         </button>
