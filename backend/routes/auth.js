@@ -145,26 +145,24 @@ router.post("/kakao/callback", async (req, res) => {
 
   try {
     // 토큰 요청 파라미터 구성
-const params = {
-  grant_type: "authorization_code",
-  client_id: process.env.KAKAO_CLIENT_ID,
-  redirect_uri: process.env.KAKAO_REDIRECT_URI,
-  code,
-};
-
-// ✅ client_secret 환경변수가 설정되어 있을 때만 추가
-if (process.env.KAKAO_CLIENT_SECRET) {
-  params.client_secret = process.env.KAKAO_CLIENT_SECRET;
-}
-
-const tokenRes = await axios.post(
-  "https://kauth.kakao.com/oauth/token",
-  null,
-  {
-    params,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  }
-);
+    const params = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: process.env.KAKAO_CLIENT_ID,
+      redirect_uri: process.env.KAKAO_REDIRECT_URI,
+      code,
+    });
+    
+    if (process.env.KAKAO_CLIENT_SECRET) {
+      params.append("client_secret", process.env.KAKAO_CLIENT_SECRET);
+    }
+    
+    const tokenRes = await axios.post(
+      "https://kauth.kakao.com/oauth/token",
+      params,
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+    
+    console.log("[kakao/callback] tokenRes.data:", tokenRes.data);
 
     const { access_token } = tokenRes.data;
 
@@ -245,20 +243,22 @@ router.post("/naver/callback", async (req, res) => {
   if (!code) return res.status(400).json({ error: "No code provided" });
 
   try {
+    const params = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: process.env.NAVER_CLIENT_ID,
+      client_secret: process.env.NAVER_CLIENT_SECRET,
+      code,
+      state,
+    });
+    
     const tokenRes = await axios.post(
       "https://nid.naver.com/oauth2.0/token",
-      null,
-      {
-        params: {
-          grant_type: "authorization_code",
-          client_id: process.env.NAVER_CLIENT_ID,
-          client_secret: process.env.NAVER_CLIENT_SECRET,
-          code,
-          state,
-        },
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      }
+      params,
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
+    
+    console.log("[naver/callback] tokenRes.data:", tokenRes.data);
+    
     const { access_token } = tokenRes.data;
 
     // 2. 네이버 사용자 정보 조회
