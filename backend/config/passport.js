@@ -74,6 +74,10 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("==== [KakaoStrategy 요청 파라미터 확인] ====");
+        console.log("client_id (REST API 키):", process.env.KAKAO_CLIENT_ID);
+        console.log("redirect_uri:", process.env.KAKAO_REDIRECT_URI);
+
         console.log("[Kakao profile 전체]", JSON.stringify(profile, null, 2));
         const email = profile._json.kakao_account.email;
         const username = profile.displayName || `kakao_${profile.id}`;
