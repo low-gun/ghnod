@@ -70,7 +70,6 @@ passport.use(
   new KakaoStrategy(
     {
       clientID: process.env.KAKAO_CLIENT_ID,
-      clientSecret: process.env.KAKAO_CLIENT_SECRET, // (필요시)
       callbackURL: process.env.KAKAO_REDIRECT_URI,
     },
     async (accessToken, refreshToken, profile, done) => {
