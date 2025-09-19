@@ -26,8 +26,8 @@ const envPath =
     ? path.resolve(__dirname, ".env.production")
     : path.resolve(__dirname, ".env.local");
 
-require("dotenv").config({ path: envPath, override: true });
-console.log("✅ .env 로딩됨:", envPath);
+    require("dotenv").config({ path: envPath, override: false });
+    console.log("✅ .env 로딩됨:", envPath);
 
 // ✅ Toss 관련 환경변수 로깅
 console.log("🔑 TOSS_SECRET_KEY prefix:", process.env.TOSS_SECRET_KEY?.slice(0, 10));
