@@ -21,13 +21,14 @@ process.on("unhandledRejection", (reason) => {
   console.error("🔥 unhandledRejection:", reason);
 });
 
-const envPath =
-  process.env.NODE_ENV === "production"
-    ? path.resolve(__dirname, ".env.production")
-    : path.resolve(__dirname, ".env.local");
-
-    require("dotenv").config({ path: envPath, override: false });
-    console.log("✅ .env 로딩됨:", envPath);
+// production 환경에서는 Azure App Service 환경변수만 사용
+if (process.env.NODE_ENV !== "production") {
+  const envPath = path.resolve(__dirname, ".env.local");
+  require("dotenv").config({ path: envPath, override: false });
+  console.log("✅ .env 로딩됨:", envPath);
+} else {
+  console.log("✅ production 환경: .env 파일 로드 안 함 (Azure 설정값만 사용)");
+}
 
 // ✅ Toss 관련 환경변수 로깅
 console.log("🔑 TOSS_SECRET_KEY prefix:", process.env.TOSS_SECRET_KEY?.slice(0, 10));
