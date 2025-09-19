@@ -8,6 +8,11 @@ const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 
 // ✅ Google OAuth 전략 설정
+console.log("==== [Google ENV 체크] ====");
+console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
+console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET ? "(설정됨)" : "(없음)");
+console.log("GOOGLE_REDIRECT_URI:", process.env.GOOGLE_REDIRECT_URI);
+
 passport.use(
   new GoogleStrategy(
     {
@@ -15,6 +20,7 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_REDIRECT_URI,
     },
+
     async (accessToken, refreshToken, profile, done) => {
       try {
         // ✅ 디버깅용 로그 추가 (여기부터)
@@ -56,7 +62,9 @@ passport.use(
   )
 );
 
-
+console.log("==== [Kakao ENV 체크] ====");
+console.log("KAKAO_CLIENT_ID:", process.env.KAKAO_CLIENT_ID);
+console.log("KAKAO_REDIRECT_URI:", process.env.KAKAO_REDIRECT_URI);
 // ✅ Kakao OAuth 전략 설정
 passport.use(
   new KakaoStrategy(
@@ -95,7 +103,9 @@ passport.use(
     }
   )
 );
-
+console.log("==== [Naver ENV 체크] ====");
+console.log("NAVER_CLIENT_ID:", process.env.NAVER_CLIENT_ID);
+console.log("NAVER_REDIRECT_URI:", process.env.NAVER_REDIRECT_URI);
 // ✅ Naver OAuth 전략 설정
 passport.use(
   new NaverStrategy(
