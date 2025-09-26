@@ -114,9 +114,12 @@ function MyApp({ Component, pageProps }) {
   // ✅ Kakao SDK 필요 페이지에서만 로드
   const needsKakao =
   !isAdmin &&
-  (router.pathname.startsWith("/auth/") ||
-    router.pathname === "/register/social" ||
-    router.pathname.startsWith("/education/"));
+  (router.asPath.startsWith("/auth/") ||
+   router.asPath.startsWith("/register/social") ||
+   router.asPath.startsWith("/diagnosis/") ||
+   router.asPath.startsWith("/orgdev/") ||
+   router.asPath.startsWith("/leadership/") ||
+   router.asPath.startsWith("/opencourse/"));
   return (
     <>
       {/* 전역 viewport 설정 */}

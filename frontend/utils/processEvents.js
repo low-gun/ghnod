@@ -14,16 +14,16 @@ function minDay(a, b) {
 }
 
 const typeMap = {
-  followup: "1",
-  certification: "2",
-  공개교육: "3",
+  hogan: "1",
+  assessment: "2",
+  development: "3",
   facilitation: "4",
+  certification: "5",
+  ft: "6",
 };
+
 const categoryMap = {
-  교육: "1",
-  컨설팅: "2",
-  진단: "3",
-  기타: "4",
+  공개과정: "1",   // ✅ 일단 공개과정만 1번
 };
 
 /**

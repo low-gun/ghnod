@@ -5,14 +5,10 @@ import dynamic from "next/dynamic";
 import Image from "next/legacy/image";
 import { useIsTabletOrBelow } from "@/lib/hooks/useIsDeviceSize";
 import Head from "next/head";
+import ResponsiveSubTabs from "@/components/common/ResponsiveSubTabs";
 
 const SearchFilterBox = dynamic(
   () => import("@/components/common/SearchFilterBox"),
-  { ssr: false, loading: () => null }
-);
-
-const ScheduleSubTabs = dynamic(
-  () => import("@/components/education/ScheduleSubTabs"),
   { ssr: false, loading: () => null }
 );
 
@@ -28,7 +24,16 @@ const ScheduleCardGrid = dynamic(
   }
 );
 
-export default function FacilitationPage() {
+const tabs = [
+  { label: "Hogan", slug: "hogan" },
+  { label: "Assessment", slug: "assessment" },
+  { label: "Development", slug: "development" },
+  { label: "Facilitation", slug: "facilitation" },
+  { label: "진단 Certification", slug: "certification" },
+  { label: "FT", slug: "ft" },
+];
+
+export default function OpenCoursePage() {
   const [sort, setSort] = useState("start_date");
   const [order, setOrder] = useState("asc");
   const [showPast, setShowPast] = useState(false);
@@ -36,27 +41,21 @@ export default function FacilitationPage() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const router = useRouter();
-  const type = "facilitation";
+  const { sub } = router.query;
   const isMobileOrTablet = useIsTabletOrBelow();
-
-  const subTabs = useMemo(
-    () => [
-      { label: "followup", href: "/education/followup" },
-      { label: "certification", href: "/education/certification" },
-      { label: "공개교육", href: "/education/opencourse" },
-      { label: "facilitation", href: "/education/facilitation" },
-    ],
-    []
-  );
 
   const fetchSchedules = useCallback(async ({ queryKey }) => {
     const [_key, type, sort, order] = queryKey;
-    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?type=${encodeURIComponent(
-      type
-    )}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?category=공개과정&type=${encodeURIComponent(
+        type
+      )}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;    
+  
+    console.log("🔍 [fetchSchedules] 요청 URL:", url); // ✅ 어떤 URL 호출하는지
+  
     const res = await fetch(url, { credentials: "include" });
-
+  
     if (res.status === 404) {
+      console.warn("⚠️ [fetchSchedules] 404: 일정 없음");
       return { schedules: [] };
     }
     if (!res.ok) {
@@ -65,12 +64,17 @@ export default function FacilitationPage() {
         `fetchSchedules failed: ${res.status} ${res.statusText} ${text}`
       );
     }
-    return res.json();
+  
+    const data = await res.json();
+    console.log("📦 [fetchSchedules] API 응답:", data); // ✅ 실제 응답 구조 확인
+    return data;
   }, []);
+  
 
   const { data, isLoading } = useQuery({
-    queryKey: ["schedules", type, sort, order],
+    queryKey: ["schedules", sub, sort, order],
     queryFn: fetchSchedules,
+    enabled: !!sub,
     staleTime: 1000 * 60 * 5,
     keepPreviousData: true,
   });
@@ -81,10 +85,14 @@ export default function FacilitationPage() {
   const filteredSchedules = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     return schedules.filter((s) => {
-      // ✅ 대표 일정: sessions 중 가장 가까운 미래 회차
-      const futureSessions = (s.sessions || []).filter(
+      // 세션이 없을 경우도 대비
+      const sessions = Array.isArray(s.sessions) ? s.sessions : [];
+  
+      const futureSessions = sessions.filter(
         (sess) => new Date(sess.start_date) >= today
       );
+  
+      // 세션이 있으면 세션 기준, 없으면 스케줄 기본 날짜 기준
       const representative = futureSessions.length
         ? futureSessions.sort(
             (a, b) => new Date(a.start_date) - new Date(b.start_date)
@@ -94,13 +102,14 @@ export default function FacilitationPage() {
       const effectiveStart = representative
         ? new Date(representative.start_date)
         : new Date(s.start_date);
+  
       const effectiveEnd = representative
         ? new Date(representative.end_date || representative.start_date)
         : new Date(s.end_date || s.start_date);
   
       const isPast = effectiveEnd < today;
       if (!showPast && isPast) return false;
-    
+  
       if (searchType === "전체" || searchType === "교육명") {
         return s.title?.toLowerCase().includes(keyword);
       }
@@ -119,12 +128,7 @@ export default function FacilitationPage() {
       return true;
     });
   }, [schedules, searchType, searchKeyword, dateRange, showPast, today]);
-
-  const imgTitleBoxStyle = {
-    position: "relative",
-    textAlign: "left",
-    marginBottom: 16,
-  };
+  
   const heroImgBoxStyle = {
     position: "relative",
     width: "100%",
@@ -141,57 +145,49 @@ export default function FacilitationPage() {
     left: "clamp(16px, 4vw, 32px)",
     color: "#222",
   };
-  const h1Style = {
-    margin: 0,
-    fontSize: "clamp(18px, 4vw, 24px)",
-    fontWeight: "bold",
-  };
-  const pStyle = {
-    margin: 0,
-    fontSize: "clamp(12px, 2.8vw, 14px)",
-    color: "#555",
-  };
 
   return (
     <>
       <Head>
-        <title>퍼실리테이션 교육 | ORP컨설팅</title>
+        <title>공개과정 | ORP컨설팅</title>
+        <meta name="description" content="ORP컨설팅 공개과정 일정" />
+        <meta property="og:title" content="공개과정 | ORP컨설팅" />
+        <meta property="og:description" content="ORP컨설팅 공개과정 일정" />
+        <meta property="og:image" content="/images/followup.webp" />
         <meta
-          name="description"
-          content="ORP컨설팅의 퍼실리테이션 교육 과정 - 퍼실리테이션 기법과 실제 활용 사례를 학습할 수 있습니다."
+          property="og:url"
+          content={`https://orpconsulting.co.kr/opencourse/${sub}`}
         />
-        <meta property="og:title" content="퍼실리테이션 교육 | ORP컨설팅" />
-        <meta
-          property="og:description"
-          content="퍼실리테이션 기법 및 활용 사례를 배우는 ORP컨설팅의 전문 교육 프로그램"
-        />
-        <meta property="og:image" content="/images/facilitation.webp" />
-        <meta property="og:url" content="https://orpconsulting.co.kr/education/facilitation" />
       </Head>
 
       <div
         style={{
-          paddingTop: isMobileOrTablet ? "32px" : "32px",
+          paddingTop: "32px",
           paddingLeft: isMobileOrTablet ? 0 : 32,
           paddingRight: isMobileOrTablet ? 0 : 32,
           paddingBottom: isMobileOrTablet ? 0 : 32,
         }}
       >
-        <ScheduleSubTabs tabs={subTabs} />
+        <ResponsiveSubTabs tabs={tabs} basePath="/opencourse" />
 
-        {/* 이미지 + 타이틀 */}
-        <div style={imgTitleBoxStyle}>
+        {/* hero 이미지 + 타이틀 */}
+        <div style={{ marginBottom: 16, position: "relative" }}>
           <div style={heroImgBoxStyle}>
             <Image
-              src="/images/facilitation.webp"
-              alt="facilitation 페이지에서는 퍼실리테이션 기법과 활용 사례 등을 다룹니다."
+              src="/images/followup.webp"
+              alt="공개과정 페이지 배너 이미지"
               layout="fill"
               objectFit="cover"
+              priority
             />
           </div>
           <div style={imgTextStyle}>
-            <h1 style={h1Style}>facilitation</h1>
-            <p style={pStyle}>퍼실리테이션 기법 및 활용</p>
+            <h1 style={{ margin: 0, fontSize: "clamp(18px, 4vw, 24px)", fontWeight: "bold" }}>
+              {sub}
+            </h1>
+            <p style={{ margin: 0, fontSize: "clamp(12px, 2.8vw, 14px)", color: "#555" }}>
+              공개과정
+            </p>
           </div>
         </div>
 
@@ -221,7 +217,7 @@ export default function FacilitationPage() {
             등록된 일정이 없습니다.
           </p>
         ) : (
-          <ScheduleCardGrid schedules={filteredSchedules} type={type} />
+          <ScheduleCardGrid schedules={filteredSchedules} type={sub} />
         )}
       </div>
     </>

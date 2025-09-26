@@ -20,6 +20,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
+  const [byCategoryType, setByCategoryType] = useState([]); // ✅ 카테고리+유형별 통계 추가
 
   // 검색 상태(공통 UI)
   const [searchType, setSearchType] = useState("all");
@@ -36,30 +37,46 @@ export default function AdminProductsPage() {
     if (user && user.role !== "admin") router.replace("/");
   }, [user, router]);
 
-  // 데이터 로드
-  const fetchProducts = useCallback(async () => {
-    try {
-      const res = await api.get("admin/products", { params: { all: true } });
-      if (res.data?.success) {
-        setProducts(res.data.products || []);
-        const types = [
-          ...new Set(
-            (res.data.products || []).map((p) => p.type).filter(Boolean)
-          ),
-        ];
-        setProductTypes(types);
+    // 데이터 로드
+    const fetchProducts = useCallback(async () => {
+      try {
+        const res = await api.get("admin/products", { params: { all: true } });
+        if (res.data?.success) {
+          setProducts(res.data.products || []);
+          const types = [
+            ...new Set(
+              (res.data.products || []).map((p) => p.type).filter(Boolean)
+            ),
+          ];
+          setProductTypes(types);
+        }
+      } catch (err) {
+        showAlert("상품 데이터를 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      showAlert("상품 데이터를 불러오지 못했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }, [showAlert]);
+    }, [showAlert]);
+  
+    // ✅ 카테고리+유형 통계 불러오기
+    const fetchStats = useCallback(async () => {
+      try {
+        const res = await api.get("admin/products/stats");
+        if (res.data?.success) {
+          setByCategoryType(res.data.byCategoryType || []);
+        }
+      } catch (err) {
+        console.error("상품 통계 불러오기 실패:", err);
+      }
+    }, []);
+  
 
-  useEffect(() => {
-    if (user && user.role === "admin") fetchProducts();
-  }, [user, fetchProducts]);
-
+    useEffect(() => {
+      if (user && user.role === "admin") {
+        fetchProducts();
+        fetchStats(); // ✅ 추가
+      }
+    }, [user, fetchProducts, fetchStats]);
+  
   // 클라이언트 필터(간단 공통 검색)
   const filteredProducts = useMemo(() => {
     const q = (appliedQuery || "").trim().toLowerCase();
@@ -116,22 +133,28 @@ export default function AdminProductsPage() {
     return productTypes.map((t) => ({ type: t, count: counts[t] || 0 }));
   }, [products, productTypes]);
 
-  // ✅ 상단 패널 표시용 데이터
-  const stats = useMemo(
-    () => [
-      {
-        title: "상품 현황",
-        value: [
-          { label: `총 ${products.length}개`, key: "all" },
-          ...byType.map(({ type, count }) => ({
-            label: `${type} ${count}개`,
-            key: `type:${type}`,
-          })),
-        ],
-      },
-    ],
-    [products.length, byType]
-  );
+  // ✅ 상단 패널 표시용 데이터 (카테고리만)
+const stats = useMemo(
+  () => [
+    {
+      title: "상품 현황",
+      value: [
+        { label: `총 ${products.length}개`, key: "all" },
+        ...Object.entries(
+          products.reduce((acc, p) => {
+            const cat = p.category || "기타";
+            acc[cat] = (acc[cat] || 0) + 1;
+            return acc;
+          }, {})
+        ).map(([category, count]) => ({
+          label: `${category}: ${count}개`,
+          key: `cat:${category}`,
+        })),
+      ],
+    },
+  ],
+  [products]
+);
 
   // ✅ 칩 클릭 시 테이블 필터 적용
   const handleStatClick = (key) => {
@@ -140,14 +163,14 @@ export default function AdminProductsPage() {
       setSearchQuery("");
       setAppliedType("all");
       setAppliedQuery("");
-    } else if (key.startsWith("type:")) {
-      const t = key.slice(5);
-      setSearchType("type");
-      setSearchQuery(t);
-      setAppliedType("type");
-      setAppliedQuery(t);
+    } else if (key.startsWith("cat:")) {
+      const category = key.replace("cat:", "");
+      setSearchType("category");
+      setSearchQuery(category);
+      setAppliedType("category");
+      setAppliedQuery(category);
     }
-    setActiveStatKey(key); // ← 추가
+    setActiveStatKey(key);
     setSearchSyncKey((k) => k + 1);
   };
 
@@ -173,9 +196,19 @@ export default function AdminProductsPage() {
   // AdminSearchFilter 옵션(공통 스펙)
   const searchOptions = [
     { value: "all", label: "전체", type: "text" },
-    { value: "id", label: "ID", type: "text" },
     { value: "code", label: "코드", type: "text" },
     { value: "title", label: "상품명", type: "text" },
+    {
+      value: "category",                // ✅ 추가됨
+      label: "카테고리",
+      type: "select",
+      options: [
+        { value: "진단", label: "진단" },
+        { value: "조직개발", label: "조직개발" },
+        { value: "리더십개발", label: "리더십개발" },
+        { value: "공개과정", label: "공개과정" },
+      ],
+    },
     {
       value: "type",
       label: "유형",
@@ -192,6 +225,7 @@ export default function AdminProductsPage() {
       ],
     },
   ];
+
 
   // 엑셀 데이터 (ProductTable에서 onExcelData로 받아옴)
   if (!user || user.role !== "admin") return null;
@@ -230,17 +264,14 @@ export default function AdminProductsPage() {
 
       {/* 본문 */}
       <ProductTable
-        products={filteredProducts}
-        productTypes={productTypes}
-        onEdit={handleEdit}
-        onRefresh={(next) => {
-          // ProductTable에서 배열을 내려줄 경우 반영, 아니면 재조회
-          if (Array.isArray(next)) setProducts(next);
-          else fetchProducts();
-        }}
-        loading={loading}
-        onExcelData={setExcelData} // ✅ 추가
-      />
+  useExternalToolbar={true}
+  externalSearchType={appliedType}   // ✅ 버튼 눌러서 커밋된 값 사용
+  externalSearchQuery={appliedQuery} // ✅ 버튼 눌러서 커밋된 값 사용
+  searchSyncKey={searchSyncKey}      // ✅ 검색 트리거
+  onEdit={handleEdit}
+  onExcelData={setExcelData}
+/>
+
     </AdminLayout>
   );
 

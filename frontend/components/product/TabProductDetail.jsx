@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import api from "@/lib/api";
 
-export default function TabProductDetail({ scheduleId }) {
+export default function TabProductDetail({ scheduleId, productId }) {
   const contentRef = useRef(null);
   const sentinelRef = useRef(null);
 
@@ -38,30 +38,32 @@ export default function TabProductDetail({ scheduleId }) {
 
   // 상세 HTML 로드 + 디버그
   useEffect(() => {
-    if (!scheduleId || !shouldLoad) return;
-    dbg && console.time("[Detail] fetch");
-    api
-      .get(`/education/schedules/${scheduleId}/detail`)
-      .then((res) => {
-        dbg && console.timeEnd("[Detail] fetch");
-        dbg &&
-          console.log(
-            "[Detail] fetch size(bytes-rough):",
-            res?.data?.detail?.length ?? 0
-          );
-        if (res.data.success) {
+    if ((!scheduleId && !productId) || !shouldLoad) return;
+  
+    const fetchDetail = async () => {
+      try {
+        let res;
+        if (scheduleId) {
+          // ✅ 일정형
+          res = await api.get(`/education/schedules/${scheduleId}/detail`);
+        } else if (productId) {
+          // ✅ 상품형
+          res = await api.get(`/products/${productId}/detail`);
+        }
+  
+        if (res?.data?.success) {
           setHtml(res.data.detail || "");
         } else {
           setHtml("");
         }
-      })
-      .catch((e) => {
-        dbg && console.timeEnd("[Detail] fetch");
-        dbg && console.warn("[Detail] fetch error", e?.message);
+      } catch (e) {
         setHtml("");
-      });
-  }, [scheduleId, shouldLoad, dbg]);
-
+      }
+    };
+  
+    fetchDetail();
+  }, [scheduleId, productId, shouldLoad, dbg]);
+  
   const isEmptyDetail =
     !html ||
     /상세\s*설명이\s*없습니다\.?/i.test(

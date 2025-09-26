@@ -9,49 +9,63 @@ export const leftGroup = [
   },
 ];
 
-// 중앙 그룹 (진단, 교육, 컨설팅 등 예시)
 export const centerGroup = [
   {
     label: "진단",
     link: "/diagnosis",
     sub: [
+      { label: "조직", slug: "org" },
+      { label: "팀", slug: "team" },
+      { label: "리더십", slug: "leadership" },
+      { label: "개인", slug: "individual" },
+    ],
+  },
+  {
+    label: "조직 개발",
+    link: "/orgdev",
+    sub: [
+      { label: "조직", slug: "org" },
+      { label: "팀", slug: "team" },
+      { label: "개인", slug: "individual" },
+    ],
+  },
+  {
+    label: "리더십 개발",
+    link: "/leadership",
+    sub: [
+      { label: "진단 기반", slug: "assessment" },
+      { label: "DCBL", slug: "dcbl" },
+      { label: "컨설팅", slug: "consulting" },
+      { label: "컨텐츠교육(예정)", slug: "content" },
+      { label: "New Solution(예정)", slug: "new" },
+    ],
+  },
+  {
+    label: "공개과정",
+    link: "/opencourse",
+    sub: [
       { label: "Hogan", slug: "hogan" },
-      { label: "TAI리더십", slug: "tai" },
-      { label: "조직건강도", slug: "orghealth" },
-      { label: "RNP", slug: "rnp" },
-      { label: "팀효과성", slug: "teamEffect" },
+      { label: "Assessment", slug: "assessment" },
+      { label: "Development", slug: "development" },
+      { label: "Facilitation", slug: "facilitation" },
+      { label: "진단 Certification", slug: "certification" },
+      { label: "FT", slug: "ft" },
     ],
   },
   {
-    label: "교육",
-    link: "/education",
+    label: "공론화",
+    link: "/forum",
     sub: [
-      { label: "followup", slug: "followup" },
-      { label: "certification", slug: "certification" },
-      { label: "공개교육", slug: "opencourse" },
-      { label: "facilitation", slug: "facilitation" },
+      { label: "원페이지", slug: "onepage" },
+      { label: "문의하기", slug: "inquiry" },
     ],
   },
   {
-    label: "교육일정",
-    link: "/education/calendar",
+    label: "일정",
+    link: "/calendar",
   },
   {
-    label: "컨설팅",
-    link: "/consulting",
-    sub: [
-      { label: "워크숍", slug: "workshop" },
-      { label: "공론화", slug: "discussion" },
-      { label: "조직개발", slug: "orgdev" },
-    ],
-  },
-  {
-    label: "수행사례",
-    link: "https://blog.naver.com/orpinstitute_hrd_od",
-    newTab: true,
-  },
-  {
-    label: "FTShop",
+    label: "교보재 판매",
     link: "https://smartstore.naver.com/facilitationshop",
     newTab: true,
   },

@@ -6,7 +6,6 @@ const paymentModel = require("../models/payment.model");
 const pointModel = require("../models/point.model");
 
 /** ======================= 공통 필터 빌더 ======================= */
-/** ======================= 공통 필터 빌더 ======================= */
 function buildUserFilters(query) {
   let {
     type = "all",
@@ -1529,59 +1528,124 @@ exports.getUserSummaryByIds = async (req, res) => {
       .json({ success: false, message: "요약 데이터 조회 실패" });
   }
 };
-// ✅ 모든 문의(회원 + 비회원 + 전역) 조회 (inquiries 하나로 통합)
+// backend/controllers/adminController.js (일부)
+
 exports.getAllInquiries = async (req, res) => {
   try {
-    let { page = 1, pageSize = 20, search = "", sort = "created_at", order = "desc", status = "unanswered" } = req.query;
+    let { 
+      page = 1, 
+      pageSize = 20, 
+      search = "", 
+      status = "unanswered"  // ✅ sort/order 제거, created_at DESC 고정
+    } = req.query;
 
     const limit = Math.max(parseInt(pageSize, 10) || 20, 1);
     const offset = Math.max((parseInt(page, 10) - 1) * limit, 0);
-    const sortOrder = String(order).toLowerCase() === "asc" ? "ASC" : "DESC";
 
+    // ✅ WHERE 조건 빌드
+    const whereClause = [];
+    const values = [];
+
+    if (status === "unanswered") {
+      whereClause.push("i.status = '접수'");
+    } else if (status === "answered") {
+      whereClause.push("i.status = '답변완료'");
+    }
+
+    if (search) {
+      whereClause.push(`(
+        i.title LIKE ? OR i.message LIKE ? 
+        OR u.username LIKE ? OR u.email LIKE ?
+        OR i.guest_name LIKE ? OR i.guest_email LIKE ? OR i.guest_phone LIKE ?
+      )`);
+      const keyword = `%${search}%`;
+      values.push(keyword, keyword, keyword, keyword, keyword, keyword, keyword);
+    }
+
+    const whereSql = whereClause.length ? "WHERE " + whereClause.join(" AND ") : "";
+
+    // ✅ 실제 목록 조회
     const [rows] = await pool.query(
       `
-      SELECT 
-        i.id, i.user_id, i.product_id, i.title, i.message, i.answer, i.status,
-        i.created_at, i.answered_at, i.answered_by,
-        u.username, u.email,
+SELECT 
+  i.id, i.user_id, i.product_id, i.title, i.message, i.answer, i.status,
+  i.is_private,   -- 👈 추가
+  i.created_at, i.answered_at, i.answered_by,
+  u.username AS user_name, u.email AS user_email, u.phone AS user_phone,
         i.guest_name, i.guest_email, i.guest_phone,
         i.company_name, i.department, i.position,
-        p.title AS product_title, p.type AS product_type
+        p.title AS product_title, p.type AS product_type,
+        au.username AS answered_name, au.email AS answered_email, au.phone AS answered_phone
       FROM inquiries i
       LEFT JOIN users u ON u.id = i.user_id
       LEFT JOIN products p ON p.id = i.product_id
-      ${status === "unanswered" ? "WHERE i.status = '접수'" : status === "answered" ? "WHERE i.status = '답변완료'" : ""}
-      ORDER BY i.${sort} ${sortOrder}
+      LEFT JOIN users au ON au.id = i.answered_by
+      ${whereSql}
+      ORDER BY i.created_at DESC   -- ✅ 정렬 고정
       LIMIT ? OFFSET ?
       `,
-      [limit, offset]
+      [...values, limit, offset]
     );
-    
-    // ✅ 전체 개수 별도 조회
+
+    // ✅ totalCount도 검색조건 반영
     const [[{ totalCount }]] = await pool.query(
       `
       SELECT COUNT(*) AS totalCount
       FROM inquiries i
       LEFT JOIN users u ON u.id = i.user_id
       LEFT JOIN products p ON p.id = i.product_id
-      ${status === "unanswered" ? "WHERE i.status = '접수'" : status === "answered" ? "WHERE i.status = '답변완료'" : ""}
-      `
+      ${whereSql}
+      `,
+      values
     );
-    
-    res.json({
-      success: true,
-      inquiries: rows,
-      totalCount: totalCount || 0,   // ✅ 전체 개수 반환
-    });
+
+    // ✅ 전체 미답변/답변완료 카운트 (status 기준으로만)
+    const [[{ totalAnswered }]] = await pool.query(
+      `SELECT COUNT(*) AS totalAnswered FROM inquiries WHERE status = '답변완료'`
+    );
+    const [[{ totalUnanswered }]] = await pool.query(
+      `SELECT COUNT(*) AS totalUnanswered FROM inquiries WHERE status = '접수'`
+    );
+
+    // ✅ 전체 문의 수
+    const [[{ grandTotal }]] = await pool.query(
+      `SELECT COUNT(*) AS grandTotal FROM inquiries`
+    );
+
+   // 각 문의별 history 불러오기
+const [histories] = await pool.query(`
+  SELECT h.inquiry_id, h.answer, h.edited_at, u.username AS editor_name, u.email AS editor_email
+  FROM inquiry_answer_history h
+  LEFT JOIN users u ON u.id = h.editor_id
+  ORDER BY h.edited_at ASC
+`);
+
+// rows와 histories 매핑
+const inquiries = rows.map(r => ({
+  ...r,
+  answerHistories: histories.filter(h => h.inquiry_id === r.id)
+}));
+
+res.json({
+  success: true,
+  inquiries,
+  totalCount: totalCount || 0,
+  totalAnswered,
+  totalUnanswered,
+  grandTotal,
+});
+
   } catch (err) {
     console.error("❌ getAllInquiries 오류:", err);
     res.status(500).json({ success: false, message: "문의 조회 실패" });
   }
 };
 
+
 // ✅ 관리자 답변 등록
 // PUT /api/admin/users/inquiries/:id/answer { answer: "..." }
 exports.answerInquiryByAdmin = async (req, res) => {
+  console.log("[HIT] controller answerInquiryByAdmin id=", req.params.id, "at", new Date().toISOString());
   const { id } = req.params;
   const { answer } = req.body;
 
@@ -1593,10 +1657,19 @@ exports.answerInquiryByAdmin = async (req, res) => {
 
   try {
     const [result] = await pool.query(`
+      INSERT INTO inquiry_answer_history (inquiry_id, answer, editor_id, edited_at)
+      SELECT id, answer, ? , NOW()
+      FROM inquiries
+      WHERE id = ? AND answer IS NOT NULL
+    `, [req.user?.id || null, id]);
+    
+    await pool.query(`
       UPDATE inquiries
       SET answer = ?, answered_at = NOW(), answered_by = ?, status = '답변완료'
       WHERE id = ?
     `, [String(answer).trim(), req.user?.id || null, id]);
+    
+    console.log("🟢 answerInquiryByAdmin result =", result);
     
     if (result.affectedRows === 0) {
       return res
@@ -1614,6 +1687,38 @@ exports.answerInquiryByAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: "답변 등록 실패" });
   }
 };
+
+// ✅ 관리자 답변 삭제
+// DELETE /api/admin/users/inquiries/:id/answer
+exports.deleteInquiryAnswer = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [exists] = await pool.execute("SELECT id FROM inquiries WHERE id = ?", [id]);
+    if (exists.length === 0) {
+      return res.status(404).json({ success: false, message: "문의가 존재하지 않습니다." });
+    }
+
+    const [result] = await pool.execute(`
+      UPDATE inquiries
+      SET answer = NULL,
+          answered_by = NULL,
+          answered_at = NULL,
+          status = '접수'
+      WHERE id = ?
+    `, [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(500).json({ success: false, message: "답변 삭제 실패" });
+    }
+
+    return res.json({ success: true, message: "답변이 삭제되었습니다." });
+  } catch (err) {
+    console.error("❌ deleteInquiryAnswer 오류:", err);
+    return res.status(500).json({ success: false, message: "서버 오류" });
+  }
+};
+
 
 /** ======================= 상품 일괄 삭제 ======================= */
 // DELETE /api/admin/products

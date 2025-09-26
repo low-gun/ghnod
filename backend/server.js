@@ -127,7 +127,8 @@ app.use("/api/auth", loadRouter("./routes/auth"));
 app.use("/api", loadRouter("./routes/productReviews"));
 app.use("/api/upload", loadRouter("./routes/upload"));
 console.log("✅ API 라우터 등록 완료");
-
+app.use("/api/products", loadRouter("./routes/public/products"));
+app.use("/api/admin", loadRouter("./routes/admin/inquiries"));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/payments", loadRouter("./routes/payments.public"));
 

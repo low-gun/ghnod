@@ -42,10 +42,17 @@ const ProductSchedulesModal = dynamic(
 );
 
 export default function ProductTable({
-  onEdit,       // 선택: 행 클릭 시 수정 열기 콜백
-  onLoaded,     // 선택: 목록/카운트 수신 시 상단 카드 등과 동기화
-  onExcelData,  // 선택: 외부에서 엑셀 버튼 따로 쓸 때
+  useExternalToolbar = false,
+  externalSearchType,
+  externalSearchQuery,
+  externalStartDate,
+  externalEndDate,
+  searchSyncKey,
+  onEdit,
+  onLoaded,
+  onExcelData,
 }) {
+
   const isTabletOrBelow = useIsTabletOrBelow();
   const { showAlert } = useGlobalAlert?.() ?? { showAlert: () => {} };
   const { showConfirm } = useGlobalConfirm?.() ?? { showConfirm: async () => true };
@@ -55,12 +62,13 @@ export default function ProductTable({
   useEffect(() => setMounted(true), []);
   const isNarrow = mounted && isTabletOrBelow;
 
-  // 🔹 모바일 첫 진입도 자동 로드
-  const [autoFetchEnabled, setAutoFetchEnabled] = useState(true);
-  useEffect(() => {
-    if (!mounted) return;
-    setAutoFetchEnabled(true);
-  }, [mounted]);
+  // ✅ SchedulesTable 동일: 외부 툴바일 땐 무조건 true, 아니면 데스크톱만 true
+const [autoFetchEnabled, setAutoFetchEnabled] = useState(useExternalToolbar ? true : false);
+useEffect(() => {
+  if (!mounted) return;
+  setAutoFetchEnabled(useExternalToolbar ? true : !isTabletOrBelow);
+}, [mounted, isTabletOrBelow, useExternalToolbar]);
+
 
   // 상태(페이지/정렬/검색)
   const [page, setPage] = useState(1);
@@ -68,9 +76,16 @@ export default function ProductTable({
   const [sortConfig, setSortConfig] = useState({ key: "updated_at", direction: "desc" });
 
   const [searchField, setSearchField] = useState("title");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState(null); // YYYY-MM-DD
-  const [endDate, setEndDate] = useState(null);
+const [searchQuery, setSearchQuery] = useState("");
+const [startDate, setStartDate] = useState(null); // YYYY-MM-DD
+const [endDate, setEndDate] = useState(null);
+
+// ✅ 외부 검색 주입값 (SchedulesTable과 동일한 방식)
+const effSearchField = useExternalToolbar ? externalSearchType ?? "title" : searchField;
+const effSearchQuery = useExternalToolbar ? externalSearchQuery ?? "" : searchQuery;
+const effStartDate   = useExternalToolbar ? externalStartDate ?? null : startDate;
+const effEndDate     = useExternalToolbar ? externalEndDate ?? null : endDate;
+
 
   // 목록/총합/로딩/에러
   const [rows, setRows] = useState([]);
@@ -120,25 +135,29 @@ export default function ProductTable({
     });
   }, [rows]);
 
-  // 엑셀
-  const excelHeaders = useMemo(
-    () => ["ID", "코드", "상품명", "유형", "가격", "상태", "등록일시", "수정일시"],
-    []
-  );
-  const excelRows = useMemo(
-    () =>
-      rows.map((p) => ({
-        ID: p.id,
-        코드: p.code ?? `P-${p.id}`,
-        상품명: p.title ?? p.name ?? "(제목 없음)",
-        유형: p.type ?? "-",
-        가격: Number(p.price ?? 0),
-        상태: Number(p.is_active) === 1 ? "활성" : "비활성",
-        등록일시: formatDateLocal(p.created_at),
-        수정일시: formatDateLocal(p.updated_at),
-      })),
-    [rows]
-  );
+  // excelHeaders
+const excelHeaders = useMemo(
+  () => ["ID", "코드", "상품명", "카테고리", "유형", "가격", "상태", "등록일시", "수정일시"],
+  []
+);
+
+// excelRows
+const excelRows = useMemo(
+  () =>
+    rows.map((p) => ({
+      ID: p.id,
+      코드: p.code ?? `P-${p.id}`,
+      상품명: p.title ?? p.name ?? "(제목 없음)",
+      카테고리: p.category ?? "-",
+      유형: p.type ?? "-",
+      가격: Number(p.price ?? 0),
+      상태: Number(p.is_active) === 1 ? "활성" : "비활성",
+      등록일시: formatDateLocal(p.created_at),
+      수정일시: formatDateLocal(p.updated_at),
+    })),
+  [rows]
+);
+
   useEffect(() => {
     if (typeof onExcelData === "function") {
       onExcelData({ headers: excelHeaders, data: excelRows });
@@ -147,21 +166,41 @@ export default function ProductTable({
   }, [excelRows]);
 
   // fetch 트리거 키
-  const refreshKey = useMemo(
-    () =>
-      [
+  const refreshKey = useMemo(() => {
+    if (useExternalToolbar) {
+      return [
         page,
         pageSize,
         sortConfig.key,
         sortConfig.direction,
-        searchField,
-        searchQuery,
-        startDate,
-        endDate,
+        searchSyncKey,  // ✅ 부모에서 트리거
         isNarrow,
-      ].join("|"),
-    [page, pageSize, sortConfig.key, sortConfig.direction, searchField, searchQuery, startDate, endDate, isNarrow]
-  );
+      ].join("|");
+    }
+    return [
+      page,
+      pageSize,
+      sortConfig.key,
+      sortConfig.direction,
+      searchField,
+      searchQuery,
+      startDate,
+      endDate,
+      isNarrow,
+    ].join("|");
+  }, [
+    useExternalToolbar,
+    page,
+    pageSize,
+    sortConfig.key,
+    sortConfig.direction,
+    searchSyncKey,
+    searchField,
+    searchQuery,
+    startDate,
+    endDate,
+    isNarrow,
+  ]); 
 
   // 목록 조회(AbortController)
   const abortRef = useRef(null);
@@ -179,16 +218,16 @@ export default function ProductTable({
         sortDir: sortConfig.direction,
         sort: sortConfig.key,
         order: sortConfig.direction,
-        searchField,
-        searchQuery,
-      };
-  
-      if (["created_at", "updated_at"].includes(searchField)) {
-        const sd = toDate(startDate);
-        const ed = toDate(endDate);
+        searchField: effSearchField,
+        search: effSearchQuery,        // ✅ 백엔드와 맞춤
+      };    
+      
+      if (["created_at", "updated_at"].includes(effSearchField)) {
+        const sd = toDate(effStartDate);
+        const ed = toDate(effEndDate);
         if (sd) params.start_date = sd;
         if (ed) params.end_date = ed;
-      }
+      }     
   
       // === 콘솔 트레이싱 시작 ===
       const fetchKey = `[FETCH /admin/products] ${JSON.stringify(params)}`;
@@ -368,27 +407,39 @@ export default function ProductTable({
   return (
     <div>
       {/* 상단 툴바 */}
-      <AdminToolbar>
-    <div className="toolbar-left">
-      {mounted && (
-        <AdminSearchFilter
-          searchType={searchField}
-          setSearchType={setSearchField}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          startDate={startDate}
-          endDate={endDate}
-          setStartDate={setStartDate}
-          setEndDate={setEndDate}
-          onSearchClick={({ type, query }) => {
-            setSearchField(type ?? "title");
-            setSearchQuery(query ?? "");
-            setPage(1);
-            setAutoFetchEnabled(true);
-          }}
+      {!useExternalToolbar && (
+        <AdminToolbar>
+          <div className="toolbar-left">
+            {mounted && (
+              <AdminSearchFilter
+                searchType={searchField}
+                setSearchType={setSearchField}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                startDate={startDate}
+                endDate={endDate}
+                setStartDate={setStartDate}
+                setEndDate={setEndDate}
+                onSearchClick={({ type, query }) => {
+                  setSearchField(type ?? "title");
+                  setSearchQuery(query ?? "");
+                  setPage(1);
+                  setAutoFetchEnabled(true);
+                }}
           searchOptions={[
             { value: "title", label: "상품명", type: "text" },
             { value: "code", label: "코드", type: "text" },
+            {
+              value: "category",                     // ✅ 추가됨
+              label: "카테고리",
+              type: "select",
+              options: [
+                { value: "진단", label: "진단" },
+                { value: "조직개발", label: "조직개발" },
+                { value: "리더십개발", label: "리더십개발" },
+                { value: "공개과정", label: "공개과정" },
+              ],
+            },
             { value: "type", label: "유형", type: "text" },
             { value: "price", label: "가격", type: "number" },
             {
@@ -403,44 +454,41 @@ export default function ProductTable({
             { value: "created_at", label: "등록일시", type: "date" },
             { value: "updated_at", label: "수정일시", type: "date" },
           ]}
+          
+          />
+        )}
+        <button onClick={handleReset} style={resetBtn}>
+          초기화
+        </button>
+      </div>
+      <div className="toolbar-right">
+        <button
+          onClick={handleDeleteSelected}
+          disabled={selectedIds.length === 0}
+          style={{
+            ...dangerBtn,
+            cursor: selectedIds.length === 0 ? "not-allowed" : "pointer",
+          }}
+        >
+          삭제
+        </button>
+        <PageSizeSelector
+          value={pageSize}
+          onChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+            setAutoFetchEnabled(true);
+          }}
         />
-      )}
-
-
-    <button onClick={handleReset} style={resetBtn}>
-      초기화
-    </button>
-  </div>
-
-        <div className="toolbar-right">
-          <button
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.length === 0}
-            style={{
-              ...dangerBtn,
-              cursor: selectedIds.length === 0 ? "not-allowed" : "pointer",
-            }}
-          >
-            삭제
-          </button>
-
-          <PageSizeSelector
-            value={pageSize}
-            onChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-              setAutoFetchEnabled(true);
-            }}
-          />
-
-          <ExcelDownloadButton
-            fileName="상품목록"
-            sheetName="Products"
-            headers={excelHeaders}
-            data={excelRows}
-          />
-        </div>
-      </AdminToolbar>
+        <ExcelDownloadButton
+          fileName="상품목록"
+          sheetName="Products"
+          headers={excelHeaders}
+          data={excelRows}
+        />
+      </div>
+    </AdminToolbar>
+  )}
 
       {/* 본문 */}
       {isFetching ? (
@@ -524,6 +572,18 @@ export default function ProductTable({
           setSortConfig((p) => ({
             key: "title",
             direction: p.key === "title" && p.direction === "asc" ? "desc" : "asc",
+          }));
+        },
+      },
+      {
+        key: "category",
+        title: "카테고리",
+        width: 120,
+        onClickHeader: () => {
+          setPage(1);
+          setSortConfig((p) => ({
+            key: "category",
+            direction: p.key === "category" && p.direction === "asc" ? "desc" : "asc",
           }));
         },
       },
@@ -641,8 +701,9 @@ export default function ProductTable({
             {p.title}
           </span>
         </td>
-        <td className="admin-td">{p.type}</td>
-        <td className="admin-td">{p.priceText}</td>
+        <td className="admin-td">{p.category || "-"}</td>
+<td className="admin-td">{p.type || "-"}</td>
+<td className="admin-td">{p.priceText}</td>
         <td className="admin-td">{formatDateLocal(p.created_at)}</td>
         <td className="admin-td">{formatDateLocal(p.updated_at)}</td>
         <td className="admin-td">
@@ -783,10 +844,15 @@ export default function ProductTable({
                   </div>
     
                   <div style={{ flex: 1, fontSize: 14, color: "#374151" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px dashed #f0f0f0" }}>
-                      <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>유형</span>
-                      <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>{p.type || "-"}</span>
-                    </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px dashed #f0f0f0" }}>
+  <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>카테고리</span>
+  <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>{p.category || "-"}</span>
+</div>
+<div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px dashed #f0f0f0" }}>
+  <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>유형</span>
+  <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>{p.type || "-"}</span>
+</div>
+
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px dashed #f0f0f0" }}>
                       <span style={{ color: "#888", fontSize: 13, minWidth: 72 }}>가격</span>
                       <span style={{ color: "#222", fontSize: 14, textAlign: "right" }}>{p.priceText}</span>

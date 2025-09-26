@@ -11,16 +11,21 @@ router.get("/products/:productId/inquiries", async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT 
-         id, 
-         title,
-         CASE WHEN is_private = 1 THEN NULL ELSE message END AS message,
-         CASE WHEN is_private = 1 THEN NULL ELSE answer  END AS answer,
-         is_private, user_id, created_at
-       FROM inquiries
-       WHERE product_id = ?
-       ORDER BY created_at DESC`,
-      [productId]  // ✅ SQL 문자열과 파라미터 배열을 콤마로 구분
+         i.id, 
+         i.title,
+         CASE WHEN i.is_private = 1 THEN NULL ELSE i.message END AS message,
+         CASE WHEN i.is_private = 1 THEN NULL ELSE i.answer  END AS answer,
+         i.is_private, 
+         i.user_id, 
+         i.created_at,
+         i.answered_at,          -- ✅ 답변일시 추가
+         i.answered_by           -- ✅ 답변자 ID 추가
+       FROM inquiries i
+       WHERE i.product_id = ?
+       ORDER BY i.created_at DESC`,
+      [productId]
     );
+    
     
 
     res.json({ success: true, inquiries: rows });

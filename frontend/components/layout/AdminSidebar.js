@@ -37,7 +37,7 @@ export default function AdminSidebar({
   const menuItems = [
     { label: "홈", path: "/admin", icon: icons.home },
     { label: "상품관리", path: "/admin/products", icon: icons.products },
-    { label: "교육일정", path: "/admin/schedules", icon: icons.calendar },
+    { label: "일정", path: "/admin/schedules", icon: icons.calendar },
     { label: "결제관리", path: "/admin/payments", icon: icons.payments },
     { label: "사용자", path: "/admin/users", icon: icons.users },
   ];

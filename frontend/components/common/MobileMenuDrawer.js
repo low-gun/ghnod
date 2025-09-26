@@ -11,12 +11,14 @@ import { centerGroup } from "@/data/menuData";
 import { Activity, GraduationCap, CalendarDays, Handshake, FolderOpen, ShoppingBag } from "lucide-react";
 const MENU_ICONS = {
   진단: Activity,
-  교육: GraduationCap,
-  교육일정: CalendarDays,
-  컨설팅: Handshake,
-  수행사례: FolderOpen,
-  FTShop: ShoppingBag,
+  "조직 개발": GraduationCap,
+  "리더십 개발": GraduationCap,
+  공개과정: GraduationCap,
+  공론화: Handshake,
+  일정: CalendarDays,
+  "교보재 판매": ShoppingBag,
 };
+
 
 export default function MobileMenuDrawer({ open, onClose }) {
   const isCompactNav = useIsTabletOrBelow980(); // ✅ 980px 이하에서만 렌더

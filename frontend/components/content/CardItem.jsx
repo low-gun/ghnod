@@ -5,9 +5,18 @@ export default function CardItem({ item, type }) {
   const today = new Date();
   const isPast = new Date(item.start_date) < today;
 
+  const categorySlugMap = {
+    "진단": "diagnosis",
+    "조직개발": "orgdev",
+    "리더십개발": "leadership",
+    "공개과정": "opencourse",
+    "공론화": "forum",
+  };
+  const slugCategory = categorySlugMap[item.category] || "opencourse";
+
   return (
     <div
-      onClick={() => router.push(`/education/${type}/${item.id}`)}
+      onClick={() => router.push(`/${slugCategory}/${type}/${item.id}`)}
       style={{
         width: 260,
         border: ".0625rem solid #ddd",
@@ -20,64 +29,44 @@ export default function CardItem({ item, type }) {
       }}
     >
       {/* 썸네일 */}
-      {/* 썸네일 */}
-{item.thumbnail_url ? (
-  <img
-    src={item.thumbnail_url}
-    alt={item.title}
-    style={{
-      width: "100%",
-      height: 140,
-      objectFit: "contain",
-    }}
-  />
-) : item.image_url ? (
-  <img
-    src={item.image_url}
-    alt={item.title}
-    style={{
-      width: "100%",
-      height: 140,
-      objectFit: "contain",
-    }}
-  />
-) : item.product_image ? (
-  <img
-    src={item.product_image}
-    alt={item.title}
-    style={{
-      width: "100%",
-      height: 140,
-      objectFit: "contain",
-    }}
-  />
-) : (
-  <div
-    style={{
-      width: "100%",
-      height: 140,
-      background: "#f2f2f2",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#999",
-      fontSize: 13,
-    }}
-  >
-    썸네일 없음
-  </div>
-)}
-
+      {item.thumbnail_url ? (
+        <img
+          src={item.thumbnail_url}
+          alt={item.title}
+          style={{ width: "100%", height: 140, objectFit: "contain" }}
+        />
+      ) : item.image_url ? (
+        <img
+          src={item.image_url}
+          alt={item.title}
+          style={{ width: "100%", height: 140, objectFit: "contain" }}
+        />
+      ) : item.product_image ? (
+        <img
+          src={item.product_image}
+          alt={item.title}
+          style={{ width: "100%", height: 140, objectFit: "contain" }}
+        />
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            height: 140,
+            background: "#f2f2f2",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#999",
+            fontSize: 13,
+          }}
+        >
+          썸네일 없음
+        </div>
+      )}
 
       {/* 텍스트 */}
       <div style={{ padding: 12 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h4
             style={{
               margin: 0,
@@ -115,14 +104,7 @@ export default function CardItem({ item, type }) {
         </p>
 
         {isPast && (
-          <p
-            style={{
-              marginTop: 8,
-              fontSize: 12,
-              color: "#d9534f",
-              fontWeight: "bold",
-            }}
-          >
+          <p style={{ marginTop: 8, fontSize: 12, color: "#d9534f", fontWeight: "bold" }}>
             종료된 일정입니다.
           </p>
         )}

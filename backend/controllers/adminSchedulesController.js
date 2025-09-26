@@ -537,8 +537,24 @@ await conn.execute(
       }
       
 
-    await conn.commit();
-    return res.json({ success: true, id: newId });
+      // ✅ 태그 저장
+      if (Array.isArray(req.body.tags)) {
+        await conn.execute("DELETE FROM schedule_tags WHERE schedule_id = ?", [newId]);
+  
+        for (const tagName of req.body.tags) {
+          const [tagRows] = await conn.execute("SELECT id FROM tags WHERE name = ?", [tagName]);
+          let tagId = tagRows[0]?.id;
+          if (!tagId) {
+            const [ins] = await conn.execute("INSERT INTO tags (name) VALUES (?)", [tagName]);
+            tagId = ins.insertId;
+          }
+          await conn.execute("INSERT INTO schedule_tags (schedule_id, tag_id) VALUES (?, ?)", [newId, tagId]);
+        }
+      }
+  
+      await conn.commit();
+      return res.json({ success: true, id: newId });
+  
   } catch (err) {
     await conn.rollback();
     console.error("❌ 일정 등록 오류:", err?.stack || err);
@@ -607,36 +623,271 @@ if (normSessions.length) {
   for (const s of normSessions) {
     const ts = s.total_spots;
     if (s.id) {
-      await conn.execute(
-        `UPDATE schedule_sessions
-           SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
-         WHERE id=? AND schedule_id=?`,
-        [s.start_date, s.end_date, s.start_time, s.end_time, ts, ts, s.id, id]
-      );
-    } else {
-      await conn.execute(
-        `INSERT INTO schedule_sessions
-           (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
-      );
-    }
-  }
+// 기존 예약 좌석 수 확인 후 remaining_spots 계산
+const [reservedRows] = await conn.execute(
+  `SELECT COALESCE(SUM(oi.quantity), 0) AS reserved
+     FROM order_items oi
+     JOIN orders o ON o.id = oi.order_id
+    WHERE oi.schedule_session_id = ? AND o.order_status = 'paid'`,
+  [s.id]
+);
+const reserved = reservedRows[0]?.reserved || 0;
+
+await conn.execute(
+  `UPDATE schedule_sessions
+     SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
+   WHERE id=? AND schedule_id=?`,
+  [
+    s.start_date,
+    s.end_date,
+    s.start_time,
+    s.end_time,
+    ts,
+    Math.max(ts - reserved, 0), // 총좌석 - 예약좌석
+    s.id,
+    id,
+  ]
+);
+
+} else {
+  // 신규 세션 INSERT + insertId 반영
+  const [ins] = await conn.execute(
+    `INSERT INTO schedule_sessions
+       (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
+  );
+  s.id = ins.insertId; // ✅ 새 세션 id 반영
+}
+}
 }
 
 // updateSchedule 내부
 /* 🔻 세션 삭제(diff) 처리 (저장 시점에만 DB 반영, 결제된 회차 보호) */
 {
+const [existRows] = await conn.execute(
+`SELECT id FROM schedule_sessions WHERE schedule_id = ?`,
+[id]
+);
+const existingIds = existRows.map(r => Number(r.id));
+
+// ✅ 신규 세션(null/undefined)은 -1로 치환, INSERT 된 세션은 위에서 id 반영됨
+const incomingIds = (normSessions || []).map(s => {
+if (s.id === null || s.id === undefined) return -1;
+return Number(s.id);
+});
+
+const [lockedRows] = await conn.execute(
+`SELECT ss.id
+   FROM schedule_sessions ss
+   JOIN order_items oi ON oi.schedule_session_id = ss.id
+   JOIN orders o ON o.id = oi.order_id
+  WHERE ss.schedule_id = ? AND o.order_status = 'paid'
+  GROUP BY ss.id`,
+[id]
+);
+const lockedSet = new Set(lockedRows.map(r => Number(r.id)));
+
+const attemptedPaidDeletes = existingIds.filter(
+x => !incomingIds.includes(x) && lockedSet.has(x)
+);
+if (attemptedPaidDeletes.length) {
+await conn.rollback();
+return res.status(409).json({
+  success: false,
+  code: "HAS_PAID_SESSIONS",
+  message: "결제된 회차는 삭제할 수 없습니다.",
+  details: { session_ids: attemptedPaidDeletes }
+});
+}
+
+const deletableIds = existingIds.filter(
+x => !incomingIds.includes(x) && !lockedSet.has(x)
+);
+if (deletableIds.length) {
+const ph = deletableIds.map(() => "?").join(",");
+await conn.execute(
+  `DELETE FROM schedule_sessions WHERE schedule_id = ? AND id IN (${ph})`,
+  [id, ...deletableIds]
+);
+}
+}
+
+
+// ✅ 태그 업데이트
+if (Array.isArray(req.body.tags)) {
+  await conn.execute("DELETE FROM schedule_tags WHERE schedule_id = ?", [id]);
+
+  for (const tagName of req.body.tags) {
+    const [tagRows] = await conn.execute("SELECT id FROM tags WHERE name = ?", [tagName]);
+    let tagId = tagRows[0]?.id;
+    if (!tagId) {
+      const [ins] = await conn.execute("INSERT INTO tags (name) VALUES (?)", [tagName]);
+      tagId = ins.insertId;
+    }
+    await conn.execute("INSERT INTO schedule_tags (schedule_id, tag_id) VALUES (?, ?)", [id, tagId]);
+  }
+}
+
+await conn.commit();
+return res.json({ success: true });
+
+
+} catch (err) {
+await conn.rollback();
+console.error("❌ 일정 수정 오류:", err?.stack || err);
+return res.status(500).json({ success: false, message: "수정 실패", error: err?.message });
+}
+finally {
+conn.release();
+}
+};
+// ===== 부분 수정(PATCH) : 들어온 필드만 동적 UPDATE, sessions 전달 시에만 세션 교체 =====
+exports.patchSchedule = async (req, res) => {
+const { id } = req.params;
+
+// 업로드 이미지 우선, data:image 차단
+const uploadedUrl =
+Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
+  ? req.uploadedImageUrls[0].original
+  : null;
+
+const incoming = req.body || {};
+const {
+product_id, title, start_date, end_date,
+location, instructor, description, total_spots,
+price, detail, image_url, sessions,
+} = incoming;
+
+// 이미지 URL 결정 및 data:image 차단
+if (!uploadedUrl && typeof image_url === "string" && /^data:image\//i.test(image_url)) {
+return res.status(400).json({
+  success: false,
+  message: "data:image URL은 허용하지 않습니다. 파일 업로드를 사용하세요.",
+});
+}
+const resolvedImageUrl =
+uploadedUrl !== null ? uploadedUrl
+: image_url !== undefined ? image_url
+: undefined; // undefined면 SET에 포함 안 함
+
+// 숫자 필드 정규화(빈 문자열 → null, 미전달은 undefined 유지)
+const pricePatched = (price === '' ? null : price);
+
+const { normalizeDetailHtml } = require("../services/normalizeDetailHtml");
+
+const normDetail = await normalizeDetailHtml(detail || "");
+const allowed = {
+product_id, title, start_date, end_date,
+location, instructor, description, total_spots,
+price: pricePatched, detail: normDetail,
+};
+
+if (resolvedImageUrl !== undefined) {
+// 빈 문자열 등은 null 저장
+allowed.image_url = resolvedImageUrl || null;
+}
+
+
+// sessions 정규화 및 start/end 자동 보정(필요 시)
+let normSessions = [];
+if (Array.isArray(sessions)) {
+normSessions = normalizeSessions(sessions);
+if ((!allowed.start_date || !allowed.end_date) && normSessions.length) {
+  const starts = normSessions.map((s) => toDT(s.start_date, s.start_time)).sort();
+  const ends   = normSessions.map((s) => toDT(s.end_date,   s.end_time)).sort();
+  if (!allowed.start_date) allowed.start_date = starts[0];
+  if (!allowed.end_date)   allowed.end_date   = ends[ends.length - 1];
+}
+}
+
+// undefined 키 제거
+const keys = Object.keys(allowed).filter((k) => allowed[k] !== undefined);
+if (keys.length === 0 && !Array.isArray(sessions)) {
+return res.status(400).json({ success: false, message: "변경할 필드가 없습니다." });
+}
+
+// 동적 UPDATE
+const setClauses = keys.map((k) => `${k} = ?`);
+const values = keys.map((k) => allowed[k]);
+// 항상 updated_at 갱신
+setClauses.push("updated_at = NOW()");
+
+const conn = await pool.getConnection();
+try {
+await conn.beginTransaction();
+
+if (keys.length > 0) {
+  await conn.execute(
+    `UPDATE schedules SET ${setClauses.join(", ")} WHERE id = ?`,
+    [...values, id]
+  );
+}
+
+// ✅ patchSchedule: 기존 세션은 UPDATE, 새 세션만 INSERT
+if (Array.isArray(sessions)) {
+  console.log("[PATCH incoming sessions]", sessions);
+  console.log("[PATCH normalized]", normSessions);
+
+  if (normSessions.length > 0) {
+    for (const s of normSessions) {
+      console.log("🟢 session 처리 대상", s);
+      const ts = s.total_spots;
+      if (s.id) {
+        const [reservedRows] = await conn.execute(
+          `SELECT COALESCE(SUM(oi.quantity), 0) AS reserved
+             FROM order_items oi
+             JOIN orders o ON o.id = oi.order_id
+            WHERE oi.schedule_session_id = ? AND o.order_status = 'paid'`,
+          [s.id]
+        );
+        const reserved = reservedRows[0]?.reserved || 0;
+
+        await conn.execute(
+          `UPDATE schedule_sessions
+             SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
+           WHERE id=? AND schedule_id=?`,
+          [
+            s.start_date,
+            s.end_date,
+            s.start_time,
+            s.end_time,
+            ts,
+            Math.max(ts - reserved, 0),
+            s.id,
+            id,
+          ]
+        );
+      } else {
+        const [ins] = await conn.execute(
+          `INSERT INTO schedule_sessions
+             (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
+        );
+        s.id = ins.insertId; // ✅ 새 세션 id 반영
+      }
+    }
+  } else {
+    console.log("⚠️ normSessions.length === 0 → 세션이 insert/update되지 않음");
+  }
+}
+    
+    // 🔻 세션 삭제(diff) 처리 (sessions가 넘어온 경우에만)
+if (Array.isArray(sessions)) {
   const [existRows] = await conn.execute(
     `SELECT id FROM schedule_sessions WHERE schedule_id = ?`,
     [id]
   );
   const existingIds = existRows.map(r => Number(r.id));
 
-  const incomingIds = (normSessions || [])
-    .map(s => s.id)
-    .filter(v => v != null)
-    .map(Number);
+  const incomingIds = (normSessions || []).map(s => {
+    if (s.id === null || s.id === undefined) return -1;
+    return Number(s.id);
+  });
+  
+
+  console.log("🔍 before diff delete", { existingIds, incomingIds });
 
   const [lockedRows] = await conn.execute(
     `SELECT ss.id
@@ -649,10 +900,10 @@ if (normSessions.length) {
   );
   const lockedSet = new Set(lockedRows.map(r => Number(r.id)));
 
-  const attemptedPaidDeletes = existingIds.filter(
-    x => !incomingIds.includes(x) && lockedSet.has(x)
-  );
+  const attemptedPaidDeletes = existingIds
+    .filter(x => !incomingIds.includes(x) && lockedSet.has(x));
   if (attemptedPaidDeletes.length) {
+    console.log("⛔ paid session delete blocked", attemptedPaidDeletes);
     await conn.rollback();
     return res.status(409).json({
       success: false,
@@ -662,185 +913,40 @@ if (normSessions.length) {
     });
   }
 
-  const deletableIds = existingIds.filter(
-    x => !incomingIds.includes(x) && !lockedSet.has(x)
-  );
+  const deletableIds = existingIds
+    .filter(x => !incomingIds.includes(x) && !lockedSet.has(x));
+
   if (deletableIds.length) {
+    console.log("🗑 deleting sessions", deletableIds);
     const ph = deletableIds.map(() => "?").join(",");
     await conn.execute(
       `DELETE FROM schedule_sessions WHERE schedule_id = ? AND id IN (${ph})`,
       [id, ...deletableIds]
     );
+  } else {
+    console.log("✅ no sessions deleted");
   }
 }
 
+    
+// ✅ 태그 업데이트 (부분 수정에서도 동일 처리)
+if (Array.isArray(req.body.tags)) {
+  await conn.execute("DELETE FROM schedule_tags WHERE schedule_id = ?", [id]);
+
+  for (const tagName of req.body.tags) {
+    const [tagRows] = await conn.execute("SELECT id FROM tags WHERE name = ?", [tagName]);
+    let tagId = tagRows[0]?.id;
+    if (!tagId) {
+      const [ins] = await conn.execute("INSERT INTO tags (name) VALUES (?)", [tagName]);
+      tagId = ins.insertId;
+    }
+    await conn.execute("INSERT INTO schedule_tags (schedule_id, tag_id) VALUES (?, ?)", [id, tagId]);
+  }
+}
 
 await conn.commit();
 return res.json({ success: true });
 
-  } catch (err) {
-    await conn.rollback();
-    console.error("❌ 일정 수정 오류:", err?.stack || err);
-    return res.status(500).json({ success: false, message: "수정 실패", error: err?.message });
-  }
-   finally {
-    conn.release();
-  }
-};
-// ===== 부분 수정(PATCH) : 들어온 필드만 동적 UPDATE, sessions 전달 시에만 세션 교체 =====
-exports.patchSchedule = async (req, res) => {
-  const { id } = req.params;
-
-  // 업로드 이미지 우선, data:image 차단
-  const uploadedUrl =
-    Array.isArray(req.uploadedImageUrls) && req.uploadedImageUrls[0]?.original
-      ? req.uploadedImageUrls[0].original
-      : null;
-
-  const incoming = req.body || {};
-  const {
-    product_id, title, start_date, end_date,
-    location, instructor, description, total_spots,
-    price, detail, image_url, sessions,
-  } = incoming;
-  
-  // 이미지 URL 결정 및 data:image 차단
-  if (!uploadedUrl && typeof image_url === "string" && /^data:image\//i.test(image_url)) {
-    return res.status(400).json({
-      success: false,
-      message: "data:image URL은 허용하지 않습니다. 파일 업로드를 사용하세요.",
-    });
-  }
-  const resolvedImageUrl =
-    uploadedUrl !== null ? uploadedUrl
-    : image_url !== undefined ? image_url
-    : undefined; // undefined면 SET에 포함 안 함
-  
-  // 숫자 필드 정규화(빈 문자열 → null, 미전달은 undefined 유지)
-  const pricePatched = (price === '' ? null : price);
-  
-  const { normalizeDetailHtml } = require("../services/normalizeDetailHtml");
-
-const normDetail = await normalizeDetailHtml(detail || "");
-const allowed = {
-  product_id, title, start_date, end_date,
-  location, instructor, description, total_spots,
-  price: pricePatched, detail: normDetail,
-};
-
-  if (resolvedImageUrl !== undefined) {
-    // 빈 문자열 등은 null 저장
-    allowed.image_url = resolvedImageUrl || null;
-  }
-  
-
-  // sessions 정규화 및 start/end 자동 보정(필요 시)
-  let normSessions = [];
-  if (Array.isArray(sessions)) {
-    normSessions = normalizeSessions(sessions);
-    if ((!allowed.start_date || !allowed.end_date) && normSessions.length) {
-      const starts = normSessions.map((s) => toDT(s.start_date, s.start_time)).sort();
-      const ends   = normSessions.map((s) => toDT(s.end_date,   s.end_time)).sort();
-      if (!allowed.start_date) allowed.start_date = starts[0];
-      if (!allowed.end_date)   allowed.end_date   = ends[ends.length - 1];
-    }
-  }
-
-  // undefined 키 제거
-  const keys = Object.keys(allowed).filter((k) => allowed[k] !== undefined);
-  if (keys.length === 0 && !Array.isArray(sessions)) {
-    return res.status(400).json({ success: false, message: "변경할 필드가 없습니다." });
-  }
-
-  // 동적 UPDATE
-  const setClauses = keys.map((k) => `${k} = ?`);
-  const values = keys.map((k) => allowed[k]);
-  // 항상 updated_at 갱신
-  setClauses.push("updated_at = NOW()");
-
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    if (keys.length > 0) {
-      await conn.execute(
-        `UPDATE schedules SET ${setClauses.join(", ")} WHERE id = ?`,
-        [...values, id]
-      );
-    }
-    
-    // ✅ patchSchedule: 기존 세션은 UPDATE, 새 세션만 INSERT
-    if (Array.isArray(sessions) && normSessions.length > 0) {
-      for (const s of normSessions) {
-        const ts = s.total_spots;
-        if (s.id) {
-          await conn.execute(
-            `UPDATE schedule_sessions
-               SET start_date=?, end_date=?, start_time=?, end_time=?, total_spots=?, remaining_spots=?
-             WHERE id=? AND schedule_id=?`,
-            [s.start_date, s.end_date, s.start_time, s.end_time, ts, ts, s.id, id]
-          );
-        } else {
-          await conn.execute(
-            `INSERT INTO schedule_sessions
-               (schedule_id, session_date, start_date, end_date, start_time, end_time, total_spots, remaining_spots)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, s.session_date || s.start_date, s.start_date, s.end_date, s.start_time, s.end_time, ts, ts]
-          );
-        }
-      }
-    }
-    
-    /* 🔻 추가: 세션 삭제(diff) 처리 (sessions가 넘어온 경우에만) */
-    if (Array.isArray(sessions)) {
-      const [existRows] = await conn.execute(
-        `SELECT id FROM schedule_sessions WHERE schedule_id = ?`,
-        [id]
-      );
-      const existingIds = existRows.map(r => Number(r.id));
-    
-      const incomingIds = (normSessions || [])
-        .map(s => s.id)
-        .filter(v => v !== null && v !== undefined)
-        .map(Number);
-    
-      const [lockedRows] = await conn.execute(
-        `SELECT ss.id
-           FROM schedule_sessions ss
-           JOIN order_items oi ON oi.schedule_session_id = ss.id
-           JOIN orders o ON o.id = oi.order_id
-          WHERE ss.schedule_id = ? AND o.order_status = 'paid'
-          GROUP BY ss.id`,
-        [id]
-      );
-      const lockedSet = new Set(lockedRows.map(r => Number(r.id)));
-    
-      const attemptedPaidDeletes = existingIds
-        .filter(x => !incomingIds.includes(x) && lockedSet.has(x));
-      if (attemptedPaidDeletes.length) {
-        await conn.rollback();
-        return res.status(409).json({
-          success: false,
-          code: "HAS_PAID_SESSIONS",
-          message: "결제된 회차는 삭제할 수 없습니다.",
-          details: { session_ids: attemptedPaidDeletes }
-        });
-      }
-    
-      const deletableIds = existingIds
-        .filter(x => !incomingIds.includes(x) && !lockedSet.has(x));
-    
-      if (deletableIds.length) {
-        const ph = deletableIds.map(() => "?").join(",");
-        await conn.execute(
-          `DELETE FROM schedule_sessions WHERE schedule_id = ? AND id IN (${ph})`,
-          [id, ...deletableIds]
-        );
-      }
-    }
-    
-    await conn.commit();
-    return res.json({ success: true });
     
   } catch (err) {
     await conn.rollback();

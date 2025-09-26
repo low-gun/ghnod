@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import AdminLayout from "@/components/layout/AdminLayout";
 import api from "@/lib/api";
 import { useGlobalAlert } from "@/stores/globalAlert";
-
+import CreatableSelect from "react-select/creatable";   // ✅ 수정
+import Select from "react-select";   // ✅ 상단 추가
 // 디자인 공용 컴포넌트 (schedules/[id].js와 동일 UI)
 import ImageUploader from "@/components/common/ImageUploader";
 import FormSection from "@/components/common/FormSection";
@@ -19,9 +20,10 @@ const TiptapEditor = dynamic(
 );
 
 const CATEGORY_MAP = {
-  교육: ["followup", "certification", "opencourse", "facilitation"],
-  컨설팅: ["워크숍", "공론화", "조직개발"],
-  진단: ["Hogan", "TAI리더십", "조직건강도", "RNP", "팀효과성"],
+  진단: ["org", "team", "leadership", "individual"],
+  조직개발: ["org", "team", "individual"],
+  리더십개발: ["assessment", "dcbl", "consulting", "content", "new"],
+  공개과정: ["hogan", "assessment", "development", "facilitation", "certification", "ft"],
 };
 
 const INITIAL_FORM = {
@@ -30,8 +32,10 @@ const INITIAL_FORM = {
   type: "",
   image_url: "",
   description: "",
+  right_description: "",   // ✅ 추가
   price: "",
   is_active: 1,
+  purchase_type: "",   // ✅ 기본값을 비워서 선택 강제
   created_at: "",
   updated_at: "",
 };
@@ -52,6 +56,37 @@ const [saving, setSaving] = useState(false);
 const [origForm, setOrigForm] = useState(INITIAL_FORM);
 const [origDetail, setOrigDetail] = useState("");
 
+// ✅ 가격 포맷 함수 & 상태
+const fmtKRW = (n) => {
+  if (n === "" || n === null || n === undefined) return "";
+  const num = Number(n);
+  if (Number.isNaN(num)) return "";
+  return num.toLocaleString("ko-KR");
+};
+const [priceInput, setPriceInput] = useState("");
+
+// ✅ form.price → priceInput 동기화
+useEffect(() => {
+  setPriceInput(fmtKRW(form.price));
+}, [form.price]);
+
+// ✅ handleChange 수정 (기존 handleChange 교체)
+const handleChange = useCallback((e) => {
+  const { name, value, type } = e.target;
+  if (name === "price") {
+    const digits = value.replace(/[^0-9]/g, "");
+    setPriceInput(digits.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
+    setForm((prev) => ({
+      ...prev,
+      price: digits === "" ? "" : Number(digits),
+    }));
+    return;
+  }
+  setForm((prev) => ({
+    ...prev,
+    [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+  }));
+}, []);
 
   const subtypeOptions = useMemo(
     () => (form.category ? CATEGORY_MAP[form.category] ?? [] : []),
@@ -76,10 +111,13 @@ const [origDetail, setOrigDetail] = useState("");
             type: p.type ?? "",
             image_url: isDataUrl(p.image_url) ? "" : (p.image_url ?? ""),
             description: p.description ?? "",
+            right_description: p.right_description ?? "",
             price: typeof p.price === "number" ? p.price : (p.price ?? ""),
             is_active: typeof p.is_active === "number" ? p.is_active : 1,
+            purchase_type: p.purchase_type ?? "",
             created_at: p.created_at ?? "",
             updated_at: p.updated_at ?? "",
+            tags: Array.isArray(p.tags) ? p.tags : [],   // ✅ 추가
           });
           
           setDetail(p.detail ?? "");
@@ -91,11 +129,14 @@ const [origDetail, setOrigDetail] = useState("");
             type: p.type ?? "",
             image_url: isDataUrl(p.image_url) ? "" : (p.image_url ?? ""),
             description: p.description ?? "",
+            right_description: p.right_description ?? "",   // ✅ 추가
             price: typeof p.price === "number" ? p.price : (p.price ?? ""),
             is_active: typeof p.is_active === "number" ? p.is_active : 1,
+            purchase_type: p.purchase_type ?? "",   // ✅ 추가
             created_at: p.created_at ?? "",
             updated_at: p.updated_at ?? "",
           });
+          
           setOrigDetail(p.detail ?? "");
           
         } else {
@@ -117,20 +158,13 @@ const [origDetail, setOrigDetail] = useState("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, pid, isEdit]);
 
-  const handleChange = useCallback((e) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
-    }));
-  }, []);
-
   const validate = useCallback(() => {
     if (!form.title?.trim()) return "상품명을 입력하세요.";
     if (!form.category) return "상품군을 선택하세요.";
     if (!form.type) return "세부유형을 선택하세요.";
+    if (!form.purchase_type) return "구매형태를 선택하세요.";  // ✅ 추가
     return null;
-  }, [form.title, form.category, form.type]);
+  }, [form.title, form.category, form.type, form.purchase_type]); 
 
   const handleSave = useCallback(async () => {
     const msg = validate();
@@ -143,8 +177,10 @@ const [origDetail, setOrigDetail] = useState("");
   
       // ✅ 변경된 필드만 추출
       const changed = {};
-      const keysToCheck = ["title","category","type","description","price","is_active","image_url"];
-      keysToCheck.forEach((k) => {
+      const keysToCheck = [
+        "title","category","type","description","right_description",
+        "price","is_active","image_url","purchase_type","tags"
+      ];      keysToCheck.forEach((k) => {
         const prev = origForm[k];
         const next = form[k];
         if (JSON.stringify(prev) !== JSON.stringify(next)) {
@@ -253,82 +289,135 @@ const [origDetail, setOrigDetail] = useState("");
             <div className="topGrid">
               <FormSection title="상품 정보" className="twoColSection">
                 <div className="stack">
-                  <FormField label="상품명">
-                    <input
-                      name="title"
-                      value={form.title}
-                      onChange={handleChange}
-                      className="input"
-                      disabled={saving}
-                    />
-                  </FormField>
+                <FormField label={<span>상품명 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <input
+    name="title"
+    value={form.title}
+    onChange={handleChange}
+    className="input"
+    disabled={saving}
+  />
+</FormField>
+<FormField label={<span>상품유형 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <Select
+    value={form.category ? { value: form.category, label: form.category } : null}
+    onChange={(opt) => {
+      const next = opt?.value || "";
+      setForm((prev) => ({ ...prev, category: next, type: "", purchase_type: "" }));
+    }}
+    options={Object.keys(CATEGORY_MAP).map((cat) => ({ value: cat, label: cat }))}
+    placeholder="선택하세요"
+    classNamePrefix="react-select"
+    isDisabled={saving}
+    isClearable
+  />
+</FormField>
 
-                  <FormField label="상품군">
-                    <select
-                      name="category"
-                      value={form.category}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setForm((prev) => ({ ...prev, category: next, type: "" }));
-                      }}
-                      className="input"
-                      disabled={saving}
-                    >
-                      <option value="">선택하세요</option>
-                      {Object.keys(CATEGORY_MAP).map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
+{form.category && (
+  <FormField label={<span>세부유형 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <Select
+    value={form.type ? { value: form.type, label: form.type } : null}
+      onChange={(opt) => {
+        const next = opt?.value || "";
+        setForm((prev) => ({ ...prev, type: next, purchase_type: "" }));
+      }}
+      options={subtypeOptions.map((sub) => ({ value: sub, label: sub }))}
+      placeholder="선택하세요"
+      classNamePrefix="react-select"
+      isDisabled={saving}
+      isClearable
+    />
+  </FormField>
+)}
 
-                  {form.category && (
-                    <FormField label="세부유형">
-                      <select
-                        name="type"
-                        value={form.type}
-                        onChange={handleChange}
-                        className="input"
-                        disabled={saving}
-                      >
-                        <option value="">선택하세요</option>
-                        {subtypeOptions.map((sub) => (
-                          <option key={sub} value={sub}>
-                            {sub}
-                          </option>
-                        ))}
-                      </select>
-                    </FormField>
-                  )}
+{form.type && (
+  <FormField label={<span>구매형태 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <Select
+      value={
+        form.purchase_type
+          ? { value: form.purchase_type, label: form.purchase_type === "buy" ? "구매형" : "문의형" }
+          : null
+      }
+      onChange={(opt) => setForm((prev) => ({ ...prev, purchase_type: opt?.value || "" }))}
+      options={[
+        { value: "buy", label: "구매형" },
+        { value: "inquiry", label: "문의형" },
+      ]}
+      placeholder="선택하세요"
+      classNamePrefix="react-select"
+      isDisabled={saving}
+      isClearable
+    />
+  </FormField>
+)}
+{/* ✅ 구매형태가 'buy'일 때만 가격 입력 노출 */}
+{form.purchase_type === "buy" && (
+  <FormField label={<span>가격 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <input
+    name="price"
+    value={priceInput}
+    onChange={handleChange}
+    className="input alignRight"
+    placeholder="숫자만 입력(쉼표 자동)"
+    disabled={saving}
+  />
+</FormField>
+)}
+    <FormField label="태그">
+  <CreatableSelect
+    isMulti
+    value={(form.tags || []).map((t) => ({ value: t, label: t }))}
+    onChange={(selected) =>
+      setForm((prev) => ({
+        ...prev,
+        tags: (selected || []).map((opt) => opt.value),
+      }))
+    }
+    options={[
+      { value: "컨설팅", label: "컨설팅" },
+      { value: "워크숍", label: "워크숍" },
+      { value: "교육", label: "교육" },
+      { value: "코칭", label: "코칭" },
+      { value: "진단기반", label: "진단기반" },
+      { value: "프로그램", label: "프로그램" },
+    ]}
+    placeholder="태그를 입력하거나 선택하세요"
+    className="react-select-container"
+    classNamePrefix="react-select"
+    isDisabled={saving}
+    isClearable={false}
+  />
+</FormField>
+                  {/* ✅ 구매형: 간단 설명 */}
+{form.purchase_type === "buy" && (
+  <FormField
+    label="간단 설명"
+    helper={`${String(form.description || "").length}/120`}
+    helperAlign="right"
+  >
+    <input
+      name="description"
+      value={form.description}
+      onChange={handleChange}
+      className="input"
+      disabled={saving}
+      maxLength={120}
+      placeholder="목록/요약에 노출될 짧은 설명 (최대 120자)"
+    />
+  </FormField>
+)}
 
-                  <FormField label="가격">
-                    <input
-                      name="price"
-                      value={form.price}
-                      onChange={handleChange}
-                      type="number"
-                      min={0}
-                      className="input alignRight"
-                      disabled={saving}
-                    />
-                  </FormField>
-
-                  <FormField
-                    label="간단 설명"
-                    helper={`${String(form.description || "").length}/120`}
-                    helperAlign="right"
-                  >
-                    <input
-                      name="description"
-                      value={form.description}
-                      onChange={handleChange}
-                      className="input"
-                      disabled={saving}
-                      maxLength={120}
-                      placeholder="목록/요약에 노출될 짧은 설명 (최대 120자)"
-                    />
-                  </FormField>
+{/* ✅ 문의형: 우측 설명 */}
+{form.purchase_type === "inquiry" && (
+  <FormField label="우측 설명">
+    <TiptapEditor
+      value={form.right_description || ""}
+      onChange={(html) => setForm((prev) => ({ ...prev, right_description: html }))}
+      height={200}
+      uploadEndpoint="/upload/image"
+    />
+  </FormField>
+)}              
                 </div>
               </FormSection>
 
@@ -356,7 +445,7 @@ const [origDetail, setOrigDetail] = useState("");
                   value={detail}
                   onChange={setDetail}
                   height={280}
-                  uploadEndpoint="/upload/images"
+                  uploadEndpoint="/upload/image"
                 />
               )}
             </FormSection>
@@ -376,7 +465,36 @@ const [origDetail, setOrigDetail] = useState("");
       {/* ✅ schedules/[id].js와 동일 톤의 스타일 */}
       <style jsx>{`
         .container { max-width:1080px; margin:auto; padding:32px; background:#fff; border-radius:12px; }
-
+:global(.react-select__control) {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #d0d5dd;
+  font-size: 13px;   /* ✅ 인풋과 동일하게 줄임 */
+  background: #fff;
+  box-shadow: none;
+}
+:global(.react-select__single-value) {
+  font-size: 13px;   /* ✅ 선택된 값도 동일하게 */
+}
+:global(.react-select__menu) {
+  font-size: 13px;   /* ✅ 드롭다운 항목도 동일하게 */
+  z-index: 9999 !important;
+}
+:global(.react-select__multi-value) {
+  background: #eef5ff;
+}
+:global(.react-select__multi-value__label) {
+  color: #0070f3;
+  font-size: 12px;
+}
+:global(.react-select__placeholder) {
+  color: #999;
+  font-size: 13px;
+}
+/* ✅ 드롭다운이 에디터보다 위로 나오도록 */
+:global(.react-select__menu) {
+  z-index: 9999 !important;
+}
         /* 1단: 상품정보 | 썸네일 */
         .topGrid{
           display:grid;

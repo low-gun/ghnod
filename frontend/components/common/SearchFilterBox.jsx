@@ -88,46 +88,48 @@ export default function SearchFilterBox({
         )}
       </div>
 
-      {/* 우측: 토글 + 정렬 */}
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <label style={{ fontSize: 13, color: "#333" }}>
-          <input
-            type="checkbox"
-            checked={showPast}
-            onChange={() => setShowPast(!showPast)}
-            style={{ marginRight: 6 }}
-          />
-          지난 일정 포함
-        </label>
+  {showPast !== undefined && setShowPast && (
+    <label style={{ fontSize: 13, color: "#333" }}>
+      <input
+        type="checkbox"
+        checked={showPast}
+        onChange={() => setShowPast(!showPast)}
+        style={{ marginRight: 6 }}
+      />
+      지난 일정 포함
+    </label>
+  )}
 
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: 6,
-            border: "1px solid #ccc",
-            fontSize: 14,
-          }}
-        >
-          <option value="start_date">최신순</option>
-          <option value="created_at">등록일순</option>
-        </select>
+  <select
+    value={sort}
+    onChange={(e) => setSort(e.target.value)}
+    style={{
+      padding: "6px 10px",
+      borderRadius: 6,
+      border: "1px solid #ccc",
+      fontSize: 14,
+    }}
+  >
+    <option value="start_date">최신순</option>
+    <option value="created_at">등록일순</option>
+  </select>
 
-        <select
-          value={order}
-          onChange={(e) => setOrder(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: 6,
-            border: "1px solid #ccc",
-            fontSize: 14,
-          }}
-        >
-          <option value="asc">오름차순</option>
-          <option value="desc">내림차순</option>
-        </select>
-      </div>
+  <select
+    value={order}
+    onChange={(e) => setOrder(e.target.value)}
+    style={{
+      padding: "6px 10px",
+      borderRadius: 6,
+      border: "1px solid #ccc",
+      fontSize: 14,
+    }}
+  >
+    <option value="asc">오름차순</option>
+    <option value="desc">내림차순</option>
+  </select>
+</div>
+
     </div>
   );
 }

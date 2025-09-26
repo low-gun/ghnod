@@ -96,13 +96,32 @@ const status = getScheduleStatus(repStart, repEnd);
     upcoming: { text: "예정", bg: "#EEF5FF", color: "#1D4ED8", border: "#BFDBFE" },
   }[status];
 
+  const categorySlugMap = {
+    "진단": "diagnosis",
+    "조직개발": "orgdev",
+    "리더십개발": "leadership",
+    "공개과정": "opencourse",
+    "공론화": "forum",
+  };
+  const slugCategory = categorySlugMap[schedule.category] || "opencourse";
+  
   const handleClick = () => {
     const targetId = (schedule.schedule_id ?? schedule.id);
     const targetType = (schedule.type ?? type);
-    router.push(`/education/${targetType}/${targetId}`);
+  
+    const path = `/${slugCategory}/${targetType}/${targetId}`;
+    console.group("[ScheduleCard.handleClick]");
+    console.log("schedule.category:", schedule.category);
+    console.log("slugCategory:", slugCategory);
+    console.log("schedule.type:", schedule.type, "prop type:", type);
+    console.log("targetId:", targetId);
+    console.log("→ push path:", path);
+    console.groupEnd();
+  
+    router.push(path);
   };
   
-
+  
   return (
     <div
       onClick={!showDetailButton ? handleClick : undefined}
@@ -234,8 +253,8 @@ const status = getScheduleStatus(repStart, repEnd);
 </p>
 
 
-        {/* 종료 문구 */}
-        {status === "ended" && !hideEndMessage && (
+               {/* 종료 문구 */}
+               {status === "ended" && !hideEndMessage && (
           <p
             style={{
               marginTop: 8,
@@ -247,7 +266,28 @@ const status = getScheduleStatus(repStart, repEnd);
             종료된 일정입니다.
           </p>
         )}
+
+        {/* ✅ 태그 표시 */}
+        {Array.isArray(schedule.tags) && schedule.tags.length > 0 && (
+          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {schedule.tags.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: 11,
+                  padding: "2px 6px",
+                  borderRadius: 6,
+                  background: "#f3f4f6",
+                  color: "#374151",
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

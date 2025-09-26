@@ -9,6 +9,9 @@ import FormSection from "@/components/common/FormSection";
 import FormField from "@/components/common/FormField";
 import { useGlobalAlert } from "@/stores/globalAlert";
 import { useGlobalConfirm } from "@/stores/globalConfirm";
+import CreatableSelect from "react-select/creatable";   // ✅ 상단 import 변경
+import Select from "react-select";
+
 // 2) 그 다음에 dynamic 변수들을 선언합니다.
 const TiptapEditor = dynamic(
   () => import("@/components/editor/TiptapEditor"),
@@ -69,7 +72,7 @@ const [sessions, setSessions] = useState([
 
   const educationTypes = useMemo(() => {
     const types = products
-      .filter((p) => p.category === "교육")
+      .filter((p) => p.category === "공개과정")
       .map((p) => p.type)
       .filter(Boolean);
     return Array.from(new Set(types));
@@ -166,16 +169,17 @@ useEffect(() => {
 
 useEffect(() => {
   const current = (products || []).filter(
-    p => p.category === "교육" && p.type === selectedType
+    p => p.category === "공개과정" && p.type === selectedType
   );
   console.log("[DEBUG filtered current]", {
     selectedType,
     count: current.length,
     sample: current.slice(0, 5).map(p => ({
-      id: p.id, title: p.title, type: p.type, category: p.category
+      id: p.id, title: p.title, type: p.type, category: p.category, purchase_type: p.purchase_type
     }))
   });
 }, [products, selectedType]);
+
 
 
   const handleChange = (e) => {
@@ -219,7 +223,22 @@ useEffect(() => {
     }
   };
   const handleSave = async () => {
-    if (hasAnyError) return showAlert("입력값을 확인하세요.");
+    if (!form.product_id) return showAlert("상품을 선택하세요.");
+    if (!form.title) return showAlert("일정명을 입력하세요.");
+    if (form.total_spots === "" || form.total_spots === null) {
+      return showAlert("모집인원을 입력하세요.");
+    }
+    if (form.price === "" || form.price === null) {
+      return showAlert("가격을 입력하세요.");
+    }
+  
+    if (rowErrors.some(e => e.missing)) {
+      return showAlert("세션의 시작일과 종료일을 모두 입력하세요.");
+    }
+    if (rowErrors.some(e => e.invalidDate)) {
+      return showAlert("세션의 종료일은 시작일보다 빠를 수 없습니다.");
+    }
+  
     try {
       // ✅ 수정 시에는 PATCH 사용, 신규 등록 시에는 POST 사용
       const method = isEdit ? "patch" : "post";
@@ -230,7 +249,7 @@ useEffect(() => {
       const keysToCheck = [
         "product_id","title","location","instructor",
         "description","total_spots","price","detail",
-        "image_url","status"
+        "image_url","status","tags"
       ];
       keysToCheck.forEach((k) => {
         const prev = originalForm?.[k];
@@ -239,7 +258,6 @@ useEffect(() => {
           changed[k] = next;
         }
       });
-  
       // 2) price 숫자 보정
       if ("price" in changed) {
         changed.price =
@@ -356,48 +374,78 @@ useEffect(() => {
             <div className="topGrid">
               {/* 1단: 좌(상품정보) | 우(썸네일) */}
               <FormSection title="상품 정보">
-                <FormField label="상품 유형">
-                  <select
-                    name="product_type"
-                    value={selectedType}
-                    onChange={handleChange}
-                    className="input"
-                  >
-                    <option value="">유형 선택</option>
-                    {educationTypes.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
+  <FormField label={<span>상품 유형 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <Select
+    value={selectedType ? { value: selectedType, label: selectedType } : null}
+    onChange={(opt) => {
+      setSelectedType(opt?.value || "");
+      setForm((prev) => ({ ...prev, product_type: opt?.value || "" }));
+    }}
+    options={educationTypes.map((t) => ({ value: t, label: t }))}
+    placeholder="유형 선택"
+    classNamePrefix="react-select"
+    isClearable
+  />
+</FormField>
 
-                <FormField label="상품명">
-                  <select
-                    name="product_id"
-                    value={form.product_id || ""}
-                    onChange={handleChange}
-                    disabled={!selectedType}
-                    className="input"
-                  >
-                    {!selectedType ? (
-                      <option value="">유형을 먼저 선택</option>
-                    ) : (
-                      <>
-                        <option value="">상품 선택</option>
-                        {products
-                          .filter((p) => p.category === "교육" && p.type === selectedType)
-                          .map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.title}
-                            </option>
-                          ))}
-                      </>
-                    )}
-                  </select>
-                </FormField>
+<FormField label={<span>상품명 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <Select
+    value={
+      form.product_id
+        ? {
+            value: form.product_id,
+            label: products.find((p) => p.id === form.product_id)?.title || "",
+          }
+        : null
+    }
+    onChange={(opt) => {
+      const selected = products.find((p) => p.id === opt?.value);
+      setForm((prev) => ({
+        ...prev,
+        product_id: opt?.value || "",
+        title: selected?.title || "",
+        price: selected?.price ?? "",
+        description: selected?.description || "",
+        image_url: selected?.image_url || prev.image_url || "",
+      }));
+      setPriceInput(fmtKRW(selected?.price ?? ""));
+    }}
+    options={products
+      .filter((p) => p.category === "공개과정" && p.type === selectedType)
+      .map((p) => ({ value: p.id, label: p.title }))}
+    placeholder={!selectedType ? "유형을 먼저 선택" : "상품 선택"}
+    classNamePrefix="react-select"
+    isDisabled={!selectedType}
+    isClearable
+  />
+</FormField>
 
-                <FormField
+<FormField label="태그">
+  <CreatableSelect
+    isMulti
+    value={(form.tags || []).map((t) => ({ value: t, label: t }))}
+    onChange={(selected) =>
+      setForm((prev) => ({
+        ...prev,
+        tags: selected.map((opt) => opt.value),
+      }))
+    }
+    options={[
+      { value: "컨설팅", label: "컨설팅" },
+      { value: "워크숍", label: "워크숍" },
+      { value: "교육", label: "교육" },
+      { value: "코칭", label: "코칭" },
+      { value: "진단기반", label: "진단기반" },
+      { value: "프로그램", label: "프로그램" },
+    ]}
+    placeholder="태그를 입력하거나 선택하세요"
+    className="react-select-container"
+    classNamePrefix="react-select"
+    isClearable={false}
+  />
+</FormField>
+
+<FormField
   label="간단 설명"
   helper={`${String(form.description || "").length}/120`}
   helperAlign="right"
@@ -411,6 +459,7 @@ useEffect(() => {
                     maxLength={120}
                   />
                 </FormField>
+
               </FormSection>
 
               <div className="thumbCol">
@@ -439,14 +488,14 @@ useEffect(() => {
   </>
 }>
           <div className="fieldGrid2">
-                  <FormField label="일정명">
-                    <input
-                      name="title"
-                      value={form.title || ""}
-                      onChange={handleChange}
-                      className="input"
-                    />
-                  </FormField>
+          <FormField label={<span>일정명 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <input
+    name="title"
+    value={form.title || ""}
+    onChange={handleChange}
+    className="input"
+  />
+</FormField>
                   <FormField label="장소">
                     <input
                       name="location"
@@ -463,18 +512,18 @@ useEffect(() => {
                       className="input"
                     />
                   </FormField>
-                  <FormField label="모집인원">
-                    <input
-                      type="number"
-                      min="0"
-                      name="total_spots"
-                      value={form.total_spots || ""}
-                      onChange={handleChange}
-                      className="input"
-                    />
-                  </FormField>
-                  <FormField label="가격">
-                  <input
+                  <FormField label={<span>모집인원 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+  <input
+    type="number"
+    min="0"
+    name="total_spots"
+    value={form.total_spots || ""}
+    onChange={handleChange}
+    className="input"
+  />
+</FormField>
+<FormField label={<span>가격 <span style={{ color: "#e74c3c" }}>*</span></span>}>
+<input
   name="price"
   value={priceInput}
   onChange={handleChange}
@@ -582,13 +631,68 @@ useEffect(() => {
       <style jsx>{`
   .container { max-width:1240px; margin:auto; padding:32px; background:#fff; border-radius:12px; }
 
-  /* 1단: 상품정보 | 썸네일, 2단: 일정정보 | 스케줄 */
-.topGrid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0,1fr)); /* ✅ 2등분 */
-  gap:24px;
-  align-items:stretch;
+  /* ✅ react-select product와 동일하게 통일 */
+ .input {
+  width: 100%;
+  height: 44px;
+  line-height: 1.2;
+  padding: 12px 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  box-sizing: border-box;
 }
+.input:focus {
+  outline: none;
+  border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0,112,243,.15);
+}
+
+/* react-select 전용 */
+:global(.react-select__control--is-focused) {
+  border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0,112,243,.15);
+}
+:global(.react-select__multi-value) {
+  background: #eef5ff;
+}
+:global(.react-select__control) {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d0d5dd;
+  font-size: 13px;   /* 🔽 기본 텍스트 크기 */
+  background: #fff;
+  box-shadow: none;
+}
+:global(.react-select__input) {
+  font-size: 13px;   /* 🔽 입력창 글씨 크기 */
+}
+:global(.react-select__single-value) {
+  font-size: 13px;   /* 🔽 선택된 값 */
+}
+:global(.react-select__multi-value__label) {
+  color: #0070f3;
+  font-size: 11px;   /* 🔽 태그 라벨 */
+}
+:global(.react-select__placeholder) {
+  color: #999;
+  font-size: 12px;   /* 🔽 placeholder */
+}
+:global(.react-select__menu) {
+  font-size: 13px;   /* 🔽 드롭다운 목록 */
+  z-index: 9999 !important;
+}
+
+
+  /* 1단: 상품정보 | 썸네일, 2단: 일정정보 | 스케줄 */
+  .topGrid {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:24px;
+    align-items:stretch;
+  }
   @media (max-width:980px){
     .topGrid{ grid-template-columns:1fr; gap:12px; }
     .thumbCol{ order:2; }
@@ -621,16 +725,6 @@ useEffect(() => {
   @media (max-width:980px){ .fieldGrid2{ grid-template-columns:1fr; gap:12px; } }
 
   .scheduleGrid .hdr{ color:#555; font-size:13px; line-height:1; }
-
-  .input{
-    width:100%; box-sizing:border-box;
-    height:44px; line-height:1.2;
-    padding:12px 14px;
-    border:1px solid #d0d5dd; border-radius:10px;
-    font-size:14px; background:#fff;
-    transition:border-color .15s ease, box-shadow .15s ease;
-  }
-  .input:focus{ outline:none; border-color:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.15); }
   .alignRight{ text-align:right; }
   .inputUnchanged{ color:#999; }
 

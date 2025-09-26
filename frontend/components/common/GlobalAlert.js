@@ -8,10 +8,8 @@ export default function GlobalAlert() {
   const isMobile = useIsMobile();
 
   const type = isMobile ? "bottomsheet" : "toast";
-  console.log("[GlobalAlert] render", { show, hasMessage: !!message, isMobile, type });
 
   useEffect(() => {
-    console.log("[GlobalAlert] effect(show)", show);
     if (show) {
       const timer = setTimeout(hideAlert, 3000);
       return () => clearTimeout(timer);
@@ -19,7 +17,6 @@ export default function GlobalAlert() {
   }, [show, hideAlert]);
 
   if (!show || !message) {
-    console.log("[GlobalAlert] hidden (return null)", { show, hasMessage: !!message });
     return null;
   }
 

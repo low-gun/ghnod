@@ -1,10 +1,12 @@
-// 개선된 EducationScheduleDetailPage.js
 import { useRouter } from "next/router";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { useCartContext } from "@/context/CartContext";
 import { useUserContext } from "@/context/UserContext";
 import ProductTabs from "@/components/product/ProductTabs";
+import InquiryModal from "@/components/inquiry/InquiryModal"; // ✅ 상단에 import
+import Breadcrumb from "@/components/common/Breadcrumb";
+
 import dynamic from "next/dynamic"; // 이미 있음
 const NextImage = dynamic(() => import("next/image").then(m => m.default), { ssr: false });
 
@@ -64,29 +66,31 @@ export default function EducationScheduleDetailPage() {
   const isTabOrBelow980 = useIsTabletOrBelow980();
 
   const { showAlert } = useGlobalAlert();
- 
-  // 데이터 로드
+  const [showInquiryModal, setShowInquiryModal] = useState(false); // ✅ 추가
+
   useEffect(() => {
-    if (!id) return;
+    const scheduleId = router.query?.id ? Number(router.query.id) : null;
+    if (!scheduleId) return;
+  
     setLoading(true);
+    console.log("🔍 요청: /education/schedules/" + scheduleId);
     api
-      .get(`/education/schedules/${id}`)
+      .get(`/education/schedules/${scheduleId}`)
       .then((res) => {
-        if (res.data.success) {
+        if (res?.data?.success && res?.data?.schedule) {
           const sc = res.data.schedule;
+          console.log("📦 schedule:", sc);  // ✅ 추가
+
           setSchedule(sc);
-          const sess = Array.isArray(sc.sessions) ? sc.sessions : [];
-          if (sess.length === 1 && (sess[0].id || sess[0].session_id)) {
-            setSelectedSessionId(sess[0].id || sess[0].session_id);
-          }
         } else {
           showAlert("일정 정보를 불러오지 못했습니다.");
         }
       })
       .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
-  }, [id, showAlert]);
-
+  }, [router.query?.id, showAlert]);
+  
+  
     // 가격/모집현황 계산
   const unitPrice = useMemo(
     () => Number(schedule?.price ?? schedule?.product_price ?? 0),
@@ -111,6 +115,7 @@ export default function EducationScheduleDetailPage() {
   
   // ✅ 현재 선택(또는 단일 일정)의 잔여 좌석 계산
   const remainingForSelection = useMemo(() => {
+    // 회차가 2개 이상이면: 선택된 회차 기준
     if (sessionsCount > 1) {
       const sess = (schedule?.sessions || []).find(
         (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
@@ -119,27 +124,72 @@ export default function EducationScheduleDetailPage() {
       const tot = Number(sess?.total_spots ?? 0);
       return Number(sess?.remaining_spots ?? Math.max(tot - (sess?.reserved_spots ?? 0), 0));
     }
+
+    // ✅ 회차가 1개여도: 세션 좌석 기준을 사용
+    const only = (schedule?.sessions || [])[0];
+    if (only) {
+      const tot = Number(only?.total_spots ?? 0);
+      return Number(only?.remaining_spots ?? Math.max(tot - (only?.reserved_spots ?? 0), 0));
+    }
+
+    // (세션 정보가 정말 없을 때만 루트 값 fallback)
     const tot = Number(schedule?.total_spots ?? 0);
     return Number(schedule?.remaining_spots ?? Math.max(tot - (schedule?.reserved_spots ?? 0), 0));
-  }, [sessionsCount, selectedSessionId, schedule]);  
+  }, [sessionsCount, selectedSessionId, schedule]);
+
 
 const isSoldOut = remainingForSelection <= 0;
 
   // ✅ 액션 버튼 비활성화/툴팁 판단
-const disableActions = useMemo(() => {
-  if (sessionsCount > 1) {
-    return selectedSessionId ? isSoldOut : false; // 회차 미선택이면 활성화
-  }
-  return isSoldOut; // 단일 회차는 기존 로직
-}, [sessionsCount, selectedSessionId, isSoldOut]);
+  const disableActions = useMemo(() => {
+    const now = new Date();
+  
+    if (sessionsCount > 1) {
+      if (!selectedSessionId) return false;
+      const sess = (schedule?.sessions || []).find(
+        (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
+      );
+      if (!sess) return true;
+      const start = new Date(sess.start_date);
+      // 시작일 익일부터는 구매 불가
+      if (now > new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)) {
+        return true;
+      }
+      return isSoldOut;
+    }
+  
+    // 단일 회차
+    const start = new Date(schedule?.start_date);
+    if (now > new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)) {
+      return true;
+    }
+    return isSoldOut;
+  }, [sessionsCount, selectedSessionId, isSoldOut, schedule]); 
 
-const disableTitle = useMemo(() => {
-  if (sessionsCount > 1) {
-    if (!selectedSessionId) return "일자를 먼저 선택해주세요.";
-    return isSoldOut ? "마감된 회차입니다." : undefined;
-  }
-  return isSoldOut ? "마감된 일정입니다." : undefined;
-}, [sessionsCount, selectedSessionId, isSoldOut]);
+  const disableTitle = useMemo(() => {
+    const now = new Date();
+  
+    if (sessionsCount > 1) {
+      if (!selectedSessionId) return "일자를 먼저 선택해주세요.";
+      const sess = (schedule?.sessions || []).find(
+        (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
+      );
+      if (sess) {
+        const start = new Date(sess.start_date);
+        if (now > new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)) {
+          return "구매 기간이 지났습니다.";
+        }
+        return isSoldOut ? "마감된 회차입니다." : undefined;
+      }
+    } else {
+      const start = new Date(schedule?.start_date);
+      if (now > new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)) {
+        return "구매 기간이 지났습니다.";
+      }
+      return isSoldOut ? "마감된 일정입니다." : undefined;
+    }
+  }, [sessionsCount, selectedSessionId, isSoldOut, schedule]);
+  
 
   // 장바구니/바로구매
   const handleBuyNow = useCallback(async () => {
@@ -160,10 +210,29 @@ const disableTitle = useMemo(() => {
         showAlert("원하시는 일자를 선택해 주세요.");
         return;
       }   
-      if (isSoldOut) {
-        showAlert(sessionsCount > 1 ? "마감된 회차입니다. 다른 회차를 선택해 주세요." : "마감된 일정입니다.");
-        return;
-      }
+      // ✅ 구매 기간 체크
+const now = new Date();
+let startDate = null;
+
+if (sessionsCount > 1) {
+  const sess = (schedule?.sessions || []).find(
+    (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
+  );
+  startDate = sess ? new Date(sess.start_date) : null;
+} else {
+  startDate = new Date(schedule?.start_date);
+}
+
+if (startDate && now > new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 1)) {
+  showAlert("구매 기간이 지났습니다.");
+  return;
+}
+
+if (isSoldOut) {
+  showAlert(sessionsCount > 1 ? "마감된 회차입니다. 다른 회차를 선택해 주세요." : "마감된 일정입니다.");
+  return;
+}
+
       const addRes = await api.post("/cart/items", {
         schedule_id: schedule.id,
         schedule_session_id: selectedSessionId || null,
@@ -200,10 +269,30 @@ const disableTitle = useMemo(() => {
         showAlert("원하시는 일자를 선택해 주세요.");
         return;
       }
+      
+      // ✅ 구매 기간 체크
+      const now = new Date();
+      let startDate = null;
+      
+      if (sessionsCount > 1) {
+        const sess = (schedule?.sessions || []).find(
+          (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
+        );
+        startDate = sess ? new Date(sess.start_date) : null;
+      } else {
+        startDate = new Date(schedule?.start_date);
+      }
+      
+      if (startDate && now > new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 1)) {
+        showAlert("구매 기간이 지났습니다.");
+        return;
+      }
+      
       if (isSoldOut) {
         showAlert((schedule.sessions || []).length > 1 ? "마감된 회차입니다. 다른 회차를 선택해 주세요." : "마감된 일정입니다.");
         return;
       }
+      
       const payload = {
         schedule_id: schedule.id,
         schedule_session_id: selectedSessionId || null,
@@ -306,21 +395,9 @@ const disableTitle = useMemo(() => {
   
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: 20, color: "#333" }}>
-      {/* 브레드크럼 */}
-      <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
-        <span onClick={() => router.push("/education/followup")} style={{ cursor: "pointer", marginRight: 6 }}>
-          교육
-        </span>
-        &gt;
-        <span
-          onClick={() => router.push(`/education/${type}`)}
-          style={{ cursor: "pointer", marginLeft: 6, textTransform: "capitalize" }}
-        >
-          {type}
-        </span>
-      </div>
-  
+
+<div style={{ maxWidth: 1200, margin: "0 auto", padding: 20 }}>
+  <Breadcrumb category="공개과정" type={schedule?.type} />  
       {/* ✅ 반응형 히어로 섹션 */}
       <div className="hero">
         {/* 썸네일 */}
@@ -345,7 +422,7 @@ const disableTitle = useMemo(() => {
         <div className="right">
           {/* 카테고리 + 상태 배지 */}
           <div className="badgeRow">
-            <span className="typeBadge">{type}</span>
+            <span className="typeBadge">{schedule?.type}</span>
             <span
               className="statusBadge"
               style={{
@@ -357,6 +434,7 @@ const disableTitle = useMemo(() => {
               {schedule?.is_active ? "판매중" : "마감"}
             </span>
           </div>
+
   
           {/* 타이틀 + 공유 */}
           <div className="titleRow">
@@ -502,7 +580,7 @@ const disableTitle = useMemo(() => {
                   const sess = (schedule?.sessions || []).find(
                     (s) => Number(s?.id ?? s?.session_id) === Number(selectedSessionId)
                   );
-              
+                
                   // ✅ 다회차 + 미선택 → 안내
                   if (sessionsCount > 1 && !sess) {
                     return <span style={{ color: "#6b7280" }}>일자를 선택해주세요</span>;
@@ -518,8 +596,20 @@ const disableTitle = useMemo(() => {
                       ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
                       : `잔여 ${remaining}명(총원 ${total}명)`;
                   }
-              
-                  // ✅ 단일 회차(기존 로직 유지)
+                
+                  // ✅ 단일 회차 → 첫 번째 세션 기준
+                  const only = (schedule?.sessions || [])[0];
+                  if (only) {
+                    const total = Number(only?.total_spots ?? 0);
+                    const remaining = Number(
+                      only?.remaining_spots ?? Math.max(total - (only?.reserved_spots ?? 0), 0)
+                    );
+                    return remaining === 0
+                      ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
+                      : `잔여 ${remaining}명(총원 ${total}명)`;
+                  }
+                
+                  // (정말 세션 정보가 없을 때만 루트 값 fallback)
                   const total = Number(schedule?.total_spots ?? 0);
                   const remaining = Number(
                     schedule?.remaining_spots ?? Math.max(total - (schedule?.reserved_spots ?? 0), 0)
@@ -528,6 +618,7 @@ const disableTitle = useMemo(() => {
                     ? <span style={{ color: "#e11d48", fontWeight: 700 }}>마감</span>
                     : `잔여 ${remaining}명(총원 ${total}명)`;
                 })(),
+                
                 icon: <Users size={16} />,
               },
               
@@ -540,6 +631,18 @@ const disableTitle = useMemo(() => {
               </div>
             ))}
           </div>
+
+          {/* ✅ 태그 표시 */}
+          {Array.isArray(schedule.tags) && schedule.tags.length > 0 && (
+            <div className="tagsSection">
+              <strong className="infoLabel">태그</strong>
+              <div className="tagRow">
+                {schedule.tags.map((tag) => (
+                  <span key={tag} className="tagBadge">{tag}</span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 수량 + CTA */}
           {/* 수량 — 마감(isSoldOut)일 땐 숨김 */}
@@ -559,7 +662,17 @@ const disableTitle = useMemo(() => {
 )}
 
 <div className="ctaRow">
-  {disableActions ? (
+  {schedule?.purchase_type === "inquiry" ? (
+    // ✅ 문의형 상품일 때 → InquiryModal 열기
+    <button
+      type="button"
+      style={actionBtnStyle(true, false)}
+      onClick={() => setShowInquiryModal(true)}
+    >
+      문의하기
+    </button>
+  ) : disableActions ? (
+    // ✅ 구매형이지만 마감
     <button
       type="button"
       style={{
@@ -581,6 +694,7 @@ const disableTitle = useMemo(() => {
       마감
     </button>
   ) : (
+    // ✅ 구매형 상품일 때
     <>
       <button onClick={handleAddToCart} style={actionBtnStyle(false, false)} title={disableTitle}>
         <ShoppingCart size={16} style={{ marginRight: 4 }} />
@@ -592,6 +706,17 @@ const disableTitle = useMemo(() => {
     </>
   )}
 </div>
+{showInquiryModal && (
+  <InquiryModal
+    mode="product"
+    productId={schedule.product_id}
+    onClose={() => setShowInquiryModal(false)}
+    onSubmitSuccess={() => {
+      setShowInquiryModal(false);
+      showAlert("문의가 등록되었습니다.");
+    }}
+  />
+)}
         </div>
       </div>
 
@@ -622,10 +747,9 @@ const disableTitle = useMemo(() => {
       </div>
 
       {/* 탭 콘텐츠 */}
-<div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
-  <TabProductDetail scheduleId={schedule.id} />
+      <div id="detail" style={{ minHeight: 400, paddingTop: 40 }}>
+  <TabProductDetail scheduleId={schedule.id} productId={schedule.product_id} />
 </div>
-
       <div id="review" style={{ minHeight: 400, paddingTop: 40 }}>
         <TabProductReviews
           productId={schedule.product_id || schedule.productId}
@@ -647,7 +771,24 @@ const disableTitle = useMemo(() => {
     gap: 32px;
     align-items: start;
   }
-
+.tagsSection {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tagBadge {
+  font-size: 12px;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 6px;
+}
   /* ✅ 썸네일: 정사각 + 축소 표시(잘림 방지) */
   .thumbWrap {
   position: relative;           /* ✅ 추가 */
