@@ -6,9 +6,8 @@ export default function ForumOnePage() {
 
   return (
     <div style={{ padding: "40px" }}>
-      <h1>공론화 - 원페이지</h1>
-      <p>여기에 원페이지 콘텐츠가 들어갑니다.</p>
-
+      <h1>공론화</h1>
+      
       <button
         onClick={() => setShowInquiry(true)}
         style={{
