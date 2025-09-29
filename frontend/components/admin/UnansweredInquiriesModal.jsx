@@ -263,20 +263,23 @@ const handleDeleteAnswer = async (id) => {
     {q.title}
   </strong>
   {q.product_id ? (
-    <a
-      className="badgeLink"
-      href={`/admin/products/${q.product_id}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={q.product_title ? `상품: ${q.product_title}` : "상품 상세로 이동"}
-    >
-      상품: {q.product_title || "알 수 없음"}
-    </a>
-  ) : q.company_name || q.department || q.position ? (
-    <span className="badgeStatic" title="일반문의">일반문의</span>
-  ) : (
-    <span className="badgeStatic" title="1:1문의">1:1문의</span>
-  )}
+  <a
+    className="badgeLink"
+    href={`/admin/products/${q.product_id}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    title={q.product_title ? `상품: ${q.product_title}` : "상품 상세로 이동"}
+  >
+    상품: {q.product_title || "알 수 없음"}
+  </a>
+) : q.origin === "forum" ? (   // 👈 공론화 구분 필드(origin) 기준
+  <span className="badgeStatic" title="공론화문의">공론화</span>
+) : q.company_name || q.department || q.position ? (
+  <span className="badgeStatic" title="일반문의">일반문의</span>
+) : (
+  <span className="badgeStatic" title="1:1문의">1:1문의</span>
+)}
+
 
   {/* ✅ 공개/비공개 여부 표시 */}
   {q.is_private ? (
@@ -389,25 +392,38 @@ const handleDeleteAnswer = async (id) => {
 )}
                   <div style={metaLines}>
                   <div style={{ marginTop: 8, padding: "10px 12px", background: "#f9fafb", borderRadius: 6 }}>
-  <div style={{ fontWeight: 600, color: "#111827" }}>작성자(작성일시)</div>
-   {/* ✅ 기업명/부서/직책을 작성자 그룹 안쪽에 위치 */}
-   {q.company_name && (
-    <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
-      <strong>기업명:</strong> {q.company_name}
-      {q.department && <> | <strong>부서:</strong> {q.department}</>}
-      {q.position && <> | <strong>직책:</strong> {q.position}</>}
-    </div>
-  )}
-  {q.user_id ? (
+                  <div style={{ fontWeight: 600, color: "#111827" }}>작성자(작성일시)</div>
+
+{/* ✅ 회원 / 비회원 각각 기업명/부서/직책 표시 */}
+{q.user_id ? (
+  <>
+    {q.user_company && (
+      <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
+        <strong>기업명:</strong> {q.user_company}
+        {q.user_department && <> | <strong>부서:</strong> {q.user_department}</>}
+        {q.user_position && <> | <strong>직책:</strong> {q.user_position}</>}
+      </div>
+    )}
     <div>
       {q.user_name || "-"} | {q.user_email || "-"} | {q.user_phone || "-"}
     </div>
-  ) : (
+  </>
+) : (
+  <>
+    {q.company_name && (
+      <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
+        <strong>기업명:</strong> {q.company_name}
+        {q.department && <> | <strong>부서:</strong> {q.department}</>}
+        {q.position && <> | <strong>직책:</strong> {q.position}</>}
+      </div>
+    )}
     <div>
       {q.guest_name || "-"} | {q.guest_email || "-"} | {q.guest_phone || "-"}
     </div>
-  )}
-  <div style={{ color: "#6b7280" }}>{toDateTime(q.created_at)}</div>
+  </>
+)}
+
+<div style={{ color: "#6b7280" }}>{toDateTime(q.created_at)}</div>
 </div>
 
 

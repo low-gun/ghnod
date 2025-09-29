@@ -28,32 +28,32 @@ export default function ChangePasswordModal({
       setError("모든 항목을 입력해주세요.");
       return;
     }
-    if (newPassword !== confirmPassword) {
-      setError("새 비밀번호가 일치하지 않습니다.");
-      return;
-    }
-
-    // ✅ 여기 showConfirm 추가
+  
+    // ❌ 프론트에서 confirmPassword 불일치 체크는 제거
+    // → 백엔드 응답 메시지를 그대로 보여주게 함
+  
     const ok = await showConfirm("비밀번호를 변경하시겠습니까?");
     if (!ok) return;
-
+  
     try {
       const payload = isForcedReset
-        ? { newPassword, userId }
-        : { currentPassword, newPassword };
+        ? { newPassword, confirmPassword, userId }
+        : { currentPassword, newPassword, confirmPassword };
+  
+        await api.post("/mypage/change-password", payload);
 
-      await api.post("/mypage/change-password", payload);
-
-      showAlert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
-      onClose();
-      router.replace("/login");
-    } catch (err) {
-      console.error("❌ 비밀번호 변경 실패:", err);
-      setError(
-        err.response?.data?.message || "비밀번호 변경 중 오류가 발생했습니다."
-      );
-    }
+        showAlert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
+        onClose();
+        router.replace("/login");
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "비밀번호 변경 중 오류가 발생했습니다."
+        );
+      }
+      
+        
   };
+  
 
   const renderPasswordInput = (
     label,

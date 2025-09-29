@@ -84,8 +84,9 @@ router.post("/google/callback", async (req, res) => {
         secure: true,
         sameSite: "None",
         path: "/",
-        maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined,
+        maxAge: (autoLogin ? 30 : 7) * 24 * 60 * 60 * 1000,
       });
+      
       console.log(
         "쿠키 세팅 시 autoLogin:",
         autoLogin,
@@ -195,8 +196,9 @@ router.post("/kakao/callback", async (req, res) => {
         secure: true,
         sameSite: "None",
         path: "/",
-        maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined,
+        maxAge: (autoLogin ? 30 : 7) * 24 * 60 * 60 * 1000,
       });
+      
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: true,
@@ -290,8 +292,9 @@ router.post("/naver/callback", async (req, res) => {
         secure: true,
         sameSite: "None",
         path: "/",
-        maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined,
+        maxAge: (autoLogin ? 30 : 7) * 24 * 60 * 60 * 1000,
       });
+      
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: true,
@@ -642,12 +645,14 @@ router.post("/login", async (req, res) => {
     const tokenPayload = { id: user.id, role: user.role };
 
     const accessTokenExpiresIn = "4h";
-    const refreshTokenExpiresIn = autoLogin ? "30d" : "7d";
 
     const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
       expiresIn: accessTokenExpiresIn,
     });
 
+    const refreshTokenExpiresIn = autoLogin ? "30d" : "7d";
+
+   
     const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: refreshTokenExpiresIn,
     });
@@ -657,8 +662,9 @@ router.post("/login", async (req, res) => {
     const deviceInfo = parseDeviceInfo(userAgent);
     const ipAddress =
       req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7일
-
+      const expiresAt = new Date(
+        Date.now() + (autoLogin ? 30 : 7) * 24 * 60 * 60 * 1000
+      ); // autoLogin 시 30일, 아니면 7일
     await db.query(
       `DELETE FROM refresh_tokens WHERE user_id = ? AND client_session_id = ?`,
       [user.id, clientSessionId]
@@ -789,7 +795,7 @@ router.post("/login", async (req, res) => {
       secure: true,
       sameSite: "None",
       path: "/",
-      maxAge: autoLogin ? 7 * 24 * 60 * 60 * 1000 : undefined,
+      maxAge: (autoLogin ? 30 : 7) * 24 * 60 * 60 * 1000,
     });
     res.cookie("accessToken", accessToken, {
       httpOnly: true,

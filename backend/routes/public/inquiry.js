@@ -181,46 +181,57 @@ router.post("/inquiries", async (req, res) => {
     company_name = "",
     department = "",
     position = "",
-    user_id = null,    // ✅ 회원일 경우 들어올 수 있음
+    user_id = null,
   } = req.body;
 
   try {
-    // ✅ 회원이면 동의 검사 건너뜀
-    if (!user_id) {
+    if (!title.trim() || !message.trim()) {
+      return res.status(400).json({ success: false, message: "제목과 내용을 입력하세요." });
+    }
+
+    if (user_id) {
+      // ✅ 회원 문의 → guest_xxx 필요 없음
+      await pool.execute(
+        `INSERT INTO inquiries
+           (product_id, user_id, title, message, is_private, agree_privacy)
+         VALUES (NULL, ?, ?, ?, 0, 1)`,
+        [user_id, title.trim(), message.trim()]
+      );
+    } else {
+      // ✅ 비회원 문의 → 개인정보 동의 + 필수항목 체크
       if (req.body.agree_privacy !== 1) {
         return res.status(400).json({
           success: false,
           message: "개인정보 취급방침 동의가 필요합니다.",
         });
       }
+
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest_email.trim());
+      const phoneOk = guest_phone.replace(/\D/g, "").length >= 9;
+
+      if (!guest_name.trim() || !emailOk || !phoneOk || !company_name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "비회원 문의: 기업명/이름/이메일/휴대폰을 확인하세요.",
+        });
+      }
+
+      await pool.execute(
+        `INSERT INTO inquiries
+           (product_id, title, message, is_private, guest_name, guest_email, guest_phone, company_name, department, position, agree_privacy)
+         VALUES (NULL, ?, ?, 0, ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          title.trim(),
+          message.trim(),
+          guest_name.trim(),
+          guest_email.trim(),
+          guest_phone.trim(),
+          company_name.trim(),
+          department?.trim() || null,
+          position?.trim() || null,
+        ]
+      );
     }
-    
-    if (!company_name.trim()) {
-      return res.status(400).json({ success: false, message: "기업명은 필수입니다." });
-    }
-    if (!guest_name.trim() || !guest_email.trim() || !guest_phone.trim()) {
-      return res.status(400).json({ success: false, message: "이름/이메일/연락처는 필수입니다." });
-    }
-    if (!title.trim() || !message.trim()) {
-      return res.status(400).json({ success: false, message: "제목과 내용을 입력하세요." });
-    }
-    
-    await pool.execute(
-      `INSERT INTO inquiries
-         (product_id, title, message, is_private, guest_name, guest_email, guest_phone, company_name, department, position, agree_privacy)
-       VALUES (NULL, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        title.trim(),
-        message.trim(),
-        guest_name.trim(),
-        guest_email.trim(),
-        guest_phone.trim(),
-        company_name?.trim() || null,
-        department?.trim() || null,
-        position?.trim() || null,
-        1, // ✅ 동의함
-      ]
-    );   
 
     res.json({ success: true });
   } catch (err) {
@@ -228,4 +239,6 @@ router.post("/inquiries", async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
+
+
 module.exports = router;

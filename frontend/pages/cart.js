@@ -151,13 +151,10 @@ export default function CartPage() {
               text-align: center;
               width: 100%;
               padding: 56px 0 80px 0;
-              color: #434b5c;
               display: flex;
               flex-direction: column;
               align-items: center;
-              border-radius: 16px;
-              background: #f8fafc;
-              box-shadow: 0 2px 12px rgba(30, 60, 110, 0.03);
+              background: #ffffff;
             }
             .empty__icon {
               font-size: 64px;
@@ -340,7 +337,7 @@ export default function CartPage() {
             }
             .btn-del:hover:not(:disabled) {
               border-color: #999;
-              background: #f8fafc;
+              background: #ffffff;
             }
             .btn-del:active:not(:disabled) {
               transform: translateY(1px);

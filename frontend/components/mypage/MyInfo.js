@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import api from "@/lib/api";
 import ChangePasswordModal from "./ChangePasswordModal";
 import { useIsMobile } from "@/lib/hooks/useIsDeviceSize";
-import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
-import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
+import { useGlobalAlert } from "@/stores/globalAlert"; 
+import { useGlobalConfirm } from "@/stores/globalConfirm"; 
 
 export default function MyInfo({ data }) {
-  if (!data || data.length === 0) return <></>; // 데이터 없는 경우만
+  if (!data || data.length === 0) return <></>;
 
   const {
     name: initialUsername,
@@ -23,15 +23,15 @@ export default function MyInfo({ data }) {
   const [company, setCompany] = useState(initialCompany);
   const [department, setDepartment] = useState(initialDepartment);
   const [position, setPosition] = useState(initialPosition);
-  const [marketingAgree, setMarketingAgree] = useState(
-    initialMarketingAgree === 1
-  );
+  const [marketingAgree, setMarketingAgree] = useState(initialMarketingAgree === 1);
   const [editing, setEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [withdrawHover, setWithdrawHover] = useState(false); // 🔹 호버 상태
   const isMobile = useIsMobile();
-  const { showAlert } = useGlobalAlert(); // ✅ 추가
-  const { showConfirm } = useGlobalConfirm(); // ✅ 추가
+  const { showAlert } = useGlobalAlert(); 
+  const { showConfirm } = useGlobalConfirm(); 
+
   const containerStyle = {
     padding: isMobile ? "0 4px" : "0 20px",
     maxWidth: 900,
@@ -54,7 +54,6 @@ export default function MyInfo({ data }) {
   const cardTitleStyle = {
     fontSize: isMobile ? "1.08rem" : "1.13rem",
     fontWeight: 600,
-    marginBottom: isMobile ? "8px" : "16px",
     color: "#232323",
     letterSpacing: "0.02em",
   };
@@ -101,22 +100,6 @@ export default function MyInfo({ data }) {
     ...editButton,
     backgroundColor: "#f3f4f6",
     color: "#333",
-  };
-
-  const withdrawButton = {
-    width: "100%",
-    padding: isMobile ? "11px 0" : "13px 0",
-    background: "none",
-    border: "none",
-    fontSize: isMobile ? "1rem" : "1.03rem",
-    color: "#d92d20",
-    cursor: "pointer",
-    borderTop: "1px solid #f1f1f1",
-    marginTop: isMobile ? "18px" : "22px",
-    fontWeight: "bold",
-    letterSpacing: "0.02em",
-    borderRadius: "0 0 12px 12px",
-    transition: "background 0.13s",
   };
 
   const handleSave = async () => {
@@ -177,7 +160,25 @@ export default function MyInfo({ data }) {
 
       {/* 기본정보 카드 */}
       <div style={cardStyle}>
-        <div style={cardTitleStyle}>기본정보</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={cardTitleStyle}>기본정보</div>
+          <span
+            onClick={handleWithdraw}
+            onMouseEnter={() => setWithdrawHover(true)}
+            onMouseLeave={() => setWithdrawHover(false)}
+            style={{
+              color: "#d92d20",
+              fontSize: "0.85rem",
+              cursor: "pointer",
+              padding: "4px 8px",
+              borderRadius: "4px",
+              backgroundColor: withdrawHover ? "rgba(217,45,32,0.08)" : "transparent",
+              transition: "background 0.15s",
+            }}
+          >
+            회원 탈퇴
+          </span>
+        </div>
 
         <div style={infoGrid}>
           <InfoField
@@ -199,7 +200,6 @@ export default function MyInfo({ data }) {
           <div style={infoItem}>
             <span style={infoLabel}>비밀번호</span>
             <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
-              <span style={infoValue}>********</span>
               <button style={miniButton} onClick={handlePasswordChange}>
                 변경
               </button>
@@ -211,7 +211,6 @@ export default function MyInfo({ data }) {
       {/* 추가정보 카드 */}
       <div style={{ ...cardStyle, marginTop: isMobile ? "10px" : "24px" }}>
         <div style={cardTitleStyle}>추가정보</div>
-
         <div style={{ ...infoGrid, marginTop: isMobile ? "0" : "8px" }}>
           <InfoField
             label="소속"
@@ -279,11 +278,6 @@ export default function MyInfo({ data }) {
           </button>
         )}
       </div>
-      {/* 탈퇴 버튼은 항상 하단에 */}
-      <button onClick={handleWithdraw} style={withdrawButton}>
-    
-        탈퇴하기
-      </button>
 
       {showPasswordModal && (
         <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />

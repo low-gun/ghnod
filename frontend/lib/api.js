@@ -2,6 +2,7 @@
 import useGlobalLoading from "@/stores/globalLoading";
 import axios from "axios";
 import { clearSessionAndNotifyAndRedirect } from "@/utils/session";
+import { getClientSessionId } from "@/lib/session"; // 파일 상단에 추가
 
 let globalSessionExpired = false;
 
@@ -138,10 +139,9 @@ axiosInstance.interceptors.response.use(
       try {
         const { data } = await axiosInstance.post(
           "/auth/refresh-token",
-          {},
+          { clientSessionId: getClientSessionId() }, // body에 세션아이디 전달
           {
             withCredentials: true,
-            // 리프레시 요청은 로딩바/토큰 모두 스킵 (쿠키로만 검증)
             headers: { "x-skip-loading": "1", "x-no-auth": "1" },
           }
         );

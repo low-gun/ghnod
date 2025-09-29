@@ -1569,17 +1569,20 @@ exports.getAllInquiries = async (req, res) => {
       `
 SELECT 
   i.id, i.user_id, i.product_id, i.title, i.message, i.answer, i.status,
-  i.is_private,   -- 👈 추가
+  i.is_private,
   i.created_at, i.answered_at, i.answered_by,
   u.username AS user_name, u.email AS user_email, u.phone AS user_phone,
-        i.guest_name, i.guest_email, i.guest_phone,
-        i.company_name, i.department, i.position,
-        p.title AS product_title, p.type AS product_type,
-        au.username AS answered_name, au.email AS answered_email, au.phone AS answered_phone
-      FROM inquiries i
-      LEFT JOIN users u ON u.id = i.user_id
-      LEFT JOIN products p ON p.id = i.product_id
-      LEFT JOIN users au ON au.id = i.answered_by
+  u.company  AS user_company,            -- ✅ 회원 회사
+  u.department AS user_department,      -- ✅ 회원 부서
+  u.position   AS user_position,        -- ✅ 회원 직책
+  i.guest_name, i.guest_email, i.guest_phone,
+  i.company_name, i.department, i.position,
+  p.title AS product_title, p.type AS product_type,
+  au.username AS answered_name, au.email AS answered_email, au.phone AS answered_phone
+FROM inquiries i
+LEFT JOIN users u ON u.id = i.user_id
+LEFT JOIN products p ON p.id = i.product_id
+LEFT JOIN users au ON au.id = i.answered_by
       ${whereSql}
       ORDER BY i.created_at DESC   -- ✅ 정렬 고정
       LIMIT ? OFFSET ?

@@ -50,25 +50,39 @@ exports.updateUserInfo = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const { currentPassword, newPassword, userId } = req.body;
+    const { currentPassword, newPassword, confirmPassword, userId } = req.body;
     const isForcedReset = !!userId;
     const targetUserId = isForcedReset ? userId : req.user?.id;
 
-    if (!targetUserId) return res.status(401).json({ message: "로그인 필요" });
+    if (!targetUserId) {
+      return res.status(401).json({ message: "로그인이 필요합니다." });
+    }
     if (!newPassword || (!isForcedReset && !currentPassword)) {
-      return res.status(400).json({ message: "필수 항목 누락" });
+      return res.status(400).json({ message: "필수 항목이 누락되었습니다." });
     }
 
     const user = await userModel.findUserById(targetUserId);
-    if (!user) return res.status(404).json({ message: "사용자 없음" });
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
 
+    // ✅ 먼저 현재 비밀번호 검증
     if (!isForcedReset) {
       const isMatch = await bcrypt.compare(currentPassword, user.password);
       if (!isMatch) {
+        console.log("🔴 changePassword - 현재 비밀번호 불일치로 401 리턴 (userId:", targetUserId, ")");
         return res
-          .status(400)
-          .json({ message: "현재 비밀번호가 일치하지 않습니다." });
+          .status(401)
+          .json({ message: "현재 비밀번호가 올바르지 않습니다." });
       }
+    }
+    
+
+    // ✅ 그 다음 새 비밀번호 확인 검증
+    if (newPassword !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ message: "새 비밀번호와 확인 비밀번호가 일치하지 않습니다." });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
@@ -80,10 +94,10 @@ exports.changePassword = async (req, res) => {
 
     return res
       .status(200)
-      .json({ success: true, message: "비밀번호가 변경되었습니다." });
+      .json({ success: true, message: "비밀번호가 성공적으로 변경되었습니다." });
   } catch (error) {
     console.error("❌ 비밀번호 변경 실패:", error);
-    return res.status(500).json({ message: "비밀번호 변경 실패" });
+    return res.status(500).json({ message: "비밀번호 변경 중 서버 오류가 발생했습니다." });
   }
 };
 
