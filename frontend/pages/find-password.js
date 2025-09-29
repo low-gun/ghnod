@@ -69,10 +69,10 @@ export default function FindPasswordPage() {
       return;
     }
     try {
-      await api.post("/auth/phone/send-code", {
+      await api.post("/auth/phone/send-code/recover", {
         phone: normalizePhone(phone),
         email: mail,
-      });
+      });    
       showAlert("인증번호가 전송되었습니다.");
       setVerificationError("");
       setHasRequestedCode(true);     // 성공시에만 입력란/타이머 노출
@@ -100,11 +100,11 @@ export default function FindPasswordPage() {
 
   const handleVerify = async () => {
     try {
-      await api.post("/auth/phone/verify-code", {
+      await api.post("/auth/phone/verify-code/recover", {
         phone: normalizePhone(phone),
         code: verificationCode,
         email: (email || "").trim(),
-      });
+      });     
       setIsVerified(true);
       setVerificationError("");
       showAlert("인증 성공");

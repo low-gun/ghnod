@@ -69,10 +69,10 @@ export default function FindEmailPage() {
     }
 
     try {
-      await api.post("/auth/phone/send-code", {
+      await api.post("/auth/phone/send-code/recover", {
         phone: (phone || "").replace(/\D/g, ""),
         username: name,
-      });
+      });     
       showAlert("인증번호가 전송되었습니다.");
       setVerificationError("");
       setShowVerificationInput(true);
@@ -101,7 +101,7 @@ export default function FindEmailPage() {
 
   const handleVerify = async () => {
     try {
-      await api.post("/auth/phone/verify-code", {
+      await api.post("/auth/phone/verify-code/recover", {
         phone: (phone || "").replace(/\D/g, ""),
         code: verificationCode,
         username,
