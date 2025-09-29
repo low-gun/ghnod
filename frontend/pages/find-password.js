@@ -11,6 +11,12 @@ export default function FindPasswordPage() {
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+    // ✅ URL 쿼리에 email 있으면 초기값으로 세팅
+    useEffect(() => {
+      if (router.query.email) {
+        setEmail(router.query.email);
+      }
+    }, [router.query.email]);
   const [verificationCode, setVerificationCode] = useState("");
   const [isVerified, setIsVerified] = useState(false);
 
@@ -136,7 +142,7 @@ export default function FindPasswordPage() {
         phone: normalizePhone(phone),
         newPassword: pw,
       });
-      showAlert("비밀번호가 재설정되었습니다. 다시 로그인하세요.");
+      showAlert("비밀번호가 재설정되었습니다.");
       router.push("/login");
     } catch {
       showAlert("비밀번호 재설정 실패");
@@ -166,7 +172,7 @@ export default function FindPasswordPage() {
           </button>
           <div className="title-wrap">
             <Key size={32} color="#3577f1" style={{ marginBottom: 4 }} />
-            <h2 className="title">비밀번호 찾기</h2>
+            <h2 className="title">비밀번호 초기화</h2>
           </div>
         </div>
 

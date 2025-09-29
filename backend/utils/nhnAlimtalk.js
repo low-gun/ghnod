@@ -22,7 +22,17 @@ async function sendAlimtalkVerify(phone, verifyCode) {
   const templateParamName = (
     process.env.NHN_ALIMTALK_TEMPLATE_PARAM_NAME || "인증번호"
   ).trim();
-
+  
+  // ✅ 환경변수 로그 추가
+  console.log("[DEBUG Alimtalk Config]", {
+    appKey,
+    secretKey: secretKey ? "***HIDDEN***" : "(empty)",
+    senderKey,
+    templateCode,
+    sendNo,
+    templateParamName,
+  });
+  
   if (!appKey || !secretKey || !senderKey || !templateCode || !sendNo) {
     throw new Error("NHN 알림톡 환경변수가 설정되지 않았습니다.");
   }

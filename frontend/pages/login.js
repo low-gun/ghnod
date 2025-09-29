@@ -211,7 +211,7 @@ if (hasRedirect) {
             <div className="find-links">
               <a href="/find-email">이메일 찾기</a>
               <span className="bar">|</span>
-              <a href="/find-password">비밀번호 찾기</a>
+              <a href="/find-password">비밀번호 초기화</a>
             </div>
           </div>
           <button

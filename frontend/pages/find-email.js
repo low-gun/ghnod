@@ -110,7 +110,7 @@ export default function FindEmailPage() {
       setVerificationError("");
       showAlert("인증 성공");
       if (timerRef.current) clearInterval(timerRef.current);
-      setTimeLeft(0);
+      setTimeLeft(0); 
     } catch (e) {
       const msg = e?.response?.data?.error || "인증번호가 일치하지 않습니다.";
       setVerificationError(msg);
@@ -308,8 +308,9 @@ export default function FindEmailPage() {
                     color: "#64748b",
                     marginBottom: 6,
                   }}
-                >
-                  찾은 계정 중 하나를 선택해 주세요. (보안을 위해 일부 마스킹되었습니다)
+                  >
+                  찾은 계정 중 하나를 선택해 주세요.<br />
+                  (보안을 위해 일부 마스킹되었습니다)
                 </div>
                 {emails.map((email, i) => (
                   <label
@@ -355,17 +356,18 @@ export default function FindEmailPage() {
                     로그인하러 가기
                   </button>
                   <button
-                    type="button"
-                    className="login-btn"
-                    onClick={() =>
-                      router.push(
-                        `/find-password?email=${encodeURIComponent(selectedEmail)}`
-                      )
-                    }
-                    disabled={!selectedEmail}
-                  >
-                    비밀번호 찾기
-                  </button>
+  type="button"
+  className="login-btn"
+  onClick={() =>
+    router.push(
+      `/find-password?email=${encodeURIComponent(selectedEmail)}`
+    )
+  }
+  disabled={!selectedEmail}
+>
+  비밀번호 초기화
+</button>
+
                 </div>
               </div>
             ) : (
