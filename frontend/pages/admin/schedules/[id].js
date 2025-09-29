@@ -195,37 +195,6 @@ useEffect(() => {
       setForm((prev) => ({ ...prev, product_id: "" }));
       return;
     }
-    if (name === "product_id") {
-      const selected = products.find((p) => p.id === Number(value));
-      setSelectedType(selected?.type || "");
-    
-      // 기본 필드 먼저 세팅
-      setForm((prev) => ({
-        ...prev,
-        product_id: Number(value),
-        title: selected?.title || "",
-        price: selected?.price ?? "",
-        image_url: selected?.image_url || prev.image_url || "",
-      }));
-      setPriceInput(fmtKRW(selected?.price ?? ""));
-    
-      // 🔑 상세 정보 추가 호출 (description, tags 포함)
-      if (value) {
-        api.get(`admin/products/${value}`).then((res) => {
-          if (res.data.success && res.data.product) {
-            const { description, tags } = res.data.product;
-            setForm((prev) => ({
-              ...prev,
-              description: description || "",
-              tags: tags || [],
-            }));
-          }
-        });
-      }
-    
-      return;
-    }  
-    
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -392,9 +361,23 @@ useEffect(() => {
   <Select
     value={selectedType ? { value: selectedType, label: selectedType } : null}
     onChange={(opt) => {
-      setSelectedType(opt?.value || "");
-      setForm((prev) => ({ ...prev, product_type: opt?.value || "" }));
+      const newType = opt?.value || "";
+      setSelectedType(newType);
+      setForm((prev) => ({
+        ...prev,
+        product_type: newType,
+        // ✅ 유형 초기화 시 하위 값 모두 초기화
+        product_id: "",
+        title: "",
+        price: "",
+        image_url: "",
+        description: "",
+        detail: "",
+        tags: [],
+      }));
+      setPriceInput("");
     }}
+    
     options={educationTypes.map((t) => ({ value: t, label: t }))}
     placeholder="유형 선택"
     classNamePrefix="react-select"
@@ -413,17 +396,50 @@ useEffect(() => {
         : null
     }
     onChange={(opt) => {
-      const selected = products.find((p) => p.id === opt?.value);
+      const selectedId = Number(opt?.value);
+    
+      if (!opt) {
+        // ✅ 상품명 초기화 시 하위 값 전부 초기화
+        setForm((prev) => ({
+          ...prev,
+          product_id: "",
+          title: "",
+          price: "",
+          image_url: "",
+          description: "",
+          detail: "",
+          tags: [],
+        }));
+        setPriceInput("");
+        return;
+      }
+    
+      const selected = products.find((p) => p.id === selectedId);
+    
       setForm((prev) => ({
         ...prev,
-        product_id: opt?.value || "",
+        product_id: selectedId,
         title: selected?.title || "",
         price: selected?.price ?? "",
-        description: selected?.description || "",
-        image_url: selected?.image_url || prev.image_url || "",
+        image_url: selected?.image_url || "",
       }));
       setPriceInput(fmtKRW(selected?.price ?? ""));
-    }}
+    
+      // ✅ 단건 API 호출 → description, detail, tags 채워 넣기
+      api.get(`admin/products/${selectedId}`).then((res) => {
+        console.log("[DEBUG 단건 product 응답]", res.data);
+        if (res.data.success && res.data.product) {
+          const { description, detail, tags } = res.data.product;
+          setForm((prev) => ({
+            ...prev,
+            description: description || "",
+            detail: detail || "",
+            tags: tags || [],
+          }));
+        }
+      });
+    }}  
+    
     options={products
       .filter((p) => p.category === "공개과정" && p.type === selectedType)
       .map((p) => ({ value: p.id, label: p.title }))}
