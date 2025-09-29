@@ -24,10 +24,7 @@ router.get("/products/:productId/inquiries", async (req, res) => {
        WHERE i.product_id = ?
        ORDER BY i.created_at DESC`,
       [productId]
-    );
-    
-    
-
+    );   
     res.json({ success: true, inquiries: rows });
   } catch (err) {
     console.error("문의 조회 오류:", err);
@@ -174,7 +171,7 @@ router.delete(
 );
 // 전역(일반) 문의 등록
 router.post("/inquiries", async (req, res) => {
-  console.log("📩 일반 문의 요청 body:", req.body);   // ← 여기 추가
+  console.log("📩 일반 문의 요청 body:", req.body);
   const {
     title = "",
     message = "",
@@ -184,14 +181,18 @@ router.post("/inquiries", async (req, res) => {
     company_name = "",
     department = "",
     position = "",
+    user_id = null,    // ✅ 회원일 경우 들어올 수 있음
   } = req.body;
 
   try {
-    if (req.body.agree_privacy !== 1) {
-      return res.status(400).json({
-        success: false,
-        message: "개인정보 취급방침 동의가 필요합니다.",
-      });
+    // ✅ 회원이면 동의 검사 건너뜀
+    if (!user_id) {
+      if (req.body.agree_privacy !== 1) {
+        return res.status(400).json({
+          success: false,
+          message: "개인정보 취급방침 동의가 필요합니다.",
+        });
+      }
     }
     
     if (!company_name.trim()) {
