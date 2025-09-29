@@ -198,19 +198,33 @@ useEffect(() => {
     if (name === "product_id") {
       const selected = products.find((p) => p.id === Number(value));
       setSelectedType(selected?.type || "");
+    
+      // 기본 필드 먼저 세팅
       setForm((prev) => ({
         ...prev,
         product_id: Number(value),
         title: selected?.title || "",
         price: selected?.price ?? "",
-        description: selected?.description || "",
-        image_url: selected?.image_url || prev.image_url || "", // ✅ 상품 이미지도 세팅
-        // detail 은 기존 값 유지
+        image_url: selected?.image_url || prev.image_url || "",
       }));
-      
       setPriceInput(fmtKRW(selected?.price ?? ""));
+    
+      // 🔑 상세 정보 추가 호출 (description, tags 포함)
+      if (value) {
+        api.get(`admin/products/${value}`).then((res) => {
+          if (res.data.success && res.data.product) {
+            const { description, tags } = res.data.product;
+            setForm((prev) => ({
+              ...prev,
+              description: description || "",
+              tags: tags || [],
+            }));
+          }
+        });
+      }
+    
       return;
-    }
+    }  
     
     setForm((prev) => ({ ...prev, [name]: value }));
   };
