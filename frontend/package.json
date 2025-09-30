@@ -34,6 +34,7 @@
     "caniuse-lite": "^1.0.30001714",
     "clsx": "^2.1.1",
     "date-fns": "^2.30.0",
+    "date-holidays": "^3.26.1",
     "dayjs": "^1.11.18",
     "file-saver": "^2.0.5",
     "jwt-decode": "^4.0.0",

@@ -1,5 +1,3 @@
-/* TableCalendar.module.css */
-
 /* 래퍼 */
 .calendarWrapper {
   max-width: 1200px;
@@ -20,10 +18,9 @@
   }
 }
 
-
 /* 상단 제목 */
 .calendarHeader {
-  display: flex;                 /* ★ 가운데 정렬 + 버튼 배치 */
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
@@ -46,7 +43,7 @@
 .navBtn:hover { background:#f3f4f6; }
 
 .todayBtn {
-  position: absolute;            /* ★ 우측에 '오늘' 버튼 */
+  position: absolute;
   right: 12px;
   padding: 6px 10px;
   font-size: 12px;
@@ -56,6 +53,7 @@
   cursor: pointer;
 }
 .todayBtn:hover { background:#f3f4f6; }
+
 /* 테이블 기본 */
 .table {
   border-collapse: collapse;
@@ -77,11 +75,10 @@
 
 /* 날짜 셀 */
 /* 날짜/이벤트 행 높이 분리 → 빈 공간 제거 */
-.dayRow { height: 42px; }              /* 날짜 숫자만 담는 행 */
-.eventRow { height: 24px; }            /* 이벤트 바들이 모이는 행 */
+.dayRow { height: 42px; }
+.eventRow { height: 24px; }
 
 /* 날짜 셀: 좌우 구분선만 유지 */
-/* 날짜 셀: 상단 + 좌우 선 */
 .dayCell {
   border-left: 1px solid #eef2f7;
   border-right: 1px solid #eef2f7;
@@ -91,38 +88,34 @@
   padding: 6px;
   font-size: 12px;
   background: #fff;
-  overflow: hidden;            /* ★ 내용 넘침 숨김 → 높이 고정 */
+  overflow: hidden;
 }
 
-
-/* 이벤트 영역 셀: 좌우 선만 (날짜와 이어지도록) */
-/* 이벤트 영역 셀: 좌우 선만 (날짜와 이어지도록) */
+/* 이벤트 영역 셀 */
 .td {
   border-left: 1px solid #eef2f7;
   border-right: 1px solid #eef2f7;
-  border-top: none;   /* 날짜와 구분선 제거 */
+  border-top: none;
   vertical-align: top;
   height: 24px;
   padding: 2px 4px;
-  background: #fff;
+  background: transparent;   /* ← 셀 배경을 투명으로 변경 */
 }
 
-/* 이벤트 행: 상단 테두리만 제거, 좌우는 유지 */
+
 .eventRow td {
   border-top: none;
   padding: 2px 4px;
   position: relative;
 }
 
-
-/* 이벤트 바 간격도 살짝만 */
+/* 이벤트 바 간격 */
 .eventBar { margin-top: 2px; }
 
-.otherMonth {                       /* 날짜칸 */
+.otherMonth {
   background: #fafafa;
   color: #9ca3af;
 }
-/* ★ 다른 달 칸의 날짜 텍스트/숫자도 회색으로 고정 */
 .otherMonth .date { color: #9ca3af; }
 .otherMonth .dateNum { color: #9ca3af; }
 
@@ -130,15 +123,13 @@
 .date {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between; /* 기본은 숫자 좌, 라벨 우 */
   font-weight: 600;
   color: #374151;
   margin-bottom: 6px;
-  gap: 6px;                    /* ★ 여유 간격 */
-  white-space: nowrap;         /* ★ 한 줄 유지 */
+  gap: 6px;
+  white-space: nowrap;
 }
-
-
 /* +n more 버튼 */
 .moreBtn {
   font-size: 11px;
@@ -148,10 +139,9 @@
   border: none;
   padding: 0;
   margin-left: 6px;
-  white-space: nowrap;         /* ★ 줄바꿈 금지 */
-  line-height: 1;              /* ★ 세로 팽창 방지 */
+  white-space: nowrap;
+  line-height: 1;
 }
-
 .moreBtn:hover { text-decoration: underline; }
 
 /* 이벤트 바 */
@@ -173,11 +163,10 @@
   border: 1px solid rgba(0,0,0,0.06);
   box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
   transition: background .15s ease, transform .05s ease;
-  position: relative;            /* ★ 진행중 좌측 바용 */
+  position: relative;
 }
-
 .eventBar:hover { background: #2563eb; }
-.eventBar:active { transform: none; }     /* ★ 클릭 흔들림 제거 */
+.eventBar:active { transform: none; }
 
 /* 모달 */
 .modalOverlay {
@@ -222,7 +211,6 @@
 }
 .modalCloseBtn:hover { background: #d1d5db; }
 
-/* 모달 리스트 */
 .modalBox ul {
   padding: 10px 12px;
   margin: 0;
@@ -242,28 +230,41 @@
 }
 .modalItem:hover { background: #e5e7eb; }
 .modalItem:active { transform: translateY(1px); }
+
 /* --- 주말 색상 구분: 헤더(요일) --- */
-.table thead tr th:nth-child(1) {  /* 일요일 */
-  color: #ef4444; /* red-500 */
-}
-.table thead tr th:nth-child(7) {  /* 토요일 */
-  color: #2563eb; /* blue-600 */
-}
+.table thead tr th:nth-child(1) { color: #ef4444; }
+.table thead tr th:nth-child(7) { color: #2563eb; }
 
 /* --- 주말 색상 구분: 날짜 숫자 --- */
-/* 다른 달(.otherMonth)에는 적용하지 않음 */
-.dayRow td:not(.otherMonth):nth-child(1) .date { /* 일요일 */
+.dayRow td:not(.otherMonth):nth-child(1) .date,
+.holidayDate {
   color: #ef4444;
 }
-.dayRow td:not(.otherMonth):nth-child(7) .date { /* 토요일 */
-  color: #2563eb;
-}
+.dayRow td:not(.otherMonth):nth-child(7) .date { color: #2563eb; }
+
 /* === 오늘 날짜 하이라이트 === */
-/* td에 today 클래스가 붙습니다. (JSX에서 styles.today 추가) */
 .today {
-  background: transparent;  /* 날짜칸 자체 배경 제거 → 컬럼 배경과 일관 */
+  background: transparent;
   box-shadow: none;
 }
+.holidayLabel {
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* 공휴일 날짜/이벤트 셀 배경 (기본 복원) */
+/* 공휴일 날짜 셀 배경만 */
+.dayCell.holidayCell {
+  background: #fff5f5 !important;
+}
+
+/* 이벤트 영역 셀은 기존 흰색 유지 */
+.td.holidayCell {
+  background: #fff !important;
+}
+
 
 /* 날짜 숫자 뱃지 형태 */
 .dateNum {
@@ -275,13 +276,12 @@
   padding: 0 6px;
   border-radius: 999px;
   font-weight: 700;
-  line-height: 26px;           /* ★ 라인 높이 고정 */
+  line-height: 26px;
 }
 
-
-/* 오늘 날짜일 때 숫자 강조 (선명한 블루 배경 + 흰색 텍스트) */
+/* 오늘 날짜 강조 */
 .today .dateNum {
-  background: #2563eb;  /* blue-600 */
+  background: #2563eb;
   color: #ffffff;
   box-shadow: 0 1px 0 rgba(0,0,0,0.08);
 }
@@ -289,95 +289,61 @@
   border: 1px solid rgba(0,0,0,0.06);
 }
 
-/* facilitation: 인디고 */
-.eventBar[data-type="facilitation"] {
-  background: #4f46e5;   /* indigo-600 */
-}
-.eventBar[data-type="facilitation"]:hover {
-  background: #4338ca;   /* indigo-700 */
-}
+/* 타입별 색상 */
+.eventBar[data-type="facilitation"] { background: #4f46e5; }
+.eventBar[data-type="facilitation"]:hover { background: #4338ca; }
+.eventBar[data-type="opencourse"] { background: #10b981; }
+.eventBar[data-type="opencourse"]:hover { background: #059669; }
+.eventBar[data-type="followup"] { background: #f59e0b; }
+.eventBar[data-type="followup"]:hover { background: #d97706; }
 
-/* opencourse: 그린 */
-.eventBar[data-type="opencourse"] {
-  background: #10b981;   /* emerald-500 */
-}
-.eventBar[data-type="opencourse"]:hover {
-  background: #059669;   /* emerald-600 */
-}
-
-/* followup: 앰버 */
-.eventBar[data-type="followup"] {
-  background: #f59e0b;   /* amber-500 */
-}
-.eventBar[data-type="followup"]:hover {
-  background: #d97706;   /* amber-600 */
-}
-/* === 상태별 스타일 (event status) === */
-/* 우선순위를 높이기 위해 카테고리 규칙 아래에 둡니다. */
-
-/* 진행중: 기존 타입 배경 유지 + 내부 라이트-그린 링 */
+/* 상태별 스타일 */
 .eventBar[data-status="ongoing"] {
-  box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.25); /* green-500 @ 25% */
+  box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.25);
   border-color: rgba(34, 197, 94, 0.35);
 }
-
-/* 예정: 살짝 또렷하게 */
 .eventBar[data-status="upcoming"] {
   filter: saturate(1.05) brightness(1.02);
 }
-
-/* 종료: 타입색 대신 회색계로 통일(가독성 높임) */
 .eventBar[data-status="ended"] {
-  background: #9ca3af !important;  /* gray-400 */
+  background: #9ca3af !important;
   color: #ffffff !important;
   border-color: rgba(0,0,0,0.12) !important;
+  opacity: 0.65;
 }
 .eventBar[data-status="ended"]:hover {
-  background: #6b7280 !important;  /* gray-500 */
-}
-/* === 종료: 흐림 처리(클릭은 유지) === */
-.eventBar[data-status="ended"] {
-  opacity: 0.65;                          /* ★ 흐림 */
-}
-.eventBar[data-status="ended"]:hover {
-  opacity: 0.65;                          /* hover 시 밝기 변화 억제 */
+  background: #6b7280 !important;
+  opacity: 0.65;
 }
 
-/* === 진행중: 좌측 굵은 바 표시 === */
+/* 진행중 좌측 굵은 바 */
 .eventBar[data-status="ongoing"] {
-  padding-left: 14px;                     /* ★ 바 공간 확보 */
+  padding-left: 14px;
 }
 .eventBar[data-status="ongoing"]::before {
   content: "";
   position: absolute;
-  left: 6px;                              /* 내부 여백 기준 위치 */
+  left: 6px;
   top: 4px;
   bottom: 4px;
-  width: 4px;                             /* ★ 굵은 바 두께 */
+  width: 4px;
   border-radius: 2px;
-  background: #22c55e;                    /* green-500 */
+  background: #22c55e;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.5) inset;
 }
-/* === 오늘 컬럼 전체 하이라이트 === */
-/* 빈 칸(이벤트 없음)인 경우 컬럼 배경 */
-/* === 오늘 컬럼 전체 하이라이트 === */
-/* 컬럼 전체 배경/스트립 제거 → 날짜 숫자만 강조 */
+
+/* 오늘 컬럼 전체 하이라이트 */
 .todayCol {
   background: transparent;
   box-shadow: none;
 }
+.todayStripe { display: none; }
 
-/* 오늘 컬럼 오버레이 스트립 제거 */
-.todayStripe {
-  display: none;
-}
-
-/* 이벤트 바는 기존 속성 유지 */
-.eventBar {
-  position: relative;
-}
+.eventBar { position: relative; }
 
 @media (max-width: 640px) {
   .moreLabel { display: none; }
 }
-.td[data-othermonth="1"] { background: #fafafa; }
+.td[data-othermonth="1"] { 
+  background: transparent;   /* ← 회색 제거 */
+}

@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../../config/db");
 const { authenticateToken } = require("../../middlewares/authMiddleware");
+const { sendInquiryMail } = require("../../utils/mailer"); // ✅ 메일 발송 함수 import
 
 // 상품별 문의 목록 조회
 router.get("/products/:productId/inquiries", async (req, res) => {
@@ -18,13 +19,13 @@ router.get("/products/:productId/inquiries", async (req, res) => {
          i.is_private, 
          i.user_id, 
          i.created_at,
-         i.answered_at,          -- ✅ 답변일시 추가
-         i.answered_by           -- ✅ 답변자 ID 추가
+         i.answered_at,
+         i.answered_by
        FROM inquiries i
        WHERE i.product_id = ?
        ORDER BY i.created_at DESC`,
       [productId]
-    );   
+    );
     res.json({ success: true, inquiries: rows });
   } catch (err) {
     console.error("문의 조회 오류:", err);
@@ -34,7 +35,7 @@ router.get("/products/:productId/inquiries", async (req, res) => {
 
 // 상품 문의 등록 (회원 + 비회원 가능)
 router.post("/products/:productId/inquiries", async (req, res) => {
-  console.log("📩 상품 문의 요청 body:", req.body);   // ← 여기 추가
+  console.log("📩 상품 문의 요청 body:", req.body);
   const { productId } = req.params;
   const {
     user_id,
@@ -44,16 +45,15 @@ router.post("/products/:productId/inquiries", async (req, res) => {
     guest_name = "",
     guest_email = "",
     guest_phone = "",
-    company_name = "",   // ✅ 추가
-    department = "",     // ✅ 추가
-    position = "",       // ✅ 추가
+    company_name = "",
+    department = "",
+    position = "",
   } = req.body;
 
   const pid = Number(productId);
-  const priv = String(is_private) === "0" ? 0 : 1; // 기본 비공개(1)
+  const priv = String(is_private) === "0" ? 0 : 1;
 
-  try {   // ✅ 여기 try 시작
-
+  try {
     if (!Number.isFinite(pid) || pid <= 0) {
       return res.status(400).json({ success: false, message: "유효한 상품 ID가 아닙니다." });
     }
@@ -61,61 +61,85 @@ router.post("/products/:productId/inquiries", async (req, res) => {
       return res.status(400).json({ success: false, message: "제목과 내용을 입력해주세요." });
     }
 
+    let insertResult;
+
     if (user_id) {
-      // 회원 문의 → user_id로만 처리
-      await pool.execute(
+      const [insert] = await pool.execute(
         `INSERT INTO inquiries (product_id, user_id, title, message, is_private)
          VALUES (?, ?, ?, ?, ?)`,
         [pid, user_id, title.trim(), message.trim(), priv]
       );
+      insertResult = insert;
     } else {
-      // 비회원 문의 → 동의 필수 + 기업명/부서/직책 포함
-if (req.body.agree_privacy !== 1) {
-  return res.status(400).json({
-    success: false,
-    message: "개인정보 취급방침 동의가 필요합니다.",
-  });
-}
+      if (req.body.agree_privacy !== 1) {
+        return res.status(400).json({
+          success: false,
+          message: "개인정보 취급방침 동의가 필요합니다.",
+        });
+      }
 
-const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest_email.trim());
-const phoneOk = guest_phone.replace(/\D/g, "").length >= 9;
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest_email.trim());
+      const phoneOk = guest_phone.replace(/\D/g, "").length >= 9;
 
-if (!guest_name.trim() || !emailOk || !phoneOk || !company_name.trim()) {
-  return res.status(400).json({
-    success: false,
-    message: "비회원 문의: 기업명/이름/이메일/휴대폰을 확인하세요.",
-  });
-}
+      if (!guest_name.trim() || !emailOk || !phoneOk || !company_name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "비회원 문의: 기업명/이름/이메일/휴대폰을 확인하세요.",
+        });
+      }
 
-await pool.execute(
-  `INSERT INTO inquiries
-     (product_id, title, message, is_private, guest_name, guest_email, guest_phone, company_name, department, position, agree_privacy)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  [
-    pid,
-    title.trim(),
-    message.trim(),
-    priv,
-    guest_name.trim(),
-    guest_email.trim(),
-    guest_phone.trim(),
-    company_name.trim(),
-    department?.trim() || null,
-    position?.trim() || null,
-    1, // ✅ 동의함
-  ]
-);
-
+      const [insert] = await pool.execute(
+        `INSERT INTO inquiries
+           (product_id, title, message, is_private, guest_name, guest_email, guest_phone, company_name, department, position, agree_privacy)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          pid,
+          title.trim(),
+          message.trim(),
+          priv,
+          guest_name.trim(),
+          guest_email.trim(),
+          guest_phone.trim(),
+          company_name.trim(),
+          department?.trim() || null,
+          position?.trim() || null,
+          1,
+        ]
+      );
+      insertResult = insert;
     }
-    
-    res.json({ success: true });
 
+    // INSERT 된 문의 조회 후 메일 발송 (상품명 포함)
+    const [rows] = await pool.execute(
+      `SELECT 
+         i.title, i.message, i.product_id, i.created_at,
+         p.title AS product_name,
+         COALESCE(u.username,  i.guest_name)   AS guest_name,
+         COALESCE(u.email,     i.guest_email)  AS guest_email,
+         COALESCE(u.phone,     i.guest_phone)  AS guest_phone,
+         COALESCE(u.company,   i.company_name) AS company_name,
+         COALESCE(u.department,i.department)   AS department,
+         COALESCE(u.position,  i.position)     AS position
+       FROM inquiries i
+       LEFT JOIN users u ON i.user_id = u.id
+       LEFT JOIN products p ON i.product_id = p.id
+       WHERE i.id = ?`,
+      [insertResult.insertId]
+    );
+
+    try {
+      await sendInquiryMail(rows[0]);
+      console.log("📧 상품 문의 메일 발송 성공");
+    } catch (mailErr) {
+      console.error("문의 메일 발송 오류:", mailErr);
+    }
+
+    res.json({ success: true });
   } catch (err) {
     console.error("문의 등록 오류:", err);
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
-
 
 // 상품 문의 삭제 (작성자 또는 관리자만)
 router.delete(
@@ -123,10 +147,9 @@ router.delete(
   authenticateToken,
   async (req, res) => {
     const { productId, id } = req.params;
-    const loginUser = req.user; // authenticateToken에서 주입됨
+    const loginUser = req.user;
 
     try {
-      // 존재 및 소유자 확인
       const [rows] = await pool.execute(
         `SELECT id, user_id
          FROM inquiries
@@ -149,7 +172,6 @@ router.delete(
           .json({ success: false, message: "삭제 권한이 없습니다." });
       }
 
-      // 삭제
       const [result] = await pool.execute(
         `DELETE FROM inquiries
          WHERE id = ? AND product_id = ?`,
@@ -169,6 +191,7 @@ router.delete(
     }
   }
 );
+
 // 전역(일반) 문의 등록
 router.post("/inquiries", async (req, res) => {
   console.log("📩 일반 문의 요청 body:", req.body);
@@ -189,16 +212,17 @@ router.post("/inquiries", async (req, res) => {
       return res.status(400).json({ success: false, message: "제목과 내용을 입력하세요." });
     }
 
+    let insertResult;
+
     if (user_id) {
-      // ✅ 회원 문의 → guest_xxx 필요 없음
-      await pool.execute(
+      const [insert] = await pool.execute(
         `INSERT INTO inquiries
            (product_id, user_id, title, message, is_private, agree_privacy)
          VALUES (NULL, ?, ?, ?, 0, 1)`,
         [user_id, title.trim(), message.trim()]
       );
+      insertResult = insert;
     } else {
-      // ✅ 비회원 문의 → 개인정보 동의 + 필수항목 체크
       if (req.body.agree_privacy !== 1) {
         return res.status(400).json({
           success: false,
@@ -216,7 +240,7 @@ router.post("/inquiries", async (req, res) => {
         });
       }
 
-      await pool.execute(
+      const [insert] = await pool.execute(
         `INSERT INTO inquiries
            (product_id, title, message, is_private, guest_name, guest_email, guest_phone, company_name, department, position, agree_privacy)
          VALUES (NULL, ?, ?, 0, ?, ?, ?, ?, ?, ?, 1)`,
@@ -231,6 +255,32 @@ router.post("/inquiries", async (req, res) => {
           position?.trim() || null,
         ]
       );
+      insertResult = insert;
+    }
+
+    // INSERT 된 문의 조회 후 메일 발송 (상품명 포함, 전역은 product_id가 NULL이라 출력X)
+    const [rows] = await pool.execute(
+      `SELECT 
+         i.title, i.message, i.product_id, i.created_at,
+         p.title AS product_name,
+         COALESCE(u.username,  i.guest_name)   AS guest_name,
+         COALESCE(u.email,     i.guest_email)  AS guest_email,
+         COALESCE(u.phone,     i.guest_phone)  AS guest_phone,
+         COALESCE(u.company,   i.company_name) AS company_name,
+         COALESCE(u.department,i.department)   AS department,
+         COALESCE(u.position,  i.position)     AS position
+       FROM inquiries i
+       LEFT JOIN users u ON i.user_id = u.id
+       LEFT JOIN products p ON i.product_id = p.id
+       WHERE i.id = ?`,
+      [insertResult.insertId]
+    );
+
+    try {
+      await sendInquiryMail(rows[0]);
+      console.log("📧 전역 문의 메일 발송 성공");
+    } catch (mailErr) {
+      console.error("문의 메일 발송 오류:", mailErr);
     }
 
     res.json({ success: true });
@@ -239,6 +289,5 @@ router.post("/inquiries", async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류" });
   }
 });
-
 
 module.exports = router;

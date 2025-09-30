@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import TableCalendar from "@/components/schedules/TableCalendar";
 import axios from "axios";
 import { useGlobalAlert } from "@/stores/globalAlert";
+import { getKoreanHolidaysOfMonth } from "@/utils/getKoreanHolidays";
 
 export async function getServerSideProps({ res }) {
   // Vercel Edge 캐시 적용
@@ -67,23 +68,31 @@ export default function CalendarPage({ initialMonth, initialEvents }) {
     }
   }, [calendarDate, initialMonth]);
 
-  // ✅ 이벤트 데이터 매핑 (필요한 필드만)
-  const events = useMemo(
-    () =>
-      (eventsData || []).map((item) => ({
-        id: item.session_id,
-        schedule_id: item.schedule_id,
-        title: item.title,
-        start: new Date(item.start_date),
-        end: new Date(item.end_date),
-        type: item.type || item.category || null,
-      })),
-    [eventsData]
-  );
+  const { scheduleEvents, holidays } = useMemo(() => {
+    const scheduleEvents = (eventsData || []).map((item) => ({
+      id: item.session_id,
+      schedule_id: item.schedule_id,
+      title: item.title,
+      start: new Date(item.start_date),
+      end: new Date(item.end_date),
+      type: item.type || item.category || null,
+    }));
+  
+    const start = dayjs(calendarDate).startOf("month").subtract(7, "day"); 
+const end   = dayjs(calendarDate).endOf("month").add(7, "day");
+
+const holidays = getKoreanHolidaysOfMonth({ start, end }, [
+  { date: "2025-05-05", name: "임시공휴일" },
+]);
+
+  
+    return { scheduleEvents, holidays };
+  }, [eventsData, calendarDate]);
+  
 
   // (기존 rows 로그 유지)
   useEffect(() => {
-    const rows = (events || [])
+    const rows = (scheduleEvents || [])
       .filter(e => String(e.title || "").includes("테스트"))
       .map(e => ({
         id: e.id || e.schedule_id,
@@ -91,7 +100,8 @@ export default function CalendarPage({ initialMonth, initialEvents }) {
         end: e.end,
       }));
     console.log("🧪 mapped events 샘플:", rows);
-  }, [events]);
+  }, [scheduleEvents]);
+  
 
   const router = useRouter();
   const { showAlert } = useGlobalAlert();
@@ -111,7 +121,8 @@ export default function CalendarPage({ initialMonth, initialEvents }) {
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
       <TableCalendar
-        events={events}
+   events={scheduleEvents}   // 공휴일은 제외된 일정만
+   holidays={holidays}       // 새 props 추가
         currentMonth={calendarDate}
         setCurrentMonth={setCalendarDate}
         onSelectSchedule={handleSelectEvent}

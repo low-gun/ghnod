@@ -20,16 +20,16 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT || 3306,
-  timezone: '+09:00',    // ✅ KST 고정
-  dateStrings: true,     // ✅ DATETIME, TIMESTAMP를 문자열 그대로 반환
+  timezone: '+09:00',       // ✅ KST 고정
+  dateStrings: true,        // ✅ DATETIME, TIMESTAMP를 문자열 그대로 반환
+  charset: "utf8mb4",       // ✅ 반드시 추가 (결과셋 한글 깨짐 방지)
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
   ssl: isProduction
-  ? { rejectUnauthorized: true }   // CA 제거
-  : undefined,
+    ? { rejectUnauthorized: true }
+    : undefined,
 });
-
 
 // ✅ 연결 테스트 로그
 pool.getConnection((err, connection) => {

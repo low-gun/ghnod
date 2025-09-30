@@ -263,7 +263,7 @@ return valid;
   value={guestCompany}
   onChange={(val) => setGuestCompany(val)}
   onBlur={() => setTouched((t) => ({ ...t, company: true }))}
-  placeholder="예) 오알피연구소"
+  placeholder="예) 오알피컨설팅"
 />
 {touched.company && errors.company && (
   <p style={{ color: "red", fontSize: 12 }}>{errors.company}</p>
