@@ -58,6 +58,7 @@
 ./backend/uploads
 ./backend/uploads/images
 ./backend/utils
+./backend/utils/mailer.js
 ./backend/utils/nhnAlimtalk.js
 ./backend/utils/parseDeviceInfo.js
 ./frontend
@@ -283,6 +284,7 @@
 ./frontend/stores/globalLoading.js
 ./frontend/styles
 ./frontend/utils
+./frontend/utils/getKoreanHolidays.js
 ./frontend/utils/processEvents.js
 ./frontend/utils/session.js
 ./ghnod-clean

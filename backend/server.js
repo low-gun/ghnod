@@ -74,8 +74,14 @@ const corsOptions = {
 };
 
 // ✅ CORS 미들웨어 "최상단" 배치
+app.options("*", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-guest-token");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 const trackVisitor = require("./middlewares/trackVisitor");
 app.use(trackVisitor);
