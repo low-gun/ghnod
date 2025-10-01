@@ -53,8 +53,8 @@ export const centerGroup = [
     ],
   },
   {
-    label: "공론화",
-    link: "/forum",
+    label: "사회적 대화",
+    link: "/socialdialogue",
     sub: [
       { label: "원페이지", slug: "onepage" },
       { label: "문의하기", slug: "inquiry" },

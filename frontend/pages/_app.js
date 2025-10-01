@@ -65,10 +65,9 @@ function MyApp({ Component, pageProps }) {
     return () => document.body.classList.remove("admin-page");
   }, [isAdmin]);
 
-  useEffect(() => {
-    // 환경변수 체크 로그 제거
-  }, []);
-  
+useEffect(() => {
+  // 환경변수 체크 로그 제거
+}, []);
 
   useEffect(() => {
     const handleStart = () => {
@@ -100,6 +99,21 @@ function MyApp({ Component, pageProps }) {
       router.events.off("routeChangeError", handleEnd);
     };
   }, [router, showLoading, hideLoading]);
+
+  // ✅ 라우트 변경 후 스크롤 초기화 + 콘솔
+  useEffect(() => {
+    const handleRouteChange = (url) => {
+      console.log("[ScrollCheck] before=", window.pageYOffset);
+      window.scrollTo(0, 0);
+document.body.scrollTop = 0; // ✅ body 스크롤도 같이 초기화
+document.documentElement.scrollTop = 0; // ✅ 크로스 브라우저 대응
+      setTimeout(() => {
+        console.log("[ScrollCheck] after=", window.pageYOffset);
+      }, 50);
+    };
+    router.events.on("routeChangeComplete", handleRouteChange);
+    return () => router.events.off("routeChangeComplete", handleRouteChange);
+  }, [router]);
 
   const LayoutWrapper = isAdmin
     ? ({ children }) => <>{children}</>

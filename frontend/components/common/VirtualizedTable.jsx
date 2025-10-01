@@ -55,10 +55,29 @@ export default function VirtualizedTable({
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [resetKey]);
 
+  // ✅ 디버깅용 로그
+  useEffect(() => {
+    console.log("[VirtualizedTable] render check", {
+      totalItems: items.length,
+      virtualItems: virtualItems.map((v) => v.index),
+      colSpan,
+      scrollRefTag: scrollRef.current?.tagName,
+    });
+    if (scrollRef.current) {
+      console.log("[VirtualizedTable] scrollRef element:", scrollRef.current);
+      console.log(
+        "[VirtualizedTable] scrollRef childNodes:",
+        scrollRef.current.childNodes
+      );
+    }
+  }, [items, virtualItems, colSpan]);
+
   return (
     <div style={{ overflowX: "auto" }}>
-      {/* 헤더 전용 테이블 */}
-      <table className={tableClassName} style={{ tableLayout: "fixed", width: "100%" }}>
+      <table
+        className={tableClassName}
+        style={{ tableLayout: "fixed", width: "100%" }}
+      >
         {colGroup}
         <thead style={{ backgroundColor: "#f9f9f9" }}>
           <tr>
@@ -69,45 +88,52 @@ export default function VirtualizedTable({
                 onClick={c.onClickHeader}
                 style={c.onClickHeader ? { cursor: "pointer" } : undefined}
               >
-                {typeof c.headerRender === "function" ? c.headerRender() : c.title}
+                {typeof c.headerRender === "function"
+                  ? c.headerRender()
+                  : c.title}
               </th>
             ))}
           </tr>
         </thead>
       </table>
 
-      {/* 바디 전용 + 스크롤 컨테이너 */}
-      <div ref={scrollRef} style={{ height, overflowY: "auto" }}>  {/* ← 고정 높이 */}
-  <table className={tableClassName} style={{ tableLayout: "fixed", width: "100%" }}>
-    {colGroup}
-    <tbody>
-            {/* 패딩 상단 */}
+      {/* tbody는 div 스크롤 안에 배치 */}
+      <div ref={scrollRef} style={{ height, overflowY: "auto" }}>
+        <table
+          className={tableClassName}
+          style={{ tableLayout: "fixed", width: "100%" }}
+        >
+          {colGroup}
+          <tbody>
+            {/* 상단 패딩 */}
             {paddingTop > 0 && (
-              <tr style={{ height: paddingTop, display: "table", width: "100%" }}>
-                <td colSpan={colSpan} style={{ padding: 0, border: "none", height: paddingTop }} />
+              <tr style={{ height: paddingTop }}>
+                <td
+                  colSpan={colSpan}
+                  style={{ padding: 0, border: "none", height: paddingTop }}
+                />
               </tr>
             )}
 
-            {/* 가시 구간만 렌더 */}
+            {/* 가시 구간만 렌더링 */}
             {virtualItems.map((vi) => {
               const index = vi.index;
               const item = items[index];
               if (!item) return null;
               return (
-                <tr
-                key={item.id ?? index}
-                style={{ height: rowHeight }}   // ← display/tableLayout/width 제거
-              >
-                {renderRowCells({ item, index })}
-              </tr>
-              
+                <tr key={item.id ?? index} style={{ height: rowHeight }}>
+                  {renderRowCells({ item, index })}
+                </tr>
               );
             })}
 
-            {/* 패딩 하단 */}
+            {/* 하단 패딩 */}
             {paddingBottom > 0 && (
-              <tr style={{ height: paddingBottom, display: "table", width: "100%" }}>
-                <td colSpan={colSpan} style={{ padding: 0, border: "none", height: paddingBottom }} />
+              <tr style={{ height: paddingBottom }}>
+                <td
+                  colSpan={colSpan}
+                  style={{ padding: 0, border: "none", height: paddingBottom }}
+                />
               </tr>
             )}
           </tbody>

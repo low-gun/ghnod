@@ -37,19 +37,26 @@ export default function MainLayout({ children }) {
       const top = document.documentElement.scrollTop || document.body.scrollTop || 0;
       setShowTop(top > 200);
     };
-  
-    // ✅ window + body 모두 감지
+
+    // ✅ window만 감지
     window.addEventListener("scroll", handleScroll, { passive: true });
-    document.body.addEventListener("scroll", handleScroll, { passive: true });
-  
-    handleScroll(); // 초기 동기화
-  
+    handleScroll();
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      document.body.removeEventListener("scroll", handleScroll);
     };
   }, []);
- 
+  // ✅ 라우트 바뀔 때 실제 스크롤 대상 확인용 콘솔
+  useEffect(() => {
+    const root = document.getElementById("__next");
+    const main = document.querySelector("main");
+
+    console.log("[ScrollCheck][layout] pageYOffset =", window.pageYOffset);
+    console.log("[ScrollCheck][layout] documentElement.scrollTop =", document.documentElement.scrollTop);
+    console.log("[ScrollCheck][layout] body.scrollTop =", document.body.scrollTop);
+    if (root) console.log("[ScrollCheck][layout] #__next.scrollTop =", root.scrollTop, "overflow=", getComputedStyle(root).overflow);
+    if (main) console.log("[ScrollCheck][layout] <main>.scrollTop =", main.scrollTop, "overflow=", getComputedStyle(main).overflow);
+  }, [router.asPath]);
 
   const handleInquiryClick = () => {
     setOpenInquiry(true); // ✅ 모바일/데스크톱 모두 GlobalDialog에서 처리
