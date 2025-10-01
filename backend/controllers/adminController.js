@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const courseModel = require("../models/course.model");
 const paymentModel = require("../models/payment.model");
 const pointModel = require("../models/point.model");
+const { sendAnswerMail } = require("../utils/mailer");
 
 /** ======================= 공통 필터 빌더 ======================= */
 function buildUserFilters(query) {
@@ -1672,14 +1673,34 @@ exports.answerInquiryByAdmin = async (req, res) => {
       WHERE id = ?
     `, [String(answer).trim(), req.user?.id || null, id]);
     
-    console.log("🟢 answerInquiryByAdmin result =", result);
+    console.log("🟢 answerInquiryByAdmin UPDATE 완료 inquiryId=", id);
     
-    if (result.affectedRows === 0) {
+    // ✅ 답변 대상자 정보 조회
+    const [rows] = await pool.query(`
+      SELECT i.title, i.message, i.answer,
+             i.created_at, i.answered_at,     -- ✅ 추가
+             u.email AS user_email,
+             i.guest_email
+      FROM inquiries i
+      LEFT JOIN users u ON i.user_id = u.id
+      WHERE i.id = ?
+    `, [id]);
+    
+    if (rows.length) {
+      try {
+        await sendAnswerMail(rows[0]);
+        console.log("📧 사용자 답변 메일 발송 성공:", rows[0].user_email || rows[0].guest_email);
+      } catch (mailErr) {
+        console.error("❌ 사용자 답변 메일 발송 오류:", mailErr);
+      }
+    }
+    
+    if (!rows.length) {
       return res
         .status(404)
         .json({ success: false, message: "해당 문의를 찾을 수 없습니다." });
     }
-
+    
     res.json({
       success: true,
       message: "답변이 등록되었습니다.",
