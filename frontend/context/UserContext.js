@@ -14,10 +14,8 @@ export function UserProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("🔵 [UserProvider] MOUNTED");
-    return () => {
-      console.log("🔴 [UserProvider] UNMOUNTED");
-    };
+    // UserProvider mount/unmount 로그 제거
+    return () => {};
   }, []);
 
   const [user, setUser] = useState(null);
@@ -166,7 +164,7 @@ const getSafePath = (p) => {
   }, [accessToken, user]);
   // user 값 변경 콘솔
   useEffect(() => {
-    console.log("[UserContext] user 변경:", user);
+    // user 상태 변경 시 실행할 추가 로직이 있으면 여기에 작성
   }, [user]);
 
   // 로그인 시 호출

@@ -66,15 +66,9 @@ function MyApp({ Component, pageProps }) {
   }, [isAdmin]);
 
   useEffect(() => {
-    console.log(
-      "NEXT_PUBLIC_API_BASE_URL:",
-      process.env.NEXT_PUBLIC_API_BASE_URL
-    );
-    console.log(
-      "[ENV] KAKAO KEY:",
-      process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? "present" : "missing"
-    );
+    // 환경변수 체크 로그 제거
   }, []);
+  
 
   useEffect(() => {
     const handleStart = () => {

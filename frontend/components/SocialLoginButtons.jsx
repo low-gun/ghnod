@@ -2,15 +2,7 @@ import React from "react";
 
 const SocialLoginButtons = () => {
   const OAUTH_BASE_URL = process.env.NEXT_PUBLIC_OAUTH_BASE_URL;
-  console.log("==== [SocialLoginButtons ENV 체크] ====");
-  console.log("NEXT_PUBLIC_OAUTH_BASE_URL:", process.env.NEXT_PUBLIC_OAUTH_BASE_URL);
-  console.log("NEXT_PUBLIC_GOOGLE_CLIENT_ID:", process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
-  console.log("NEXT_PUBLIC_GOOGLE_REDIRECT_URI:", process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI);
-  console.log("NEXT_PUBLIC_KAKAO_CLIENT_ID:", process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID);
-  console.log("NEXT_PUBLIC_KAKAO_REDIRECT_URI:", process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI);
-  console.log("NEXT_PUBLIC_KAKAO_JS_KEY:", process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
-  console.log("NEXT_PUBLIC_NAVER_CLIENT_ID:", process.env.NEXT_PUBLIC_NAVER_CLIENT_ID);
-  console.log("NEXT_PUBLIC_NAVER_REDIRECT_URI:", process.env.NEXT_PUBLIC_NAVER_REDIRECT_URI);
+
   if (!OAUTH_BASE_URL) {
     return (
       <div style={{ color: "red", textAlign: "center" }}>

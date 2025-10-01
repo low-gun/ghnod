@@ -7,7 +7,6 @@ export const useGlobalAlert = create((set) => ({
   isHtml: false, // ★ 추가
 
   showAlert: (message, options = {}) => {
-    console.log("[GlobalAlert][showAlert] call", { message, options });
     return set({
       show: true,
       message,
@@ -17,8 +16,6 @@ export const useGlobalAlert = create((set) => ({
   },
   
   hideAlert: () => {
-    console.log("[GlobalAlert][hideAlert] call");
     return set({ show: false, message: "", type: "toast", isHtml: false });
   },
-  
 }));
