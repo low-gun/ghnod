@@ -18,8 +18,9 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
+      # 🔥 dependencies 한 번만 설치 (dev 제외)
+      - name: Install production dependencies
+        run: npm ci --omit=dev
         working-directory: ./backend
 
       - name: Copy env file from secrets
@@ -28,8 +29,7 @@ jobs:
       - name: Build backend (optional)
         run: npm run build || echo "no build step"
         working-directory: ./backend
-      - name: Remove node_modules before packaging
-        run: rm -rf ./backend/node_modules
+
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -38,5 +38,5 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ghnod-backend      # 새 App Service 이름
+          app-name: ghnod-backend      # App Service 이름
           package: ./backend
