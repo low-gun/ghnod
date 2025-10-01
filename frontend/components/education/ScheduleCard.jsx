@@ -110,14 +110,6 @@ const status = getScheduleStatus(repStart, repEnd);
     const targetType = (schedule.type ?? type);
   
     const path = `/${slugCategory}/${targetType}/${targetId}`;
-    console.group("[ScheduleCard.handleClick]");
-    console.log("schedule.category:", schedule.category);
-    console.log("slugCategory:", slugCategory);
-    console.log("schedule.type:", schedule.type, "prop type:", type);
-    console.log("targetId:", targetId);
-    console.log("→ push path:", path);
-    console.groupEnd();
-  
     router.push(path);
   };
   

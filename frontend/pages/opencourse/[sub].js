@@ -49,9 +49,7 @@ export default function OpenCoursePage() {
     const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/education/schedules/public?category=공개과정&type=${encodeURIComponent(
         type
       )}&sort=${encodeURIComponent(sort)}&order=${encodeURIComponent(order)}`;    
-  
-    console.log("🔍 [fetchSchedules] 요청 URL:", url); // ✅ 어떤 URL 호출하는지
-  
+    
     const res = await fetch(url, { credentials: "include" });
   
     if (res.status === 404) {
@@ -66,7 +64,6 @@ export default function OpenCoursePage() {
     }
   
     const data = await res.json();
-    console.log("📦 [fetchSchedules] API 응답:", data); // ✅ 실제 응답 구조 확인
     return data;
   }, []);
   

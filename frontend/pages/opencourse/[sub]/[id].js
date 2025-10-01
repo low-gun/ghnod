@@ -79,8 +79,6 @@ export default function EducationScheduleDetailPage() {
       .then((res) => {
         if (res?.data?.success && res?.data?.schedule) {
           const sc = res.data.schedule;
-          console.log("📦 schedule:", sc);  // ✅ 추가
-
           setSchedule(sc);
         } else {
           showAlert("일정 정보를 불러오지 못했습니다.");

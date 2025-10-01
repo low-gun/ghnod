@@ -5,8 +5,6 @@ import ProductReviewModal from "./ProductReviewModal";
 import { useGlobalAlert } from "@/stores/globalAlert"; // ✅ 추가
 import { useGlobalConfirm } from "@/stores/globalConfirm"; // ✅ 추가
 
-console.log("🔥 ProductReviewModalNew 연결됨");
-
 export default function TabProductReviews({ productId, scheduleId }) {
   const { user } = useUserContext();
   const [isPurchaser, setIsPurchaser] = useState(false);
