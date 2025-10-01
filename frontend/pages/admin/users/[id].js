@@ -35,7 +35,6 @@ export default function AdminUserDetailPage() {
     api
       .get(`/admin/users/${id}`)
       .then((res) => {
-        console.log("✅ res.data.user:", res.data.user);
         setUser(res.data.user);
         setLoading(false);
       })

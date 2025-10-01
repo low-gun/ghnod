@@ -202,22 +202,6 @@ export default function AdminUsersPage() {
       const nextQuery = norm.query ?? "";
       const nextS = norm.startDate ?? null;
       const nextE = norm.endDate ?? null;
-
-      // ✅ 콘솔 추가
-      console.group("[users] handleSearchSubmit");
-      console.log("norm:", norm);
-      console.log(
-        "nextType:",
-        nextType,
-        "nextQuery:",
-        nextQuery,
-        "nextS:",
-        nextS,
-        "nextE:",
-        nextE
-      );
-      console.groupEnd();
-
       // 부모 상태 동기화
       setSearchType(nextType);
       setSearchQuery(nextQuery);
@@ -255,12 +239,7 @@ export default function AdminUsersPage() {
       setError("");
 
       // ✅ 콘솔 추가: 증가 전/후
-      console.log("[users] before ++ searchSyncKeyList");
-      setSearchSyncKeyList((k) => {
-        const next = k + 1;
-        console.log("[users] searchSyncKeyList ->", next);
-        return next;
-      });
+      setSearchSyncKeyList((k) => k + 1);
 
       // 즉시 로딩표시 해제(컨테이너는 표시만 담당, 실제 로딩은 UserTable이 처리)
       setSharedLoading(false);

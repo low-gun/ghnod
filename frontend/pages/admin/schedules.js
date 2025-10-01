@@ -204,7 +204,7 @@ export default function AdminSchedulesPage() {
   if (isBlocked) return null;
 
   return (
-    <AdminLayout pageTitle="교육일정">
+    <AdminLayout pageTitle="일정관리">
       <AdminTopPanels
         stats={stats}
         onStatClick={handleStatClick}
@@ -254,7 +254,7 @@ export default function AdminSchedulesPage() {
         }
         excel={{
           visible: true, // 상단 엑셀 버튼 on
-          fileName: "교육일정",
+          fileName: "일정관리",
           sheetName: "Schedules",
           headers: excelData.headers,
           data: excelData.data,

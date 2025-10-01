@@ -229,26 +229,10 @@ const excelRows = useMemo(
         if (ed) params.end_date = ed;
       }     
   
-      // === 콘솔 트레이싱 시작 ===
-      const fetchKey = `[FETCH /admin/products] ${JSON.stringify(params)}`;
-      console.log(fetchKey, { refreshKey, isNarrow, autoFetchEnabled });
-      console.time(fetchKey);
-  
       const res = await api.get("admin/products", { params, signal });
-  
-      console.timeEnd(fetchKey);
-      try {
-        const approxKB = Math.round(
-          new Blob([JSON.stringify(res?.data ?? {})]).size / 1024
-        );
-        console.log(`${fetchKey} ~ response size ~ approx ${approxKB} KB`);
-        const count =
-          Array.isArray(res?.data?.products) ? res.data.products.length :
-          Array.isArray(res?.data?.items) ? res.data.items.length :
-          Array.isArray(res?.data?.rows) ? res.data.rows.length : -1;
-        console.log(`${fetchKey} ~ rows.length =`, count);
-      } catch {}
-      // === 콘솔 트레이싱 끝 ===
+
+      // 👉 디버깅용 콘솔 출력 제거됨
+      
   
       if (res.data?.success) {
         const list = res.data.products || res.data.items || res.data.rows || [];

@@ -17,8 +17,7 @@ export function getKoreanHolidaysOfMonth(refDate, extraHolidays = []) {
 
   const hd = new Holidays("KR");
   const raw = hd.getHolidays(year) || [];
-  console.log("[HolidayRaw]", year, raw.filter(h => h.date?.includes(`${year}-${month+1}`)));
-  
+ 
   // date-holidays 결과에서 날짜 파싱(라이브러리 포맷 상관없이 안전하게 처리)
   const yearly = raw
     .map((h) => {

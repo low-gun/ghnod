@@ -50,18 +50,12 @@ export default function MainLayout({ children }) {
   useEffect(() => {
     const root = document.getElementById("__next");
     const main = document.querySelector("main");
-
-    console.log("[ScrollCheck][layout] pageYOffset =", window.pageYOffset);
-    console.log("[ScrollCheck][layout] documentElement.scrollTop =", document.documentElement.scrollTop);
-    console.log("[ScrollCheck][layout] body.scrollTop =", document.body.scrollTop);
-    if (root) console.log("[ScrollCheck][layout] #__next.scrollTop =", root.scrollTop, "overflow=", getComputedStyle(root).overflow);
-    if (main) console.log("[ScrollCheck][layout] <main>.scrollTop =", main.scrollTop, "overflow=", getComputedStyle(main).overflow);
+    // 필요 시 scroll 상태 확인 가능 (현재는 로그 제거)
   }, [router.asPath]);
-
+  
   const handleInquiryClick = () => {
     setOpenInquiry(true); // ✅ 모바일/데스크톱 모두 GlobalDialog에서 처리
   };
-  
 
   return (
     <div

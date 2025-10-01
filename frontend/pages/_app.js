@@ -102,18 +102,15 @@ useEffect(() => {
 
   // ✅ 라우트 변경 후 스크롤 초기화 + 콘솔
   useEffect(() => {
-    const handleRouteChange = (url) => {
-      console.log("[ScrollCheck] before=", window.pageYOffset);
+    const handleRouteChange = () => {
       window.scrollTo(0, 0);
-document.body.scrollTop = 0; // ✅ body 스크롤도 같이 초기화
-document.documentElement.scrollTop = 0; // ✅ 크로스 브라우저 대응
-      setTimeout(() => {
-        console.log("[ScrollCheck] after=", window.pageYOffset);
-      }, 50);
+      document.body.scrollTop = 0; // ✅ body 스크롤도 같이 초기화
+      document.documentElement.scrollTop = 0; // ✅ 크로스 브라우저 대응
     };
     router.events.on("routeChangeComplete", handleRouteChange);
     return () => router.events.off("routeChangeComplete", handleRouteChange);
   }, [router]);
+  
 
   const LayoutWrapper = isAdmin
     ? ({ children }) => <>{children}</>

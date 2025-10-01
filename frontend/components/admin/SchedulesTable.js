@@ -239,27 +239,8 @@ const [selectedIds, setSelectedIds] = useState([]);
         params.in_progress = 1;
       }
   
-      // === 콘솔 트레이싱 시작 ===
-      const fetchKey = `[FETCH /admin/schedules] ${JSON.stringify(params)}`;
-      console.log(fetchKey, { refreshKey, isNarrow, autoFetchEnabled });
-      console.time(fetchKey);
-  
       const res = await api.get("admin/schedules", { params, signal });
-  
-      console.timeEnd(fetchKey);
-      try {
-        const approxKB = Math.round(
-          new Blob([JSON.stringify(res?.data ?? {})]).size / 1024
-        );
-        console.log(`${fetchKey} ~ response size ~ approx ${approxKB} KB`);
-        const count =
-          res?.data?.schedules && Array.isArray(res.data.schedules)
-            ? res.data.schedules.length
-            : -1;
-        console.log(`${fetchKey} ~ schedules.length =`, count);
-      } catch {}
-      // === 콘솔 트레이싱 끝 ===
-  
+
       if (res.data?.success) {
         setSchedules(res.data.schedules || []);
         const t =

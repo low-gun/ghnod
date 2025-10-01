@@ -276,44 +276,30 @@ const handleRefund = async (orderId) => {
   const toggleOne = (id, checked) =>
     setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
 
-// 데이터 호출 (단순 패턴)
-const fetchPayments = async (signal) => {
-  setIsFetching(true);
-  try {
-    const baseParams = {
-      page: currentPage,
-      pageSize: itemsPerPage,
-      sort: sortConfig.key,
-      order: sortConfig.direction,
-      type: externalSearchType,
-      search: externalSearchQuery,
-    };
-
-    const compatParams = { field: externalSearchType, keyword: externalSearchQuery };
-
-    const rangeParams = {};
-    if (externalSearchType === "created_at" && typeof externalSearchQuery === "string") {
-      const [start, end] = externalSearchQuery.split("|");
-      if (start) rangeParams.start_date = start;
-      if (end) rangeParams.end_date = end;
-    }
-
-    const params = { ...baseParams, ...compatParams, ...rangeParams };
-    const tkey = `[FETCH /admin/payments #${Date.now()}]`;
-    console.log(tkey, params);
-    console.time(tkey);
-    
-    const res = await api.get("admin/payments", { params, signal });
-    
-    console.timeEnd(tkey);
-    
-try {
-  const approxKB = Math.round(new Blob([JSON.stringify(res?.data ?? {})]).size / 1024);
-  const count = Array.isArray(res?.data?.payments) ? res.data.payments.length : 0;
-  console.log(`[FETCH /admin/payments] ~ size ~ ${approxKB} KB, rows=${count}, total=${res?.data?.totalCount ?? -1}`);
-} catch {}
-
-
+  const fetchPayments = async (signal) => {
+    setIsFetching(true);
+    try {
+      const baseParams = {
+        page: currentPage,
+        pageSize: itemsPerPage,
+        sort: sortConfig.key,
+        order: sortConfig.direction,
+        type: externalSearchType,
+        search: externalSearchQuery,
+      };
+  
+      const compatParams = { field: externalSearchType, keyword: externalSearchQuery };
+  
+      const rangeParams = {};
+      if (externalSearchType === "created_at" && typeof externalSearchQuery === "string") {
+        const [start, end] = externalSearchQuery.split("|");
+        if (start) rangeParams.start_date = start;
+        if (end) rangeParams.end_date = end;
+      }
+  
+      const params = { ...baseParams, ...compatParams, ...rangeParams };
+      
+      const res = await api.get("admin/payments", { params, signal });
 
     if (res.data?.success) {
       const list = res.data.payments || [];

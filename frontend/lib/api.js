@@ -1,8 +1,8 @@
-// frontend/lib/api.js
 import useGlobalLoading from "@/stores/globalLoading";
 import axios from "axios";
 import { clearSessionAndNotifyAndRedirect } from "@/utils/session";
 import { getClientSessionId } from "@/lib/session"; // 파일 상단에 추가
+import Router from "next/router"; // ✅ 추가
 
 let globalSessionExpired = false;
 
@@ -101,9 +101,8 @@ axiosInstance.interceptors.request.use(
       }
 
       if (guestToken) {
-        config.headers["x-guest-token"] = guestToken;  // 로그인 여부 관계없이 항상 보냄
+        config.headers["x-guest-token"] = guestToken; // 로그인 여부 관계없이 항상 보냄
       }
-      
     }
 
     // 전역 로딩바 (스킵 아닌 경우만)
@@ -129,17 +128,25 @@ axiosInstance.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    // 토큰 만료 → 리프레시 시도
-    if (
-      error.response &&
-      [401, 403, 419].includes(error.response.status) &&
-      !originalRequest?._retry
-    ) {
+   // 🔒 권한 없음 처리 (401, 403)
+if (error.response?.status === 401 || error.response?.status === 403) {
+  console.log("🚨 401/403 발생, 권한 없음 처리 시작");
+  clearSessionAndNotifyAndRedirect("권한이 없습니다.");
+  return;
+}
+
+
+// 토큰 만료 → 리프레시 시도 (419만)
+if (
+  error.response &&
+  error.response.status === 419 &&  // ✅ 이제 419만 refresh 처리
+  !originalRequest?._retry
+) {
       originalRequest._retry = true;
       try {
         const { data } = await axiosInstance.post(
           "/auth/refresh-token",
-          { clientSessionId: getClientSessionId() }, // body에 세션아이디 전달
+          { clientSessionId: getClientSessionId() },
           {
             withCredentials: true,
             headers: { "x-skip-loading": "1", "x-no-auth": "1" },
@@ -148,7 +155,6 @@ axiosInstance.interceptors.response.use(
         setAccessToken(data.accessToken);
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-        // 원래 요청 재시도 (원래의 스킵 플래그 유지)
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         if (!globalSessionExpired) {

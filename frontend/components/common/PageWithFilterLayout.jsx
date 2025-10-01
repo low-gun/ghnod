@@ -43,12 +43,11 @@ export default function PageWithFilterLayout({
         {filterBox}
 
         {/* 카드 리스트 분기 */}
-        {domain === "education" && (
-          <ScheduleCardGrid schedules={items} type={type} />
-        )}
-        {domain === "diagnosis" && (
-          <ProductCardGrid products={items} />
-        )}
+        {domain === "education" ? (
+  <ScheduleCardGrid schedules={items} type={type} />
+) : (
+  <ProductCardGrid products={items} />
+)}
       </div>
     </>
   );

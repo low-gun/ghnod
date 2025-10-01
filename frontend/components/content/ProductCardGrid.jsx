@@ -2,12 +2,6 @@ import ProductCard from "./ProductCard";
 import ResponsiveGrid from "@/components/common/ResponsiveGrid";
 
 export default function ProductCardGrid({ products }) {
-  // ✅ 콘솔 출력 (디버깅용)
-  console.log("🔍 ProductCardGrid 렌더링:", {
-    productsCount: products?.length,
-    hasProducts: !!products?.length,
-  });
-
   if (!products || products.length === 0) {
     return (
       <p style={{ textAlign: "center", padding: "40px 0" }}>

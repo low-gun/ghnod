@@ -88,20 +88,6 @@ const holidays = getKoreanHolidaysOfMonth({ start, end }, [
   
     return { scheduleEvents, holidays };
   }, [eventsData, calendarDate]);
-  
-
-  // (기존 rows 로그 유지)
-  useEffect(() => {
-    const rows = (scheduleEvents || [])
-      .filter(e => String(e.title || "").includes("테스트"))
-      .map(e => ({
-        id: e.id || e.schedule_id,
-        start: e.start,
-        end: e.end,
-      }));
-    console.log("🧪 mapped events 샘플:", rows);
-  }, [scheduleEvents]);
-  
 
   const router = useRouter();
   const { showAlert } = useGlobalAlert();

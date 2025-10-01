@@ -11,18 +11,17 @@ export default function TableCalendar({
   onSelectSchedule,
   onShowMore,
 }) {
-  if (process.env.NODE_ENV !== "production") console.count("Render:TableCalendar");
-
   // currentMonth가 moment든 dayjs든 대응 (valueOf 있으면 ms로 변환)
-  const cm = currentMonth?.valueOf ? dayjs(currentMonth.valueOf()) : dayjs(currentMonth);
+const cm = currentMonth?.valueOf ? dayjs(currentMonth.valueOf()) : dayjs(currentMonth);
 
-  const startMonth = cm.startOf("month");
-  const startWeekday = Number(startMonth.format("d")); // 0(일)~6(토)
-  const start = startMonth.subtract(startWeekday, "day"); // 일요일로 보정
+const startMonth = cm.startOf("month");
+const startWeekday = Number(startMonth.format("d")); // 0(일)~6(토)
+const start = startMonth.subtract(startWeekday, "day"); // 일요일로 보정
 
-  const endMonth = cm.endOf("month");
-  const endWeekday = Number(endMonth.format("d"));
-  const end = endMonth.add(6 - endWeekday, "day").endOf("day"); // 토요일 말까지
+const endMonth = cm.endOf("month");
+const endWeekday = Number(endMonth.format("d"));
+const end = endMonth.add(6 - endWeekday, "day").endOf("day"); // 토요일 말까지
+
 
   // 날짜 배열
   const days = [];
@@ -38,58 +37,9 @@ export default function TableCalendar({
     weeks.push(days.slice(i, i + 7));
   }
 
-  // 이벤트 전처리
 // 이벤트 전처리
 const { visibleEvents, hiddenEventsMap } = processEvents(events, "type");
-
-// ★ 공휴일 데이터 구조 로깅
-useEffect(() => {
-  if (process.env.NODE_ENV !== "production") {
-    console.group("[Calendar] holidays sample");
-    console.log("holidays.length:", holidays?.length);
-    (holidays || []).slice(0, 20).forEach((h, idx) => {
-      console.log(idx, {
-        id: h.id ?? null,
-        title: h.title,
-        start: h.start,
-        end: h.end,
-      });
-    });
-    console.groupEnd();
-  }
-}, [holidays]);
-
-  // ★ 이벤트 구조 로깅
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "production") {
-      try {
-        const rows = (visibleEvents || []).slice(0, 50).map((e) => ({
-          id: e.id ?? e._id ?? null,
-          title: e.title,
-          type: e.type ?? e.category ?? null,
-          status: e.status ?? e.state ?? null,
-          start: e.start ?? e.start_date ?? e.begin ?? null,
-          end: e.end ?? e.end_date ?? e.finish ?? null,
-          _date: e._date,
-          _row: e._row,
-          _colSpan: e._colSpan,
-        }));
-        console.group("[Calendar] visibleEvents schema sample");
-        console.table(rows);
-        console.log("rows.length:", rows.length);
-        const keySet = new Set();
-        (visibleEvents || []).forEach((ev) =>
-          Object.keys(ev || {}).forEach((k) => keySet.add(k))
-        );
-        console.log("keys:", Array.from(keySet).sort());
-        console.groupEnd();
-      } catch (err) {
-        console.warn("[Calendar] log error:", err);
-      }
-    }
-  }, [visibleEvents]);
-
-  const [modalDate, setModalDate] = useState(null);
+   const [modalDate, setModalDate] = useState(null);
 
   // ★ 달 이동 핸들러
   const handlePrev = () =>
@@ -147,24 +97,12 @@ useEffect(() => {
   const isToday = day.isSame(dayjs(), "day");
 
   const isOtherMonth = day.month() !== currentMonth.month();
-  const holiday = (holidays || []).find((ev) => {
-    const match = dayjs(ev.start).isSame(dateStr, "day");
-    if (match) {
-      console.log("[HOLIDAY MATCH]", { dateStr, evStart: ev.start, evTitle: ev.title });
-    }
-    return match;
-  });
-  
-  const isHoliday = !!holiday;
+const holiday = (holidays || []).find((ev) =>
+  dayjs(ev.start).isSame(dateStr, "day")
+);
 
-  // ★ 콘솔 로그 추가
-  if (isHoliday) {
-    console.log("[HOLIDAY MATCH]", {
-      dateStr,
-      evStart: holiday.start,
-      evTitle: holiday.title,
-    });
-  }
+const isHoliday = !!holiday;
+
 
   return (
     <td

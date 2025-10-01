@@ -129,14 +129,6 @@ export default function UserTable({
   const effStart = useExternalToolbar ? externalStartDate : null;
   const effEnd = useExternalToolbar ? externalEndDate : null;
 
-  console.log("[UserTable] effective filters", {
-    useExternalToolbar,
-    effType,
-    effQuery,
-    effStart,
-    effEnd,
-    showDeleted,
-  });
   // 탭 바뀌면 항상 1페이지부터
   useEffect(() => {
     if (!isActive || disableFetch) return;
@@ -264,20 +256,6 @@ export default function UserTable({
     const sortKey = sortConfig?.key || "created_at";
     const sortDir = sortConfig?.direction || "desc";
 
-    console.group("[UserTable] fetchUsers call");
-    console.log("[UserTable] USING effective params", {
-      page: currentPage,
-      pageSize,
-      sort: sortKey,
-      order: sortDir,
-      type: effType, // ✅ effective
-      search: effQuery, // ✅ effective
-      start_date: normalizeDate(effStart), // ✅ effective
-      end_date: normalizeDate(effEnd), // ✅ effective
-      showDeleted,
-    });
-    console.groupEnd();
-
     try {
       if (!silent) {
         setLoadError("");
@@ -367,11 +345,7 @@ export default function UserTable({
       end_date: normalizeDate(effEnd),
       showDeleted,
     };
-
-    console.group("[UserTable] fetchSummaries call");
-    console.log("USING effective params", params);
-    console.groupEnd();
-
+    
     try {
       setLoadError("");
       if (users.length === 0) setIsInitialLoading(true);
@@ -428,50 +402,22 @@ export default function UserTable({
   useEffect(() => {
     if (!isActive || disableFetch) return;
 
-    console.group("[UserTable] searchSyncKey effect");
-    console.log(
-      "searchSyncKey:",
-      searchSyncKey,
-      "activeTab:",
-      activeTab,
-      "currentPage:",
-      currentPage
-    );
-    console.groupEnd();
-
     if (currentPage !== 1) {
-      console.log("[UserTable] setCurrentPage(1) due to searchSyncKey change");
       setCurrentPage(1);
       return;
     }
-
+    
     if (activeTab === "summary") {
       const controller = new AbortController();
-      console.log("[UserTable] calling fetchSummaries due to searchSyncKey");
       fetchSummaries(controller.signal);
       return () => controller.abort();
     }
+    
   }, [searchSyncKey]);
 
   // 목록 탭: 의존 조건 변경 시 fetch
   useEffect(() => {
     if (!isActive || disableFetch || activeTab !== "list") return;
-
-    console.group("[UserTable] list effect");
-    console.log({
-      currentPage,
-      pageSize,
-      sortKey: sortConfig?.key,
-      sortDir: sortConfig?.direction,
-      showDeleted,
-      searchSyncKey,
-      effType,
-      effQuery,
-      effStart: effStart?.toString?.() || effStart,
-      effEnd: effEnd?.toString?.() || effEnd,
-    });
-    console.groupEnd();
-
     if (listAbortRef.current) listAbortRef.current.abort(); // ✅ 올바른 ref
     const controller = new AbortController();
     listAbortRef.current = controller;
@@ -548,16 +494,7 @@ export default function UserTable({
     });
   }, [users, onExcelData, isActive, getSummaryByUser]);
   useEffect(() => {
-    console.group("[UserTable] props change");
-    console.log({
-      activeTab,
-      searchSyncKey,
-      externalSearchType,
-      externalSearchQuery,
-      externalStartDate,
-      externalEndDate,
-    });
-    console.groupEnd();
+    // (props change 로깅 제거됨)
   }, [
     activeTab,
     searchSyncKey,
@@ -566,7 +503,7 @@ export default function UserTable({
     externalStartDate,
     externalEndDate,
   ]);
-   
+  
   // 🔹 모바일/태블릿 카드 렌더러: 목록 탭
   const renderCardsList = () =>
     users.map((user, index) => {

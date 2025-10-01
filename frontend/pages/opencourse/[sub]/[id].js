@@ -73,7 +73,6 @@ export default function EducationScheduleDetailPage() {
     if (!scheduleId) return;
   
     setLoading(true);
-    console.log("🔍 요청: /education/schedules/" + scheduleId);
     api
       .get(`/education/schedules/${scheduleId}`)
       .then((res) => {
@@ -86,8 +85,7 @@ export default function EducationScheduleDetailPage() {
       })
       .catch(() => showAlert("일정 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
-  }, [router.query?.id, showAlert]);
-  
+  }, [router.query?.id, showAlert]);  
   
     // 가격/모집현황 계산
   const unitPrice = useMemo(
