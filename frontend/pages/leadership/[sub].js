@@ -12,6 +12,15 @@ const tabs = [
   { label: "New Solution(예정)", slug: "new" },
 ];
 
+export async function getServerSideProps() {
+  return {
+    redirect: {
+      destination: "/coming-soon",
+      permanent: false,
+    },
+  };
+}
+
 export default function LeadershipPage() {
   const router = useRouter();
   const { sub } = router.query;
