@@ -107,23 +107,24 @@ const jumpInterval = setInterval(() => {
 
         // 랜덤 생성
         const now = Date.now();
-        if (Math.random() < 0.8 && now - lastObstacleRef.current > 800) {
-          const cactusTypes = [
-            "cactus_small1", "cactus_small2", "cactus_small3",
-            "cactus_big1", "cactus_big2", "cactus_big3"
-          ];
-          // 새 등장 확률도 조금 더 높이려면 배열에 2번 넣음
-          const types = [...cactusTypes, "ptero", "ptero"];
-          const type = types[Math.floor(Math.random() * types.length)];
-          
-          if (type === "ptero") {
-            nextArr.push({ x: 600, type, frame: 0, y: 50 + Math.random() * 50 });
-          } else {
-            nextArr.push({ x: 600, type });
-          }
-        
-          lastObstacleRef.current = now;
-        }
+        // 확률 0.8 → 0.5 로 낮춤 (약 30% 줄임), 텀은 그대로 800ms 유지
+if (Math.random() < 0.5 && now - lastObstacleRef.current > 800) {
+  const cactusTypes = [
+    "cactus_small1", "cactus_small2", // 3번 제거
+    "cactus_big1", "cactus_big2"      // 3번 제거
+  ];
+  const types = [...cactusTypes, "ptero", "ptero"]; // 새 확률은 그대로 2배
+  const type = types[Math.floor(Math.random() * types.length)];
+  
+  if (type === "ptero") {
+    nextArr.push({ x: 600, type, frame: 0, y: 50 + Math.random() * 50 });
+  } else {
+    nextArr.push({ x: 600, type });
+  }
+
+  lastObstacleRef.current = now;
+}
+
         obstaclesRef.current = nextArr;
 
         // 충돌 체크
