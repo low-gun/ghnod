@@ -244,18 +244,19 @@ cactus_big3: { x: -407, y: -2, w: 75, h: 50 },
 
       {/* 게임 영역 */}
       <div
-        ref={gameRef}
-        onClick={doJump}
-        style={{
-          position: "relative",
-          width: "600px",
-          height: "200px",
-          background: "#fff",
-          border: "2px solid #ccc",
-          overflow: "hidden",
-          cursor: "pointer",
-        }}
-      >
+  ref={gameRef}
+  onClick={doJump}
+  style={{
+    position: "relative",
+    width: "100%",        // 반응형 적용
+    maxWidth: "600px",    // 최대 크기 제한
+    height: "200px",
+    background: "#fff",
+    border: "2px solid #ccc",
+    overflow: "hidden",
+    cursor: "pointer",
+  }}
+>
         {/* 점수 */}
         <div
           style={{
